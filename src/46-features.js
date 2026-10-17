@@ -32,7 +32,7 @@ function renderGoals() {
   let card = $('#goalsCard');
   if (!card) { card = h('section', { id: 'goalsCard', class: 'card feature-card', 'aria-label': 'Objectif hebdomadaire' }); $('#kpis').after(card); }
   const p = goalProgress(), g = p.goal;
-  const range = fmtDayShortUTC.format(keyToUTC(p.start)) + ' – ' + fmtDayShortUTC.format(keyToUTC(p.end));
+  const range = dayFmt('short').format(keyToUTC(p.start)) + ' – ' + dayFmt('short').format(keyToUTC(p.end));
   card.replaceChildren(
     h('div', { class: 'feature-between' }, h('h3', {}, p.done ? 'Objectif atteint !' : 'Mon rythme de la semaine'),
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openGoals }, 'Modifier')),
@@ -257,7 +257,7 @@ function buildingLevelText(key) {
 }
 function openCityPersonalization() {
   openSheet('Ma ville à moi', body => {
-    const name = h('input', { class: 'input', id: 'cityName', maxlength: '40', value: (S.personal || {}).name || 'Ma ville', required: true });
+    const name = h('input', { class: 'input', id: 'cityName', maxlength: '40', value: cityName(), required: true });
     body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = name.value.trim().slice(0, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast('Ta ville a un nouveau nom.'); } },
       h('div', { class: 'field' }, h('label', { for: 'cityName' }, 'Nom de ma ville'), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), 'Enregistrer le nom')),
       h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, 'Une ville qui grandit avec toi'),
@@ -289,7 +289,7 @@ async function exportCityImage() {
     const footFont = '600 ' + Math.round(width * .019) + 'px Figtree, system-ui, sans-serif';
     if (document.fonts && document.fonts.load) await Promise.all([document.fonts.load(titleFont), document.fonts.load(footFont)]).catch(() => {});
     ctx.fillStyle = cssVar('--ink') || '#20332a'; ctx.textBaseline = 'middle'; ctx.font = titleFont;
-    ctx.fillText(frTypo((S.personal || {}).name || 'Ma ville'), margin, head * .55, width - margin * 2);
+    ctx.fillText(frTypo(cityName()), margin, head * .55, width - margin * 2);
     ctx.drawImage(source, 0, head, width, cityH);
     ctx.fillStyle = cssVar('--muted') || '#536459'; ctx.font = footFont;
     ctx.fillText(frTypo('Ville du bien-être · ' + fmtEffort(totalEffortMinutes()) + ' pour prendre soin de moi'), margin, out.height - foot * .5, width - margin * 2);

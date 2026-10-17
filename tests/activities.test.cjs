@@ -19,7 +19,7 @@ function harness(at = '2026-10-17T12:00:00Z') {
     window: { crypto: { getRandomValues: arr => { arr[0] = 0; return arr; } } },
     commit: () => { saves++; }, bump: () => {}, toast: value => messages.push(value), setTimeout };
   vm.createContext(sandbox);
-  const source = ['00-core.js', '20-rules.js', '41-activities.js', '42-draw.js']
+  const source = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '20-rules.js', '41-activities.js', '42-draw.js']
     .map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
   vm.runInContext(source + `\n animateDraw = () => { drawAnim = null; };
     globalThis.api = { taskAvailable, taskNextDay, completeTask, resetTask, matchesDrawFilters, poolItems, drawAlternatives, doDraw, drawFilters,

@@ -79,7 +79,9 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const clone = v => (v == null ? v : JSON.parse(JSON.stringify(v)));
 const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const NB = ' ';
-const frTypo = t => String(t).replace(/ ([:;!?»])/g, ' $1').replace(/« /g, '« ');
+// Langue affichée ('fr' ou 'en'), fixée par setLang() (05-i18n.js).
+let LANG = 'fr';
+const frTypo = t => (LANG === 'fr' ? String(t).replace(/ ([:;!?»])/g, ' $1').replace(/« /g, '« ') : String(t));
 
 function h(tag, props, ...kids) {
   const el = document.createElement(tag);
@@ -116,12 +118,13 @@ function catLabel(cat) { return h('span', { class: 'cat-label' }, catDot(cat), i
 function dec1(x) {
   const r = Math.round(x * 10) / 10;
   if (Math.abs(r) >= 100) return String(Math.round(x));
-  return (Number.isInteger(r) ? String(r) : r.toFixed(1)).replace('.', ',');
+  const s = Number.isInteger(r) ? String(r) : r.toFixed(1);
+  return LANG === 'fr' ? s.replace('.', ',') : s;
 }
 function fmt(n) {
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);
-  if (a >= 1e9) return dec1(n / 1e9) + NB + 'Md';
+  if (a >= 1e9) return dec1(n / 1e9) + NB + (LANG === 'fr' ? 'Md' : 'B');
   if (a >= 1e6) return dec1(n / 1e6) + NB + 'M';
   if (a >= 1e3) return Math.round(n / 1e3) + NB + 'k';
   return String(Math.round(n));
@@ -130,13 +133,14 @@ function fmtMin(m) {
   m = Math.round(m);
   if (m < 60) return m + NB + 'min';
   const hh = Math.floor(m / 60), mm = m % 60;
-  return hh + NB + 'h' + (mm ? NB + String(mm).padStart(2, '0') : '');
+  return hh + NB + 'h' + (mm ? NB + String(mm).padStart(2, '0') + (LANG === 'fr' ? '' : NB + 'min') : '');
 }
 function fmtAway(ms) {
   const s = Math.max(1, Math.round(ms / 1000));
   return s >= 60 ? fmtMin(s / 60) : s + NB + 's';
 }
-function plural(n, one, many) { return n + NB + (n > 1 ? many : one); }
+// Le français met 0 et 1 au singulier, l'anglais seulement 1.
+function plural(n, one, many) { return n + NB + ((LANG === 'fr' ? n <= 1 : n === 1) ? one : many); }
 function pad2(n) { return String(n).padStart(2, '0'); }
 function dbg(msg) { if (window.__ville && window.__ville.log) window.__ville.log.push((Date.now() % 100000) + ' ' + msg); }
 function rnd(a, b) { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); }

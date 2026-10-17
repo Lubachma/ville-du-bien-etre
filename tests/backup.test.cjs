@@ -7,7 +7,7 @@ function api() {
   const context = vm.createContext({ Intl, Date, Math, JSON, TextEncoder, TextDecoder,
     btoa: text => Buffer.from(text, 'binary').toString('base64'), atob: text => Buffer.from(text, 'base64').toString('binary'),
     window: {}, document: { querySelector() {} } });
-  const source = ['00-core.js', '10-state.js', '20-rules.js', '45-settings.js'].map(f => fs.readFileSync(path.join(__dirname, '../src', f), 'utf8')).join('\n');
+  const source = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '45-settings.js'].map(f => fs.readFileSync(path.join(__dirname, '../src', f), 'utf8')).join('\n');
   vm.runInContext(source + '\nthis.api = { exportBackup, readBackup, normalize, get state() { return S; }, sign(raw,version) { const body=b64encode(JSON.stringify(raw)); return "VBE"+version+"."+body+"."+hash53(BACKUP_SALT+body); } };', context);
   return context.api;
 }
@@ -30,6 +30,16 @@ test('legacy VBE1 backups are accepted without altering earned coins or existing
   const restored = a.readBackup(a.sign(old, 1)).state;
   assert.equal(restored.v, 2); assert.equal(restored.coins, old.coins);
   assert.equal(restored.activities[0].mode, 'focus'); assert.equal(restored.stats.effort.byCat.corps, 15);
+});
+test("une sauvegarde d'avant la mise à jour reste en français", () => {
+  const a = api();
+  const old = { coins: 3e6, settings: { grace: 20, keepAwake: true, sound: true, theme: 'auto' }, history: [] };
+  for (const version of [2, 1]) {
+    const restored = a.readBackup(a.sign(Object.assign({ v: version }, old), version));
+    assert.equal(restored.error, undefined);
+    assert.equal(restored.state.settings.lang, 'fr');
+    assert.equal(restored.state.settings.grace, 20);
+  }
 });
 test('damaged or unsupported backups are rejected, active sessions are excluded from exports', () => {
   const a = api(); a.state.active = { id: 'active' };

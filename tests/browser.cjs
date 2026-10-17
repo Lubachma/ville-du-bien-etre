@@ -13,7 +13,7 @@ const errors = [];
 const contexts = [];
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function newPage(browser, url, options = {}) {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, ...options });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR', ...options });
   contexts.push(context);
   const page = await context.newPage();
   page.on('pageerror', e => errors.push(e.message));

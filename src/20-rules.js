@@ -20,27 +20,36 @@ function maxDay(a, b) { return (a || '') > (b || '') ? a : b; }
 function effectiveDay() { return maxDay(today(), S.clock.lastDay); }
 function keyToUTC(key) { const [y, m, d] = key.split('-').map(Number); return Date.UTC(y, m - 1, d, 12); }
 function shiftDay(key, n) { const t = new Date(keyToUTC(key) + n * 86400000); return t.getUTCFullYear() + '-' + pad2(t.getUTCMonth() + 1) + '-' + pad2(t.getUTCDate()); }
-const fmtDayLong = new Intl.DateTimeFormat('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-const fmtDayShortUTC = new Intl.DateTimeFormat('fr-CH', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-const fmtWeekday = new Intl.DateTimeFormat('fr-CH', { weekday: 'short', timeZone: 'UTC' });
+// Dates d'un jour (clé AAAA-MM-JJ lue en UTC), une mise en forme par langue.
+const DAY_FMT_OPTIONS = {
+  long: { weekday: 'long', day: 'numeric', month: 'long' },
+  short: { weekday: 'short', day: 'numeric', month: 'short' },
+  weekday: { weekday: 'short' },
+};
+const dayLabelCache = new Map();
+function dayFmt(kind) {
+  const id = LANG + ':' + kind;
+  if (!dayLabelCache.has(id)) dayLabelCache.set(id, new Intl.DateTimeFormat(locale(), { ...DAY_FMT_OPTIONS[kind], timeZone: 'UTC' }));
+  return dayLabelCache.get(id);
+}
 const timeFmtCache = new Map();
 function fmtTime(ts) {
-  const tz = S.clock.tz;
-  if (!timeFmtCache.has(tz)) {
+  const tz = S.clock.tz, id = LANG + ':' + tz;
+  if (!timeFmtCache.has(id)) {
     let f;
-    try { f = new Intl.DateTimeFormat('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: tz }); }
-    catch (e) { f = new Intl.DateTimeFormat('fr-CH', { hour: '2-digit', minute: '2-digit' }); }
-    timeFmtCache.set(tz, f);
+    try { f = new Intl.DateTimeFormat(locale(), { hour: '2-digit', minute: '2-digit', timeZone: tz }); }
+    catch (e) { f = new Intl.DateTimeFormat(locale(), { hour: '2-digit', minute: '2-digit' }); }
+    timeFmtCache.set(id, f);
   }
-  return timeFmtCache.get(tz).format(ts);
+  return timeFmtCache.get(id).format(ts);
 }
-function dayLabel(key) { return fmtDayLong.format(keyToUTC(key)); }
+function dayLabel(key) { return dayFmt('long').format(keyToUTC(key)); }
 function whenLabel(ts) {
   if (!validTs(ts)) return '';
-  const k = dayOf(ts), t = today();
-  if (k === t) return "aujourd'hui, " + fmtTime(ts);
-  if (k === shiftDay(t, -1)) return 'hier, ' + fmtTime(ts);
-  return fmtDayShortUTC.format(keyToUTC(k)) + ', ' + fmtTime(ts);
+  const k = dayOf(ts), now = today(), time = fmtTime(ts);
+  if (k === now) return t('when.today', { time });
+  if (k === shiftDay(now, -1)) return t('when.yesterday', { time });
+  return t('when.other', { date: dayFmt('short').format(keyToUTC(k)), time });
 }
 
 function totalMinutes() { return CAT_ORDER.reduce((a, c) => a + (S.stats.byCat[c] || 0), 0); }

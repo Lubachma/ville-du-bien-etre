@@ -4,7 +4,7 @@ const path = require('node:path');
 const { chromium } = require('playwright');
 
 async function runFeatures(browser, baseURL = process.env.BASE_URL || 'http://127.0.0.1:8766/index.html#debug') {
-  const context = await browser.newContext({ viewport: { width: 320, height: 760 }, reducedMotion: 'reduce', acceptDownloads: true });
+  const context = await browser.newContext({ viewport: { width: 320, height: 760 }, reducedMotion: 'reduce', acceptDownloads: true, locale: 'fr-FR' });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));

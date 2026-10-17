@@ -11,33 +11,34 @@ function validTz(tz) {
 
 function defaultState() {
   const now = Date.now();
-  const ex = (name, cat, min) => ({ id: uid(), name, cat, min, mode: cat === 'corps' ? 'free' : 'focus', energy: name === 'Aller marcher' || cat === 'calme' ? 'low' : 'medium', place: name === 'Aller marcher' ? 'outside' : 'any', repeat: 'always', completedAt: 0, ex: true });
+  // Les exemples prennent les noms de la langue affichée ; displayName() les traduit tant qu'ils ne sont pas renommés.
+  const ex = (key, cat, min) => ({ id: uid(), name: t(key), cat, min, mode: cat === 'corps' ? 'free' : 'focus', energy: key === 'tpl.wish.walk' || cat === 'calme' ? 'low' : 'medium', place: key === 'tpl.wish.walk' ? 'outside' : 'any', repeat: 'always', completedAt: 0, ex: true });
   return {
     v: 2, createdAt: now, updatedAt: 0, revision: '',
     coins: 5e6, earned: 0,
-    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto' },
+    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto' },
     clock: { tz: currentTz(), maxSeen: now, lastDay: '' },
     activities: [
-      { id: uid(), name: 'Lecture', cat: 'esprit', min: 10 },
-      { id: uid(), name: 'Sport', cat: 'corps', min: 20, mode: 'free', energy: 'high' },
-      { id: uid(), name: 'Méditation', cat: 'calme', min: 10, energy: 'low' },
-      { id: uid(), name: 'Rangement', cat: 'foyer', min: 15 },
-      { id: uid(), name: 'Musique', cat: 'crea', min: 20 },
-      { id: uid(), name: 'Devoirs / travail', cat: 'esprit', min: 25 },
-      { id: uid(), name: 'Marche dehors', cat: 'corps', min: 20, mode: 'free', place: 'outside', energy: 'low' },
-      { id: uid(), name: 'Dessin', cat: 'crea', min: 15 },
+      { id: uid(), name: t('tpl.act.reading'), cat: 'esprit', min: 10 },
+      { id: uid(), name: t('tpl.act.sport'), cat: 'corps', min: 20, mode: 'free', energy: 'high' },
+      { id: uid(), name: t('tpl.act.meditation'), cat: 'calme', min: 10, energy: 'low' },
+      { id: uid(), name: t('tpl.act.tidying'), cat: 'foyer', min: 15 },
+      { id: uid(), name: t('tpl.act.music'), cat: 'crea', min: 20 },
+      { id: uid(), name: t('tpl.act.homework'), cat: 'esprit', min: 25 },
+      { id: uid(), name: t('tpl.act.walk'), cat: 'corps', min: 20, mode: 'free', place: 'outside', energy: 'low' },
+      { id: uid(), name: t('tpl.act.drawing'), cat: 'crea', min: 15 },
     ],
     wishes: [
-      ex('Lire un chapitre', 'esprit', 15), ex('Jouer de la musique', 'crea', 20),
-      ex('Aller marcher', 'corps', 20), ex('Méditer', 'calme', 10), ex('Dessiner', 'crea', 15),
+      ex('tpl.wish.chapter', 'esprit', 15), ex('tpl.wish.music', 'crea', 20),
+      ex('tpl.wish.walk', 'corps', 20), ex('tpl.wish.meditate', 'calme', 10), ex('tpl.wish.draw', 'crea', 15),
     ],
     chores: [
-      ex('Ranger', 'foyer', 15), ex('Faire la vaisselle', 'foyer', 10),
-      ex('Réviser / travailler', 'esprit', 30), ex('Trier le courrier', 'foyer', 15),
+      ex('tpl.chore.tidy', 'foyer', 15), ex('tpl.chore.dishes', 'foyer', 10),
+      ex('tpl.chore.study', 'esprit', 30), ex('tpl.chore.mail', 'foyer', 15),
     ],
     draw: { pool: 'wishes', current: null, rerolls: 0, filters: { maxMin: 0, energy: 'any', place: 'any' } },
     goals: { minutes: 60, days: 3, cat: 'all', building: '' },
-    personal: { name: 'Ma ville' }, routines: [], routineRun: null,
+    personal: { name: '' }, routines: [], routineRun: null,
     city: {
       size: 7,
       tiles: [
@@ -146,6 +147,8 @@ function normalize(raw) {
   s.settings = {
     grace: GRACE_CHOICES.includes(st.grace) ? st.grace : 10, keepAwake: st.keepAwake !== false,
     sound: st.sound !== false, theme: THEMES.some(t => t[0] === st.theme) ? st.theme : 'auto',
+    // Une ville d'avant la traduction reste en français ; une ville neuve suit le téléphone.
+    lang: ['auto', 'fr', 'en'].includes(st.lang) ? st.lang : 'fr',
   };
   const ck = obj(raw.clock);
   s.clock = {
@@ -162,7 +165,7 @@ function normalize(raw) {
   } };
   const goals = obj(raw.goals);
   s.goals = { minutes: int(goals.minutes, 5, 1260, 60), days: int(goals.days, 1, 7, 3), cat: isCat(goals.cat) ? goals.cat : 'all', building: isItem(goals.building) ? goals.building : '' };
-  s.personal = { name: str(obj(raw.personal).name, 40) || 'Ma ville' };
+  s.personal = { name: str(obj(raw.personal).name, 40) };
   if (Array.isArray(raw.routines)) {
     const ids = new Set();
     s.routines = raw.routines.slice(0, 20).filter(r => r && typeof r === 'object' && str(r.name, 40) && Array.isArray(r.activityIds)).map(r => ({ id: idOf(r.id), name: str(r.name, 40), activityIds: r.activityIds.filter(id => typeof id === 'string' && /^[\w-]{1,40}$/.test(id)).slice(0, 6) })).filter(r => !ids.has(r.id) && ids.add(r.id));

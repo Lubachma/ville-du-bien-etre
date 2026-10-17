@@ -100,8 +100,11 @@ function bindEvents() {
 }
 
 function boot(hotData) {
-  document.documentElement.lang = 'fr';
+  // Une ville neuve reçoit ses exemples dans la langue du téléphone, puis la ville choisit.
+  setLang('auto');
   Store.init();
+  setLang(S.settings.lang);
+  applyStaticText();
   fillSelects();
   enhanceActivityForms();
   setupAccessibility();

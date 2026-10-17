@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
-const source = ['00-core.js', '10-state.js', '20-rules.js', '50-session.js'].map(file => fs.readFileSync(path.join(__dirname, '../src', file), 'utf8')).join('\n');
+const source = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '50-session.js'].map(file => fs.readFileSync(path.join(__dirname, '../src', file), 'utf8')).join('\n');
 function storage() {
   const data = new Map();
   return { data, fail: false, getItem(k) { return data.get(k) ?? null; }, setItem(k, v) { if (this.fail) throw new Error('QuotaExceededError'); data.set(k, String(v)); }, removeItem(k) { data.delete(k); } };

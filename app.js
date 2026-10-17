@@ -84,7 +84,9 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const clone = v => (v == null ? v : JSON.parse(JSON.stringify(v)));
 const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const NB = ' ';
-const frTypo = t => String(t).replace(/ ([:;!?»])/g, ' $1').replace(/« /g, '« ');
+// Langue affichée ('fr' ou 'en'), fixée par setLang() (05-i18n.js).
+let LANG = 'fr';
+const frTypo = t => (LANG === 'fr' ? String(t).replace(/ ([:;!?»])/g, ' $1').replace(/« /g, '« ') : String(t));
 
 function h(tag, props, ...kids) {
   const el = document.createElement(tag);
@@ -121,12 +123,13 @@ function catLabel(cat) { return h('span', { class: 'cat-label' }, catDot(cat), i
 function dec1(x) {
   const r = Math.round(x * 10) / 10;
   if (Math.abs(r) >= 100) return String(Math.round(x));
-  return (Number.isInteger(r) ? String(r) : r.toFixed(1)).replace('.', ',');
+  const s = Number.isInteger(r) ? String(r) : r.toFixed(1);
+  return LANG === 'fr' ? s.replace('.', ',') : s;
 }
 function fmt(n) {
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);
-  if (a >= 1e9) return dec1(n / 1e9) + NB + 'Md';
+  if (a >= 1e9) return dec1(n / 1e9) + NB + (LANG === 'fr' ? 'Md' : 'B');
   if (a >= 1e6) return dec1(n / 1e6) + NB + 'M';
   if (a >= 1e3) return Math.round(n / 1e3) + NB + 'k';
   return String(Math.round(n));
@@ -135,13 +138,14 @@ function fmtMin(m) {
   m = Math.round(m);
   if (m < 60) return m + NB + 'min';
   const hh = Math.floor(m / 60), mm = m % 60;
-  return hh + NB + 'h' + (mm ? NB + String(mm).padStart(2, '0') : '');
+  return hh + NB + 'h' + (mm ? NB + String(mm).padStart(2, '0') + (LANG === 'fr' ? '' : NB + 'min') : '');
 }
 function fmtAway(ms) {
   const s = Math.max(1, Math.round(ms / 1000));
   return s >= 60 ? fmtMin(s / 60) : s + NB + 's';
 }
-function plural(n, one, many) { return n + NB + (n > 1 ? many : one); }
+// Le français met 0 et 1 au singulier, l'anglais seulement 1.
+function plural(n, one, many) { return n + NB + ((LANG === 'fr' ? n <= 1 : n === 1) ? one : many); }
 function pad2(n) { return String(n).padStart(2, '0'); }
 function dbg(msg) { if (window.__ville && window.__ville.log) window.__ville.log.push((Date.now() % 100000) + ' ' + msg); }
 function rnd(a, b) { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); }
@@ -195,6 +199,154 @@ function cssVar(name) { return getComputedStyle(document.documentElement).getPro
 
 
 
+/* ---- 05-i18n.js ---- */
+/* =========================================================================
+   Traduction : un dictionnaire par langue (06-lang-fr.js, 07-lang-en.js),
+   langue courante dans LANG (00-core.js), textes fixes du HTML marqués data-i18n.
+   Une entrée est un texte ({nom} à remplacer), des pluriels { one, other }
+   ou un accord { m, f } choisi par le paramètre g.
+   ========================================================================= */
+const LANGS = ['fr', 'en'];
+const DICT = {};
+const LOCALES = { fr: 'fr-CH', en: 'en-GB' };
+const pluralRules = new Map();
+let tplIndex = null;
+
+function locale() { return LOCALES[LANG] || LOCALES.fr; }
+
+// 'auto' : la première langue du navigateur que l'app connaît, sinon l'anglais.
+function resolveLang(pref, langs) {
+  if (LANGS.includes(pref)) return pref;
+  let list = langs;
+  if (!list) {
+    const nav = typeof navigator !== 'undefined' ? navigator : {};
+    list = nav.languages && nav.languages.length ? nav.languages : [nav.language];
+  }
+  for (const entry of list) {
+    const code = String(entry || '').toLowerCase().slice(0, 2);
+    if (LANGS.includes(code)) return code;
+  }
+  return 'en';
+}
+
+function setLang(pref) {
+  LANG = resolveLang(pref);
+  if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = LANG;
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('ville:lang'));
+  }
+}
+
+function pluralCategory(n) {
+  if (!pluralRules.has(LANG)) pluralRules.set(LANG, new Intl.PluralRules(locale()));
+  return pluralRules.get(LANG).select(n);
+}
+
+function t(key, params = {}) {
+  let value = DICT[LANG] && DICT[LANG][key];
+  if (value == null) value = DICT.fr && DICT.fr[key];
+  if (value == null) return key;
+  if (typeof value === 'object') {
+    if ('one' in value || 'other' in value) value = value[pluralCategory(Number(params.n) || 0)] ?? value.other ?? value.one;
+    else value = params.g === 'f' ? value.f : value.m;
+  }
+  return String(value).replace(/\{(\w+)\}/g, (all, name) => (params[name] == null ? all : String(params[name])));
+}
+
+function applyStaticText(root) {
+  const scope = root || (typeof document !== 'undefined' ? document : null);
+  if (!scope || typeof scope.querySelectorAll !== 'function') return;
+  for (const el of scope.querySelectorAll('[data-i18n]')) el.textContent = frTypo(t(el.getAttribute('data-i18n')));
+  for (const attr of ['aria-label', 'placeholder', 'title']) {
+    for (const el of scope.querySelectorAll('[data-i18n-' + attr + ']')) el.setAttribute(attr, frTypo(t(el.getAttribute('data-i18n-' + attr))));
+  }
+}
+
+// Un exemple jamais renommé (nom par défaut dans n'importe quelle langue) suit la langue choisie.
+function displayName(name) {
+  if (!tplIndex) {
+    tplIndex = new Map();
+    for (const lang of LANGS) {
+      for (const [key, value] of Object.entries(DICT[lang] || {})) if (key.startsWith('tpl.') && typeof value === 'string') tplIndex.set(value, key);
+    }
+  }
+  const key = tplIndex.get(name);
+  return key ? t(key) : name;
+}
+
+// « Ma ville » était le nom par défaut avant la traduction : il reste traité comme tel.
+function cityName() {
+  const name = S.personal && S.personal.name;
+  return name && name !== 'Ma ville' ? name : t('city.defaultName');
+}
+
+if (typeof window !== 'undefined') window.VilleI18n = Object.freeze({ t: (key, params) => t(key, params), lang: () => LANG });
+
+
+/* ---- 06-lang-fr.js ---- */
+/* Textes français (langue d'origine du jeu). Les clés sont partagées avec 07-lang-en.js. */
+DICT.fr = {
+  'lang.auto': 'Automatique',
+  'lang.fr': 'Français',
+  'lang.en': 'English',
+  'city.defaultName': 'Ma ville',
+  'when.today': "aujourd'hui, {time}",
+  'when.yesterday': 'hier, {time}',
+  'when.other': '{date}, {time}',
+
+  // Exemples d'une ville neuve (activités, envies, obligations)
+  'tpl.act.reading': 'Lecture',
+  'tpl.act.sport': 'Sport',
+  'tpl.act.meditation': 'Méditation',
+  'tpl.act.tidying': 'Rangement',
+  'tpl.act.music': 'Musique',
+  'tpl.act.homework': 'Devoirs / travail',
+  'tpl.act.walk': 'Marche dehors',
+  'tpl.act.drawing': 'Dessin',
+  'tpl.wish.chapter': 'Lire un chapitre',
+  'tpl.wish.music': 'Jouer de la musique',
+  'tpl.wish.walk': 'Aller marcher',
+  'tpl.wish.meditate': 'Méditer',
+  'tpl.wish.draw': 'Dessiner',
+  'tpl.chore.tidy': 'Ranger',
+  'tpl.chore.dishes': 'Faire la vaisselle',
+  'tpl.chore.study': 'Réviser / travailler',
+  'tpl.chore.mail': 'Trier le courrier',
+};
+
+
+/* ---- 07-lang-en.js ---- */
+/* English texts. Same keys as 06-lang-fr.js; friendly "you", never a word about losing. */
+DICT.en = {
+  'lang.auto': 'Automatic',
+  'lang.fr': 'Français',
+  'lang.en': 'English',
+  'city.defaultName': 'My town',
+  'when.today': 'today, {time}',
+  'when.yesterday': 'yesterday, {time}',
+  'when.other': '{date}, {time}',
+
+  // Examples for a new town (activities, wishes, chores)
+  'tpl.act.reading': 'Reading',
+  'tpl.act.sport': 'Sport',
+  'tpl.act.meditation': 'Meditation',
+  'tpl.act.tidying': 'Tidying up',
+  'tpl.act.music': 'Music',
+  'tpl.act.homework': 'Homework / work',
+  'tpl.act.walk': 'Walk outside',
+  'tpl.act.drawing': 'Drawing',
+  'tpl.wish.chapter': 'Read a chapter',
+  'tpl.wish.music': 'Play music',
+  'tpl.wish.walk': 'Go for a walk',
+  'tpl.wish.meditate': 'Meditate',
+  'tpl.wish.draw': 'Draw something',
+  'tpl.chore.tidy': 'Tidy up',
+  'tpl.chore.dishes': 'Do the dishes',
+  'tpl.chore.study': 'Study / work',
+  'tpl.chore.mail': 'Sort the mail',
+};
+
+
 /* ---- 10-state.js ---- */
 /* =========================================================================
    État, validation et fusion
@@ -209,33 +361,34 @@ function validTz(tz) {
 
 function defaultState() {
   const now = Date.now();
-  const ex = (name, cat, min) => ({ id: uid(), name, cat, min, mode: cat === 'corps' ? 'free' : 'focus', energy: name === 'Aller marcher' || cat === 'calme' ? 'low' : 'medium', place: name === 'Aller marcher' ? 'outside' : 'any', repeat: 'always', completedAt: 0, ex: true });
+  // Les exemples prennent les noms de la langue affichée ; displayName() les traduit tant qu'ils ne sont pas renommés.
+  const ex = (key, cat, min) => ({ id: uid(), name: t(key), cat, min, mode: cat === 'corps' ? 'free' : 'focus', energy: key === 'tpl.wish.walk' || cat === 'calme' ? 'low' : 'medium', place: key === 'tpl.wish.walk' ? 'outside' : 'any', repeat: 'always', completedAt: 0, ex: true });
   return {
     v: 2, createdAt: now, updatedAt: 0, revision: '',
     coins: 5e6, earned: 0,
-    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto' },
+    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto' },
     clock: { tz: currentTz(), maxSeen: now, lastDay: '' },
     activities: [
-      { id: uid(), name: 'Lecture', cat: 'esprit', min: 10 },
-      { id: uid(), name: 'Sport', cat: 'corps', min: 20, mode: 'free', energy: 'high' },
-      { id: uid(), name: 'Méditation', cat: 'calme', min: 10, energy: 'low' },
-      { id: uid(), name: 'Rangement', cat: 'foyer', min: 15 },
-      { id: uid(), name: 'Musique', cat: 'crea', min: 20 },
-      { id: uid(), name: 'Devoirs / travail', cat: 'esprit', min: 25 },
-      { id: uid(), name: 'Marche dehors', cat: 'corps', min: 20, mode: 'free', place: 'outside', energy: 'low' },
-      { id: uid(), name: 'Dessin', cat: 'crea', min: 15 },
+      { id: uid(), name: t('tpl.act.reading'), cat: 'esprit', min: 10 },
+      { id: uid(), name: t('tpl.act.sport'), cat: 'corps', min: 20, mode: 'free', energy: 'high' },
+      { id: uid(), name: t('tpl.act.meditation'), cat: 'calme', min: 10, energy: 'low' },
+      { id: uid(), name: t('tpl.act.tidying'), cat: 'foyer', min: 15 },
+      { id: uid(), name: t('tpl.act.music'), cat: 'crea', min: 20 },
+      { id: uid(), name: t('tpl.act.homework'), cat: 'esprit', min: 25 },
+      { id: uid(), name: t('tpl.act.walk'), cat: 'corps', min: 20, mode: 'free', place: 'outside', energy: 'low' },
+      { id: uid(), name: t('tpl.act.drawing'), cat: 'crea', min: 15 },
     ],
     wishes: [
-      ex('Lire un chapitre', 'esprit', 15), ex('Jouer de la musique', 'crea', 20),
-      ex('Aller marcher', 'corps', 20), ex('Méditer', 'calme', 10), ex('Dessiner', 'crea', 15),
+      ex('tpl.wish.chapter', 'esprit', 15), ex('tpl.wish.music', 'crea', 20),
+      ex('tpl.wish.walk', 'corps', 20), ex('tpl.wish.meditate', 'calme', 10), ex('tpl.wish.draw', 'crea', 15),
     ],
     chores: [
-      ex('Ranger', 'foyer', 15), ex('Faire la vaisselle', 'foyer', 10),
-      ex('Réviser / travailler', 'esprit', 30), ex('Trier le courrier', 'foyer', 15),
+      ex('tpl.chore.tidy', 'foyer', 15), ex('tpl.chore.dishes', 'foyer', 10),
+      ex('tpl.chore.study', 'esprit', 30), ex('tpl.chore.mail', 'foyer', 15),
     ],
     draw: { pool: 'wishes', current: null, rerolls: 0, filters: { maxMin: 0, energy: 'any', place: 'any' } },
     goals: { minutes: 60, days: 3, cat: 'all', building: '' },
-    personal: { name: 'Ma ville' }, routines: [], routineRun: null,
+    personal: { name: '' }, routines: [], routineRun: null,
     city: {
       size: 7,
       tiles: [
@@ -344,6 +497,8 @@ function normalize(raw) {
   s.settings = {
     grace: GRACE_CHOICES.includes(st.grace) ? st.grace : 10, keepAwake: st.keepAwake !== false,
     sound: st.sound !== false, theme: THEMES.some(t => t[0] === st.theme) ? st.theme : 'auto',
+    // Une ville d'avant la traduction reste en français ; une ville neuve suit le téléphone.
+    lang: ['auto', 'fr', 'en'].includes(st.lang) ? st.lang : 'fr',
   };
   const ck = obj(raw.clock);
   s.clock = {
@@ -360,7 +515,7 @@ function normalize(raw) {
   } };
   const goals = obj(raw.goals);
   s.goals = { minutes: int(goals.minutes, 5, 1260, 60), days: int(goals.days, 1, 7, 3), cat: isCat(goals.cat) ? goals.cat : 'all', building: isItem(goals.building) ? goals.building : '' };
-  s.personal = { name: str(obj(raw.personal).name, 40) || 'Ma ville' };
+  s.personal = { name: str(obj(raw.personal).name, 40) };
   if (Array.isArray(raw.routines)) {
     const ids = new Set();
     s.routines = raw.routines.slice(0, 20).filter(r => r && typeof r === 'object' && str(r.name, 40) && Array.isArray(r.activityIds)).map(r => ({ id: idOf(r.id), name: str(r.name, 40), activityIds: r.activityIds.filter(id => typeof id === 'string' && /^[\w-]{1,40}$/.test(id)).slice(0, 6) })).filter(r => !ids.has(r.id) && ids.add(r.id));
@@ -1044,27 +1199,36 @@ function maxDay(a, b) { return (a || '') > (b || '') ? a : b; }
 function effectiveDay() { return maxDay(today(), S.clock.lastDay); }
 function keyToUTC(key) { const [y, m, d] = key.split('-').map(Number); return Date.UTC(y, m - 1, d, 12); }
 function shiftDay(key, n) { const t = new Date(keyToUTC(key) + n * 86400000); return t.getUTCFullYear() + '-' + pad2(t.getUTCMonth() + 1) + '-' + pad2(t.getUTCDate()); }
-const fmtDayLong = new Intl.DateTimeFormat('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-const fmtDayShortUTC = new Intl.DateTimeFormat('fr-CH', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-const fmtWeekday = new Intl.DateTimeFormat('fr-CH', { weekday: 'short', timeZone: 'UTC' });
+// Dates d'un jour (clé AAAA-MM-JJ lue en UTC), une mise en forme par langue.
+const DAY_FMT_OPTIONS = {
+  long: { weekday: 'long', day: 'numeric', month: 'long' },
+  short: { weekday: 'short', day: 'numeric', month: 'short' },
+  weekday: { weekday: 'short' },
+};
+const dayLabelCache = new Map();
+function dayFmt(kind) {
+  const id = LANG + ':' + kind;
+  if (!dayLabelCache.has(id)) dayLabelCache.set(id, new Intl.DateTimeFormat(locale(), { ...DAY_FMT_OPTIONS[kind], timeZone: 'UTC' }));
+  return dayLabelCache.get(id);
+}
 const timeFmtCache = new Map();
 function fmtTime(ts) {
-  const tz = S.clock.tz;
-  if (!timeFmtCache.has(tz)) {
+  const tz = S.clock.tz, id = LANG + ':' + tz;
+  if (!timeFmtCache.has(id)) {
     let f;
-    try { f = new Intl.DateTimeFormat('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: tz }); }
-    catch (e) { f = new Intl.DateTimeFormat('fr-CH', { hour: '2-digit', minute: '2-digit' }); }
-    timeFmtCache.set(tz, f);
+    try { f = new Intl.DateTimeFormat(locale(), { hour: '2-digit', minute: '2-digit', timeZone: tz }); }
+    catch (e) { f = new Intl.DateTimeFormat(locale(), { hour: '2-digit', minute: '2-digit' }); }
+    timeFmtCache.set(id, f);
   }
-  return timeFmtCache.get(tz).format(ts);
+  return timeFmtCache.get(id).format(ts);
 }
-function dayLabel(key) { return fmtDayLong.format(keyToUTC(key)); }
+function dayLabel(key) { return dayFmt('long').format(keyToUTC(key)); }
 function whenLabel(ts) {
   if (!validTs(ts)) return '';
-  const k = dayOf(ts), t = today();
-  if (k === t) return "aujourd'hui, " + fmtTime(ts);
-  if (k === shiftDay(t, -1)) return 'hier, ' + fmtTime(ts);
-  return fmtDayShortUTC.format(keyToUTC(k)) + ', ' + fmtTime(ts);
+  const k = dayOf(ts), now = today(), time = fmtTime(ts);
+  if (k === now) return t('when.today', { time });
+  if (k === shiftDay(now, -1)) return t('when.yesterday', { time });
+  return t('when.other', { date: dayFmt('short').format(keyToUTC(k)), time });
 }
 
 function totalMinutes() { return CAT_ORDER.reduce((a, c) => a + (S.stats.byCat[c] || 0), 0); }
@@ -2015,7 +2179,7 @@ function applyTheme() {
   }
 }
 function renderHeader() {
-  $('.brand-name').textContent = frTypo(S.personal && S.personal.name ? S.personal.name : 'Ville du bien-être');
+  $('.brand-name').textContent = frTypo(cityName());
   $('#balance').textContent = fmt(S.coins);
   const st = streak();
   $('#streak').textContent = st + NB + 'j';
@@ -2492,7 +2656,7 @@ function renderWeekChart() {
       bars[i] = el('path', { class: 'bar', d: 'M' + x0 + ',' + (yy + hh) + 'V' + (yy + r) + 'Q' + x0 + ',' + yy + ' ' + (x0 + r) + ',' + yy + 'H' + (x0 + bw - r) + 'Q' + (x0 + bw) + ',' + yy + ' ' + (x0 + bw) + ',' + (yy + r) + 'V' + (yy + hh) + 'Z' });
       if (isToday || i === maxIdx) el('text', { class: 't-val', x: cx, y: yy - 5, 'text-anchor': 'middle' }, String(dd.v));
     }
-    el('text', { class: 't-axis' + (isToday ? ' today' : ''), x: cx, y: H - 6, 'text-anchor': 'middle' }, isToday ? 'auj.' : fmtWeekday.format(keyToUTC(dd.k)).replace('.', ''));
+    el('text', { class: 't-axis' + (isToday ? ' today' : ''), x: cx, y: H - 6, 'text-anchor': 'middle' }, isToday ? 'auj.' : dayFmt('weekday').format(keyToUTC(dd.k)).replace('.', ''));
     const label = dayLabel(dd.k) + ' : ' + fmtMin(dd.v);
     const hit = el('rect', { class: 'hit', x: cx - band / 2, y: padT - 10, width: band, height: plotH + 10 + padB, 'aria-hidden': 'true' });
     const show = () => { readout.textContent = frTypo(label.charAt(0).toUpperCase() + label.slice(1)); bars.forEach((b, j) => b && b.classList.toggle('hot', j !== i)); };
@@ -2626,7 +2790,7 @@ function openBuildingSheet(tile) {
       commit();
       toast(it.name + (it.fem ? ' démolie.' : ' démoli.'));
     });
-    const built = validTs(tile.at) ? (it.fem ? 'Construite le ' : 'Construit le ') + fmtDayShortUTC.format(keyToUTC(dayOf(tile.at))) : '';
+    const built = validTs(tile.at) ? (it.fem ? 'Construite le ' : 'Construit le ') + dayFmt('short').format(keyToUTC(dayOf(tile.at))) : '';
     body.append(
       h('div', { class: 'bsheet' }, cv,
         h('div', { class: 'bsheet-text' },
@@ -2909,7 +3073,7 @@ function renderGoals() {
   let card = $('#goalsCard');
   if (!card) { card = h('section', { id: 'goalsCard', class: 'card feature-card', 'aria-label': 'Objectif hebdomadaire' }); $('#kpis').after(card); }
   const p = goalProgress(), g = p.goal;
-  const range = fmtDayShortUTC.format(keyToUTC(p.start)) + ' – ' + fmtDayShortUTC.format(keyToUTC(p.end));
+  const range = dayFmt('short').format(keyToUTC(p.start)) + ' – ' + dayFmt('short').format(keyToUTC(p.end));
   card.replaceChildren(
     h('div', { class: 'feature-between' }, h('h3', {}, p.done ? 'Objectif atteint !' : 'Mon rythme de la semaine'),
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openGoals }, 'Modifier')),
@@ -3134,7 +3298,7 @@ function buildingLevelText(key) {
 }
 function openCityPersonalization() {
   openSheet('Ma ville à moi', body => {
-    const name = h('input', { class: 'input', id: 'cityName', maxlength: '40', value: (S.personal || {}).name || 'Ma ville', required: true });
+    const name = h('input', { class: 'input', id: 'cityName', maxlength: '40', value: cityName(), required: true });
     body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = name.value.trim().slice(0, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast('Ta ville a un nouveau nom.'); } },
       h('div', { class: 'field' }, h('label', { for: 'cityName' }, 'Nom de ma ville'), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), 'Enregistrer le nom')),
       h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, 'Une ville qui grandit avec toi'),
@@ -3166,7 +3330,7 @@ async function exportCityImage() {
     const footFont = '600 ' + Math.round(width * .019) + 'px Figtree, system-ui, sans-serif';
     if (document.fonts && document.fonts.load) await Promise.all([document.fonts.load(titleFont), document.fonts.load(footFont)]).catch(() => {});
     ctx.fillStyle = cssVar('--ink') || '#20332a'; ctx.textBaseline = 'middle'; ctx.font = titleFont;
-    ctx.fillText(frTypo((S.personal || {}).name || 'Ma ville'), margin, head * .55, width - margin * 2);
+    ctx.fillText(frTypo(cityName()), margin, head * .55, width - margin * 2);
     ctx.drawImage(source, 0, head, width, cityH);
     ctx.fillStyle = cssVar('--muted') || '#536459'; ctx.font = footFont;
     ctx.fillText(frTypo('Ville du bien-être · ' + fmtEffort(totalEffortMinutes()) + ' pour prendre soin de moi'), margin, out.height - foot * .5, width - margin * 2);
@@ -3988,8 +4152,11 @@ function bindEvents() {
 }
 
 function boot(hotData) {
-  document.documentElement.lang = 'fr';
+  // Une ville neuve reçoit ses exemples dans la langue du téléphone, puis la ville choisit.
+  setLang('auto');
   Store.init();
+  setLang(S.settings.lang);
+  applyStaticText();
   fillSelects();
   enhanceActivityForms();
   setupAccessibility();

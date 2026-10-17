@@ -56,7 +56,7 @@ function renderWeekChart() {
       bars[i] = el('path', { class: 'bar', d: 'M' + x0 + ',' + (yy + hh) + 'V' + (yy + r) + 'Q' + x0 + ',' + yy + ' ' + (x0 + r) + ',' + yy + 'H' + (x0 + bw - r) + 'Q' + (x0 + bw) + ',' + yy + ' ' + (x0 + bw) + ',' + (yy + r) + 'V' + (yy + hh) + 'Z' });
       if (isToday || i === maxIdx) el('text', { class: 't-val', x: cx, y: yy - 5, 'text-anchor': 'middle' }, String(dd.v));
     }
-    el('text', { class: 't-axis' + (isToday ? ' today' : ''), x: cx, y: H - 6, 'text-anchor': 'middle' }, isToday ? 'auj.' : fmtWeekday.format(keyToUTC(dd.k)).replace('.', ''));
+    el('text', { class: 't-axis' + (isToday ? ' today' : ''), x: cx, y: H - 6, 'text-anchor': 'middle' }, isToday ? 'auj.' : dayFmt('weekday').format(keyToUTC(dd.k)).replace('.', ''));
     const label = dayLabel(dd.k) + ' : ' + fmtMin(dd.v);
     const hit = el('rect', { class: 'hit', x: cx - band / 2, y: padT - 10, width: band, height: plotH + 10 + padB, 'aria-hidden': 'true' });
     const show = () => { readout.textContent = frTypo(label.charAt(0).toUpperCase() + label.slice(1)); bars.forEach((b, j) => b && b.classList.toggle('hot', j !== i)); };

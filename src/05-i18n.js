@@ -1,0 +1,81 @@
+/* =========================================================================
+   Traduction : un dictionnaire par langue (06-lang-fr.js, 07-lang-en.js),
+   langue courante dans LANG (00-core.js), textes fixes du HTML marqués data-i18n.
+   Une entrée est un texte ({nom} à remplacer), des pluriels { one, other }
+   ou un accord { m, f } choisi par le paramètre g.
+   ========================================================================= */
+const LANGS = ['fr', 'en'];
+const DICT = {};
+const LOCALES = { fr: 'fr-CH', en: 'en-GB' };
+const pluralRules = new Map();
+let tplIndex = null;
+
+function locale() { return LOCALES[LANG] || LOCALES.fr; }
+
+// 'auto' : la première langue du navigateur que l'app connaît, sinon l'anglais.
+function resolveLang(pref, langs) {
+  if (LANGS.includes(pref)) return pref;
+  let list = langs;
+  if (!list) {
+    const nav = typeof navigator !== 'undefined' ? navigator : {};
+    list = nav.languages && nav.languages.length ? nav.languages : [nav.language];
+  }
+  for (const entry of list) {
+    const code = String(entry || '').toLowerCase().slice(0, 2);
+    if (LANGS.includes(code)) return code;
+  }
+  return 'en';
+}
+
+function setLang(pref) {
+  LANG = resolveLang(pref);
+  if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = LANG;
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('ville:lang'));
+  }
+}
+
+function pluralCategory(n) {
+  if (!pluralRules.has(LANG)) pluralRules.set(LANG, new Intl.PluralRules(locale()));
+  return pluralRules.get(LANG).select(n);
+}
+
+function t(key, params = {}) {
+  let value = DICT[LANG] && DICT[LANG][key];
+  if (value == null) value = DICT.fr && DICT.fr[key];
+  if (value == null) return key;
+  if (typeof value === 'object') {
+    if ('one' in value || 'other' in value) value = value[pluralCategory(Number(params.n) || 0)] ?? value.other ?? value.one;
+    else value = params.g === 'f' ? value.f : value.m;
+  }
+  return String(value).replace(/\{(\w+)\}/g, (all, name) => (params[name] == null ? all : String(params[name])));
+}
+
+function applyStaticText(root) {
+  const scope = root || (typeof document !== 'undefined' ? document : null);
+  if (!scope || typeof scope.querySelectorAll !== 'function') return;
+  for (const el of scope.querySelectorAll('[data-i18n]')) el.textContent = frTypo(t(el.getAttribute('data-i18n')));
+  for (const attr of ['aria-label', 'placeholder', 'title']) {
+    for (const el of scope.querySelectorAll('[data-i18n-' + attr + ']')) el.setAttribute(attr, frTypo(t(el.getAttribute('data-i18n-' + attr))));
+  }
+}
+
+// Un exemple jamais renommé (nom par défaut dans n'importe quelle langue) suit la langue choisie.
+function displayName(name) {
+  if (!tplIndex) {
+    tplIndex = new Map();
+    for (const lang of LANGS) {
+      for (const [key, value] of Object.entries(DICT[lang] || {})) if (key.startsWith('tpl.') && typeof value === 'string') tplIndex.set(value, key);
+    }
+  }
+  const key = tplIndex.get(name);
+  return key ? t(key) : name;
+}
+
+// « Ma ville » était le nom par défaut avant la traduction : il reste traité comme tel.
+function cityName() {
+  const name = S.personal && S.personal.name;
+  return name && name !== 'Ma ville' ? name : t('city.defaultName');
+}
+
+if (typeof window !== 'undefined') window.VilleI18n = Object.freeze({ t: (key, params) => t(key, params), lang: () => LANG });

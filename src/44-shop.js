@@ -73,7 +73,7 @@ function openBuildingSheet(tile) {
       commit();
       toast(it.name + (it.fem ? ' démolie.' : ' démoli.'));
     });
-    const built = validTs(tile.at) ? (it.fem ? 'Construite le ' : 'Construit le ') + fmtDayShortUTC.format(keyToUTC(dayOf(tile.at))) : '';
+    const built = validTs(tile.at) ? (it.fem ? 'Construite le ' : 'Construit le ') + dayFmt('short').format(keyToUTC(dayOf(tile.at))) : '';
     body.append(
       h('div', { class: 'bsheet' }, cv,
         h('div', { class: 'bsheet-text' },
