@@ -5,7 +5,18 @@
 .activity-options { grid-column: 1 / -1; }
 .activity-options[open] { padding-bottom: 4px; }
 .activity-options > .note { margin-top: 10px; }
-.draw-filters { display: grid; gap: 10px; padding: 14px; }
+.draw-filters { padding: 0; }
+.draw-filters > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 14px; color: var(--ink); }
+.draw-filters > summary::-webkit-details-marker { display: none; }
+.draw-filters > summary::after {
+  content: ""; flex: none; width: 9px; height: 9px; margin: 0 4px 4px auto;
+  border: solid var(--ink-2); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .15s ease;
+}
+.draw-filters[open] > summary::after { margin-bottom: -4px; transform: rotate(-135deg); }
+.draw-filter-head { display: grid; gap: 2px; min-width: 0; }
+.draw-filter-title { font-size: 16px; font-weight: 700; }
+.draw-filter-summary { color: var(--muted); font-size: 13px; font-weight: 600; }
+.draw-filter-body { display: grid; gap: 10px; padding: 0 14px 14px; }
 .draw-filter-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .draw-filters .note { margin: 0; }
 .draw-filter-actions { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
@@ -14,7 +25,6 @@
 .task-waiting { background: var(--surface-2); }
 .act .task-status { text-align: left; }
 .act-wrap .act { width: 100%; height: 100%; }
-.act-wrap .act-name { padding-right: 22px; }
 .mode-choices .chip { flex: 1; padding-inline: 10px; }
 .rows .row-sub { flex-wrap: wrap; }
 .rows .task-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: end; gap: 4px; }

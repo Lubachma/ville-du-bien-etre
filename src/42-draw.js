@@ -1,5 +1,6 @@
 /* ---------- Tirage contextualisé ---------- */
 const ACT_DRAW_TIMES = [0, 5, 10, 15, 20, 30, 60, 180];
+const DRAW_ENERGIES = [['any', 'Peu importe'], ['low', 'Basse'], ['medium', 'Moyenne'], ['high', 'Haute']];
 let drawAnim = null;
 let drawBusyUntil = 0;
 function drawFilters() {
@@ -38,24 +39,32 @@ function renderDrawFilters() {
         commit();
         announce(S.draw.current ? 'Filtres enregistrés pour le prochain tirage. Le tirage actuel est conservé.' : 'Filtres mis à jour.');
       } }, options));
-    root = h('section', { class: 'card draw-filters', id: 'drawFilters', 'aria-label': 'Adapter le tirage à ma disponibilité' },
-      h('h3', {}, 'Ce qui me convient maintenant'),
-      h('div', { class: 'draw-filter-fields' },
-        field('drawMaxMin', 'Mon temps', ACT_DRAW_TIMES.map(t => h('option', { value: t }, t ? t + NB + 'min maximum' : 'Sans limite'))),
-        field('drawEnergy', 'Mon énergie', activityOptions([['any', 'Peu importe'], ['low', 'Basse'], ['medium', 'Moyenne'], ['high', 'Haute']], 'any')),
-        field('drawPlace', 'Mon lieu', activityOptions(ACT_PLACES, 'any'))),
-      h('div', { class: 'draw-filter-actions' }, h('span', { class: 'draw-filter-count', id: 'drawFilterCount', 'aria-live': 'polite' }),
-        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
-          S.draw.filters = { maxMin: 0, energy: 'any', place: 'any' }; commit(); announce('Filtres réinitialisés.');
-        } }, 'Tout proposer')),
-      h('p', { class: 'note', id: 'drawFilterNote' }));
+    // Repliés par défaut : le bouton « Tirer au sort » reste visible sans faire défiler.
+    root = h('details', { class: 'card draw-filters', id: 'drawFilters' },
+      h('summary', {}, h('span', { class: 'draw-filter-head' },
+        h('span', { class: 'draw-filter-title' }, 'Ce qui me convient maintenant'),
+        h('span', { class: 'draw-filter-summary', id: 'drawFilterSummary' }))),
+      h('div', { class: 'draw-filter-body' },
+        h('div', { class: 'draw-filter-fields' },
+          field('drawMaxMin', 'Mon temps', ACT_DRAW_TIMES.map(t => h('option', { value: t }, t ? t + NB + 'min maximum' : 'Sans limite'))),
+          field('drawEnergy', 'Mon énergie', activityOptions(DRAW_ENERGIES, 'any')),
+          field('drawPlace', 'Mon lieu', activityOptions(ACT_PLACES, 'any'))),
+        h('div', { class: 'draw-filter-actions' }, h('span', { class: 'draw-filter-count', id: 'drawFilterCount', 'aria-live': 'polite' }),
+          h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+            S.draw.filters = { maxMin: 0, energy: 'any', place: 'any' }; commit(); announce('Filtres réinitialisés.');
+          } }, 'Tout proposer')),
+        h('p', { class: 'note', id: 'drawFilterNote' })));
     $('#drawCard').before(root);
   }
-  const f = drawFilters();
+  const f = drawFilters(), count = poolItems(S.draw.pool).length;
   $('#drawMaxMin').value = String(f.maxMin);
   $('#drawEnergy').value = f.energy;
   $('#drawPlace').value = f.place;
-  $('#drawFilterCount').textContent = frTypo(plural(poolItems(S.draw.pool).length, 'idée disponible', 'idées disponibles'));
+  const active = [f.maxMin ? f.maxMin + NB + 'min max' : '',
+    f.energy !== 'any' ? 'énergie ' + DRAW_ENERGIES.find(([value]) => value === f.energy)[1].toLowerCase() : '',
+    f.place !== 'any' ? ACT_PLACES.find(([value]) => value === f.place)[1].toLowerCase() : ''].filter(Boolean);
+  $('#drawFilterSummary').textContent = frTypo((active.length ? active.join(' · ') : 'Temps, énergie, lieu') + ' · ' + plural(count, 'idée', 'idées'));
+  $('#drawFilterCount').textContent = frTypo(plural(count, 'idée disponible', 'idées disponibles'));
   $('#drawFilterNote').textContent = frTypo(S.draw.current
     ? 'Ces filtres s’appliquent au prochain tirage. Le tirage actuel, son bonus et le prix de sa relance sont conservés.'
     : 'Les idées demandant moins d’énergie restent proposées. Le bonus nécessite au moins ' + DRAW_MIN_POOL + ' idées disponibles avec ces filtres.');

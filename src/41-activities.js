@@ -44,7 +44,7 @@ function completeTask(a) {
 function resetTask(key, id) {
   const it = S[key].find(item => item.id === id);
   if (!it) return;
-  it.completedAt = null;
+  it.completedAt = 0;   // même valeur que normalize() pour « jamais terminée »
   commit();
   toast('Remise à disposition.');
 }

@@ -169,8 +169,8 @@ function openWakeWarning(o, wake) {
     const ack = h('input', { type: 'checkbox', id: 'wakeAck' });
     body.append(
       h('p', {}, wake === 'off'
-        ? "Tu as désactivé « Garder l'écran allumé ». Si l'écran se verrouille pendant la session, elle sera perdue."
-        : "Ici, l'app ne peut pas empêcher la mise en veille. Si l'écran se verrouille pendant la session, elle sera perdue : l'app ne peut pas faire la différence avec un changement d'app."),
+        ? "Tu as désactivé « Garder l'écran allumé ». Si l'écran se verrouille pendant la session, elle sera interrompue."
+        : "Ici, l'app ne peut pas empêcher la mise en veille. Si l'écran se verrouille pendant la session, elle sera interrompue : l'app ne peut pas faire la différence avec un changement d'app."),
       h('p', { class: 'section-title' }, 'Avant de commencer'),
       h('ul', { class: 'info-list' },
         h('li', {}, icon('sun'), h('span', {}, h('strong', {}, 'iPhone : '), 'Réglages → Luminosité et affichage → Verrouillage automatique → Jamais. En mode Économie d’énergie, l’iPhone se verrouille quand même au bout de 30 s.')),
@@ -280,7 +280,8 @@ function showRun(a) {
   bonus.hidden = !a.drawPct;
   bonus.textContent = a.drawPct ? frTypo('Tirage accepté · bonus +' + a.drawPct + NB + '%') : '';
   $('#timerSub').textContent = frTypo('Gain à la fin : ' + fmt(a.promised || rewardFor(a.min, a.drawPct).total));
-  $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? 'Activité libre : le chrono continue écran verrouillé ou app fermée. Rouvre cette page pour enregistrer le résultat.' : "Concentration : garde l'app à l'écran. Au-delà de " + S.settings.grace + NB + 's d’absence, le défi s’arrête ; ton temps effectué reste enregistré.'));
+  $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? 'Rouvre l’app après la fin pour enregistrer ta récompense. Le son de fin n’est garanti que si l’app est ouverte.' : "Concentration : garde l'app à l'écran. Au-delà de " + S.settings.grace + NB + 's d’absence, le défi s’arrête ; ton temps effectué reste enregistré.'));
+  $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
   $('#sessRun').hidden = false;
@@ -379,7 +380,7 @@ function onReturn() {
   run.lastWall = Date.now();
   if (away > graceMs()) { failSession('away', away); return; }
   const al = $('#sessAlert');
-  al.replaceChildren(icon('alert'), h('span', {}, "L'app n'était plus à l'écran (" + fmtAway(away) + '). Au-delà de ' + S.settings.grace + NB + 's, la session est perdue.'));
+  al.replaceChildren(icon('alert'), h('span', {}, "L'app n'était plus à l'écran (" + fmtAway(away) + '). Au-delà de ' + S.settings.grace + NB + 's, la session est interrompue.'));
   al.hidden = false;
   requestWake();
 }
@@ -551,8 +552,8 @@ function showFail(a, reason, awayMs, elapsed) {
   showResult(res => {
     res.append(
       h('div', { class: 'res-fail' }, icon('lost', 'ic-big')),
-      h('h2', { class: 'res-title', tabindex: '-1' }, 'Session perdue'),
-      h('p', { class: 'sub' }, a.name + ' · ' + a.min + NB + 'min' + (done ? ' (' + done + NB + 'min faites)' : '')),
+      h('h2', { class: 'res-title', tabindex: '-1' }, 'Session interrompue'),
+      h('p', { class: 'sub' }, a.name + ' · ' + a.min + NB + 'min' + (done ? ' (' + done + NB + 'min ' + (done > 1 ? 'faites' : 'faite') + ')' : '')),
       h('p', {}, why),
       h('p', { class: 'note' }, a.draw ? "Aucune pièce cette fois. Ton temps effectué reste dans le journal. Tu peux recommencer cette même activité sans frais." : "Aucune pièce cette fois. Ton temps effectué reste enregistré dans ton journal et tes objectifs."),
       h('div', { class: 'res-actions' },
@@ -564,11 +565,11 @@ function showFail(a, reason, awayMs, elapsed) {
 function setWake(state) {
   const li = $('#wakeStatus');
   const msg = {
-    free: ['sun', 'Activité libre : tu peux verrouiller l’écran ou utiliser une autre app.'],
+    free: ['sun', 'Activité libre : tu peux verrouiller l’écran ou changer d’app, le chrono continue.'],
     on: ['sun', 'Écran maintenu allumé pendant la session.'],
-    off: ['alert', "Écran : mise en veille normale. S'il se verrouille, la session est perdue."],
+    off: ['alert', "Écran : mise en veille normale. S'il se verrouille, la session est interrompue."],
     checking: ['sun', "Activation de l'écran allumé…"],
-    na: ['alert', "L'écran ne peut pas être maintenu allumé ici : s'il se verrouille, la session est perdue."],
+    na: ['alert', "L'écran ne peut pas être maintenu allumé ici : s'il se verrouille, la session est interrompue."],
   }[state];
   li.className = state === 'na' || state === 'off' ? 'warn' : '';
   li.replaceChildren(icon(msg[0]), h('span', {}, msg[1]));

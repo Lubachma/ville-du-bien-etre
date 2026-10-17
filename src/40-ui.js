@@ -126,7 +126,7 @@ function applyTheme() {
   }
 }
 function renderHeader() {
-  $('.brand-name').textContent = S.personal && S.personal.name ? S.personal.name : 'Ville du bien-être';
+  $('.brand-name').textContent = frTypo(S.personal && S.personal.name ? S.personal.name : 'Ville du bien-être');
   $('#balance').textContent = fmt(S.coins);
   const st = streak();
   $('#streak').textContent = st + NB + 'j';

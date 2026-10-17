@@ -2015,7 +2015,7 @@ function applyTheme() {
   }
 }
 function renderHeader() {
-  $('.brand-name').textContent = S.personal && S.personal.name ? S.personal.name : 'Ville du bien-être';
+  $('.brand-name').textContent = frTypo(S.personal && S.personal.name ? S.personal.name : 'Ville du bien-être');
   $('#balance').textContent = fmt(S.coins);
   const st = streak();
   $('#streak').textContent = st + NB + 'j';
@@ -2117,7 +2117,7 @@ function completeTask(a) {
 function resetTask(key, id) {
   const it = S[key].find(item => item.id === id);
   if (!it) return;
-  it.completedAt = null;
+  it.completedAt = 0;   // même valeur que normalize() pour « jamais terminée »
   commit();
   toast('Remise à disposition.');
 }
@@ -2255,6 +2255,7 @@ function openEditSheet(key, id) {
 /* ---- 42-draw.js ---- */
 /* ---------- Tirage contextualisé ---------- */
 const ACT_DRAW_TIMES = [0, 5, 10, 15, 20, 30, 60, 180];
+const DRAW_ENERGIES = [['any', 'Peu importe'], ['low', 'Basse'], ['medium', 'Moyenne'], ['high', 'Haute']];
 let drawAnim = null;
 let drawBusyUntil = 0;
 function drawFilters() {
@@ -2293,24 +2294,32 @@ function renderDrawFilters() {
         commit();
         announce(S.draw.current ? 'Filtres enregistrés pour le prochain tirage. Le tirage actuel est conservé.' : 'Filtres mis à jour.');
       } }, options));
-    root = h('section', { class: 'card draw-filters', id: 'drawFilters', 'aria-label': 'Adapter le tirage à ma disponibilité' },
-      h('h3', {}, 'Ce qui me convient maintenant'),
-      h('div', { class: 'draw-filter-fields' },
-        field('drawMaxMin', 'Mon temps', ACT_DRAW_TIMES.map(t => h('option', { value: t }, t ? t + NB + 'min maximum' : 'Sans limite'))),
-        field('drawEnergy', 'Mon énergie', activityOptions([['any', 'Peu importe'], ['low', 'Basse'], ['medium', 'Moyenne'], ['high', 'Haute']], 'any')),
-        field('drawPlace', 'Mon lieu', activityOptions(ACT_PLACES, 'any'))),
-      h('div', { class: 'draw-filter-actions' }, h('span', { class: 'draw-filter-count', id: 'drawFilterCount', 'aria-live': 'polite' }),
-        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
-          S.draw.filters = { maxMin: 0, energy: 'any', place: 'any' }; commit(); announce('Filtres réinitialisés.');
-        } }, 'Tout proposer')),
-      h('p', { class: 'note', id: 'drawFilterNote' }));
+    // Repliés par défaut : le bouton « Tirer au sort » reste visible sans faire défiler.
+    root = h('details', { class: 'card draw-filters', id: 'drawFilters' },
+      h('summary', {}, h('span', { class: 'draw-filter-head' },
+        h('span', { class: 'draw-filter-title' }, 'Ce qui me convient maintenant'),
+        h('span', { class: 'draw-filter-summary', id: 'drawFilterSummary' }))),
+      h('div', { class: 'draw-filter-body' },
+        h('div', { class: 'draw-filter-fields' },
+          field('drawMaxMin', 'Mon temps', ACT_DRAW_TIMES.map(t => h('option', { value: t }, t ? t + NB + 'min maximum' : 'Sans limite'))),
+          field('drawEnergy', 'Mon énergie', activityOptions(DRAW_ENERGIES, 'any')),
+          field('drawPlace', 'Mon lieu', activityOptions(ACT_PLACES, 'any'))),
+        h('div', { class: 'draw-filter-actions' }, h('span', { class: 'draw-filter-count', id: 'drawFilterCount', 'aria-live': 'polite' }),
+          h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+            S.draw.filters = { maxMin: 0, energy: 'any', place: 'any' }; commit(); announce('Filtres réinitialisés.');
+          } }, 'Tout proposer')),
+        h('p', { class: 'note', id: 'drawFilterNote' })));
     $('#drawCard').before(root);
   }
-  const f = drawFilters();
+  const f = drawFilters(), count = poolItems(S.draw.pool).length;
   $('#drawMaxMin').value = String(f.maxMin);
   $('#drawEnergy').value = f.energy;
   $('#drawPlace').value = f.place;
-  $('#drawFilterCount').textContent = frTypo(plural(poolItems(S.draw.pool).length, 'idée disponible', 'idées disponibles'));
+  const active = [f.maxMin ? f.maxMin + NB + 'min max' : '',
+    f.energy !== 'any' ? 'énergie ' + DRAW_ENERGIES.find(([value]) => value === f.energy)[1].toLowerCase() : '',
+    f.place !== 'any' ? ACT_PLACES.find(([value]) => value === f.place)[1].toLowerCase() : ''].filter(Boolean);
+  $('#drawFilterSummary').textContent = frTypo((active.length ? active.join(' · ') : 'Temps, énergie, lieu') + ' · ' + plural(count, 'idée', 'idées'));
+  $('#drawFilterCount').textContent = frTypo(plural(count, 'idée disponible', 'idées disponibles'));
   $('#drawFilterNote').textContent = frTypo(S.draw.current
     ? 'Ces filtres s’appliquent au prochain tirage. Le tirage actuel, son bonus et le prix de sa relance sont conservés.'
     : 'Les idées demandant moins d’énergie restent proposées. Le bonus nécessite au moins ' + DRAW_MIN_POOL + ' idées disponibles avec ces filtres.');
@@ -2433,6 +2442,7 @@ function totalEffortMinutes() {
 function todayEffortMinutes() { return S.stats.effort ? S.stats.effort.days[today()] || 0 : todayMinutes(); }
 function fmtEffort(minutes) {
   const seconds = Math.max(0, Math.floor(minutes * 60));
+  if (!seconds) return '0' + NB + 'min';
   return seconds < 60 ? seconds + NB + 's' : fmtMin(Math.floor(seconds / 60));
 }
 
@@ -2443,7 +2453,7 @@ function renderJournal() {
   $('#kpis').replaceChildren(
     kpi("Aujourd'hui", fmtEffort(todayEffortMinutes()), fmtMin(tm) + ' réussies · ' + plural(todayCount, 'session', 'sessions')),
     kpi('Série', plural(st, 'jour', 'jours'), st && !tm ? "Fais une session aujourd'hui pour la garder" : 'Bonus actuel +' + streakBonus(st) + NB + '%'),
-    kpi('Temps effectué', fmtEffort(totalEffortMinutes()), 'Dont ' + fmtMin(totalMinutes()) + ' réussies · ' + fmt(S.earned) + ' gagnés'),
+    kpi('Temps effectué', fmtEffort(totalEffortMinutes()), 'Dont ' + fmtMin(totalMinutes()) + ' réussies' + (S.earned ? ' · ' + fmt(S.earned) + ' gagnés' : '')),
     kpi('Sessions', String(S.stats.ok), plural(S.stats.ko, 'interrompue', 'interrompues')));
   renderGoals();
   renderWeekChart();
@@ -2525,7 +2535,7 @@ function renderHistory() {
   if (!S.history.length) { ul.append(h('li', {}, h('span', { class: 'empty-state' }, 'Pas encore de session. Lance une activité pour remplir ton journal.'))); return; }
   for (const e of S.history.slice(0, 25)) {
     const src = e.source === 'wishes' ? ' · tirage (envie)' : e.source === 'chores' ? ' · tirage (obligation)' : e.source === 'routine' ? ' · routine' : '';
-    const duration = e.ok ? e.min + NB + 'min' : typeof e.elapsedSec === 'number' ? fmtEffort(e.elapsedSec / 60) + ' effectuées sur ' + e.min + NB + 'min' : e.min + NB + 'min prévues · temps effectué non enregistré';
+    const duration = e.ok ? e.min + NB + 'min' : typeof e.elapsedSec === 'number' ? fmtEffort(e.elapsedSec / 60) + ' sur ' + e.min + NB + 'min' : e.min + NB + 'min prévues · temps effectué non enregistré';
     ul.append(h('li', {},
       h('div', { class: 'h-main' },
         h('span', { class: 'h-title' }, catDot(e.cat), e.name),
@@ -2638,8 +2648,8 @@ function strictContent(body) {
     h('ul', { class: 'info-list' },
       h('li', {}, icon('lock'), h('span', {}, h('strong', {}, 'iPhone : '), "Réglages → Accessibilité → Accès guidé. Dans ses options, règle aussi « Verrouillage auto » sur « Jamais ». Pendant une session, appuie trois fois sur le bouton latéral (ou sur le bouton principal) : l'iPhone reste bloqué sur l'app jusqu'à ton code.")),
       h('li', {}, icon('lock'), h('span', {}, h('strong', {}, 'Android : '), "Paramètres → Sécurité → Épinglage d'application (sur Samsung : « Épingler des fenêtres »). Épingle l'app depuis l'écran des apps récentes.")),
-      h('li', { class: 'warn' }, icon('alert'), h('span', {}, "N'appuie pas une seule fois sur le bouton latéral : verrouiller l'écran compte comme une sortie et la session serait perdue."))),
-    h('p', { class: 'note' }, "Sans mode strict, l'app détecte quand même quand elle n'est plus à l'écran : au-delà de " + S.settings.grace + NB + 's, la session est perdue.'));
+      h('li', { class: 'warn' }, icon('alert'), h('span', {}, "N'appuie pas une seule fois sur le bouton latéral : verrouiller l'écran compte comme une sortie et la session serait interrompue."))),
+    h('p', { class: 'note' }, "Sans mode strict, l'app détecte quand même quand elle n'est plus à l'écran : au-delà de " + S.settings.grace + NB + 's, la session est interrompue.'));
 }
 function openStrict() { openSheet('Mode strict', strictContent, { keep: true }); }
 
@@ -3129,7 +3139,7 @@ function openCityPersonalization() {
       h('div', { class: 'field' }, h('label', { for: 'cityName' }, 'Nom de ma ville'), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), 'Enregistrer le nom')),
       h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, 'Une ville qui grandit avec toi'),
       h('p', {}, 'Les bâtiments gagnent des niveaux avec les minutes réussies dans leur domaine. Après leur seuil de déblocage, 2 heures de pratique mènent au niveau 2, puis 6 heures au niveau 3. Les décors restent libres.'),
-      h('p', { class: 'note' }, 'Les seuils exacts figurent dans la boutique et sur chaque bâtiment. Les niveaux sont gratuits et restent acquis, même après des jours de repos.'),
+      h('p', { class: 'note' }, 'Touche un bâtiment de ta ville pour voir son niveau et le prochain seuil. Les niveaux sont gratuits et restent acquis, même après des jours de repos.'),
       h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: exportCityImage }, icon('download'), 'Enregistrer une image de ma ville'));
   });
 }
@@ -3137,15 +3147,29 @@ async function exportCityImage() {
   try {
     const source = typeof City.snapshot === 'function' ? City.snapshot() : $('#city');
     const width = Math.max(1200, source.width), ratio = width / source.width, margin = Math.round(width * .05), head = Math.round(width * .12), foot = Math.round(width * .065);
+    const cityH = Math.round(source.height * ratio);
     const out = document.createElement('canvas');
-    out.width = width; out.height = Math.round(source.height * ratio) + head + foot;
+    out.width = width; out.height = cityH + head + foot;
     const ctx = out.getContext('2d');
-    ctx.fillStyle = cssVar('--bg') || '#edf1e7'; ctx.fillRect(0, 0, out.width, out.height);
-    ctx.fillStyle = cssVar('--ink') || '#20332a'; ctx.textBaseline = 'middle'; ctx.font = '700 ' + Math.round(width * .033) + 'px system-ui, sans-serif';
-    ctx.fillText((S.personal || {}).name || 'Ma ville', margin, head * .55, width - margin * 2);
-    ctx.drawImage(source, 0, head, width, Math.round(source.height * ratio));
-    ctx.fillStyle = cssVar('--muted') || '#536459'; ctx.font = Math.round(width * .019) + 'px system-ui, sans-serif';
-    ctx.fillText('Ville du bien-être · ' + fmtMin(totalMinutes()) + ' pour prendre soin de moi', margin, out.height - foot * .5, width - margin * 2);
+    // Le dessin de la ville est transparent : on remet le ciel de l'app (et ses étoiles la nuit).
+    const sky = ctx.createLinearGradient(0, 0, 0, out.height);
+    sky.addColorStop(0, cssVar('--sky-top') || '#d3e8e0');
+    sky.addColorStop(1, cssVar('--sky-bottom') || '#f3f6ec');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, out.width, out.height);
+    if (cssVar('--night') === '1') {
+      ctx.fillStyle = '#ffffff';
+      for (const [x, y, r] of [[.12, .18, 1.2], [.28, .09, 1], [.47, .15, 1.4], [.63, .06, 1], [.78, .2, 1.3], [.9, .1, 1], [.08, .32, 1], [.94, .34, 1.1]]) {
+        ctx.beginPath(); ctx.arc(x * width, head + y * cityH, r * width / 360, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    const titleFont = '400 ' + Math.round(width * .036) + 'px "Young Serif", Georgia, serif';
+    const footFont = '600 ' + Math.round(width * .019) + 'px Figtree, system-ui, sans-serif';
+    if (document.fonts && document.fonts.load) await Promise.all([document.fonts.load(titleFont), document.fonts.load(footFont)]).catch(() => {});
+    ctx.fillStyle = cssVar('--ink') || '#20332a'; ctx.textBaseline = 'middle'; ctx.font = titleFont;
+    ctx.fillText(frTypo((S.personal || {}).name || 'Ma ville'), margin, head * .55, width - margin * 2);
+    ctx.drawImage(source, 0, head, width, cityH);
+    ctx.fillStyle = cssVar('--muted') || '#536459'; ctx.font = footFont;
+    ctx.fillText(frTypo('Ville du bien-être · ' + fmtEffort(totalEffortMinutes()) + ' pour prendre soin de moi'), margin, out.height - foot * .5, width - margin * 2);
     const blob = await new Promise(resolve => out.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('PNG indisponible');
     const filename = 'ma-ville-' + today() + '.png';
@@ -3446,8 +3470,8 @@ function openWakeWarning(o, wake) {
     const ack = h('input', { type: 'checkbox', id: 'wakeAck' });
     body.append(
       h('p', {}, wake === 'off'
-        ? "Tu as désactivé « Garder l'écran allumé ». Si l'écran se verrouille pendant la session, elle sera perdue."
-        : "Ici, l'app ne peut pas empêcher la mise en veille. Si l'écran se verrouille pendant la session, elle sera perdue : l'app ne peut pas faire la différence avec un changement d'app."),
+        ? "Tu as désactivé « Garder l'écran allumé ». Si l'écran se verrouille pendant la session, elle sera interrompue."
+        : "Ici, l'app ne peut pas empêcher la mise en veille. Si l'écran se verrouille pendant la session, elle sera interrompue : l'app ne peut pas faire la différence avec un changement d'app."),
       h('p', { class: 'section-title' }, 'Avant de commencer'),
       h('ul', { class: 'info-list' },
         h('li', {}, icon('sun'), h('span', {}, h('strong', {}, 'iPhone : '), 'Réglages → Luminosité et affichage → Verrouillage automatique → Jamais. En mode Économie d’énergie, l’iPhone se verrouille quand même au bout de 30 s.')),
@@ -3557,7 +3581,8 @@ function showRun(a) {
   bonus.hidden = !a.drawPct;
   bonus.textContent = a.drawPct ? frTypo('Tirage accepté · bonus +' + a.drawPct + NB + '%') : '';
   $('#timerSub').textContent = frTypo('Gain à la fin : ' + fmt(a.promised || rewardFor(a.min, a.drawPct).total));
-  $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? 'Activité libre : le chrono continue écran verrouillé ou app fermée. Rouvre cette page pour enregistrer le résultat.' : "Concentration : garde l'app à l'écran. Au-delà de " + S.settings.grace + NB + 's d’absence, le défi s’arrête ; ton temps effectué reste enregistré.'));
+  $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? 'Rouvre l’app après la fin pour enregistrer ta récompense. Le son de fin n’est garanti que si l’app est ouverte.' : "Concentration : garde l'app à l'écran. Au-delà de " + S.settings.grace + NB + 's d’absence, le défi s’arrête ; ton temps effectué reste enregistré.'));
+  $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
   $('#sessRun').hidden = false;
@@ -3656,7 +3681,7 @@ function onReturn() {
   run.lastWall = Date.now();
   if (away > graceMs()) { failSession('away', away); return; }
   const al = $('#sessAlert');
-  al.replaceChildren(icon('alert'), h('span', {}, "L'app n'était plus à l'écran (" + fmtAway(away) + '). Au-delà de ' + S.settings.grace + NB + 's, la session est perdue.'));
+  al.replaceChildren(icon('alert'), h('span', {}, "L'app n'était plus à l'écran (" + fmtAway(away) + '). Au-delà de ' + S.settings.grace + NB + 's, la session est interrompue.'));
   al.hidden = false;
   requestWake();
 }
@@ -3828,8 +3853,8 @@ function showFail(a, reason, awayMs, elapsed) {
   showResult(res => {
     res.append(
       h('div', { class: 'res-fail' }, icon('lost', 'ic-big')),
-      h('h2', { class: 'res-title', tabindex: '-1' }, 'Session perdue'),
-      h('p', { class: 'sub' }, a.name + ' · ' + a.min + NB + 'min' + (done ? ' (' + done + NB + 'min faites)' : '')),
+      h('h2', { class: 'res-title', tabindex: '-1' }, 'Session interrompue'),
+      h('p', { class: 'sub' }, a.name + ' · ' + a.min + NB + 'min' + (done ? ' (' + done + NB + 'min ' + (done > 1 ? 'faites' : 'faite') + ')' : '')),
       h('p', {}, why),
       h('p', { class: 'note' }, a.draw ? "Aucune pièce cette fois. Ton temps effectué reste dans le journal. Tu peux recommencer cette même activité sans frais." : "Aucune pièce cette fois. Ton temps effectué reste enregistré dans ton journal et tes objectifs."),
       h('div', { class: 'res-actions' },
@@ -3841,11 +3866,11 @@ function showFail(a, reason, awayMs, elapsed) {
 function setWake(state) {
   const li = $('#wakeStatus');
   const msg = {
-    free: ['sun', 'Activité libre : tu peux verrouiller l’écran ou utiliser une autre app.'],
+    free: ['sun', 'Activité libre : tu peux verrouiller l’écran ou changer d’app, le chrono continue.'],
     on: ['sun', 'Écran maintenu allumé pendant la session.'],
-    off: ['alert', "Écran : mise en veille normale. S'il se verrouille, la session est perdue."],
+    off: ['alert', "Écran : mise en veille normale. S'il se verrouille, la session est interrompue."],
     checking: ['sun', "Activation de l'écran allumé…"],
-    na: ['alert', "L'écran ne peut pas être maintenu allumé ici : s'il se verrouille, la session est perdue."],
+    na: ['alert', "L'écran ne peut pas être maintenu allumé ici : s'il se verrouille, la session est interrompue."],
   }[state];
   li.className = state === 'na' || state === 'off' ? 'warn' : '';
   li.replaceChildren(icon(msg[0]), h('span', {}, msg[1]));

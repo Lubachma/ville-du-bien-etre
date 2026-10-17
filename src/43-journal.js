@@ -6,6 +6,7 @@ function totalEffortMinutes() {
 function todayEffortMinutes() { return S.stats.effort ? S.stats.effort.days[today()] || 0 : todayMinutes(); }
 function fmtEffort(minutes) {
   const seconds = Math.max(0, Math.floor(minutes * 60));
+  if (!seconds) return '0' + NB + 'min';
   return seconds < 60 ? seconds + NB + 's' : fmtMin(Math.floor(seconds / 60));
 }
 
@@ -16,7 +17,7 @@ function renderJournal() {
   $('#kpis').replaceChildren(
     kpi("Aujourd'hui", fmtEffort(todayEffortMinutes()), fmtMin(tm) + ' réussies · ' + plural(todayCount, 'session', 'sessions')),
     kpi('Série', plural(st, 'jour', 'jours'), st && !tm ? "Fais une session aujourd'hui pour la garder" : 'Bonus actuel +' + streakBonus(st) + NB + '%'),
-    kpi('Temps effectué', fmtEffort(totalEffortMinutes()), 'Dont ' + fmtMin(totalMinutes()) + ' réussies · ' + fmt(S.earned) + ' gagnés'),
+    kpi('Temps effectué', fmtEffort(totalEffortMinutes()), 'Dont ' + fmtMin(totalMinutes()) + ' réussies' + (S.earned ? ' · ' + fmt(S.earned) + ' gagnés' : '')),
     kpi('Sessions', String(S.stats.ok), plural(S.stats.ko, 'interrompue', 'interrompues')));
   renderGoals();
   renderWeekChart();
@@ -98,7 +99,7 @@ function renderHistory() {
   if (!S.history.length) { ul.append(h('li', {}, h('span', { class: 'empty-state' }, 'Pas encore de session. Lance une activité pour remplir ton journal.'))); return; }
   for (const e of S.history.slice(0, 25)) {
     const src = e.source === 'wishes' ? ' · tirage (envie)' : e.source === 'chores' ? ' · tirage (obligation)' : e.source === 'routine' ? ' · routine' : '';
-    const duration = e.ok ? e.min + NB + 'min' : typeof e.elapsedSec === 'number' ? fmtEffort(e.elapsedSec / 60) + ' effectuées sur ' + e.min + NB + 'min' : e.min + NB + 'min prévues · temps effectué non enregistré';
+    const duration = e.ok ? e.min + NB + 'min' : typeof e.elapsedSec === 'number' ? fmtEffort(e.elapsedSec / 60) + ' sur ' + e.min + NB + 'min' : e.min + NB + 'min prévues · temps effectué non enregistré';
     ul.append(h('li', {},
       h('div', { class: 'h-main' },
         h('span', { class: 'h-title' }, catDot(e.cat), e.name),

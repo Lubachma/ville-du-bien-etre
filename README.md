@@ -4,6 +4,8 @@ Une application personnelle pour transformer les activités réelles en une vill
 
 Chaque personne garde **sa propre progression sur son appareil**. Les villes ne sont ni partagées ni synchronisées entre téléphones.
 
+**Ouvrir l’app : <https://lubachma.github.io/ville-du-bien-etre/>**
+
 ## Utiliser l’app
 
 - **Concentration** : garder l’app affichée pendant la session. La tolérance de sortie est réglable à 5, 10 ou 20 secondes.

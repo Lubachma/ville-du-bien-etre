@@ -262,7 +262,7 @@ function openCityPersonalization() {
       h('div', { class: 'field' }, h('label', { for: 'cityName' }, 'Nom de ma ville'), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), 'Enregistrer le nom')),
       h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, 'Une ville qui grandit avec toi'),
       h('p', {}, 'Les bâtiments gagnent des niveaux avec les minutes réussies dans leur domaine. Après leur seuil de déblocage, 2 heures de pratique mènent au niveau 2, puis 6 heures au niveau 3. Les décors restent libres.'),
-      h('p', { class: 'note' }, 'Les seuils exacts figurent dans la boutique et sur chaque bâtiment. Les niveaux sont gratuits et restent acquis, même après des jours de repos.'),
+      h('p', { class: 'note' }, 'Touche un bâtiment de ta ville pour voir son niveau et le prochain seuil. Les niveaux sont gratuits et restent acquis, même après des jours de repos.'),
       h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: exportCityImage }, icon('download'), 'Enregistrer une image de ma ville'));
   });
 }
@@ -270,15 +270,29 @@ async function exportCityImage() {
   try {
     const source = typeof City.snapshot === 'function' ? City.snapshot() : $('#city');
     const width = Math.max(1200, source.width), ratio = width / source.width, margin = Math.round(width * .05), head = Math.round(width * .12), foot = Math.round(width * .065);
+    const cityH = Math.round(source.height * ratio);
     const out = document.createElement('canvas');
-    out.width = width; out.height = Math.round(source.height * ratio) + head + foot;
+    out.width = width; out.height = cityH + head + foot;
     const ctx = out.getContext('2d');
-    ctx.fillStyle = cssVar('--bg') || '#edf1e7'; ctx.fillRect(0, 0, out.width, out.height);
-    ctx.fillStyle = cssVar('--ink') || '#20332a'; ctx.textBaseline = 'middle'; ctx.font = '700 ' + Math.round(width * .033) + 'px system-ui, sans-serif';
-    ctx.fillText((S.personal || {}).name || 'Ma ville', margin, head * .55, width - margin * 2);
-    ctx.drawImage(source, 0, head, width, Math.round(source.height * ratio));
-    ctx.fillStyle = cssVar('--muted') || '#536459'; ctx.font = Math.round(width * .019) + 'px system-ui, sans-serif';
-    ctx.fillText('Ville du bien-être · ' + fmtMin(totalMinutes()) + ' pour prendre soin de moi', margin, out.height - foot * .5, width - margin * 2);
+    // Le dessin de la ville est transparent : on remet le ciel de l'app (et ses étoiles la nuit).
+    const sky = ctx.createLinearGradient(0, 0, 0, out.height);
+    sky.addColorStop(0, cssVar('--sky-top') || '#d3e8e0');
+    sky.addColorStop(1, cssVar('--sky-bottom') || '#f3f6ec');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, out.width, out.height);
+    if (cssVar('--night') === '1') {
+      ctx.fillStyle = '#ffffff';
+      for (const [x, y, r] of [[.12, .18, 1.2], [.28, .09, 1], [.47, .15, 1.4], [.63, .06, 1], [.78, .2, 1.3], [.9, .1, 1], [.08, .32, 1], [.94, .34, 1.1]]) {
+        ctx.beginPath(); ctx.arc(x * width, head + y * cityH, r * width / 360, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    const titleFont = '400 ' + Math.round(width * .036) + 'px "Young Serif", Georgia, serif';
+    const footFont = '600 ' + Math.round(width * .019) + 'px Figtree, system-ui, sans-serif';
+    if (document.fonts && document.fonts.load) await Promise.all([document.fonts.load(titleFont), document.fonts.load(footFont)]).catch(() => {});
+    ctx.fillStyle = cssVar('--ink') || '#20332a'; ctx.textBaseline = 'middle'; ctx.font = titleFont;
+    ctx.fillText(frTypo((S.personal || {}).name || 'Ma ville'), margin, head * .55, width - margin * 2);
+    ctx.drawImage(source, 0, head, width, cityH);
+    ctx.fillStyle = cssVar('--muted') || '#536459'; ctx.font = footFont;
+    ctx.fillText(frTypo('Ville du bien-être · ' + fmtEffort(totalEffortMinutes()) + ' pour prendre soin de moi'), margin, out.height - foot * .5, width - margin * 2);
     const blob = await new Promise(resolve => out.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('PNG indisponible');
     const filename = 'ma-ville-' + today() + '.png';

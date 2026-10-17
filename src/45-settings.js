@@ -4,8 +4,8 @@ function strictContent(body) {
     h('ul', { class: 'info-list' },
       h('li', {}, icon('lock'), h('span', {}, h('strong', {}, 'iPhone : '), "Réglages → Accessibilité → Accès guidé. Dans ses options, règle aussi « Verrouillage auto » sur « Jamais ». Pendant une session, appuie trois fois sur le bouton latéral (ou sur le bouton principal) : l'iPhone reste bloqué sur l'app jusqu'à ton code.")),
       h('li', {}, icon('lock'), h('span', {}, h('strong', {}, 'Android : '), "Paramètres → Sécurité → Épinglage d'application (sur Samsung : « Épingler des fenêtres »). Épingle l'app depuis l'écran des apps récentes.")),
-      h('li', { class: 'warn' }, icon('alert'), h('span', {}, "N'appuie pas une seule fois sur le bouton latéral : verrouiller l'écran compte comme une sortie et la session serait perdue."))),
-    h('p', { class: 'note' }, "Sans mode strict, l'app détecte quand même quand elle n'est plus à l'écran : au-delà de " + S.settings.grace + NB + 's, la session est perdue.'));
+      h('li', { class: 'warn' }, icon('alert'), h('span', {}, "N'appuie pas une seule fois sur le bouton latéral : verrouiller l'écran compte comme une sortie et la session serait interrompue."))),
+    h('p', { class: 'note' }, "Sans mode strict, l'app détecte quand même quand elle n'est plus à l'écran : au-delà de " + S.settings.grace + NB + 's, la session est interrompue.'));
 }
 function openStrict() { openSheet('Mode strict', strictContent, { keep: true }); }
 
