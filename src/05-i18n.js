@@ -51,11 +51,21 @@ function t(key, params = {}) {
   return String(value).replace(/\{(\w+)\}/g, (all, name) => (params[name] == null ? all : String(params[name])));
 }
 
+// Comme t(), mais un paramètre peut être un élément (un nom en gras…) : renvoie les morceaux à passer à h().
+function tParts(key, params = {}) {
+  const nodes = {}, plain = {};
+  for (const [name, value] of Object.entries(params)) {
+    if (value && typeof value === 'object' && 'nodeType' in value) { nodes[name] = value; plain[name] = '\u0000' + name + '\u0000'; }
+    else plain[name] = value;
+  }
+  return t(key, plain).split('\u0000').map((part, i) => (i % 2 ? nodes[part] : part)).filter(part => part !== '');
+}
+
 function applyStaticText(root) {
   const scope = root || (typeof document !== 'undefined' ? document : null);
   if (!scope || typeof scope.querySelectorAll !== 'function') return;
   for (const el of scope.querySelectorAll('[data-i18n]')) el.textContent = frTypo(t(el.getAttribute('data-i18n')));
-  for (const attr of ['aria-label', 'placeholder', 'title']) {
+  for (const attr of ['aria-label', 'aria-roledescription', 'placeholder', 'title']) {
     for (const el of scope.querySelectorAll('[data-i18n-' + attr + ']')) el.setAttribute(attr, frTypo(t(el.getAttribute('data-i18n-' + attr))));
   }
 }

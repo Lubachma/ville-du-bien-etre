@@ -60,111 +60,111 @@
   <header class="topbar">
     <h1 class="brand-name">Ville du bien-être</h1>
     <div class="top-stats">
-      <span class="stat-chip coins" id="balanceChip" title="Ton solde"><svg class="ic" aria-hidden="true"><use href="#i-coin"/></svg><span id="balance">5 M</span><span class="visually-hidden"> pièces</span></span>
-      <span class="stat-chip streak" id="streakChip" title="Jours d'affilée avec au moins une session"><svg class="ic" aria-hidden="true"><use href="#i-flame"/></svg><span id="streak">0 j</span></span>
-      <button class="icon-btn" id="settingsBtn" type="button" aria-label="Réglages"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
+      <span class="stat-chip coins" id="balanceChip" title="Ton solde" data-i18n-title="header.balance"><svg class="ic" aria-hidden="true"><use href="#i-coin"/></svg><span id="balance"></span><span class="visually-hidden" data-i18n="header.coins"> pièces</span></span>
+      <span class="stat-chip streak" id="streakChip"><svg class="ic" aria-hidden="true"><use href="#i-flame"/></svg><span id="streak"></span></span>
+      <button class="icon-btn" id="settingsBtn" type="button" aria-label="Réglages" data-i18n-aria-label="nav.settings"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
     </div>
   </header>
 
   <main id="main">
     <div class="card storage-status" id="storageStatus" role="alert" hidden></div>
     <div class="card update-notice" id="updateNotice" role="status" hidden></div>
-    <section class="view" id="view-ville" aria-label="Ma ville">
+    <section class="view" id="view-ville" aria-label="Ma ville" data-i18n-aria-label="nav.cityView">
       <div class="card elsewhere" id="elsewhere" hidden></div>
-      <div class="card remind" id="remind" role="region" aria-label="Rappel de sauvegarde" hidden></div>
+      <div class="card remind" id="remind" role="region" aria-label="Rappel de sauvegarde" data-i18n-aria-label="backup.remindRegion" hidden></div>
       <div class="placebar" id="placebar" role="status" hidden>
         <span id="placeText"></span>
-        <button class="btn btn-primary btn-sm" id="placeConfirm" type="button" hidden>Placer ici</button>
-        <button class="btn btn-ghost btn-sm" id="placeCancel" type="button">Annuler</button>
+        <button class="btn btn-primary btn-sm" id="placeConfirm" type="button" data-i18n="city.placeHere" hidden>Placer ici</button>
+        <button class="btn btn-ghost btn-sm" id="placeCancel" type="button" data-i18n="common.cancel">Annuler</button>
       </div>
       <div class="sky" id="sky">
-        <canvas id="city" tabindex="0" role="application" aria-roledescription="ville" aria-label="Ta ville. Flèches pour choisir une case, Entrée pour ouvrir un bâtiment ou choisir une case." aria-describedby="cityCaption"></canvas>
-        <button class="btn btn-secondary btn-sm build-fab" id="buildBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-build"/></svg>Construire</button>
+        <canvas id="city" tabindex="0" role="application" aria-roledescription="ville" data-i18n-aria-roledescription="city.roleDescription" aria-label="Ta ville. Flèches pour choisir une case, Entrée pour ouvrir un bâtiment ou choisir une case." data-i18n-aria-label="city.canvasLabel" aria-describedby="cityCaption"></canvas>
+        <button class="btn btn-secondary btn-sm build-fab" id="buildBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-build"/></svg><span data-i18n="city.build">Construire</span></button>
       </div>
       <p class="city-caption" id="cityCaption"></p>
-      <div class="city-tools"><button class="btn btn-ghost btn-sm" id="personalizeCity" type="button"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg>Personnaliser ma ville</button></div>
-      <details class="city-list"><summary>Liste des constructions</summary><ul id="cityList"></ul></details>
+      <div class="city-tools"><button class="btn btn-ghost btn-sm" id="personalizeCity" type="button"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg><span data-i18n="city.personalize">Personnaliser ma ville</span></button></div>
+      <details class="city-list"><summary data-i18n="city.listTitle">Liste des constructions</summary><ul id="cityList"></ul></details>
       <div class="cta-row">
-        <button class="btn btn-primary btn-lg" id="ctaStart" type="button"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>Lancer une activité</button>
-        <button class="btn btn-secondary btn-lg" id="ctaDraw" type="button"><svg class="ic" aria-hidden="true"><use href="#i-dice"/></svg>Je ne sais pas quoi faire</button>
+        <button class="btn btn-primary btn-lg" id="ctaStart" type="button"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg><span data-i18n="city.ctaStart">Lancer une activité</span></button>
+        <button class="btn btn-secondary btn-lg" id="ctaDraw" type="button"><svg class="ic" aria-hidden="true"><use href="#i-dice"/></svg><span data-i18n="city.ctaDraw">Je ne sais pas quoi faire</span></button>
       </div>
       <div class="card next-card" id="nextCard"></div>
     </section>
 
-    <section class="view" id="view-activites" aria-label="Activités" hidden>
+    <section class="view" id="view-activites" aria-label="Activités" data-i18n-aria-label="nav.activities" hidden>
       <div class="view-head">
-        <h2>Activités</h2>
-        <button class="btn btn-ghost btn-sm" id="editActs" type="button" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg>Modifier</button>
+        <h2 data-i18n="nav.activities">Activités</h2>
+        <button class="btn btn-ghost btn-sm" id="editActs" type="button" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg><span data-i18n="act.edit">Modifier</span></button>
       </div>
-      <p class="lede" id="actsLede">Choisis une activité et lance le chrono. Chaque minute rapporte 1&nbsp;M de pièces.</p>
+      <p class="lede" id="actsLede" data-i18n="act.lede">Choisis une activité et lance le chrono. Chaque minute rapporte 1&nbsp;M de pièces.</p>
       <div class="acts" id="actsGrid"></div>
       <form class="card add-form" id="addActForm" hidden>
-        <h3>Nouvelle activité</h3>
-        <div class="field"><label for="actName">Nom</label><input class="input" id="actName" maxlength="40" placeholder="Ex. Apprendre l'espagnol" required></div>
+        <h3 data-i18n="act.newTitle">Nouvelle activité</h3>
+        <div class="field"><label for="actName" data-i18n="act.name">Nom</label><input class="input" id="actName" maxlength="40" placeholder="Ex. Apprendre l'espagnol" data-i18n-placeholder="act.namePlaceholder" required></div>
         <div class="row-2">
-          <div class="field"><label for="actCat">Domaine</label><select class="select" id="actCat"></select></div>
-          <div class="field"><label for="actMin">Durée</label><select class="select" id="actMin"></select></div>
+          <div class="field"><label for="actCat" data-i18n="act.domain">Domaine</label><select class="select" id="actCat"></select></div>
+          <div class="field"><label for="actMin" data-i18n="act.duration">Durée</label><select class="select" id="actMin"></select></div>
         </div>
-        <button class="btn btn-primary" type="submit"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Ajouter l'activité</button>
+        <button class="btn btn-primary" type="submit"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="act.add">Ajouter l'activité</span></button>
       </form>
     </section>
 
-    <section class="view" id="view-tirage" aria-label="Tirage au sort" hidden>
-      <div class="view-head"><h2>Tirage au sort</h2></div>
-      <p class="lede">Le hasard choisit ta prochaine activité. Accepter le premier tirage rapporte un bonus (à partir de 3&nbsp;idées). Chaque relance coûte des pièces et divise le bonus par deux.</p>
-      <div class="seg" role="radiogroup" aria-label="Dans quelle liste tirer" id="poolSeg">
-        <button type="button" role="radio" data-pool="wishes" aria-checked="true">Envies</button>
-        <button type="button" role="radio" data-pool="chores" aria-checked="false">Obligations</button>
-        <button type="button" role="radio" data-pool="both" aria-checked="false">Les deux</button>
+    <section class="view" id="view-tirage" aria-label="Tirage au sort" data-i18n-aria-label="draw.title" hidden>
+      <div class="view-head"><h2 data-i18n="draw.title">Tirage au sort</h2></div>
+      <p class="lede" data-i18n="draw.lede">Le hasard choisit ta prochaine activité. Accepter le premier tirage rapporte un bonus (à partir de 3&nbsp;idées). Chaque relance coûte des pièces et divise le bonus par deux.</p>
+      <div class="seg" role="radiogroup" aria-label="Dans quelle liste tirer" data-i18n-aria-label="draw.poolLabel" id="poolSeg">
+        <button type="button" role="radio" data-pool="wishes" aria-checked="true" data-i18n="draw.poolWishes">Envies</button>
+        <button type="button" role="radio" data-pool="chores" aria-checked="false" data-i18n="draw.poolChores">Obligations</button>
+        <button type="button" role="radio" data-pool="both" aria-checked="false" data-i18n="draw.poolBoth">Les deux</button>
       </div>
       <div class="card draw-card" id="drawCard"></div>
       <section class="list-block">
-        <div class="list-head"><h3 class="section-title">Mes envies</h3><span class="hint">Bonus +20&nbsp;% si tirée</span></div>
+        <div class="list-head"><h3 class="section-title" data-i18n="draw.myWishes">Mes envies</h3><span class="hint" data-i18n="draw.wishBonus">Bonus +20&nbsp;% si tirée</span></div>
         <ul class="rows" id="wishList"></ul>
         <form class="inline-add" id="addWish" data-list="wishes">
-          <input class="input" name="name" maxlength="40" placeholder="Ajouter une envie" aria-label="Nouvelle envie" required>
-          <button class="btn btn-secondary" type="submit" aria-label="Ajouter l'envie"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
-          <div class="opts"><select class="select" name="cat" aria-label="Domaine"></select><select class="select" name="min" aria-label="Durée"></select></div>
+          <input class="input" name="name" maxlength="40" placeholder="Ajouter une envie" data-i18n-placeholder="draw.addWishPlaceholder" aria-label="Nouvelle envie" data-i18n-aria-label="draw.newWish" required>
+          <button class="btn btn-secondary" type="submit" aria-label="Ajouter l'envie" data-i18n-aria-label="draw.addWish"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+          <div class="opts"><select class="select" name="cat" aria-label="Domaine" data-i18n-aria-label="act.domain"></select><select class="select" name="min" aria-label="Durée" data-i18n-aria-label="act.duration"></select></div>
         </form>
       </section>
       <section class="list-block">
-        <div class="list-head"><h3 class="section-title">Mes obligations</h3><span class="hint">Bonus +50&nbsp;% si tirée</span></div>
+        <div class="list-head"><h3 class="section-title" data-i18n="draw.myChores">Mes obligations</h3><span class="hint" data-i18n="draw.choreBonus">Bonus +50&nbsp;% si tirée</span></div>
         <ul class="rows" id="choreList"></ul>
         <form class="inline-add" id="addChore" data-list="chores">
-          <input class="input" name="name" maxlength="40" placeholder="Ajouter une obligation" aria-label="Nouvelle obligation" required>
-          <button class="btn btn-secondary" type="submit" aria-label="Ajouter l'obligation"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
-          <div class="opts"><select class="select" name="cat" aria-label="Domaine"></select><select class="select" name="min" aria-label="Durée"></select></div>
+          <input class="input" name="name" maxlength="40" placeholder="Ajouter une obligation" data-i18n-placeholder="draw.addChorePlaceholder" aria-label="Nouvelle obligation" data-i18n-aria-label="draw.newChore" required>
+          <button class="btn btn-secondary" type="submit" aria-label="Ajouter l'obligation" data-i18n-aria-label="draw.addChore"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+          <div class="opts"><select class="select" name="cat" aria-label="Domaine" data-i18n-aria-label="act.domain"></select><select class="select" name="min" aria-label="Durée" data-i18n-aria-label="act.duration"></select></div>
         </form>
       </section>
     </section>
 
-    <section class="view" id="view-journal" aria-label="Journal" hidden>
-      <div class="view-head"><h2>Journal</h2></div>
+    <section class="view" id="view-journal" aria-label="Journal" data-i18n-aria-label="nav.journal" hidden>
+      <div class="view-head"><h2 data-i18n="nav.journal">Journal</h2></div>
       <div class="kpis" id="kpis"></div>
       <section class="card">
-        <h3>Minutes par jour</h3>
-        <p class="sub">Les 7 derniers jours, sessions réussies</p>
+        <h3 data-i18n="journal.minutesTitle">Minutes par jour</h3>
+        <p class="sub" data-i18n="journal.minutesSub">Les 7 derniers jours, sessions réussies</p>
         <div class="chart-wrap" id="weekChart"></div>
         <p class="chart-readout" id="chartReadout" aria-live="polite"></p>
-        <details class="day-details"><summary>Détail par jour</summary><table class="day-table" id="weekTable"></table></details>
+        <details class="day-details"><summary data-i18n="journal.dayDetails">Détail par jour</summary><table class="day-table" id="weekTable"></table></details>
       </section>
       <section class="card">
-        <h3>Progression par domaine</h3>
-        <p class="sub">Les minutes de chaque domaine débloquent ses bâtiments</p>
+        <h3 data-i18n="journal.progressTitle">Progression par domaine</h3>
+        <p class="sub" data-i18n="journal.progressSub">Les minutes de chaque domaine débloquent ses bâtiments</p>
         <div class="meters" id="meters"></div>
       </section>
       <section class="card">
-        <h3>Dernières sessions</h3>
+        <h3 data-i18n="journal.recentTitle">Dernières sessions</h3>
         <ul class="history" id="history"></ul>
       </section>
     </section>
   </main>
 
-  <nav class="tabbar" aria-label="Navigation principale">
-    <button class="tab" type="button" data-tab="ville" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-city"/></svg><span>Ville</span></button>
-    <button class="tab" type="button" data-tab="activites"><svg class="ic" aria-hidden="true"><use href="#i-timer"/></svg><span>Activités</span></button>
-    <button class="tab" type="button" data-tab="tirage"><svg class="ic" aria-hidden="true"><use href="#i-dice"/></svg><span>Tirage</span></button>
-    <button class="tab" type="button" data-tab="journal"><svg class="ic" aria-hidden="true"><use href="#i-journal"/></svg><span>Journal</span></button>
+  <nav class="tabbar" aria-label="Navigation principale" data-i18n-aria-label="nav.main">
+    <button class="tab" type="button" data-tab="ville" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-city"/></svg><span data-i18n="nav.city">Ville</span></button>
+    <button class="tab" type="button" data-tab="activites"><svg class="ic" aria-hidden="true"><use href="#i-timer"/></svg><span data-i18n="nav.activities">Activités</span></button>
+    <button class="tab" type="button" data-tab="tirage"><svg class="ic" aria-hidden="true"><use href="#i-dice"/></svg><span data-i18n="nav.draw">Tirage</span></button>
+    <button class="tab" type="button" data-tab="journal"><svg class="ic" aria-hidden="true"><use href="#i-journal"/></svg><span data-i18n="nav.journal">Journal</span></button>
   </nav>
 </div>
 
@@ -172,12 +172,12 @@
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
   <div class="sheet-head">
     <h2 id="sheetTitle" tabindex="-1"></h2>
-    <button class="icon-btn" id="sheetClose" type="button" aria-label="Fermer"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+    <button class="icon-btn" id="sheetClose" type="button" aria-label="Fermer" data-i18n-aria-label="common.close"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
   </div>
   <div class="sheet-body" id="sheetBody"></div>
 </div>
 
-<div class="session" id="session" role="dialog" aria-modal="true" aria-label="Session en cours" hidden>
+<div class="session" id="session" role="dialog" aria-modal="true" aria-label="Session en cours" data-i18n-aria-label="session.dialogLabel" hidden>
   <div class="sess-run" id="sessRun">
     <div class="sess-top">
       <span class="pill" id="sessCat"></span>
@@ -194,8 +194,8 @@
       <li id="graceRule"></li>
     </ul>
     <div class="sess-foot">
-      <button class="btn btn-ghost" id="strictBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>Mode strict&nbsp;: bloquer le téléphone sur l'app</button>
-      <button class="btn btn-ghost" id="abandonBtn" type="button">Abandonner</button>
+      <button class="btn btn-ghost" id="strictBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span data-i18n="session.strictButton">Mode strict&nbsp;: bloquer le téléphone sur l'app</span></button>
+      <button class="btn btn-ghost" id="abandonBtn" type="button" data-i18n="session.abandon">Abandonner</button>
     </div>
   </div>
   <div class="sess-result" id="sessResult" hidden></div>

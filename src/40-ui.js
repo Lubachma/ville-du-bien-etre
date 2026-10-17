@@ -69,18 +69,18 @@ function toast(msg, action) {
 function hideToast() { $('#toast').hidden = true; }
 function bump() { const c = $('#balanceChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
 function twoStep(btn, label, confirmLabel, action) {
-  let armed = false, t = 0;
+  let armed = false, timer = 0;
   const reset = () => { armed = false; btn.textContent = label; btn.classList.remove('btn-danger'); };
   btn.addEventListener('click', () => {
     if (!armed) {
       armed = true;
       btn.textContent = confirmLabel;
       btn.classList.add('btn-danger');
-      announce(confirmLabel + ' : touche encore pour confirmer.');
-      t = setTimeout(reset, 4000);
+      announce(t('ui.confirmAgain', { action: confirmLabel }));
+      timer = setTimeout(reset, 4000);
       return;
     }
-    clearTimeout(t);
+    clearTimeout(timer);
     reset();
     action();
   });
@@ -91,7 +91,7 @@ function removeWithUndo(key, id) {
   if (idx < 0) return;
   const [item] = S[key].splice(idx, 1);
   commit();
-  toast('Supprimé : « ' + item.name + ' ».', { label: 'Annuler', run: () => {
+  toast(t('ui.deleted', { name: displayName(item.name) }), { label: t('common.undo'), run: () => {
     if (S[key].some(x => x.id === item.id)) return;
     S[key].splice(Math.min(idx, S[key].length), 0, item);
     commit();
@@ -129,8 +129,8 @@ function renderHeader() {
   $('.brand-name').textContent = frTypo(cityName());
   $('#balance').textContent = fmt(S.coins);
   const st = streak();
-  $('#streak').textContent = st + NB + 'j';
-  $('#streakChip').title = st ? 'Série : ' + plural(st, 'jour', 'jours') + " d'affilée" : 'Aucune série en cours';
+  $('#streak').textContent = t('unit.streakDays', { n: st });
+  $('#streakChip').title = st ? t('header.streakTitle', { n: st }) : t('header.noStreak');
 }
 function renderView(tab) {
   if (tab === 'ville') renderVille();
@@ -141,8 +141,8 @@ function renderView(tab) {
 
 function renderVille() {
   const n = S.city.tiles.length, N = S.city.size;
-  const parts = [plural(n, 'construction', 'constructions'), 'terrain ' + N + '×' + N];
-  if (todayMinutes() > 0) parts.push("aujourd'hui : " + fmtMin(todayMinutes()));
+  const parts = [t('city.captionBuildings', { n }), t('city.captionLand', { size: N })];
+  if (todayMinutes() > 0) parts.push(t('city.captionToday', { time: fmtMin(todayMinutes()) }));
   $('#cityCaption').textContent = frTypo(parts.join(' · '));
   const ew = $('#elsewhere');
   ew.replaceChildren();
@@ -150,8 +150,8 @@ function renderVille() {
   if (!ew.hidden) {
     const a = S.active;
     ew.append(icon('timer'), h('div', { class: 'ew-main' },
-      h('p', {}, 'Une session « ' + a.name + ' » est en cours sur un autre écran.'),
-      h('p', { class: 'note' }, 'Tu pourras en lancer une autre quand elle sera terminée. Si cet écran a été fermé, la session sera récupérée automatiquement.')));
+      h('p', {}, t('city.elsewhere', { name: displayName(a.name) })),
+      h('p', { class: 'note' }, t('city.elsewhereNote'))));
   }
   renderRemind();
   const card = $('#nextCard');
@@ -161,21 +161,22 @@ function renderVille() {
   const box = h('div', { class: 'next-main' });
   if (affordable.length) {
     const k = affordable.sort((a, b) => priceOf(b) - priceOf(a))[0];
-    box.append(h('p', {}, 'Tu as assez pour : ', h('strong', {}, itemName(k)), ' (' + fmt(priceOf(k)) + ').'));
+    box.append(h('p', {}, tParts('city.affordable', { item: h('strong', {}, itemName(k)), price: fmt(priceOf(k)) })));
   }
   if (nu) {
     const pct = clamp(nu.l.have / nu.l.need * 100, 0, 100);
-    const what = nu.l.need === 1 ? 'après ta première session ' + catName(nu.l.cat)
-      : 'encore ' + fmtMin(nu.rem) + ' ' + (nu.l.cat ? catOf(nu.l.cat) : "d'activités");
-    box.append(h('p', {}, 'Prochain déblocage : ', h('strong', {}, itemName(nu.key)), ', ' + what + '.'));
-    if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': 'Progression vers ' + itemName(nu.key), 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
+    const params = { item: h('strong', {}, itemName(nu.key)), time: fmtMin(nu.rem), cat: nu.l.cat ? catName(nu.l.cat) : '', of: nu.l.cat ? catOf(nu.l.cat) : '' };
+    box.append(h('p', {}, nu.l.need === 1 ? tParts('city.nextFirst', params) : nu.l.cat ? tParts('city.nextCat', params) : tParts('city.nextTotal', params)));
+    if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': t('city.progressTo', { item: itemName(nu.key) }), 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
   } else {
-    box.append(h('p', {}, 'Tous les bâtiments sont débloqués. Bravo !'));
+    box.append(h('p', {}, t('city.allUnlocked')));
   }
   card.append(icon('sparkle'), box);
-  box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, 'Choisir mon objectif'));
+  box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, t('goal.choose')));
   const list = $('#cityList');
-  list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(t =>
-    h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(t) }, itemName(t.item) + ', case ' + (t.x + 1) + ', ' + (t.y + 1) + (buildingLevel(t.item) > 1 ? ' · niveau ' + buildingLevel(t.item) : '')))));
+  list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
+    const params = { item: itemName(tile.item), x: tile.x + 1, y: tile.y + 1, level: buildingLevel(tile.item) };
+    return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params)));
+  }));
 }
 

@@ -173,13 +173,13 @@ const City = (() => {
   function relayout() { layout(); draw(); }
   function point(e) { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
   function describe(x, y) {
-    const t = tileOf(x, y);
-    const where = 'Case ' + (x + 1) + ', ' + (y + 1);
+    const tile = tileOf(x, y);
+    const params = { x: x + 1, y: y + 1, item: tile ? itemName(tile.item) : '' };
     if (Mode.state) {
-      const free = !t || (Mode.state.type === 'move' && t.id === Mode.state.tileId);
-      return where + (free ? ' : libre. Entrée pour choisir cette case.' : ' : occupée par ' + itemName(t.item) + '.');
+      const free = !tile || (Mode.state.type === 'move' && tile.id === Mode.state.tileId);
+      return free ? t('city.descFreePick', params) : t('city.descTaken', params);
     }
-    return where + (t ? ' : ' + itemName(t.item) + '. Entrée pour ouvrir.' : ' : libre.');
+    return tile ? t('city.descBuilding', params) : t('city.descFree', params);
   }
 
   canvas.addEventListener('pointermove', e => {
@@ -237,7 +237,7 @@ const Mode = {
     this.render();
     City.draw();
     if (kbdMode) setTimeout(() => City.focus(), 60);
-    announce('Choisis une case libre pour placer ' + itemName(key) + '. Au clavier : flèches puis Entrée.');
+    announce(t('city.choosePlace', { item: itemName(key) }));
   },
   startMove(tile) {
     this.state = { type: 'move', tileId: tile.id, target: null };
@@ -245,30 +245,30 @@ const Mode = {
     this.render();
     City.draw();
     if (kbdMode) setTimeout(() => City.focus(), 60);
-    announce('Choisis une case libre pour déplacer ' + itemName(tile.item) + '.');
+    announce(t('city.chooseMove', { item: itemName(tile.item) }));
   },
   isFree(t, exceptId) {
     const occ = City.tileOf(t.x, t.y);
     return !occ || occ.id === exceptId;
   },
-  pickTile(t) {
-    if (!this.state || !t) return;
-    if (!this.isFree(t, this.state.type === 'move' ? this.state.tileId : null)) { toast('Cette case est déjà occupée.'); return; }
-    this.state.target = t;
+  pickTile(spot) {
+    if (!this.state || !spot) return;
+    if (!this.isFree(spot, this.state.type === 'move' ? this.state.tileId : null)) { toast(t('city.taken')); return; }
+    this.state.target = spot;
     this.render();
     City.draw();
-    announce('Case ' + (t.x + 1) + ', ' + (t.y + 1) + ' choisie. ' + (this.state.type === 'place' ? 'Confirme avec « Placer ici ».' : 'Confirme avec « Déplacer ici ».'));
+    announce(t('city.picked', { x: spot.x + 1, y: spot.y + 1, button: this.state.type === 'place' ? t('city.placeHere') : t('city.moveHere') }));
   },
   confirm() {
     const st = this.state;
     if (!st || !st.target) return;
     if (st.type === 'place') {
-      const it = ITEMS[st.item];
+      const name = { item: itemName(st.item), g: itemGender(st.item) };
       const price = priceOf(st.item);
       const lock = lockInfo(st.item);
-      if (lock) { toast(itemName(st.item) + ' est encore verrouillé' + (it.fem ? 'e' : '') + '.'); this.cancel(); return; }
-      if (S.coins < price) { toast('Il te manque ' + fmt(price - S.coins) + '.'); return; }
-      if (!this.isFree(st.target)) { toast('Cette case est déjà occupée.'); return; }
+      if (lock) { toast(t('city.stillLocked', name)); this.cancel(); return; }
+      if (S.coins < price) { toast(t('shop.missingToast', { coins: fmt(price - S.coins) })); return; }
+      if (!this.isFree(st.target)) { toast(t('city.taken')); return; }
       S.coins -= price;
       const tile = { id: uid(), item: st.item, x: st.target.x, y: st.target.y, at: Date.now(), paid: price };
       S.city.tiles.push(tile);
@@ -276,17 +276,17 @@ const Mode = {
       City.pop(tile.id);
       commit();
       bump();
-      toast(itemName(st.item) + (it.fem ? ' construite.' : ' construit.'));
+      toast(t('city.built', name));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
-      if (!this.isFree(st.target, tile.id)) { toast('Cette case est déjà occupée.'); st.target = null; this.render(); City.draw(); return; }
+      if (!this.isFree(st.target, tile.id)) { toast(t('city.taken')); st.target = null; this.render(); City.draw(); return; }
       this.state = null;
       tile.x = st.target.x;
       tile.y = st.target.y;
       City.pop(tile.id);
       commit();
-      toast('Déplacé.');
+      toast(t('city.moved'));
     }
   },
   cancel() { this.state = null; this.render(); City.draw(); },
@@ -296,12 +296,12 @@ const Mode = {
     bar.hidden = !st;
     if (!st) return;
     if (st.type === 'place') {
-      txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : 'Touche une case libre pour placer : ' + itemName(st.item) + ' (' + fmt(priceOf(st.item)) + ')');
-      ok.textContent = 'Placer ici';
+      txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : t('city.tapToPlace', { item: itemName(st.item), price: fmt(priceOf(st.item)) }));
+      ok.textContent = t('city.placeHere');
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
-      txt.textContent = frTypo(st.target ? 'Nouvel emplacement choisi' : 'Touche une case libre pour déplacer : ' + (tile ? itemName(tile.item) : ''));
-      ok.textContent = 'Déplacer ici';
+      txt.textContent = frTypo(st.target ? t('city.newSpot') : t('city.tapToMove', { item: tile ? itemName(tile.item) : '' }));
+      ok.textContent = t('city.moveHere');
     }
     ok.hidden = !st.target;
   },

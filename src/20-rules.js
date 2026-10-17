@@ -79,12 +79,12 @@ function lockInfo(key) {
   const it = ITEMS[key];
   if (it.needTotal) {
     const have = totalMinutes();
-    return have >= it.needTotal ? null : { have, need: it.needTotal, cat: null, text: it.needTotal + NB + "min d'activités au total" };
+    return have >= it.needTotal ? null : { have, need: it.needTotal, cat: null, text: t('lock.total', { min: it.needTotal }) };
   }
   if (!it.need) return null;
   const have = S.stats.byCat[it.group] || 0;
   if (have >= it.need) return null;
-  const text = it.need === 1 ? 'Après ta première session ' + catName(it.group) : it.need + NB + 'min ' + catOf(it.group);
+  const text = it.need === 1 ? t('lock.first', { cat: catName(it.group) }) : t('lock.need', { min: it.need, cat: catName(it.group), of: catOf(it.group) });
   return { have, need: it.need, cat: it.group, text };
 }
 function unlockedSet() { return new Set(Object.keys(ITEMS).filter(k => !lockInfo(k))); }

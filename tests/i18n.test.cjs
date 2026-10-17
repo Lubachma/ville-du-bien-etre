@@ -13,7 +13,7 @@ function app() {
   const source = ['00-core.js', '05-i18n.js', ...DICTIONARIES, '10-state.js', '20-rules.js']
     .map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
   vm.runInContext(source + `\nthis.api = { DICT, t, setLang, resolveLang, fmt, fmtMin, frTypo, normalize, defaultState,
-    displayName, cityName, ITEMS, CAT_ORDER, itemName, itemGender, catName, catOf, catHint, groupName,
+    displayName, cityName, tParts, applyStaticText, ITEMS, CAT_ORDER, itemName, itemGender, catName, catOf, catHint, groupName,
     get state() { return S; }, set state(v) { S = v; } };`, context);
   return context.api;
 }
@@ -27,9 +27,9 @@ test('chaque clé utilisée existe dans les deux langues', () => {
   const { DICT } = app();
   const used = new Set();
   for (const file of fs.readdirSync(path.join(root, 'src')).filter(f => f.endsWith('.js') && !DICTIONARIES.includes(f))) {
-    for (const m of fs.readFileSync(path.join(root, 'src', file), 'utf8').matchAll(/\bt\(\s*'([^']+)'\s*[,)]/g)) used.add(m[1]);
+    for (const m of fs.readFileSync(path.join(root, 'src', file), 'utf8').matchAll(/\b(?:t|tParts)\(\s*'([^']+)'\s*[,)]/g)) used.add(m[1]);
   }
-  for (const m of fs.readFileSync(path.join(root, 'index.html'), 'utf8').matchAll(/data-i18n(?:-(?:aria-label|placeholder|title))?="([^"]+)"/g)) used.add(m[1]);
+  for (const m of fs.readFileSync(path.join(root, 'index.html'), 'utf8').matchAll(/data-i18n(?:-(?:aria-label|aria-roledescription|placeholder|title))?="([^"]+)"/g)) used.add(m[1]);
   const missing = [...used].filter(key => !(key in DICT.fr) || !(key in DICT.en));
   assert.deepEqual(missing, []);
 });
@@ -123,4 +123,100 @@ test('noms dynamiques présents', () => {
   assert.equal(a.catName('crea'), 'Creativity');
   assert.equal(a.catOf('corps'), 'of Body');
   assert.equal(a.groupName('prestige'), 'Landmarks');
+});
+
+// Fichiers dont tout le texte visible passe par t() ; chaque tâche de traduction y ajoute les siens.
+const CLEAN_FILES = ['20-rules.js', '35-city.js', '40-ui.js', '44-shop.js', '47-accessibility.js'];
+// Exceptions purement techniques : listes de classes CSS, polices, clés de stockage et nom de l'app.
+const TECHNICAL = [/^[a-z0-9-]+( [a-z0-9-]+)+$/, /px|serif|system-ui/, /^ville-(du-)?bien-etre/, /^Ville du bien-être$/];
+const KEYWORDS_BEFORE_REGEX = new Set(['return', 'typeof', 'case', 'void', 'in', 'of', 'delete', 'new', 'throw', 'else', 'do', 'yield', 'await']);
+
+// Chaînes d'un fichier JavaScript, sans les commentaires ni les expressions régulières.
+function jsStrings(code) {
+  const out = [];
+  let i = 0, operand = false;
+  while (i < code.length) {
+    const c = code[i], n = code[i + 1];
+    if (c === '/' && n === '/') { const end = code.indexOf('\n', i); i = end < 0 ? code.length : end; continue; }
+    if (c === '/' && n === '*') { const end = code.indexOf('*/', i + 2); i = end < 0 ? code.length : end + 2; continue; }
+    if (c === '/' && !operand) {
+      let cls = false; i++;
+      while (i < code.length && (code[i] !== '/' || cls)) { if (code[i] === '\\') i++; else if (code[i] === '[') cls = true; else if (code[i] === ']') cls = false; i++; }
+      i++; operand = true; continue;
+    }
+    if (c === "'" || c === '"' || c === '`') {
+      let j = i + 1, s = '';
+      while (j < code.length && code[j] !== c) {
+        if (code[j] === '\\') { s += code[j + 1]; j += 2; continue; }
+        if (c === '`' && code[j] === '$' && code[j + 1] === '{') {
+          let depth = 1; j += 2;
+          while (j < code.length && depth) { if (code[j] === '{') depth++; else if (code[j] === '}') depth--; j++; }
+          s += '{}'; continue;
+        }
+        s += code[j]; j++;
+      }
+      out.push(s); i = j + 1; operand = true; continue;
+    }
+    const word = /^[\w$.]+/.exec(code.slice(i, i + 40));
+    if (word) { operand = !KEYWORDS_BEFORE_REGEX.has(word[0]); i += word[0].length; continue; }
+    if (!/\s/.test(c)) operand = c === ')' || c === ']' || c === '}';
+    i++;
+  }
+  return out;
+}
+function looksLikeText(s) {
+  return (/[à-ÿœÀ-ŸŒ]/.test(s) || /[A-Za-zÀ-ÿ]{2,}[ '’][A-Za-zÀ-ÿ]{2,}/.test(s)) && !TECHNICAL.some(re => re.test(s));
+}
+
+test('aucun texte en dur dans les fichiers traduits', () => {
+  const found = [];
+  for (const file of CLEAN_FILES) {
+    for (const s of jsStrings(fs.readFileSync(path.join(root, 'src', file), 'utf8'))) if (looksLikeText(s)) found.push(file + ': ' + s);
+  }
+  assert.deepEqual(found, []);
+});
+
+test("chaque texte fixe de la page est marqué data-i18n", () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
+    .replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|svg|title)\b[\s\S]*?<\/\1>/g, '');
+  const body = html.slice(html.indexOf('<body'));
+  const VOID = new Set(['input', 'img', 'br', 'hr', 'meta', 'link', 'source', 'use', 'path', 'circle', 'rect']);
+  const stack = [], found = [];
+  for (const m of body.matchAll(/<(\/?)([a-zA-Z0-9-]+)([^>]*)>|([^<]+)/g)) {
+    if (m[4] !== undefined) {
+      const text = m[4].replace(/&nbsp;/g, ' ').trim();
+      if (/[A-Za-zÀ-ÿ]/.test(text) && !TECHNICAL.some(re => re.test(text)) && !(stack.length && /\sdata-i18n="/.test(stack[stack.length - 1]))) found.push('texte: ' + text);
+      continue;
+    }
+    const [, close, tag, attrs] = m;
+    if (close) { stack.pop(); continue; }
+    for (const a of ['aria-label', 'aria-roledescription', 'placeholder', 'title']) {
+      if (new RegExp('\\s' + a + '="').test(attrs) && !new RegExp('\\sdata-i18n-' + a + '="').test(attrs)) found.push(a + ': <' + tag + attrs + '>');
+    }
+    if (!VOID.has(tag.toLowerCase()) && !attrs.endsWith('/')) stack.push(attrs);
+  }
+  assert.deepEqual(found, []);
+});
+
+test('tParts : un paramètre peut être un élément de la page', () => {
+  const a = app();
+  a.DICT.fr['test.p'] = 'Tu as assez pour : {item} ({price}).';
+  a.DICT.en['test.p'] = 'You can afford: {item} ({price}).';
+  const node = { nodeType: 1 };
+  a.setLang('fr');
+  assert.deepEqual([...a.tParts('test.p', { item: node, price: '5 M' })], ['Tu as assez pour : ', node, ' (5 M).']);
+  a.setLang('en');
+  assert.deepEqual([...a.tParts('test.p', { item: node, price: '5 M' })], ['You can afford: ', node, ' (5 M).']);
+});
+
+test('applyStaticText remplit textes et attributs marqués', () => {
+  const a = app();
+  const el = (attrs, text = '') => ({ attrs: { ...attrs }, textContent: text, getAttribute(k) { return this.attrs[k]; }, setAttribute(k, v) { this.attrs[k] = v; } });
+  const title = el({ 'data-i18n': 'city.listTitle' }), canvas = el({ 'data-i18n-aria-label': 'city.canvasLabel', 'data-i18n-aria-roledescription': 'city.roleDescription' });
+  const all = [title, canvas];
+  const root = { querySelectorAll(sel) { const attr = sel.slice(1, -1); return all.filter(x => attr in x.attrs); } };
+  a.setLang('en'); a.applyStaticText(root);
+  assert.equal(title.textContent, 'List of buildings');
+  assert.equal(canvas.attrs['aria-roledescription'], 'town');
+  assert.match(canvas.attrs['aria-label'], /^Your town\. /);
 });

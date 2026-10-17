@@ -243,11 +243,21 @@ function t(key, params = {}) {
   return String(value).replace(/\{(\w+)\}/g, (all, name) => (params[name] == null ? all : String(params[name])));
 }
 
+// Comme t(), mais un paramètre peut être un élément (un nom en gras…) : renvoie les morceaux à passer à h().
+function tParts(key, params = {}) {
+  const nodes = {}, plain = {};
+  for (const [name, value] of Object.entries(params)) {
+    if (value && typeof value === 'object' && 'nodeType' in value) { nodes[name] = value; plain[name] = '\u0000' + name + '\u0000'; }
+    else plain[name] = value;
+  }
+  return t(key, plain).split('\u0000').map((part, i) => (i % 2 ? nodes[part] : part)).filter(part => part !== '');
+}
+
 function applyStaticText(root) {
   const scope = root || (typeof document !== 'undefined' ? document : null);
   if (!scope || typeof scope.querySelectorAll !== 'function') return;
   for (const el of scope.querySelectorAll('[data-i18n]')) el.textContent = frTypo(t(el.getAttribute('data-i18n')));
-  for (const attr of ['aria-label', 'placeholder', 'title']) {
+  for (const attr of ['aria-label', 'aria-roledescription', 'placeholder', 'title']) {
     for (const el of scope.querySelectorAll('[data-i18n-' + attr + ']')) el.setAttribute(attr, frTypo(t(el.getAttribute('data-i18n-' + attr))));
   }
 }
@@ -353,6 +363,125 @@ DICT.fr = {
   'item.atelier': "Atelier d'artiste",
   'item.theatre': 'Théâtre',
   'item.horloge': "Tour de l'horloge",
+
+  // Commun, en-tête et navigation
+  'common.cancel': 'Annuler',
+  'common.undo': 'Annuler',
+  'common.close': 'Fermer',
+  'ui.confirmAgain': '{action} : touche encore pour confirmer.',
+  'ui.deleted': 'Supprimé : « {name} ».',
+  'header.balance': 'Ton solde',
+  'header.coins': ' pièces',
+  'unit.streakDays': '{n}\u00a0j',
+  'header.streakTitle': { one: "Série : {n}\u00a0jour d'affilée", other: "Série : {n}\u00a0jours d'affilée" },
+  'header.noStreak': 'Aucune série en cours',
+  'nav.settings': 'Réglages',
+  'nav.cityView': 'Ma ville',
+  'nav.main': 'Navigation principale',
+  'nav.city': 'Ville',
+  'nav.activities': 'Activités',
+  'nav.draw': 'Tirage',
+  'nav.journal': 'Journal',
+  'backup.remindRegion': 'Rappel de sauvegarde',
+
+  // Ville : écran, placement et déplacement
+  'city.placeHere': 'Placer ici',
+  'city.moveHere': 'Déplacer ici',
+  'city.roleDescription': 'ville',
+  'city.canvasLabel': 'Ta ville. Flèches pour choisir une case, Entrée pour ouvrir un bâtiment ou choisir une case.',
+  'city.build': 'Construire',
+  'city.personalize': 'Personnaliser ma ville',
+  'city.listTitle': 'Liste des constructions',
+  'city.ctaStart': 'Lancer une activité',
+  'city.ctaDraw': 'Je ne sais pas quoi faire',
+  'city.captionBuildings': { one: '{n}\u00a0construction', other: '{n}\u00a0constructions' },
+  'city.captionLand': 'terrain {size}×{size}',
+  'city.captionToday': "aujourd'hui : {time}",
+  'city.elsewhere': 'Une session « {name} » est en cours sur un autre écran.',
+  'city.elsewhereNote': 'Tu pourras en lancer une autre quand elle sera terminée. Si cet écran a été fermé, la session sera récupérée automatiquement.',
+  'city.affordable': 'Tu as assez pour : {item} ({price}).',
+  'city.nextFirst': 'Prochain déblocage : {item}, après ta première session {cat}.',
+  'city.nextCat': 'Prochain déblocage : {item}, encore {time} {of}.',
+  'city.nextTotal': "Prochain déblocage : {item}, encore {time} d'activités.",
+  'city.progressTo': 'Progression vers {item}',
+  'city.allUnlocked': 'Tous les bâtiments sont débloqués. Bravo !',
+  'city.listItem': '{item}, case {x}, {y}',
+  'city.listItemLevel': '{item}, case {x}, {y} · niveau {level}',
+  'city.square': 'Case {x}, {y}',
+  'city.descFreePick': 'Case {x}, {y} : libre. Entrée pour choisir cette case.',
+  'city.descTaken': 'Case {x}, {y} : occupée par {item}.',
+  'city.descBuilding': 'Case {x}, {y} : {item}. Entrée pour ouvrir.',
+  'city.descFree': 'Case {x}, {y} : libre.',
+  'city.choosePlace': 'Choisis une case libre pour placer {item}. Au clavier : flèches puis Entrée.',
+  'city.chooseMove': 'Choisis une case libre pour déplacer {item}.',
+  'city.taken': 'Cette case est déjà occupée.',
+  'city.picked': 'Case {x}, {y} choisie. Confirme avec « {button} ».',
+  'city.stillLocked': { m: '{item} est encore verrouillé.', f: '{item} est encore verrouillée.' },
+  'city.built': { m: '{item} construit.', f: '{item} construite.' },
+  'city.moved': 'Déplacé.',
+  'city.tapToPlace': 'Touche une case libre pour placer : {item} ({price})',
+  'city.newSpot': 'Nouvel emplacement choisi',
+  'city.tapToMove': 'Touche une case libre pour déplacer : {item}',
+  'goal.choose': 'Choisir mon objectif',
+
+  // Boutique, terrain et déblocages
+  'shop.title': 'Construire',
+  'shop.intro': 'Solde : {coins}. Choisis un élément, puis une case libre de ta ville.',
+  'shop.missing': 'Il te manque {coins}',
+  'shop.missingToast': 'Il te manque {coins}.',
+  'shop.available': 'Disponible',
+  'shop.owned': 'tu en as {n}, +{pct}\u00a0%',
+  'shop.placeFor': 'Placer {item} pour {price}',
+  'shop.land': 'Terrain',
+  'shop.expandTo': 'Agrandir à {size}×{size}',
+  'shop.expandHint': 'Plus de place pour construire',
+  'shop.maxSize': 'Ton terrain a atteint sa taille maximale ({size}×{size}).',
+  'shop.alreadyMax': 'Ton terrain a déjà sa taille maximale.',
+  'shop.expanded': 'Terrain agrandi à {size}×{size}.',
+  'shop.demolish': 'Démolir',
+  'shop.demolishConfirm': 'Confirmer la démolition',
+  'shop.demolished': { m: '{item} démoli.', f: '{item} démolie.' },
+  'shop.builtOn': { m: 'Construit le {date}', f: 'Construite le {date}' },
+  'shop.move': 'Déplacer',
+  'shop.noRefund': 'Démolir ne rembourse pas les pièces.',
+  'lock.total': "{min}\u00a0min d'activités au total",
+  'lock.first': 'Après ta première session {cat}',
+  'lock.need': '{min}\u00a0min {of}',
+
+  // Textes fixes de la page : activités, tirage, journal, session
+  'act.edit': 'Modifier',
+  'act.lede': 'Choisis une activité et lance le chrono. Chaque minute rapporte 1\u00a0M de pièces.',
+  'act.newTitle': 'Nouvelle activité',
+  'act.name': 'Nom',
+  'act.namePlaceholder': "Ex. Apprendre l'espagnol",
+  'act.domain': 'Domaine',
+  'act.duration': 'Durée',
+  'act.add': "Ajouter l'activité",
+  'draw.title': 'Tirage au sort',
+  'draw.lede': 'Le hasard choisit ta prochaine activité. Accepter le premier tirage rapporte un bonus (à partir de 3\u00a0idées). Chaque relance coûte des pièces et divise le bonus par deux.',
+  'draw.poolLabel': 'Dans quelle liste tirer',
+  'draw.poolWishes': 'Envies',
+  'draw.poolChores': 'Obligations',
+  'draw.poolBoth': 'Les deux',
+  'draw.myWishes': 'Mes envies',
+  'draw.wishBonus': 'Bonus +20\u00a0% si tirée',
+  'draw.addWishPlaceholder': 'Ajouter une envie',
+  'draw.newWish': 'Nouvelle envie',
+  'draw.addWish': "Ajouter l'envie",
+  'draw.myChores': 'Mes obligations',
+  'draw.choreBonus': 'Bonus +50\u00a0% si tirée',
+  'draw.addChorePlaceholder': 'Ajouter une obligation',
+  'draw.newChore': 'Nouvelle obligation',
+  'draw.addChore': "Ajouter l'obligation",
+  'journal.minutesTitle': 'Minutes par jour',
+  'journal.minutesSub': 'Les 7 derniers jours, sessions réussies',
+  'journal.dayDetails': 'Détail par jour',
+  'journal.progressTitle': 'Progression par domaine',
+  'journal.progressSub': 'Les minutes de chaque domaine débloquent ses bâtiments',
+  'journal.recentTitle': 'Dernières sessions',
+  'session.dialogLabel': 'Session en cours',
+  'session.strictButton': "Mode strict : bloquer le téléphone sur l'app",
+  'session.abandon': 'Abandonner',
 };
 
 
@@ -428,6 +557,125 @@ DICT.en = {
   'item.atelier': "Artist's studio",
   'item.theatre': 'Theatre',
   'item.horloge': 'Clock tower',
+
+  // Shared, header and navigation
+  'common.cancel': 'Cancel',
+  'common.undo': 'Undo',
+  'common.close': 'Close',
+  'ui.confirmAgain': '{action}: tap again to confirm.',
+  'ui.deleted': 'Deleted: “{name}”.',
+  'header.balance': 'Your balance',
+  'header.coins': ' coins',
+  'unit.streakDays': '{n}\u00a0d',
+  'header.streakTitle': { one: 'Streak: {n}\u00a0day in a row', other: 'Streak: {n}\u00a0days in a row' },
+  'header.noStreak': 'No streak right now',
+  'nav.settings': 'Settings',
+  'nav.cityView': 'My town',
+  'nav.main': 'Main navigation',
+  'nav.city': 'Town',
+  'nav.activities': 'Activities',
+  'nav.draw': 'Draw',
+  'nav.journal': 'Journal',
+  'backup.remindRegion': 'Backup reminder',
+
+  // Town: screen, placing and moving
+  'city.placeHere': 'Place here',
+  'city.moveHere': 'Move here',
+  'city.roleDescription': 'town',
+  'city.canvasLabel': 'Your town. Arrow keys to pick a square, Enter to open a building or choose a square.',
+  'city.build': 'Build',
+  'city.personalize': 'Personalise my town',
+  'city.listTitle': 'List of buildings',
+  'city.ctaStart': 'Start an activity',
+  'city.ctaDraw': "I don't know what to do",
+  'city.captionBuildings': { one: '{n}\u00a0building', other: '{n}\u00a0buildings' },
+  'city.captionLand': 'plot {size}×{size}',
+  'city.captionToday': 'today: {time}',
+  'city.elsewhere': 'A “{name}” session is running on another screen.',
+  'city.elsewhereNote': 'You can start another one once it ends. If that screen was closed, the session will be recovered automatically.',
+  'city.affordable': 'You can afford: {item} ({price}).',
+  'city.nextFirst': 'Next unlock: {item}, after your first {cat} session.',
+  'city.nextCat': 'Next unlock: {item}, {time} more {of}.',
+  'city.nextTotal': 'Next unlock: {item}, {time} more of any activity.',
+  'city.progressTo': 'Progress towards {item}',
+  'city.allUnlocked': 'Every building is unlocked. Well done!',
+  'city.listItem': '{item}, square {x}, {y}',
+  'city.listItemLevel': '{item}, square {x}, {y} · level {level}',
+  'city.square': 'Square {x}, {y}',
+  'city.descFreePick': 'Square {x}, {y}: free. Press Enter to choose this square.',
+  'city.descTaken': 'Square {x}, {y}: taken by {item}.',
+  'city.descBuilding': 'Square {x}, {y}: {item}. Press Enter to open.',
+  'city.descFree': 'Square {x}, {y}: free.',
+  'city.choosePlace': 'Choose a free square to place {item}. With a keyboard: arrow keys, then Enter.',
+  'city.chooseMove': 'Choose a free square to move {item}.',
+  'city.taken': 'This square is already taken.',
+  'city.picked': 'Square {x}, {y} chosen. Confirm with “{button}”.',
+  'city.stillLocked': { m: '{item} is still locked.', f: '{item} is still locked.' },
+  'city.built': { m: '{item} built.', f: '{item} built.' },
+  'city.moved': 'Moved.',
+  'city.tapToPlace': 'Tap a free square to place: {item} ({price})',
+  'city.newSpot': 'New spot chosen',
+  'city.tapToMove': 'Tap a free square to move: {item}',
+  'goal.choose': 'Choose my goal',
+
+  // Shop, land and unlocks
+  'shop.title': 'Build',
+  'shop.intro': 'Balance: {coins}. Pick an item, then a free square in your town.',
+  'shop.missing': 'You need {coins} more',
+  'shop.missingToast': 'You need {coins} more.',
+  'shop.available': 'Available',
+  'shop.owned': 'you have {n}, +{pct}%',
+  'shop.placeFor': 'Place {item} for {price}',
+  'shop.land': 'Land',
+  'shop.expandTo': 'Expand to {size}×{size}',
+  'shop.expandHint': 'More room to build',
+  'shop.maxSize': 'Your land has reached its maximum size ({size}×{size}).',
+  'shop.alreadyMax': 'Your land is already at its maximum size.',
+  'shop.expanded': 'Land expanded to {size}×{size}.',
+  'shop.demolish': 'Demolish',
+  'shop.demolishConfirm': 'Confirm demolition',
+  'shop.demolished': { m: '{item} demolished.', f: '{item} demolished.' },
+  'shop.builtOn': { m: 'Built on {date}', f: 'Built on {date}' },
+  'shop.move': 'Move',
+  'shop.noRefund': 'Demolishing does not refund coins.',
+  'lock.total': '{min}\u00a0min of activities in total',
+  'lock.first': 'After your first {cat} session',
+  'lock.need': '{min}\u00a0min {of}',
+
+  // Fixed page texts: activities, draw, journal, session
+  'act.edit': 'Edit',
+  'act.lede': 'Pick an activity and start the timer. Every minute earns 1\u00a0M coins.',
+  'act.newTitle': 'New activity',
+  'act.name': 'Name',
+  'act.namePlaceholder': 'E.g. Learn Spanish',
+  'act.domain': 'Domain',
+  'act.duration': 'Duration',
+  'act.add': 'Add activity',
+  'draw.title': 'Random draw',
+  'draw.lede': 'Let chance pick your next activity. Accepting the first draw earns a bonus (from 3\u00a0ideas). Each redraw costs coins and halves the bonus.',
+  'draw.poolLabel': 'Which list to draw from',
+  'draw.poolWishes': 'Wishes',
+  'draw.poolChores': 'Chores',
+  'draw.poolBoth': 'Both',
+  'draw.myWishes': 'My wishes',
+  'draw.wishBonus': '+20% bonus if drawn',
+  'draw.addWishPlaceholder': 'Add a wish',
+  'draw.newWish': 'New wish',
+  'draw.addWish': 'Add wish',
+  'draw.myChores': 'My chores',
+  'draw.choreBonus': '+50% bonus if drawn',
+  'draw.addChorePlaceholder': 'Add a chore',
+  'draw.newChore': 'New chore',
+  'draw.addChore': 'Add chore',
+  'journal.minutesTitle': 'Minutes per day',
+  'journal.minutesSub': 'Last 7 days, completed sessions',
+  'journal.dayDetails': 'Day by day',
+  'journal.progressTitle': 'Progress by domain',
+  'journal.progressSub': "Each domain's minutes unlock its buildings",
+  'journal.recentTitle': 'Recent sessions',
+  'session.dialogLabel': 'Session in progress',
+  'session.strictButton': 'Strict mode: lock the phone to the app',
+  'session.abandon': 'Stop',
 };
 
 
@@ -1342,12 +1590,12 @@ function lockInfo(key) {
   const it = ITEMS[key];
   if (it.needTotal) {
     const have = totalMinutes();
-    return have >= it.needTotal ? null : { have, need: it.needTotal, cat: null, text: it.needTotal + NB + "min d'activités au total" };
+    return have >= it.needTotal ? null : { have, need: it.needTotal, cat: null, text: t('lock.total', { min: it.needTotal }) };
   }
   if (!it.need) return null;
   const have = S.stats.byCat[it.group] || 0;
   if (have >= it.need) return null;
-  const text = it.need === 1 ? 'Après ta première session ' + catName(it.group) : it.need + NB + 'min ' + catOf(it.group);
+  const text = it.need === 1 ? t('lock.first', { cat: catName(it.group) }) : t('lock.need', { min: it.need, cat: catName(it.group), of: catOf(it.group) });
   return { have, need: it.need, cat: it.group, text };
 }
 function unlockedSet() { return new Set(Object.keys(ITEMS).filter(k => !lockInfo(k))); }
@@ -1996,13 +2244,13 @@ const City = (() => {
   function relayout() { layout(); draw(); }
   function point(e) { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
   function describe(x, y) {
-    const t = tileOf(x, y);
-    const where = 'Case ' + (x + 1) + ', ' + (y + 1);
+    const tile = tileOf(x, y);
+    const params = { x: x + 1, y: y + 1, item: tile ? itemName(tile.item) : '' };
     if (Mode.state) {
-      const free = !t || (Mode.state.type === 'move' && t.id === Mode.state.tileId);
-      return where + (free ? ' : libre. Entrée pour choisir cette case.' : ' : occupée par ' + itemName(t.item) + '.');
+      const free = !tile || (Mode.state.type === 'move' && tile.id === Mode.state.tileId);
+      return free ? t('city.descFreePick', params) : t('city.descTaken', params);
     }
-    return where + (t ? ' : ' + itemName(t.item) + '. Entrée pour ouvrir.' : ' : libre.');
+    return tile ? t('city.descBuilding', params) : t('city.descFree', params);
   }
 
   canvas.addEventListener('pointermove', e => {
@@ -2060,7 +2308,7 @@ const Mode = {
     this.render();
     City.draw();
     if (kbdMode) setTimeout(() => City.focus(), 60);
-    announce('Choisis une case libre pour placer ' + itemName(key) + '. Au clavier : flèches puis Entrée.');
+    announce(t('city.choosePlace', { item: itemName(key) }));
   },
   startMove(tile) {
     this.state = { type: 'move', tileId: tile.id, target: null };
@@ -2068,30 +2316,30 @@ const Mode = {
     this.render();
     City.draw();
     if (kbdMode) setTimeout(() => City.focus(), 60);
-    announce('Choisis une case libre pour déplacer ' + itemName(tile.item) + '.');
+    announce(t('city.chooseMove', { item: itemName(tile.item) }));
   },
   isFree(t, exceptId) {
     const occ = City.tileOf(t.x, t.y);
     return !occ || occ.id === exceptId;
   },
-  pickTile(t) {
-    if (!this.state || !t) return;
-    if (!this.isFree(t, this.state.type === 'move' ? this.state.tileId : null)) { toast('Cette case est déjà occupée.'); return; }
-    this.state.target = t;
+  pickTile(spot) {
+    if (!this.state || !spot) return;
+    if (!this.isFree(spot, this.state.type === 'move' ? this.state.tileId : null)) { toast(t('city.taken')); return; }
+    this.state.target = spot;
     this.render();
     City.draw();
-    announce('Case ' + (t.x + 1) + ', ' + (t.y + 1) + ' choisie. ' + (this.state.type === 'place' ? 'Confirme avec « Placer ici ».' : 'Confirme avec « Déplacer ici ».'));
+    announce(t('city.picked', { x: spot.x + 1, y: spot.y + 1, button: this.state.type === 'place' ? t('city.placeHere') : t('city.moveHere') }));
   },
   confirm() {
     const st = this.state;
     if (!st || !st.target) return;
     if (st.type === 'place') {
-      const it = ITEMS[st.item];
+      const name = { item: itemName(st.item), g: itemGender(st.item) };
       const price = priceOf(st.item);
       const lock = lockInfo(st.item);
-      if (lock) { toast(itemName(st.item) + ' est encore verrouillé' + (it.fem ? 'e' : '') + '.'); this.cancel(); return; }
-      if (S.coins < price) { toast('Il te manque ' + fmt(price - S.coins) + '.'); return; }
-      if (!this.isFree(st.target)) { toast('Cette case est déjà occupée.'); return; }
+      if (lock) { toast(t('city.stillLocked', name)); this.cancel(); return; }
+      if (S.coins < price) { toast(t('shop.missingToast', { coins: fmt(price - S.coins) })); return; }
+      if (!this.isFree(st.target)) { toast(t('city.taken')); return; }
       S.coins -= price;
       const tile = { id: uid(), item: st.item, x: st.target.x, y: st.target.y, at: Date.now(), paid: price };
       S.city.tiles.push(tile);
@@ -2099,17 +2347,17 @@ const Mode = {
       City.pop(tile.id);
       commit();
       bump();
-      toast(itemName(st.item) + (it.fem ? ' construite.' : ' construit.'));
+      toast(t('city.built', name));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
-      if (!this.isFree(st.target, tile.id)) { toast('Cette case est déjà occupée.'); st.target = null; this.render(); City.draw(); return; }
+      if (!this.isFree(st.target, tile.id)) { toast(t('city.taken')); st.target = null; this.render(); City.draw(); return; }
       this.state = null;
       tile.x = st.target.x;
       tile.y = st.target.y;
       City.pop(tile.id);
       commit();
-      toast('Déplacé.');
+      toast(t('city.moved'));
     }
   },
   cancel() { this.state = null; this.render(); City.draw(); },
@@ -2119,12 +2367,12 @@ const Mode = {
     bar.hidden = !st;
     if (!st) return;
     if (st.type === 'place') {
-      txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : 'Touche une case libre pour placer : ' + itemName(st.item) + ' (' + fmt(priceOf(st.item)) + ')');
-      ok.textContent = 'Placer ici';
+      txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : t('city.tapToPlace', { item: itemName(st.item), price: fmt(priceOf(st.item)) }));
+      ok.textContent = t('city.placeHere');
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
-      txt.textContent = frTypo(st.target ? 'Nouvel emplacement choisi' : 'Touche une case libre pour déplacer : ' + (tile ? itemName(tile.item) : ''));
-      ok.textContent = 'Déplacer ici';
+      txt.textContent = frTypo(st.target ? t('city.newSpot') : t('city.tapToMove', { item: tile ? itemName(tile.item) : '' }));
+      ok.textContent = t('city.moveHere');
     }
     ok.hidden = !st.target;
   },
@@ -2205,18 +2453,18 @@ function toast(msg, action) {
 function hideToast() { $('#toast').hidden = true; }
 function bump() { const c = $('#balanceChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
 function twoStep(btn, label, confirmLabel, action) {
-  let armed = false, t = 0;
+  let armed = false, timer = 0;
   const reset = () => { armed = false; btn.textContent = label; btn.classList.remove('btn-danger'); };
   btn.addEventListener('click', () => {
     if (!armed) {
       armed = true;
       btn.textContent = confirmLabel;
       btn.classList.add('btn-danger');
-      announce(confirmLabel + ' : touche encore pour confirmer.');
-      t = setTimeout(reset, 4000);
+      announce(t('ui.confirmAgain', { action: confirmLabel }));
+      timer = setTimeout(reset, 4000);
       return;
     }
-    clearTimeout(t);
+    clearTimeout(timer);
     reset();
     action();
   });
@@ -2227,7 +2475,7 @@ function removeWithUndo(key, id) {
   if (idx < 0) return;
   const [item] = S[key].splice(idx, 1);
   commit();
-  toast('Supprimé : « ' + item.name + ' ».', { label: 'Annuler', run: () => {
+  toast(t('ui.deleted', { name: displayName(item.name) }), { label: t('common.undo'), run: () => {
     if (S[key].some(x => x.id === item.id)) return;
     S[key].splice(Math.min(idx, S[key].length), 0, item);
     commit();
@@ -2265,8 +2513,8 @@ function renderHeader() {
   $('.brand-name').textContent = frTypo(cityName());
   $('#balance').textContent = fmt(S.coins);
   const st = streak();
-  $('#streak').textContent = st + NB + 'j';
-  $('#streakChip').title = st ? 'Série : ' + plural(st, 'jour', 'jours') + " d'affilée" : 'Aucune série en cours';
+  $('#streak').textContent = t('unit.streakDays', { n: st });
+  $('#streakChip').title = st ? t('header.streakTitle', { n: st }) : t('header.noStreak');
 }
 function renderView(tab) {
   if (tab === 'ville') renderVille();
@@ -2277,8 +2525,8 @@ function renderView(tab) {
 
 function renderVille() {
   const n = S.city.tiles.length, N = S.city.size;
-  const parts = [plural(n, 'construction', 'constructions'), 'terrain ' + N + '×' + N];
-  if (todayMinutes() > 0) parts.push("aujourd'hui : " + fmtMin(todayMinutes()));
+  const parts = [t('city.captionBuildings', { n }), t('city.captionLand', { size: N })];
+  if (todayMinutes() > 0) parts.push(t('city.captionToday', { time: fmtMin(todayMinutes()) }));
   $('#cityCaption').textContent = frTypo(parts.join(' · '));
   const ew = $('#elsewhere');
   ew.replaceChildren();
@@ -2286,8 +2534,8 @@ function renderVille() {
   if (!ew.hidden) {
     const a = S.active;
     ew.append(icon('timer'), h('div', { class: 'ew-main' },
-      h('p', {}, 'Une session « ' + a.name + ' » est en cours sur un autre écran.'),
-      h('p', { class: 'note' }, 'Tu pourras en lancer une autre quand elle sera terminée. Si cet écran a été fermé, la session sera récupérée automatiquement.')));
+      h('p', {}, t('city.elsewhere', { name: displayName(a.name) })),
+      h('p', { class: 'note' }, t('city.elsewhereNote'))));
   }
   renderRemind();
   const card = $('#nextCard');
@@ -2297,22 +2545,23 @@ function renderVille() {
   const box = h('div', { class: 'next-main' });
   if (affordable.length) {
     const k = affordable.sort((a, b) => priceOf(b) - priceOf(a))[0];
-    box.append(h('p', {}, 'Tu as assez pour : ', h('strong', {}, itemName(k)), ' (' + fmt(priceOf(k)) + ').'));
+    box.append(h('p', {}, tParts('city.affordable', { item: h('strong', {}, itemName(k)), price: fmt(priceOf(k)) })));
   }
   if (nu) {
     const pct = clamp(nu.l.have / nu.l.need * 100, 0, 100);
-    const what = nu.l.need === 1 ? 'après ta première session ' + catName(nu.l.cat)
-      : 'encore ' + fmtMin(nu.rem) + ' ' + (nu.l.cat ? catOf(nu.l.cat) : "d'activités");
-    box.append(h('p', {}, 'Prochain déblocage : ', h('strong', {}, itemName(nu.key)), ', ' + what + '.'));
-    if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': 'Progression vers ' + itemName(nu.key), 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
+    const params = { item: h('strong', {}, itemName(nu.key)), time: fmtMin(nu.rem), cat: nu.l.cat ? catName(nu.l.cat) : '', of: nu.l.cat ? catOf(nu.l.cat) : '' };
+    box.append(h('p', {}, nu.l.need === 1 ? tParts('city.nextFirst', params) : nu.l.cat ? tParts('city.nextCat', params) : tParts('city.nextTotal', params)));
+    if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': t('city.progressTo', { item: itemName(nu.key) }), 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
   } else {
-    box.append(h('p', {}, 'Tous les bâtiments sont débloqués. Bravo !'));
+    box.append(h('p', {}, t('city.allUnlocked')));
   }
   card.append(icon('sparkle'), box);
-  box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, 'Choisir mon objectif'));
+  box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, t('goal.choose')));
   const list = $('#cityList');
-  list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(t =>
-    h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(t) }, itemName(t.item) + ', case ' + (t.x + 1) + ', ' + (t.y + 1) + (buildingLevel(t.item) > 1 ? ' · niveau ' + buildingLevel(t.item) : '')))));
+  list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
+    const params = { item: itemName(tile.item), x: tile.x + 1, y: tile.y + 1, level: buildingLevel(tile.item) };
+    return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params)));
+  }));
 }
 
 
@@ -2799,8 +3048,8 @@ function renderHistory() {
 
 /* ---- 44-shop.js ---- */
 function openShop() {
-  openSheet('Construire', body => {
-    body.append(h('p', { class: 'note' }, 'Solde : ' + fmt(S.coins) + '. Choisis un élément, puis une case libre de ta ville.'));
+  openSheet(t('shop.title'), body => {
+    body.append(h('p', { class: 'note' }, t('shop.intro', { coins: fmt(S.coins) })));
     for (const gk of GROUPS) {
       const sec = h('section', { class: 'shop-group' }, h('h3', {}, isCat(gk) ? catDot(gk) : null, isCat(gk) ? catName(gk) : groupName(gk)));
       for (const key of Object.keys(ITEMS).filter(k => ITEMS[k].group === gk)) {
@@ -2818,25 +3067,25 @@ function openShop() {
           action = h('span', { class: 'pill' }, fmt(price));
         } else {
           const short = price > S.coins;
-          const extra = owned && it.group !== 'decor' ? ' · tu en as ' + owned + ', +' + Math.round(DUP_STEP * 100 * owned) + NB + '%' : '';
-          sub.append(h('span', {}, (short ? 'Il te manque ' + fmt(price - S.coins) : 'Disponible') + extra));
-          action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': 'Placer ' + itemName(key) + ' pour ' + fmt(price), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
+          const extra = owned && it.group !== 'decor' ? ' · ' + t('shop.owned', { n: owned, pct: Math.round(DUP_STEP * 100 * owned) }) : '';
+          sub.append(h('span', {}, (short ? t('shop.missing', { coins: fmt(price - S.coins) }) : t('shop.available')) + extra));
+          action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': t('shop.placeFor', { item: itemName(key), price: fmt(price) }), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
         }
         sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, itemName(key)), sub), action));
       }
       body.append(sec);
     }
     const ns = nextSize();
-    const land = h('section', { class: 'shop-group' }, h('h3', {}, 'Terrain'));
+    const land = h('section', { class: 'shop-group' }, h('h3', {}, t('shop.land')));
     if (ns) {
       const price = EXPAND_PRICE[ns];
       const short = price > S.coins;
       land.append(h('div', { class: 'shop-item' },
         h('div', { class: 'si-icon' }, icon('expand')),
-        h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, 'Agrandir à ' + ns + '×' + ns), h('div', { class: 'si-sub' }, h('span', {}, short ? 'Il te manque ' + fmt(price - S.coins) : 'Plus de place pour construire'))),
+        h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, t('shop.expandTo', { size: ns })), h('div', { class: 'si-sub' }, h('span', {}, short ? t('shop.missing', { coins: fmt(price - S.coins) }) : t('shop.expandHint')))),
         h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, onclick: expandCity }, fmt(price))));
     } else {
-      land.append(h('p', { class: 'note' }, 'Ton terrain a atteint sa taille maximale (' + S.city.size + '×' + S.city.size + ').'));
+      land.append(h('p', { class: 'note' }, t('shop.maxSize', { size: S.city.size })));
     }
     body.append(land);
   });
@@ -2844,19 +3093,19 @@ function openShop() {
 // Calculé à partir de l'état actuel : une fenêtre ouverte avant une synchronisation ne peut pas faire payer pour rien.
 function expandCity() {
   const ns = nextSize();
-  if (!ns) { closeSheet(); toast('Ton terrain a déjà sa taille maximale.'); return; }
+  if (!ns) { closeSheet(); toast(t('shop.alreadyMax')); return; }
   const price = EXPAND_PRICE[ns];
-  if (S.coins < price) { toast('Il te manque ' + fmt(price - S.coins) + '.'); return; }
+  if (S.coins < price) { toast(t('shop.missingToast', { coins: fmt(price - S.coins) })); return; }
   S.coins -= price;
   const shift = (ns - S.city.size) / 2;
   S.city.size = ns;
-  for (const t of S.city.tiles) { t.x += shift; t.y += shift; }
+  for (const tile of S.city.tiles) { tile.x += shift; tile.y += shift; }
   Mode.state = null;
   closeSheet();
   commit();
   City.relayout();
   bump();
-  toast('Terrain agrandi à ' + ns + '×' + ns + '.');
+  toast(t('shop.expanded', { size: ns }));
 }
 function openBuildingSheet(tile) {
   if (!tile || !isItem(tile.item)) return;
@@ -2866,24 +3115,25 @@ function openBuildingSheet(tile) {
   openSheet(itemName(tile.item), body => {
     const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
     City.thumb(cv, tile.item, 96);
-    const del = h('button', { class: 'btn btn-ghost', type: 'button' }, 'Démolir');
-    twoStep(del, 'Démolir', 'Confirmer la démolition', () => {
-      S.city.tiles = S.city.tiles.filter(t => t.id !== tile.id);
+    const g = itemGender(tile.item);
+    const del = h('button', { class: 'btn btn-ghost', type: 'button' }, t('shop.demolish'));
+    twoStep(del, t('shop.demolish'), t('shop.demolishConfirm'), () => {
+      S.city.tiles = S.city.tiles.filter(other => other.id !== tile.id);
       closeSheet();
       commit();
-      toast(itemName(tile.item) + (it.fem ? ' démolie.' : ' démoli.'));
+      toast(t('shop.demolished', { item: itemName(tile.item), g }));
     });
-    const built = validTs(tile.at) ? (it.fem ? 'Construite le ' : 'Construit le ') + dayFmt('short').format(keyToUTC(dayOf(tile.at))) : '';
+    const built = validTs(tile.at) ? t('shop.builtOn', { date: dayFmt('short').format(keyToUTC(dayOf(tile.at))), g }) : '';
     body.append(
       h('div', { class: 'bsheet' }, cv,
         h('div', { class: 'bsheet-text' },
           isCat(it.group) ? catLabel(it.group) : h('span', { class: 'cat-label' }, groupName(it.group)),
           built ? h('span', { class: 'note' }, built) : null,
           isCat(it.group) ? h('span', { class: 'note' }, buildingLevelText(tile.item)) : null,
-          h('span', { class: 'note' }, 'Case ' + (tile.x + 1) + ', ' + (tile.y + 1)))),
-      h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); Mode.startMove(tile); } }, icon('move'), 'Déplacer'),
+          h('span', { class: 'note' }, t('city.square', { x: tile.x + 1, y: tile.y + 1 })))),
+      h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); Mode.startMove(tile); } }, icon('move'), t('shop.move')),
       del,
-      h('p', { class: 'note' }, 'Démolir ne rembourse pas les pièces.'));
+      h('p', { class: 'note' }, t('shop.noRefund')));
   }, { onClose: () => { Selection.id = null; City.draw(); } });
 }
 
