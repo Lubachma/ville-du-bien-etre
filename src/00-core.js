@@ -26,44 +26,35 @@ const NIGHT_TINT = '#16233a';
 const SVGNS = 'http://www.w3.org/2000/svg';
 const BACKUP_SALT = 'vbe/2026/ville-du-bien-etre/sauvegarde';
 
-const CATS = {
-  esprit: { name: 'Esprit', de: "d'Esprit", hint: 'lecture, devoirs, apprendre' },
-  corps:  { name: 'Corps', de: 'de Corps', hint: 'sport, marche, vélo' },
-  calme:  { name: 'Calme', de: 'de Calme', hint: 'méditation, respiration' },
-  foyer:  { name: 'Foyer', de: 'de Foyer', hint: 'rangement, cuisine, tâches' },
-  crea:   { name: 'Créativité', de: 'de Créativité', hint: 'musique, dessin, écriture' },
-};
 const CAT_ORDER = ['esprit', 'corps', 'calme', 'foyer', 'crea'];
-const GROUPS = [
-  ['decor', 'Décor'], ['foyer', 'Foyer'], ['esprit', 'Esprit'], ['corps', 'Corps'],
-  ['calme', 'Calme'], ['crea', 'Créativité'], ['prestige', 'Prestige'],
-];
+// Rubriques de la boutique, dans l'ordre ; noms dans les dictionnaires (cat.* et group.*).
+const GROUPS = ['decor', 'foyer', 'esprit', 'corps', 'calme', 'crea', 'prestige'];
 
 // Prix : au moins 1,5 M par minute exigée pour débloquer, pour que les pièces gardent leur valeur.
 // hf = hauteur approximative du dessin (en largeurs de case) pour les vignettes et la sélection.
 const ITEMS = {
-  arbre:        { name: 'Arbre', group: 'decor', price: 2e6, hf: .62 },
-  fleurs:       { name: 'Massif de fleurs', group: 'decor', price: 1e6, hf: .12, ground: true },
-  chemin:       { name: 'Chemin', group: 'decor', price: 5e5, hf: .06, ground: true },
-  banc:         { name: 'Banc', group: 'decor', price: 2e6, hf: .28 },
-  lampadaire:   { name: 'Lampadaire', group: 'decor', price: 3e6, hf: .78 },
-  etang:        { name: 'Étang', group: 'decor', price: 6e6, hf: .1, ground: true },
-  maison:       { name: 'Maison', group: 'foyer', price: 5e6, need: 0, fem: true, hf: .72 },
-  boulangerie:  { name: 'Boulangerie', group: 'foyer', price: 15e6, need: 1, fem: true, hf: .55 },
-  serre:        { name: 'Serre potagère', group: 'foyer', price: 180e6, need: 120, fem: true, hf: .5 },
-  bibliotheque: { name: 'Bibliothèque', group: 'esprit', price: 10e6, need: 1, fem: true, hf: .58 },
-  ecole:        { name: 'École', group: 'esprit', price: 90e6, need: 60, fem: true, hf: .78 },
-  observatoire: { name: 'Observatoire', group: 'esprit', price: 450e6, need: 300, hf: .66 },
-  terrain:      { name: 'Terrain de sport', group: 'corps', price: 10e6, need: 1, hf: .12, ground: true },
-  piscine:      { name: 'Piscine', group: 'corps', price: 140e6, need: 90, fem: true, hf: .38, ground: true },
-  stade:        { name: 'Stade', group: 'corps', price: 600e6, need: 400, hf: .62 },
-  jardin:       { name: 'Jardin zen', group: 'calme', price: 8e6, need: 1, hf: .3, ground: true },
-  fontaine:     { name: 'Fontaine', group: 'calme', price: 70e6, need: 45, fem: true, hf: .45 },
-  pavillon:     { name: 'Pavillon de thé', group: 'calme', price: 230e6, need: 150, hf: .62 },
-  kiosque:      { name: 'Kiosque à musique', group: 'crea', price: 10e6, need: 1, hf: .62 },
-  atelier:      { name: "Atelier d'artiste", group: 'crea', price: 90e6, need: 60, hf: .55 },
-  theatre:      { name: 'Théâtre', group: 'crea', price: 360e6, need: 240, hf: .72 },
-  horloge:      { name: "Tour de l'horloge", group: 'prestige', price: 1.5e9, needTotal: 1000, fem: true, hf: 1.5 },
+  arbre:        { group: 'decor', price: 2e6, hf: .62 },
+  fleurs:       { group: 'decor', price: 1e6, hf: .12, ground: true },
+  chemin:       { group: 'decor', price: 5e5, hf: .06, ground: true },
+  banc:         { group: 'decor', price: 2e6, hf: .28 },
+  lampadaire:   { group: 'decor', price: 3e6, hf: .78 },
+  etang:        { group: 'decor', price: 6e6, hf: .1, ground: true },
+  maison:       { group: 'foyer', price: 5e6, need: 0, fem: true, hf: .72 },
+  boulangerie:  { group: 'foyer', price: 15e6, need: 1, fem: true, hf: .55 },
+  serre:        { group: 'foyer', price: 180e6, need: 120, fem: true, hf: .5 },
+  bibliotheque: { group: 'esprit', price: 10e6, need: 1, fem: true, hf: .58 },
+  ecole:        { group: 'esprit', price: 90e6, need: 60, fem: true, hf: .78 },
+  observatoire: { group: 'esprit', price: 450e6, need: 300, hf: .66 },
+  terrain:      { group: 'corps', price: 10e6, need: 1, hf: .12, ground: true },
+  piscine:      { group: 'corps', price: 140e6, need: 90, fem: true, hf: .38, ground: true },
+  stade:        { group: 'corps', price: 600e6, need: 400, hf: .62 },
+  jardin:       { group: 'calme', price: 8e6, need: 1, hf: .3, ground: true },
+  fontaine:     { group: 'calme', price: 70e6, need: 45, fem: true, hf: .45 },
+  pavillon:     { group: 'calme', price: 230e6, need: 150, hf: .62 },
+  kiosque:      { group: 'crea', price: 10e6, need: 1, hf: .62 },
+  atelier:      { group: 'crea', price: 90e6, need: 60, hf: .55 },
+  theatre:      { group: 'crea', price: 360e6, need: 240, hf: .72 },
+  horloge:      { group: 'prestige', price: 1.5e9, needTotal: 1000, fem: true, hf: 1.5 },
 };
 
 /* =========================================================================
@@ -71,7 +62,7 @@ const ITEMS = {
    ========================================================================= */
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const isItem = k => typeof k === 'string' && own(ITEMS, k);
-const isCat = k => typeof k === 'string' && own(CATS, k);
+const isCat = k => typeof k === 'string' && CAT_ORDER.includes(k);
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
@@ -110,10 +101,9 @@ function icon(name, cls) {
   s.append(u);
   return s;
 }
-function groupName(g) { const f = GROUPS.find(x => x[0] === g); return f ? f[1] : ''; }
 function catVar(cat) { return 'var(--cat-' + (isCat(cat) || cat === 'prestige' || cat === 'decor' ? cat : 'decor') + ')'; }
 function catDot(cat) { return h('span', { class: 'cat-dot', vars: { '--c': catVar(cat) }, 'aria-hidden': 'true' }); }
-function catLabel(cat) { return h('span', { class: 'cat-label' }, catDot(cat), isCat(cat) ? CATS[cat].name : groupName(cat)); }
+function catLabel(cat) { return h('span', { class: 'cat-label' }, catDot(cat), isCat(cat) ? catName(cat) : groupName(cat)); }
 
 function dec1(x) {
   const r = Math.round(x * 10) / 10;

@@ -161,14 +161,14 @@ function renderVille() {
   const box = h('div', { class: 'next-main' });
   if (affordable.length) {
     const k = affordable.sort((a, b) => priceOf(b) - priceOf(a))[0];
-    box.append(h('p', {}, 'Tu as assez pour : ', h('strong', {}, ITEMS[k].name), ' (' + fmt(priceOf(k)) + ').'));
+    box.append(h('p', {}, 'Tu as assez pour : ', h('strong', {}, itemName(k)), ' (' + fmt(priceOf(k)) + ').'));
   }
   if (nu) {
     const pct = clamp(nu.l.have / nu.l.need * 100, 0, 100);
-    const what = nu.l.need === 1 ? 'après ta première session ' + CATS[nu.l.cat].name
-      : 'encore ' + fmtMin(nu.rem) + ' ' + (nu.l.cat ? CATS[nu.l.cat].de : "d'activités");
-    box.append(h('p', {}, 'Prochain déblocage : ', h('strong', {}, ITEMS[nu.key].name), ', ' + what + '.'));
-    if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': 'Progression vers ' + ITEMS[nu.key].name, 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
+    const what = nu.l.need === 1 ? 'après ta première session ' + catName(nu.l.cat)
+      : 'encore ' + fmtMin(nu.rem) + ' ' + (nu.l.cat ? catOf(nu.l.cat) : "d'activités");
+    box.append(h('p', {}, 'Prochain déblocage : ', h('strong', {}, itemName(nu.key)), ', ' + what + '.'));
+    if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': 'Progression vers ' + itemName(nu.key), 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
   } else {
     box.append(h('p', {}, 'Tous les bâtiments sont débloqués. Bravo !'));
   }
@@ -176,6 +176,6 @@ function renderVille() {
   box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, 'Choisir mon objectif'));
   const list = $('#cityList');
   list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(t =>
-    h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(t) }, ITEMS[t.item].name + ', case ' + (t.x + 1) + ', ' + (t.y + 1) + (buildingLevel(t.item) > 1 ? ' · niveau ' + buildingLevel(t.item) : '')))));
+    h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(t) }, itemName(t.item) + ', case ' + (t.x + 1) + ', ' + (t.y + 1) + (buildingLevel(t.item) > 1 ? ' · niveau ' + buildingLevel(t.item) : '')))));
 }
 

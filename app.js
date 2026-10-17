@@ -31,44 +31,35 @@ const NIGHT_TINT = '#16233a';
 const SVGNS = 'http://www.w3.org/2000/svg';
 const BACKUP_SALT = 'vbe/2026/ville-du-bien-etre/sauvegarde';
 
-const CATS = {
-  esprit: { name: 'Esprit', de: "d'Esprit", hint: 'lecture, devoirs, apprendre' },
-  corps:  { name: 'Corps', de: 'de Corps', hint: 'sport, marche, vélo' },
-  calme:  { name: 'Calme', de: 'de Calme', hint: 'méditation, respiration' },
-  foyer:  { name: 'Foyer', de: 'de Foyer', hint: 'rangement, cuisine, tâches' },
-  crea:   { name: 'Créativité', de: 'de Créativité', hint: 'musique, dessin, écriture' },
-};
 const CAT_ORDER = ['esprit', 'corps', 'calme', 'foyer', 'crea'];
-const GROUPS = [
-  ['decor', 'Décor'], ['foyer', 'Foyer'], ['esprit', 'Esprit'], ['corps', 'Corps'],
-  ['calme', 'Calme'], ['crea', 'Créativité'], ['prestige', 'Prestige'],
-];
+// Rubriques de la boutique, dans l'ordre ; noms dans les dictionnaires (cat.* et group.*).
+const GROUPS = ['decor', 'foyer', 'esprit', 'corps', 'calme', 'crea', 'prestige'];
 
 // Prix : au moins 1,5 M par minute exigée pour débloquer, pour que les pièces gardent leur valeur.
 // hf = hauteur approximative du dessin (en largeurs de case) pour les vignettes et la sélection.
 const ITEMS = {
-  arbre:        { name: 'Arbre', group: 'decor', price: 2e6, hf: .62 },
-  fleurs:       { name: 'Massif de fleurs', group: 'decor', price: 1e6, hf: .12, ground: true },
-  chemin:       { name: 'Chemin', group: 'decor', price: 5e5, hf: .06, ground: true },
-  banc:         { name: 'Banc', group: 'decor', price: 2e6, hf: .28 },
-  lampadaire:   { name: 'Lampadaire', group: 'decor', price: 3e6, hf: .78 },
-  etang:        { name: 'Étang', group: 'decor', price: 6e6, hf: .1, ground: true },
-  maison:       { name: 'Maison', group: 'foyer', price: 5e6, need: 0, fem: true, hf: .72 },
-  boulangerie:  { name: 'Boulangerie', group: 'foyer', price: 15e6, need: 1, fem: true, hf: .55 },
-  serre:        { name: 'Serre potagère', group: 'foyer', price: 180e6, need: 120, fem: true, hf: .5 },
-  bibliotheque: { name: 'Bibliothèque', group: 'esprit', price: 10e6, need: 1, fem: true, hf: .58 },
-  ecole:        { name: 'École', group: 'esprit', price: 90e6, need: 60, fem: true, hf: .78 },
-  observatoire: { name: 'Observatoire', group: 'esprit', price: 450e6, need: 300, hf: .66 },
-  terrain:      { name: 'Terrain de sport', group: 'corps', price: 10e6, need: 1, hf: .12, ground: true },
-  piscine:      { name: 'Piscine', group: 'corps', price: 140e6, need: 90, fem: true, hf: .38, ground: true },
-  stade:        { name: 'Stade', group: 'corps', price: 600e6, need: 400, hf: .62 },
-  jardin:       { name: 'Jardin zen', group: 'calme', price: 8e6, need: 1, hf: .3, ground: true },
-  fontaine:     { name: 'Fontaine', group: 'calme', price: 70e6, need: 45, fem: true, hf: .45 },
-  pavillon:     { name: 'Pavillon de thé', group: 'calme', price: 230e6, need: 150, hf: .62 },
-  kiosque:      { name: 'Kiosque à musique', group: 'crea', price: 10e6, need: 1, hf: .62 },
-  atelier:      { name: "Atelier d'artiste", group: 'crea', price: 90e6, need: 60, hf: .55 },
-  theatre:      { name: 'Théâtre', group: 'crea', price: 360e6, need: 240, hf: .72 },
-  horloge:      { name: "Tour de l'horloge", group: 'prestige', price: 1.5e9, needTotal: 1000, fem: true, hf: 1.5 },
+  arbre:        { group: 'decor', price: 2e6, hf: .62 },
+  fleurs:       { group: 'decor', price: 1e6, hf: .12, ground: true },
+  chemin:       { group: 'decor', price: 5e5, hf: .06, ground: true },
+  banc:         { group: 'decor', price: 2e6, hf: .28 },
+  lampadaire:   { group: 'decor', price: 3e6, hf: .78 },
+  etang:        { group: 'decor', price: 6e6, hf: .1, ground: true },
+  maison:       { group: 'foyer', price: 5e6, need: 0, fem: true, hf: .72 },
+  boulangerie:  { group: 'foyer', price: 15e6, need: 1, fem: true, hf: .55 },
+  serre:        { group: 'foyer', price: 180e6, need: 120, fem: true, hf: .5 },
+  bibliotheque: { group: 'esprit', price: 10e6, need: 1, fem: true, hf: .58 },
+  ecole:        { group: 'esprit', price: 90e6, need: 60, fem: true, hf: .78 },
+  observatoire: { group: 'esprit', price: 450e6, need: 300, hf: .66 },
+  terrain:      { group: 'corps', price: 10e6, need: 1, hf: .12, ground: true },
+  piscine:      { group: 'corps', price: 140e6, need: 90, fem: true, hf: .38, ground: true },
+  stade:        { group: 'corps', price: 600e6, need: 400, hf: .62 },
+  jardin:       { group: 'calme', price: 8e6, need: 1, hf: .3, ground: true },
+  fontaine:     { group: 'calme', price: 70e6, need: 45, fem: true, hf: .45 },
+  pavillon:     { group: 'calme', price: 230e6, need: 150, hf: .62 },
+  kiosque:      { group: 'crea', price: 10e6, need: 1, hf: .62 },
+  atelier:      { group: 'crea', price: 90e6, need: 60, hf: .55 },
+  theatre:      { group: 'crea', price: 360e6, need: 240, hf: .72 },
+  horloge:      { group: 'prestige', price: 1.5e9, needTotal: 1000, fem: true, hf: 1.5 },
 };
 
 /* =========================================================================
@@ -76,7 +67,7 @@ const ITEMS = {
    ========================================================================= */
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const isItem = k => typeof k === 'string' && own(ITEMS, k);
-const isCat = k => typeof k === 'string' && own(CATS, k);
+const isCat = k => typeof k === 'string' && CAT_ORDER.includes(k);
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
@@ -115,10 +106,9 @@ function icon(name, cls) {
   s.append(u);
   return s;
 }
-function groupName(g) { const f = GROUPS.find(x => x[0] === g); return f ? f[1] : ''; }
 function catVar(cat) { return 'var(--cat-' + (isCat(cat) || cat === 'prestige' || cat === 'decor' ? cat : 'decor') + ')'; }
 function catDot(cat) { return h('span', { class: 'cat-dot', vars: { '--c': catVar(cat) }, 'aria-hidden': 'true' }); }
-function catLabel(cat) { return h('span', { class: 'cat-label' }, catDot(cat), isCat(cat) ? CATS[cat].name : groupName(cat)); }
+function catLabel(cat) { return h('span', { class: 'cat-label' }, catDot(cat), isCat(cat) ? catName(cat) : groupName(cat)); }
 
 function dec1(x) {
   const r = Math.round(x * 10) / 10;
@@ -274,6 +264,14 @@ function displayName(name) {
   return key ? t(key) : name;
 }
 
+// Noms des bâtiments, des domaines et des rubriques de la boutique.
+function itemName(key) { return t('item.' + key); }
+function itemGender(key) { return ITEMS[key] && ITEMS[key].fem ? 'f' : 'm'; }
+function catName(c) { return t('cat.' + c); }
+function catOf(c) { return t('cat.' + c + '.of'); }
+function catHint(c) { return t('cat.' + c + '.hint'); }
+function groupName(g) { return t('group.' + g); }
+
 // « Ma ville » était le nom par défaut avant la traduction : il reste traité comme tel.
 function cityName() {
   const name = S.personal && S.personal.name;
@@ -312,6 +310,49 @@ DICT.fr = {
   'tpl.chore.dishes': 'Faire la vaisselle',
   'tpl.chore.study': 'Réviser / travailler',
   'tpl.chore.mail': 'Trier le courrier',
+
+  // Domaines (nom, « de … » et exemples) et rubriques de la boutique
+  'cat.esprit': 'Esprit',
+  'cat.esprit.of': "d'Esprit",
+  'cat.esprit.hint': 'lecture, devoirs, apprendre',
+  'cat.corps': 'Corps',
+  'cat.corps.of': 'de Corps',
+  'cat.corps.hint': 'sport, marche, vélo',
+  'cat.calme': 'Calme',
+  'cat.calme.of': 'de Calme',
+  'cat.calme.hint': 'méditation, respiration',
+  'cat.foyer': 'Foyer',
+  'cat.foyer.of': 'de Foyer',
+  'cat.foyer.hint': 'rangement, cuisine, tâches',
+  'cat.crea': 'Créativité',
+  'cat.crea.of': 'de Créativité',
+  'cat.crea.hint': 'musique, dessin, écriture',
+  'group.decor': 'Décor',
+  'group.prestige': 'Prestige',
+
+  // Bâtiments et décor
+  'item.arbre': 'Arbre',
+  'item.fleurs': 'Massif de fleurs',
+  'item.chemin': 'Chemin',
+  'item.banc': 'Banc',
+  'item.lampadaire': 'Lampadaire',
+  'item.etang': 'Étang',
+  'item.maison': 'Maison',
+  'item.boulangerie': 'Boulangerie',
+  'item.serre': 'Serre potagère',
+  'item.bibliotheque': 'Bibliothèque',
+  'item.ecole': 'École',
+  'item.observatoire': 'Observatoire',
+  'item.terrain': 'Terrain de sport',
+  'item.piscine': 'Piscine',
+  'item.stade': 'Stade',
+  'item.jardin': 'Jardin zen',
+  'item.fontaine': 'Fontaine',
+  'item.pavillon': 'Pavillon de thé',
+  'item.kiosque': 'Kiosque à musique',
+  'item.atelier': "Atelier d'artiste",
+  'item.theatre': 'Théâtre',
+  'item.horloge': "Tour de l'horloge",
 };
 
 
@@ -344,6 +385,49 @@ DICT.en = {
   'tpl.chore.dishes': 'Do the dishes',
   'tpl.chore.study': 'Study / work',
   'tpl.chore.mail': 'Sort the mail',
+
+  // Domains (name, "of …" and examples) and shop sections
+  'cat.esprit': 'Mind',
+  'cat.esprit.of': 'of Mind',
+  'cat.esprit.hint': 'reading, homework, learning',
+  'cat.corps': 'Body',
+  'cat.corps.of': 'of Body',
+  'cat.corps.hint': 'sport, walking, cycling',
+  'cat.calme': 'Calm',
+  'cat.calme.of': 'of Calm',
+  'cat.calme.hint': 'meditation, breathing',
+  'cat.foyer': 'Home',
+  'cat.foyer.of': 'of Home',
+  'cat.foyer.hint': 'tidying, cooking, chores',
+  'cat.crea': 'Creativity',
+  'cat.crea.of': 'of Creativity',
+  'cat.crea.hint': 'music, drawing, writing',
+  'group.decor': 'Decorations',
+  'group.prestige': 'Landmarks',
+
+  // Buildings and decorations
+  'item.arbre': 'Tree',
+  'item.fleurs': 'Flower bed',
+  'item.chemin': 'Path',
+  'item.banc': 'Bench',
+  'item.lampadaire': 'Street lamp',
+  'item.etang': 'Pond',
+  'item.maison': 'House',
+  'item.boulangerie': 'Bakery',
+  'item.serre': 'Greenhouse',
+  'item.bibliotheque': 'Library',
+  'item.ecole': 'School',
+  'item.observatoire': 'Observatory',
+  'item.terrain': 'Sports field',
+  'item.piscine': 'Swimming pool',
+  'item.stade': 'Stadium',
+  'item.jardin': 'Zen garden',
+  'item.fontaine': 'Fountain',
+  'item.pavillon': 'Tea pavilion',
+  'item.kiosque': 'Bandstand',
+  'item.atelier': "Artist's studio",
+  'item.theatre': 'Theatre',
+  'item.horloge': 'Clock tower',
 };
 
 
@@ -1263,7 +1347,7 @@ function lockInfo(key) {
   if (!it.need) return null;
   const have = S.stats.byCat[it.group] || 0;
   if (have >= it.need) return null;
-  const text = it.need === 1 ? 'Après ta première session ' + CATS[it.group].name : it.need + NB + 'min ' + CATS[it.group].de;
+  const text = it.need === 1 ? 'Après ta première session ' + catName(it.group) : it.need + NB + 'min ' + catOf(it.group);
   return { have, need: it.need, cat: it.group, text };
 }
 function unlockedSet() { return new Set(Object.keys(ITEMS).filter(k => !lockInfo(k))); }
@@ -1916,9 +2000,9 @@ const City = (() => {
     const where = 'Case ' + (x + 1) + ', ' + (y + 1);
     if (Mode.state) {
       const free = !t || (Mode.state.type === 'move' && t.id === Mode.state.tileId);
-      return where + (free ? ' : libre. Entrée pour choisir cette case.' : ' : occupée par ' + ITEMS[t.item].name + '.');
+      return where + (free ? ' : libre. Entrée pour choisir cette case.' : ' : occupée par ' + itemName(t.item) + '.');
     }
-    return where + (t ? ' : ' + ITEMS[t.item].name + '. Entrée pour ouvrir.' : ' : libre.');
+    return where + (t ? ' : ' + itemName(t.item) + '. Entrée pour ouvrir.' : ' : libre.');
   }
 
   canvas.addEventListener('pointermove', e => {
@@ -1976,7 +2060,7 @@ const Mode = {
     this.render();
     City.draw();
     if (kbdMode) setTimeout(() => City.focus(), 60);
-    announce('Choisis une case libre pour placer ' + ITEMS[key].name + '. Au clavier : flèches puis Entrée.');
+    announce('Choisis une case libre pour placer ' + itemName(key) + '. Au clavier : flèches puis Entrée.');
   },
   startMove(tile) {
     this.state = { type: 'move', tileId: tile.id, target: null };
@@ -1984,7 +2068,7 @@ const Mode = {
     this.render();
     City.draw();
     if (kbdMode) setTimeout(() => City.focus(), 60);
-    announce('Choisis une case libre pour déplacer ' + ITEMS[tile.item].name + '.');
+    announce('Choisis une case libre pour déplacer ' + itemName(tile.item) + '.');
   },
   isFree(t, exceptId) {
     const occ = City.tileOf(t.x, t.y);
@@ -2005,7 +2089,7 @@ const Mode = {
       const it = ITEMS[st.item];
       const price = priceOf(st.item);
       const lock = lockInfo(st.item);
-      if (lock) { toast(it.name + ' est encore verrouillé' + (it.fem ? 'e' : '') + '.'); this.cancel(); return; }
+      if (lock) { toast(itemName(st.item) + ' est encore verrouillé' + (it.fem ? 'e' : '') + '.'); this.cancel(); return; }
       if (S.coins < price) { toast('Il te manque ' + fmt(price - S.coins) + '.'); return; }
       if (!this.isFree(st.target)) { toast('Cette case est déjà occupée.'); return; }
       S.coins -= price;
@@ -2015,7 +2099,7 @@ const Mode = {
       City.pop(tile.id);
       commit();
       bump();
-      toast(it.name + (it.fem ? ' construite.' : ' construit.'));
+      toast(itemName(st.item) + (it.fem ? ' construite.' : ' construit.'));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
@@ -2035,12 +2119,11 @@ const Mode = {
     bar.hidden = !st;
     if (!st) return;
     if (st.type === 'place') {
-      const it = ITEMS[st.item];
-      txt.textContent = frTypo(st.target ? it.name + ' · ' + fmt(priceOf(st.item)) : 'Touche une case libre pour placer : ' + it.name + ' (' + fmt(priceOf(st.item)) + ')');
+      txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : 'Touche une case libre pour placer : ' + itemName(st.item) + ' (' + fmt(priceOf(st.item)) + ')');
       ok.textContent = 'Placer ici';
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
-      txt.textContent = frTypo(st.target ? 'Nouvel emplacement choisi' : 'Touche une case libre pour déplacer : ' + (tile ? ITEMS[tile.item].name : ''));
+      txt.textContent = frTypo(st.target ? 'Nouvel emplacement choisi' : 'Touche une case libre pour déplacer : ' + (tile ? itemName(tile.item) : ''));
       ok.textContent = 'Déplacer ici';
     }
     ok.hidden = !st.target;
@@ -2214,14 +2297,14 @@ function renderVille() {
   const box = h('div', { class: 'next-main' });
   if (affordable.length) {
     const k = affordable.sort((a, b) => priceOf(b) - priceOf(a))[0];
-    box.append(h('p', {}, 'Tu as assez pour : ', h('strong', {}, ITEMS[k].name), ' (' + fmt(priceOf(k)) + ').'));
+    box.append(h('p', {}, 'Tu as assez pour : ', h('strong', {}, itemName(k)), ' (' + fmt(priceOf(k)) + ').'));
   }
   if (nu) {
     const pct = clamp(nu.l.have / nu.l.need * 100, 0, 100);
-    const what = nu.l.need === 1 ? 'après ta première session ' + CATS[nu.l.cat].name
-      : 'encore ' + fmtMin(nu.rem) + ' ' + (nu.l.cat ? CATS[nu.l.cat].de : "d'activités");
-    box.append(h('p', {}, 'Prochain déblocage : ', h('strong', {}, ITEMS[nu.key].name), ', ' + what + '.'));
-    if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': 'Progression vers ' + ITEMS[nu.key].name, 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
+    const what = nu.l.need === 1 ? 'après ta première session ' + catName(nu.l.cat)
+      : 'encore ' + fmtMin(nu.rem) + ' ' + (nu.l.cat ? catOf(nu.l.cat) : "d'activités");
+    box.append(h('p', {}, 'Prochain déblocage : ', h('strong', {}, itemName(nu.key)), ', ' + what + '.'));
+    if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': 'Progression vers ' + itemName(nu.key), 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
   } else {
     box.append(h('p', {}, 'Tous les bâtiments sont débloqués. Bravo !'));
   }
@@ -2229,7 +2312,7 @@ function renderVille() {
   box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, 'Choisir mon objectif'));
   const list = $('#cityList');
   list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(t =>
-    h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(t) }, ITEMS[t.item].name + ', case ' + (t.x + 1) + ', ' + (t.y + 1) + (buildingLevel(t.item) > 1 ? ' · niveau ' + buildingLevel(t.item) : '')))));
+    h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(t) }, itemName(t.item) + ', case ' + (t.x + 1) + ', ' + (t.y + 1) + (buildingLevel(t.item) > 1 ? ' · niveau ' + buildingLevel(t.item) : '')))));
 }
 
 
@@ -2522,7 +2605,7 @@ function renderDraw() {
     h('p', { class: 'draw-kind' }, cur.kind === 'chores' ? 'Obligation tirée' : 'Envie tirée'),
     h('p', { class: 'draw-name' }, cur.name),
     h('div', { class: 'draw-meta' }, h('span', { class: 'pill' }, cur.min + NB + 'min'),
-      h('span', { class: 'pill' }, catDot(cur.cat), CATS[cur.cat].name),
+      h('span', { class: 'pill' }, catDot(cur.cat), catName(cur.cat)),
       h('span', { class: 'pill' }, activityModeLabel(cur.mode)),
       cur.bonus ? h('span', { class: 'pill bonus' }, 'Bonus +' + cur.bonus + NB + '%') : null),
     h('p', { class: 'sub' }, 'Gain à la fin : ' + fmt(r.total)),
@@ -2586,7 +2669,7 @@ function renderList(key, ul) {
     const available = taskAvailable(it), status = taskStatus(it);
     ul.append(h('li', { class: available ? null : 'task-waiting' },
       h('div', { class: 'row-main' }, h('span', { class: 'row-title' }, it.name),
-        h('span', { class: 'row-sub' }, catDot(it.cat), CATS[it.cat].name + ' · ' + it.min + NB + 'min' + (it.ex ? ' · exemple' : '')),
+        h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · exemple' : '')),
         h('span', { class: 'task-status' }, activityModeLabel(it.mode) + ' · énergie ' + (ACT_ENERGIES.find(([value]) => value === (it.energy || 'medium')) || ACT_ENERGIES[1])[1].toLowerCase()),
         status ? h('span', { class: 'task-status' }, status) : null,
         !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': 'Remettre disponible : ' + it.name, onclick: () => resetTask(key, it.id) }, 'Remettre disponible') : null),
@@ -2676,15 +2759,15 @@ function renderMeters() {
   for (const c of CAT_ORDER) {
     const have = S.stats.byCat[c] || 0;
     const next = Object.keys(ITEMS).filter(k => ITEMS[k].group === c && lockInfo(k)).sort((a, b) => ITEMS[a].need - ITEMS[b].need)[0];
-    let pct = 100, note = 'Tous les bâtiments ' + CATS[c].de + ' sont débloqués.';
+    let pct = 100, note = 'Tous les bâtiments ' + catOf(c) + ' sont débloqués.';
     if (next) {
       const need = ITEMS[next].need;
       pct = clamp(have / need * 100, 0, 100);
-      note = need === 1 ? ITEMS[next].name + ' : après ta première session.' : ITEMS[next].name + ' à ' + fmtMin(need) + ' (encore ' + fmtMin(need - have) + ').';
+      note = need === 1 ? itemName(next) + ' : après ta première session.' : itemName(next) + ' à ' + fmtMin(need) + ' (encore ' + fmtMin(need - have) + ').';
     }
     wrap.append(h('div', { class: 'meter-row' },
-      h('div', { class: 'meter-top' }, h('span', { class: 'name' }, catDot(c), CATS[c].name), h('span', { class: 'val' }, fmtMin(have))),
-      h('div', { class: 'meter', vars: { '--c': catVar(c) }, role: 'progressbar', 'aria-label': 'Progression ' + CATS[c].de, 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct)) }, h('span', { style: 'width:' + pct + '%' })),
+      h('div', { class: 'meter-top' }, h('span', { class: 'name' }, catDot(c), catName(c)), h('span', { class: 'val' }, fmtMin(have))),
+      h('div', { class: 'meter', vars: { '--c': catVar(c) }, role: 'progressbar', 'aria-label': 'Progression ' + catOf(c), 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct)) }, h('span', { style: 'width:' + pct + '%' })),
       h('span', { class: 'meter-note' }, note)));
   }
 }
@@ -2718,8 +2801,8 @@ function renderHistory() {
 function openShop() {
   openSheet('Construire', body => {
     body.append(h('p', { class: 'note' }, 'Solde : ' + fmt(S.coins) + '. Choisis un élément, puis une case libre de ta ville.'));
-    for (const [gk, gname] of GROUPS) {
-      const sec = h('section', { class: 'shop-group' }, h('h3', {}, gk === 'decor' || gk === 'prestige' ? null : catDot(gk), gname));
+    for (const gk of GROUPS) {
+      const sec = h('section', { class: 'shop-group' }, h('h3', {}, isCat(gk) ? catDot(gk) : null, isCat(gk) ? catName(gk) : groupName(gk)));
       for (const key of Object.keys(ITEMS).filter(k => ITEMS[k].group === gk)) {
         const it = ITEMS[key];
         const lock = lockInfo(key);
@@ -2737,9 +2820,9 @@ function openShop() {
           const short = price > S.coins;
           const extra = owned && it.group !== 'decor' ? ' · tu en as ' + owned + ', +' + Math.round(DUP_STEP * 100 * owned) + NB + '%' : '';
           sub.append(h('span', {}, (short ? 'Il te manque ' + fmt(price - S.coins) : 'Disponible') + extra));
-          action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': 'Placer ' + it.name + ' pour ' + fmt(price), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
+          action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': 'Placer ' + itemName(key) + ' pour ' + fmt(price), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
         }
-        sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, it.name), sub), action));
+        sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, itemName(key)), sub), action));
       }
       body.append(sec);
     }
@@ -2780,7 +2863,7 @@ function openBuildingSheet(tile) {
   const it = ITEMS[tile.item];
   Selection.id = tile.id;
   City.draw();
-  openSheet(it.name, body => {
+  openSheet(itemName(tile.item), body => {
     const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
     City.thumb(cv, tile.item, 96);
     const del = h('button', { class: 'btn btn-ghost', type: 'button' }, 'Démolir');
@@ -2788,7 +2871,7 @@ function openBuildingSheet(tile) {
       S.city.tiles = S.city.tiles.filter(t => t.id !== tile.id);
       closeSheet();
       commit();
-      toast(it.name + (it.fem ? ' démolie.' : ' démoli.'));
+      toast(itemName(tile.item) + (it.fem ? ' démolie.' : ' démoli.'));
     });
     const built = validTs(tile.at) ? (it.fem ? 'Construite le ' : 'Construit le ') + dayFmt('short').format(keyToUTC(dayOf(tile.at))) : '';
     body.append(
@@ -3077,12 +3160,12 @@ function renderGoals() {
   card.replaceChildren(
     h('div', { class: 'feature-between' }, h('h3', {}, p.done ? 'Objectif atteint !' : 'Mon rythme de la semaine'),
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openGoals }, 'Modifier')),
-    h('p', { class: 'sub' }, range + ' · ' + (g.cat === 'all' ? 'Tous les domaines' : CATS[g.cat].name)),
+    h('p', { class: 'sub' }, range + ' · ' + (g.cat === 'all' ? 'Tous les domaines' : catName(g.cat))),
     featureMeter('Minutes effectuées', p.minutes, g.minutes), featureMeter('Jours actifs', p.activeDays, g.days),
     h('p', { class: 'note' }, p.done ? 'Tu as atteint ton rythme. La suite est du bonus, à ton envie.' : 'Dès 1 minute effectuée, le jour compte. Choisis tes jours de repos : aucun jour imposé, aucune pénalité.'));
   if (g.building && ITEMS[g.building]) {
     const lock = lockInfo(g.building);
-    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, 'Mon bâtiment : ', h('strong', {}, ITEMS[g.building].name), lock ? ' · encore ' + fmtMin(lock.need - lock.have) + (lock.cat ? ' ' + CATS[lock.cat].de : ' au total') : ' · débloqué, à construire dans la boutique')));
+    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, 'Mon bâtiment : ', h('strong', {}, itemName(g.building)), lock ? ' · encore ' + fmtMin(lock.need - lock.have) + (lock.cat ? ' ' + catOf(lock.cat) : ' au total') : ' · débloqué, à construire dans la boutique')));
   }
 }
 function openGoals() {
@@ -3091,7 +3174,7 @@ function openGoals() {
     const minutes = h('input', { class: 'input', id: 'goalMinutes', type: 'number', min: '5', max: '1260', step: '1', value: initial.minutes, required: true, inputmode: 'numeric' });
     const days = h('select', { class: 'select', id: 'goalDays' }, Array.from({ length: 7 }, (_, i) => h('option', { value: i + 1, selected: i + 1 === initial.days }, plural(i + 1, 'jour', 'jours'))));
     const cat = h('select', { class: 'select', id: 'goalCat' }, h('option', { value: 'all', selected: initial.cat === 'all' }, 'Tous les domaines'), catOptions(initial.cat));
-    const building = h('select', { class: 'select', id: 'goalBuilding' }, h('option', { value: '', selected: !initial.building }, 'Laisser la ville me guider'), Object.keys(ITEMS).filter(k => ITEMS[k].group !== 'decor').map(k => h('option', { value: k, selected: k === initial.building }, ITEMS[k].name + (lockInfo(k) ? '' : ' · débloqué'))));
+    const building = h('select', { class: 'select', id: 'goalBuilding' }, h('option', { value: '', selected: !initial.building }, 'Laisser la ville me guider'), Object.keys(ITEMS).filter(k => ITEMS[k].group !== 'decor').map(k => h('option', { value: k, selected: k === initial.building }, itemName(k) + (lockInfo(k) ? '' : ' · débloqué'))));
     body.append(h('p', {}, 'Un cap du lundi au dimanche, à adapter à ta semaine. Chaque minute effectuée remplit cet objectif, même si tu interromps une session. Un jour actif compte dès 1 minute.'),
       h('form', { class: 'add-form', onsubmit: e => {
         e.preventDefault();
@@ -3294,7 +3377,7 @@ function buildingLevelText(key) {
   const info = buildingLevelInfo(key), it = ITEMS[key];
   if (!info.level) return '';
   const labels = ['Naissance', 'Épanouissement', 'Rayonnement'];
-  return 'Niveau ' + info.level + ' · ' + labels[info.level - 1] + (info.level < 3 ? ' · niveau ' + (info.level + 1) + ' à ' + fmtMin(info.thresholds[info.level - 1]) + (it.needTotal ? ' au total' : ' ' + CATS[it.group].de) : ' · niveau maximum');
+  return 'Niveau ' + info.level + ' · ' + labels[info.level - 1] + (info.level < 3 ? ' · niveau ' + (info.level + 1) + ' à ' + fmtMin(info.thresholds[info.level - 1]) + (it.needTotal ? ' au total' : ' ' + catOf(it.group)) : ' · niveau maximum');
 }
 function openCityPersonalization() {
   openSheet('Ma ville à moi', body => {
@@ -3739,7 +3822,7 @@ function persistRun(force = false) {
 function showRun(a) {
   const ses = $('#session');
   ses.style.setProperty('--c', catVar(a.cat));
-  $('#sessCat').replaceChildren(catDot(a.cat), CATS[a.cat].name);
+  $('#sessCat').replaceChildren(catDot(a.cat), catName(a.cat));
   $('#sessName').textContent = frTypo(a.name);
   const bonus = $('#sessBonus');
   bonus.hidden = !a.drawPct;
@@ -3994,7 +4077,7 @@ function showSuccess(a, total, fresh) {
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });
       City.thumb(cv, k, 56);
-      return h('div', { class: 'res-unlock' }, cv, h('span', {}, 'Nouveau bâtiment débloqué : ' + ITEMS[k].name));
+      return h('div', { class: 'res-unlock' }, cv, h('span', {}, 'Nouveau bâtiment débloqué : ' + itemName(k)));
     });
     res.append(
       h('div', { class: 'res-figure' }, burst, icon('coin'), '+' + fmt(total)),
@@ -4053,7 +4136,7 @@ async function requestWake() {
 /* =========================================================================
    Événements et démarrage
    ========================================================================= */
-function catOptions(sel) { return CAT_ORDER.map(c => h('option', { value: c, selected: c === sel ? true : null }, CATS[c].name + ' (' + CATS[c].hint + ')')); }
+function catOptions(sel) { return CAT_ORDER.map(c => h('option', { value: c, selected: c === sel ? true : null }, catName(c) + ' (' + catHint(c) + ')')); }
 // Durées proposées, plus la durée actuelle si elle n'en fait pas partie (sauvegarde ancienne).
 function minOptions(sel) {
   const durs = !sel || DURATIONS.includes(sel) ? DURATIONS : [...DURATIONS, sel].sort((a, b) => a - b);

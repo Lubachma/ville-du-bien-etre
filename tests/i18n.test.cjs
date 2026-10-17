@@ -13,7 +13,8 @@ function app() {
   const source = ['00-core.js', '05-i18n.js', ...DICTIONARIES, '10-state.js', '20-rules.js']
     .map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
   vm.runInContext(source + `\nthis.api = { DICT, t, setLang, resolveLang, fmt, fmtMin, frTypo, normalize, defaultState,
-    displayName, cityName, get state() { return S; }, set state(v) { S = v; } };`, context);
+    displayName, cityName, ITEMS, CAT_ORDER, itemName, itemGender, catName, catOf, catHint, groupName,
+    get state() { return S; }, set state(v) { S = v; } };`, context);
   return context.api;
 }
 
@@ -97,4 +98,29 @@ test("exemples par défaut et nom de ville traduits tant qu'ils ne sont pas reno
   assert.equal(a.cityName(), 'My town');
   a.state.personal.name = 'Lausanne';
   assert.equal(a.cityName(), 'Lausanne');
+});
+
+test('noms dynamiques présents', () => {
+  const a = app();
+  for (const lang of ['fr', 'en']) {
+    const dict = a.DICT[lang];
+    for (const k of Object.keys(a.ITEMS)) assert.ok('item.' + k in dict, lang + ' item.' + k);
+    for (const c of a.CAT_ORDER) for (const key of ['cat.' + c, 'cat.' + c + '.of', 'cat.' + c + '.hint']) assert.ok(key in dict, lang + ' ' + key);
+    assert.ok('group.decor' in dict && 'group.prestige' in dict, lang + ' groupes');
+  }
+  for (const file of fs.readdirSync(path.join(root, 'src')).filter(f => f.endsWith('.js'))) {
+    assert.equal(fs.readFileSync(path.join(root, 'src', file), 'utf8').match(/(ITEMS|CATS)\[[^\]]+\]\.(name|de|hint)/g), null, file);
+  }
+  assert.deepEqual(Object.keys(a.ITEMS).filter(k => 'name' in a.ITEMS[k]), []);
+  a.setLang('fr');
+  assert.equal(a.itemName('maison'), 'Maison');
+  assert.equal(a.itemGender('maison'), 'f');
+  assert.equal(a.itemGender('stade'), 'm');
+  assert.equal(a.catOf('esprit'), "d'Esprit");
+  assert.equal(a.groupName('decor'), 'Décor');
+  a.setLang('en');
+  assert.equal(a.itemName('atelier'), "Artist's studio");
+  assert.equal(a.catName('crea'), 'Creativity');
+  assert.equal(a.catOf('corps'), 'of Body');
+  assert.equal(a.groupName('prestige'), 'Landmarks');
 });

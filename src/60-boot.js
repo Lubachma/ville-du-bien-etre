@@ -1,7 +1,7 @@
 /* =========================================================================
    Événements et démarrage
    ========================================================================= */
-function catOptions(sel) { return CAT_ORDER.map(c => h('option', { value: c, selected: c === sel ? true : null }, CATS[c].name + ' (' + CATS[c].hint + ')')); }
+function catOptions(sel) { return CAT_ORDER.map(c => h('option', { value: c, selected: c === sel ? true : null }, catName(c) + ' (' + catHint(c) + ')')); }
 // Durées proposées, plus la durée actuelle si elle n'en fait pas partie (sauvegarde ancienne).
 function minOptions(sel) {
   const durs = !sel || DURATIONS.includes(sel) ? DURATIONS : [...DURATIONS, sel].sort((a, b) => a - b);

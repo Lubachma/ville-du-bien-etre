@@ -274,7 +274,7 @@ function persistRun(force = false) {
 function showRun(a) {
   const ses = $('#session');
   ses.style.setProperty('--c', catVar(a.cat));
-  $('#sessCat').replaceChildren(catDot(a.cat), CATS[a.cat].name);
+  $('#sessCat').replaceChildren(catDot(a.cat), catName(a.cat));
   $('#sessName').textContent = frTypo(a.name);
   const bonus = $('#sessBonus');
   bonus.hidden = !a.drawPct;
@@ -529,7 +529,7 @@ function showSuccess(a, total, fresh) {
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });
       City.thumb(cv, k, 56);
-      return h('div', { class: 'res-unlock' }, cv, h('span', {}, 'Nouveau bâtiment débloqué : ' + ITEMS[k].name));
+      return h('div', { class: 'res-unlock' }, cv, h('span', {}, 'Nouveau bâtiment débloqué : ' + itemName(k)));
     });
     res.append(
       h('div', { class: 'res-figure' }, burst, icon('coin'), '+' + fmt(total)),

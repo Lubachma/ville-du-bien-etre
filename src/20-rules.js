@@ -84,7 +84,7 @@ function lockInfo(key) {
   if (!it.need) return null;
   const have = S.stats.byCat[it.group] || 0;
   if (have >= it.need) return null;
-  const text = it.need === 1 ? 'Après ta première session ' + CATS[it.group].name : it.need + NB + 'min ' + CATS[it.group].de;
+  const text = it.need === 1 ? 'Après ta première session ' + catName(it.group) : it.need + NB + 'min ' + catOf(it.group);
   return { have, need: it.need, cat: it.group, text };
 }
 function unlockedSet() { return new Set(Object.keys(ITEMS).filter(k => !lockInfo(k))); }

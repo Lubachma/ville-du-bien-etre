@@ -76,15 +76,15 @@ function renderMeters() {
   for (const c of CAT_ORDER) {
     const have = S.stats.byCat[c] || 0;
     const next = Object.keys(ITEMS).filter(k => ITEMS[k].group === c && lockInfo(k)).sort((a, b) => ITEMS[a].need - ITEMS[b].need)[0];
-    let pct = 100, note = 'Tous les bâtiments ' + CATS[c].de + ' sont débloqués.';
+    let pct = 100, note = 'Tous les bâtiments ' + catOf(c) + ' sont débloqués.';
     if (next) {
       const need = ITEMS[next].need;
       pct = clamp(have / need * 100, 0, 100);
-      note = need === 1 ? ITEMS[next].name + ' : après ta première session.' : ITEMS[next].name + ' à ' + fmtMin(need) + ' (encore ' + fmtMin(need - have) + ').';
+      note = need === 1 ? itemName(next) + ' : après ta première session.' : itemName(next) + ' à ' + fmtMin(need) + ' (encore ' + fmtMin(need - have) + ').';
     }
     wrap.append(h('div', { class: 'meter-row' },
-      h('div', { class: 'meter-top' }, h('span', { class: 'name' }, catDot(c), CATS[c].name), h('span', { class: 'val' }, fmtMin(have))),
-      h('div', { class: 'meter', vars: { '--c': catVar(c) }, role: 'progressbar', 'aria-label': 'Progression ' + CATS[c].de, 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct)) }, h('span', { style: 'width:' + pct + '%' })),
+      h('div', { class: 'meter-top' }, h('span', { class: 'name' }, catDot(c), catName(c)), h('span', { class: 'val' }, fmtMin(have))),
+      h('div', { class: 'meter', vars: { '--c': catVar(c) }, role: 'progressbar', 'aria-label': 'Progression ' + catOf(c), 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct)) }, h('span', { style: 'width:' + pct + '%' })),
       h('span', { class: 'meter-note' }, note)));
   }
 }

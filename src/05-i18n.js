@@ -72,6 +72,14 @@ function displayName(name) {
   return key ? t(key) : name;
 }
 
+// Noms des bâtiments, des domaines et des rubriques de la boutique.
+function itemName(key) { return t('item.' + key); }
+function itemGender(key) { return ITEMS[key] && ITEMS[key].fem ? 'f' : 'm'; }
+function catName(c) { return t('cat.' + c); }
+function catOf(c) { return t('cat.' + c + '.of'); }
+function catHint(c) { return t('cat.' + c + '.hint'); }
+function groupName(g) { return t('group.' + g); }
+
 // « Ma ville » était le nom par défaut avant la traduction : il reste traité comme tel.
 function cityName() {
   const name = S.personal && S.personal.name;

@@ -36,12 +36,12 @@ function renderGoals() {
   card.replaceChildren(
     h('div', { class: 'feature-between' }, h('h3', {}, p.done ? 'Objectif atteint !' : 'Mon rythme de la semaine'),
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openGoals }, 'Modifier')),
-    h('p', { class: 'sub' }, range + ' · ' + (g.cat === 'all' ? 'Tous les domaines' : CATS[g.cat].name)),
+    h('p', { class: 'sub' }, range + ' · ' + (g.cat === 'all' ? 'Tous les domaines' : catName(g.cat))),
     featureMeter('Minutes effectuées', p.minutes, g.minutes), featureMeter('Jours actifs', p.activeDays, g.days),
     h('p', { class: 'note' }, p.done ? 'Tu as atteint ton rythme. La suite est du bonus, à ton envie.' : 'Dès 1 minute effectuée, le jour compte. Choisis tes jours de repos : aucun jour imposé, aucune pénalité.'));
   if (g.building && ITEMS[g.building]) {
     const lock = lockInfo(g.building);
-    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, 'Mon bâtiment : ', h('strong', {}, ITEMS[g.building].name), lock ? ' · encore ' + fmtMin(lock.need - lock.have) + (lock.cat ? ' ' + CATS[lock.cat].de : ' au total') : ' · débloqué, à construire dans la boutique')));
+    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, 'Mon bâtiment : ', h('strong', {}, itemName(g.building)), lock ? ' · encore ' + fmtMin(lock.need - lock.have) + (lock.cat ? ' ' + catOf(lock.cat) : ' au total') : ' · débloqué, à construire dans la boutique')));
   }
 }
 function openGoals() {
@@ -50,7 +50,7 @@ function openGoals() {
     const minutes = h('input', { class: 'input', id: 'goalMinutes', type: 'number', min: '5', max: '1260', step: '1', value: initial.minutes, required: true, inputmode: 'numeric' });
     const days = h('select', { class: 'select', id: 'goalDays' }, Array.from({ length: 7 }, (_, i) => h('option', { value: i + 1, selected: i + 1 === initial.days }, plural(i + 1, 'jour', 'jours'))));
     const cat = h('select', { class: 'select', id: 'goalCat' }, h('option', { value: 'all', selected: initial.cat === 'all' }, 'Tous les domaines'), catOptions(initial.cat));
-    const building = h('select', { class: 'select', id: 'goalBuilding' }, h('option', { value: '', selected: !initial.building }, 'Laisser la ville me guider'), Object.keys(ITEMS).filter(k => ITEMS[k].group !== 'decor').map(k => h('option', { value: k, selected: k === initial.building }, ITEMS[k].name + (lockInfo(k) ? '' : ' · débloqué'))));
+    const building = h('select', { class: 'select', id: 'goalBuilding' }, h('option', { value: '', selected: !initial.building }, 'Laisser la ville me guider'), Object.keys(ITEMS).filter(k => ITEMS[k].group !== 'decor').map(k => h('option', { value: k, selected: k === initial.building }, itemName(k) + (lockInfo(k) ? '' : ' · débloqué'))));
     body.append(h('p', {}, 'Un cap du lundi au dimanche, à adapter à ta semaine. Chaque minute effectuée remplit cet objectif, même si tu interromps une session. Un jour actif compte dès 1 minute.'),
       h('form', { class: 'add-form', onsubmit: e => {
         e.preventDefault();
@@ -253,7 +253,7 @@ function buildingLevelText(key) {
   const info = buildingLevelInfo(key), it = ITEMS[key];
   if (!info.level) return '';
   const labels = ['Naissance', 'Épanouissement', 'Rayonnement'];
-  return 'Niveau ' + info.level + ' · ' + labels[info.level - 1] + (info.level < 3 ? ' · niveau ' + (info.level + 1) + ' à ' + fmtMin(info.thresholds[info.level - 1]) + (it.needTotal ? ' au total' : ' ' + CATS[it.group].de) : ' · niveau maximum');
+  return 'Niveau ' + info.level + ' · ' + labels[info.level - 1] + (info.level < 3 ? ' · niveau ' + (info.level + 1) + ' à ' + fmtMin(info.thresholds[info.level - 1]) + (it.needTotal ? ' au total' : ' ' + catOf(it.group)) : ' · niveau maximum');
 }
 function openCityPersonalization() {
   openSheet('Ma ville à moi', body => {

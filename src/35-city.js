@@ -177,9 +177,9 @@ const City = (() => {
     const where = 'Case ' + (x + 1) + ', ' + (y + 1);
     if (Mode.state) {
       const free = !t || (Mode.state.type === 'move' && t.id === Mode.state.tileId);
-      return where + (free ? ' : libre. Entrée pour choisir cette case.' : ' : occupée par ' + ITEMS[t.item].name + '.');
+      return where + (free ? ' : libre. Entrée pour choisir cette case.' : ' : occupée par ' + itemName(t.item) + '.');
     }
-    return where + (t ? ' : ' + ITEMS[t.item].name + '. Entrée pour ouvrir.' : ' : libre.');
+    return where + (t ? ' : ' + itemName(t.item) + '. Entrée pour ouvrir.' : ' : libre.');
   }
 
   canvas.addEventListener('pointermove', e => {
@@ -237,7 +237,7 @@ const Mode = {
     this.render();
     City.draw();
     if (kbdMode) setTimeout(() => City.focus(), 60);
-    announce('Choisis une case libre pour placer ' + ITEMS[key].name + '. Au clavier : flèches puis Entrée.');
+    announce('Choisis une case libre pour placer ' + itemName(key) + '. Au clavier : flèches puis Entrée.');
   },
   startMove(tile) {
     this.state = { type: 'move', tileId: tile.id, target: null };
@@ -245,7 +245,7 @@ const Mode = {
     this.render();
     City.draw();
     if (kbdMode) setTimeout(() => City.focus(), 60);
-    announce('Choisis une case libre pour déplacer ' + ITEMS[tile.item].name + '.');
+    announce('Choisis une case libre pour déplacer ' + itemName(tile.item) + '.');
   },
   isFree(t, exceptId) {
     const occ = City.tileOf(t.x, t.y);
@@ -266,7 +266,7 @@ const Mode = {
       const it = ITEMS[st.item];
       const price = priceOf(st.item);
       const lock = lockInfo(st.item);
-      if (lock) { toast(it.name + ' est encore verrouillé' + (it.fem ? 'e' : '') + '.'); this.cancel(); return; }
+      if (lock) { toast(itemName(st.item) + ' est encore verrouillé' + (it.fem ? 'e' : '') + '.'); this.cancel(); return; }
       if (S.coins < price) { toast('Il te manque ' + fmt(price - S.coins) + '.'); return; }
       if (!this.isFree(st.target)) { toast('Cette case est déjà occupée.'); return; }
       S.coins -= price;
@@ -276,7 +276,7 @@ const Mode = {
       City.pop(tile.id);
       commit();
       bump();
-      toast(it.name + (it.fem ? ' construite.' : ' construit.'));
+      toast(itemName(st.item) + (it.fem ? ' construite.' : ' construit.'));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
@@ -296,12 +296,11 @@ const Mode = {
     bar.hidden = !st;
     if (!st) return;
     if (st.type === 'place') {
-      const it = ITEMS[st.item];
-      txt.textContent = frTypo(st.target ? it.name + ' · ' + fmt(priceOf(st.item)) : 'Touche une case libre pour placer : ' + it.name + ' (' + fmt(priceOf(st.item)) + ')');
+      txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : 'Touche une case libre pour placer : ' + itemName(st.item) + ' (' + fmt(priceOf(st.item)) + ')');
       ok.textContent = 'Placer ici';
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
-      txt.textContent = frTypo(st.target ? 'Nouvel emplacement choisi' : 'Touche une case libre pour déplacer : ' + (tile ? ITEMS[tile.item].name : ''));
+      txt.textContent = frTypo(st.target ? 'Nouvel emplacement choisi' : 'Touche une case libre pour déplacer : ' + (tile ? itemName(tile.item) : ''));
       ok.textContent = 'Déplacer ici';
     }
     ok.hidden = !st.target;

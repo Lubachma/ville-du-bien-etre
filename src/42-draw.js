@@ -103,7 +103,7 @@ function renderDraw() {
     h('p', { class: 'draw-kind' }, cur.kind === 'chores' ? 'Obligation tirée' : 'Envie tirée'),
     h('p', { class: 'draw-name' }, cur.name),
     h('div', { class: 'draw-meta' }, h('span', { class: 'pill' }, cur.min + NB + 'min'),
-      h('span', { class: 'pill' }, catDot(cur.cat), CATS[cur.cat].name),
+      h('span', { class: 'pill' }, catDot(cur.cat), catName(cur.cat)),
       h('span', { class: 'pill' }, activityModeLabel(cur.mode)),
       cur.bonus ? h('span', { class: 'pill bonus' }, 'Bonus +' + cur.bonus + NB + '%') : null),
     h('p', { class: 'sub' }, 'Gain à la fin : ' + fmt(r.total)),
@@ -167,7 +167,7 @@ function renderList(key, ul) {
     const available = taskAvailable(it), status = taskStatus(it);
     ul.append(h('li', { class: available ? null : 'task-waiting' },
       h('div', { class: 'row-main' }, h('span', { class: 'row-title' }, it.name),
-        h('span', { class: 'row-sub' }, catDot(it.cat), CATS[it.cat].name + ' · ' + it.min + NB + 'min' + (it.ex ? ' · exemple' : '')),
+        h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · exemple' : '')),
         h('span', { class: 'task-status' }, activityModeLabel(it.mode) + ' · énergie ' + (ACT_ENERGIES.find(([value]) => value === (it.energy || 'medium')) || ACT_ENERGIES[1])[1].toLowerCase()),
         status ? h('span', { class: 'task-status' }, status) : null,
         !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': 'Remettre disponible : ' + it.name, onclick: () => resetTask(key, it.id) }, 'Remettre disponible') : null),

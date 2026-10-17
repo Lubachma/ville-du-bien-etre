@@ -1,8 +1,8 @@
 function openShop() {
   openSheet('Construire', body => {
     body.append(h('p', { class: 'note' }, 'Solde : ' + fmt(S.coins) + '. Choisis un élément, puis une case libre de ta ville.'));
-    for (const [gk, gname] of GROUPS) {
-      const sec = h('section', { class: 'shop-group' }, h('h3', {}, gk === 'decor' || gk === 'prestige' ? null : catDot(gk), gname));
+    for (const gk of GROUPS) {
+      const sec = h('section', { class: 'shop-group' }, h('h3', {}, isCat(gk) ? catDot(gk) : null, isCat(gk) ? catName(gk) : groupName(gk)));
       for (const key of Object.keys(ITEMS).filter(k => ITEMS[k].group === gk)) {
         const it = ITEMS[key];
         const lock = lockInfo(key);
@@ -20,9 +20,9 @@ function openShop() {
           const short = price > S.coins;
           const extra = owned && it.group !== 'decor' ? ' · tu en as ' + owned + ', +' + Math.round(DUP_STEP * 100 * owned) + NB + '%' : '';
           sub.append(h('span', {}, (short ? 'Il te manque ' + fmt(price - S.coins) : 'Disponible') + extra));
-          action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': 'Placer ' + it.name + ' pour ' + fmt(price), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
+          action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': 'Placer ' + itemName(key) + ' pour ' + fmt(price), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
         }
-        sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, it.name), sub), action));
+        sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, itemName(key)), sub), action));
       }
       body.append(sec);
     }
@@ -63,7 +63,7 @@ function openBuildingSheet(tile) {
   const it = ITEMS[tile.item];
   Selection.id = tile.id;
   City.draw();
-  openSheet(it.name, body => {
+  openSheet(itemName(tile.item), body => {
     const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
     City.thumb(cv, tile.item, 96);
     const del = h('button', { class: 'btn btn-ghost', type: 'button' }, 'Démolir');
@@ -71,7 +71,7 @@ function openBuildingSheet(tile) {
       S.city.tiles = S.city.tiles.filter(t => t.id !== tile.id);
       closeSheet();
       commit();
-      toast(it.name + (it.fem ? ' démolie.' : ' démoli.'));
+      toast(itemName(tile.item) + (it.fem ? ' démolie.' : ' démoli.'));
     });
     const built = validTs(tile.at) ? (it.fem ? 'Construite le ' : 'Construit le ') + dayFmt('short').format(keyToUTC(dayOf(tile.at))) : '';
     body.append(
