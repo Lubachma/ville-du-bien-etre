@@ -55,7 +55,7 @@ Les cinq situations les plus susceptibles de gêner un utilisateur réel, chacun
 
 ---
 
-### Tâche 1 : Socle de traduction
+### Task 1 : Socle de traduction
 
 **Fichiers :**
 - Créer :
@@ -201,7 +201,7 @@ Les cinq situations les plus susceptibles de gêner un utilisateur réel, chacun
 
 - [ ] **Étape 5 :** committer avec le message `feat(i18n): socle de traduction FR/EN`.
 
-### Tâche 2 : Noms des bâtiments, domaines et groupes
+### Task 2 : Noms des bâtiments, domaines et groupes
 
 **Fichiers :**
 - Modifier :
@@ -251,7 +251,7 @@ Les cinq situations les plus susceptibles de gêner un utilisateur réel, chacun
 - [ ] **Étape 4 :** `npm test`, puis `npm run build && PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Résultat attendu : tout passe.
 - [ ] **Étape 5 :** committer avec le message `feat(i18n): noms traduits des bâtiments et domaines`.
 
-### Tâches 3 à 7 : Traduire l'interface existante, fichier par fichier
+### Procédure commune aux tâches 3 à 7 : traduire l'interface existante, fichier par fichier
 
 Chacune de ces cinq tâches suit **la même procédure** sur sa liste de fichiers. Une tâche est terminée quand ses fichiers rejoignent la liste `CLEAN_FILES` du test anti-texte-en-dur.
 
@@ -278,30 +278,67 @@ Exceptions de départ :
 
 Toute nouvelle exception doit rester purement technique et être commentée. Pour `index.html`, la règle est différente : chaque texte visible se trouve dans un élément `data-i18n`. Le texte d'un bouton qui contient une icône va dans un `<span data-i18n>`.
 
-- [ ] **Tâche 3 : navigation, ville et boutique.**
-  - Fichiers : `index.html` (tous les textes fixes), `src/40-ui.js`, `src/44-shop.js`, `src/35-city.js`, `src/20-rules.js` (`lockInfo`) et `src/47-accessibility.js`.
-  - Le test commun est créé avec ces fichiers dans `CLEAN_FILES`.
-  - Pastille de série : clé `unit.streakDays` (`{n} j` / `{n} d`).
-  - Committer avec le message `feat(i18n): navigation, ville et boutique`.
-- [ ] **Tâche 4 : activités et tirage.**
-  - Fichiers : `src/41-activities.js`, `src/42-draw.js` et `src/60-boot.js` (toasts des formulaires).
-  - `catOptions` affiche `catName(c) + ' (' + catHint(c) + ')'`.
-  - La fenêtre de modification se pré-remplit avec `displayName(it.name)`.
-  - Committer avec le message `feat(i18n): activités et tirage`.
-- [ ] **Tâche 5 : journal, objectifs, routines, niveaux, personnalisation.**
-  - Fichiers : `src/43-journal.js` et `src/46-features.js`.
-  - La légende du PNG devient la clé `png.footer` (`Ville du bien-être · {time} pour prendre soin de moi` / `Ville du bien-être · {time} of self-care`).
-  - La plage de la semaine utilise `dayFmt('short')`.
-  - Committer avec le message `feat(i18n): journal et fonctions`.
-- [ ] **Tâche 6 : sessions.**
-  - Fichiers : `src/50-session.js`, ainsi que les messages de `src/10-state.js` (`localWarning`, `localError`, migration).
-  - Committer avec le message `feat(i18n): sessions et messages de stockage`.
-- [ ] **Tâche 7 : réglages, sauvegarde, état, aide, installation.**
-  - Fichiers : `src/45-settings.js`, `src/48-status.js` et `src/70-install.js`.
-  - `70-install.js` lit `window.VilleI18n.t`. Sur l'événement `ville:lang`, il reconstruit le contenu de sa carte si elle est affichée, en gardant sa variante (`ios` ou `prompt`).
-  - Committer avec le message `feat(i18n): réglages, aide et installation`.
+### Task 3 : Navigation, ville et boutique
 
-Pour chacune des tâches 3 à 7 :
+Suivre la procédure commune ci-dessus.
+
+- Fichiers : `index.html` (tous les textes fixes), `src/40-ui.js`, `src/44-shop.js`, `src/35-city.js`, `src/20-rules.js` (`lockInfo`) et `src/47-accessibility.js`.
+- Le test commun est créé avec ces fichiers dans `CLEAN_FILES`.
+- Pastille de série : clé `unit.streakDays` (`{n} j` / `{n} d`).
+- Committer avec le message `feat(i18n): navigation, ville et boutique`.
+
+- [ ] Ajouter les fichiers de la tâche à `CLEAN_FILES`, puis `npm test`. Résultat attendu : ÉCHEC, avec la liste des textes encore en dur.
+- [ ] Traduire les fichiers.
+- [ ] `npm test`, puis `npm run build && npm run check && PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Résultat attendu : tout passe. Les tests navigateur sont en français : ils prouvent qu'aucun texte français n'a changé.
+- [ ] Committer.
+
+### Task 4 : Activités et tirage
+
+Suivre la procédure commune ci-dessus.
+
+- Fichiers : `src/41-activities.js`, `src/42-draw.js` et `src/60-boot.js` (toasts des formulaires).
+- `catOptions` affiche `catName(c) + ' (' + catHint(c) + ')'`.
+- La fenêtre de modification se pré-remplit avec `displayName(it.name)`.
+- Committer avec le message `feat(i18n): activités et tirage`.
+
+- [ ] Ajouter les fichiers de la tâche à `CLEAN_FILES`, puis `npm test`. Résultat attendu : ÉCHEC, avec la liste des textes encore en dur.
+- [ ] Traduire les fichiers.
+- [ ] `npm test`, puis `npm run build && npm run check && PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Résultat attendu : tout passe. Les tests navigateur sont en français : ils prouvent qu'aucun texte français n'a changé.
+- [ ] Committer.
+
+### Task 5 : Journal, objectifs, routines, niveaux, personnalisation
+
+Suivre la procédure commune ci-dessus.
+
+- Fichiers : `src/43-journal.js` et `src/46-features.js`.
+- La légende du PNG devient la clé `png.footer` (`Ville du bien-être · {time} pour prendre soin de moi` / `Ville du bien-être · {time} of self-care`).
+- La plage de la semaine utilise `dayFmt('short')`.
+- Committer avec le message `feat(i18n): journal et fonctions`.
+
+- [ ] Ajouter les fichiers de la tâche à `CLEAN_FILES`, puis `npm test`. Résultat attendu : ÉCHEC, avec la liste des textes encore en dur.
+- [ ] Traduire les fichiers.
+- [ ] `npm test`, puis `npm run build && npm run check && PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Résultat attendu : tout passe. Les tests navigateur sont en français : ils prouvent qu'aucun texte français n'a changé.
+- [ ] Committer.
+
+### Task 6 : Sessions
+
+Suivre la procédure commune ci-dessus.
+
+- Fichiers : `src/50-session.js`, ainsi que les messages de `src/10-state.js` (`localWarning`, `localError`, migration).
+- Committer avec le message `feat(i18n): sessions et messages de stockage`.
+
+- [ ] Ajouter les fichiers de la tâche à `CLEAN_FILES`, puis `npm test`. Résultat attendu : ÉCHEC, avec la liste des textes encore en dur.
+- [ ] Traduire les fichiers.
+- [ ] `npm test`, puis `npm run build && npm run check && PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Résultat attendu : tout passe. Les tests navigateur sont en français : ils prouvent qu'aucun texte français n'a changé.
+- [ ] Committer.
+
+### Task 7 : Réglages, sauvegarde, état, aide, installation
+
+Suivre la procédure commune ci-dessus.
+
+- Fichiers : `src/45-settings.js`, `src/48-status.js` et `src/70-install.js`.
+- `70-install.js` lit `window.VilleI18n.t`. Sur l'événement `ville:lang`, il reconstruit le contenu de sa carte si elle est affichée, en gardant sa variante (`ios` ou `prompt`).
+- Committer avec le message `feat(i18n): réglages, aide et installation`.
 
 - [ ] Ajouter les fichiers de la tâche à `CLEAN_FILES`, puis `npm test`. Résultat attendu : ÉCHEC, avec la liste des textes encore en dur.
 - [ ] Traduire les fichiers.
@@ -310,7 +347,7 @@ Pour chacune des tâches 3 à 7 :
 
 À la fin de la tâche 7, `CLEAN_FILES` contient tous les fichiers `src/*.js` sauf `06-lang-fr.js` et `07-lang-en.js`. Le test le vérifie : `assert.deepEqual(CLEAN_FILES.sort(), srcFilesExceptDictionaries.sort())`.
 
-### Tâche 8 : Réglage de la langue et changement en direct
+### Task 8 : Réglage de la langue et changement en direct
 
 **Fichiers :**
 - Modifier :
@@ -362,7 +399,7 @@ Pour chacune des tâches 3 à 7 :
 - [ ] **Étape 4 :** `npm test && npm run build && PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Résultat attendu : tout passe.
 - [ ] **Étape 5 :** committer avec le message `feat(i18n): réglage de la langue et changement en direct`.
 
-### Tâche 9 : Calcul de la série, jours de repos, pause, début de semaine
+### Task 9 : Calcul de la série, jours de repos, pause, début de semaine
 
 **Fichiers :**
 - Modifier :
@@ -421,7 +458,7 @@ Pour chacune des tâches 3 à 7 :
 - [ ] **Étape 4 :** `npm test && npm run build && PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Résultat attendu : tout passe.
 - [ ] **Étape 5 :** committer avec le message `feat(série): jours de repos, pause et début de semaine`.
 
-### Tâche 10 : Cadeau de bon retour
+### Task 10 : Cadeau de bon retour
 
 **Fichiers :**
 - Modifier :
@@ -458,7 +495,7 @@ Pour chacune des tâches 3 à 7 :
 - [ ] **Étape 4 :** `npm test && npm run build && PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Résultat attendu : tout passe.
 - [ ] **Étape 5 :** committer avec le message `feat(série): cadeau de bon retour`.
 
-### Tâche 11 : Interface de la série
+### Task 11 : Interface de la série
 
 **Fichiers :**
 - Modifier :
@@ -502,7 +539,7 @@ Pour chacune des tâches 3 à 7 :
 - [ ] **Étape 4 :** tout relancer. Résultat attendu : tout passe.
 - [ ] **Étape 5 :** committer avec le message `feat(série): réglages, journal et en-tête`.
 
-### Tâche 12 : Son de fin et vibration
+### Task 12 : Son de fin et vibration
 
 **Fichiers :**
 - Modifier :
@@ -534,7 +571,7 @@ Pour chacune des tâches 3 à 7 :
 - [ ] **Étape 4 :** tout relancer. Résultat attendu : tout passe.
 - [ ] **Étape 5 :** committer avec le message `feat(réglages): choix du son, volume et vibration`.
 
-### Tâche 13 : Rappel quotidien dans l'agenda
+### Task 13 : Rappel quotidien dans l'agenda
 
 **Fichiers :**
 - Créer : `src/49-reminder.js` et `tests/reminder.test.cjs`.
@@ -586,7 +623,7 @@ Pour chacune des tâches 3 à 7 :
 - [ ] **Étape 5 :** tout relancer. Résultat attendu : tout passe.
 - [ ] **Étape 6 :** committer avec le message `feat(réglages): rappel quotidien dans l'agenda`.
 
-### Tâche 14 : Vérification d'ensemble et documentation
+### Task 14 : Vérification d'ensemble et documentation
 
 **Fichiers :**
 - Modifier :
