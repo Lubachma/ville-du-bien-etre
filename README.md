@@ -1,94 +1,124 @@
-# Ville du bien-être
+<div align="center">
 
-Une application personnelle pour transformer les activités réelles en une ville qui grandit. Pensée pour être partagée à des amis via **GitHub Pages** : aucun serveur applicatif, compte ou abonnement nécessaire.
+🇫🇷 <a href="README.fr.md">Version française disponible ici</a>
 
-Chaque personne garde **sa propre progression sur son appareil**. Les villes ne sont ni partagées ni synchronisées entre téléphones.
+# 🏙️ Ville du bien-être
 
-**Ouvrir l’app : <https://lubachma.github.io/ville-du-bien-etre/>**
+**Grow a city by taking care of yourself.** Real-life activities with a timer earn coins, and coins build an isometric town that lights up at night.
 
-## Utiliser l’app
+**[▶ Try it live](https://lubachma.github.io/ville-du-bien-etre/)** — nothing to install, no account. Interface in French.
 
-- **Concentration** : garder l’app affichée pendant la session. La tolérance de sortie est réglable à 5, 10 ou 20 secondes.
-- **Activité libre** : marcher, faire du sport ou écouter de la musique, écran verrouillé ou dans une autre app. Le chrono est retrouvé à la réouverture, même après fermeture. Le son de fin n’est pas garanti quand le navigateur suspend la page.
-- Une session réussie rapporte des pièces pour construire. Le temps réellement effectué lors d’une interruption reste dans le journal et compte pour les objectifs hebdomadaires ; il ne donne ni pièces, ni bonus de série, ni déblocage de bâtiment.
-- Le tirage peut tenir compte du temps disponible, de l’énergie et du lieu. Les tâches ponctuelles ou récurrentes quittent les propositions après réussite, puis reviennent si leur fréquence le prévoit.
-- Les routines enchaînent 2 à 6 activités toujours disponibles, avec une pause libre entre les étapes. Leur progression est conservée au rechargement.
-- Le journal contient un objectif hebdomadaire souple. Le bâtiment ciblé se choisit indépendamment de cet objectif.
-- Personnaliser la ville permet de lui donner un nom et d’en exporter une image PNG. Les bâtiments gagnent des décorations avec les minutes réussies de leur domaine.
+100 % local — your city stays on your device (browser storage). Installable on iPhone and Android, works offline. Made to be shared with friends: everyone keeps their own city.
 
-## Installer sur téléphone
+[![Deploy](https://github.com/Lubachma/ville-du-bien-etre/actions/workflows/pages.yml/badge.svg)](https://github.com/Lubachma/ville-du-bien-etre/actions/workflows/pages.yml)
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-1. Ouvrir l’adresse publiée en HTTPS, pas le fichier HTML reçu en pièce jointe.
-2. **iPhone** : ouvrir dans Safari, puis **Partager → Sur l’écran d’accueil → Ajouter**. **Android** : menu de Chrome → **Installer l’application** ou **Ajouter à l’écran d’accueil**.
-3. Ouvrir l’app depuis son icône. Dans les réglages, attendre l’indication **Disponible hors connexion** avant de compter sur le mode hors ligne.
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
+![Canvas 2D](https://img.shields.io/badge/Canvas_2D-E34F26?logo=html5&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-5A0FC8?logo=pwa&logoColor=white)
+![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-222222?logo=githubpages&logoColor=white)
 
-Les libellés du téléphone peuvent varier. L’aide reste accessible dans **Réglages → Bien démarrer et installer l’app**. Installer avant de commencer évite d’avoir à transférer la ville entre le navigateur et l’app installée.
+<img src="docs/assets/demo.gif" width="300" alt="Ville du bien-être demo — a 5-minute meditation earns coins and unlocks the zen garden, which is then built in the city">
 
-## Sauvegarde et confidentialité
+</div>
 
-Sur GitHub Pages, les données de progression restent dans le stockage local du navigateur. Les polices et icônes sont servies avec l’app ; aucun service d’analytics ou de publicité n’est intégré. L’hébergeur reçoit les requêtes nécessaires au téléchargement du site, pas les activités enregistrées.
+## ✨ Features
 
-**Réglages → Sauvegarde** permet d’exporter un fichier ou un texte et de le restaurer sur un autre appareil. Conserver cette copie : supprimer les données du navigateur ou désinstaller l’app peut supprimer la ville. La date affichée est celle de la demande d’export ; l’app ne peut pas vérifier que le fichier a réellement été conservé.
+| Feature | Description |
+|---------|-------------|
+| ⏱️ **Focus** | Keep the app on screen while the timer runs (5, 10 or 20 s of grace to read a notification). Leaving longer interrupts the session: the time already done stays in the journal, without coins |
+| 🚶 **Free activity** | Walk, sport, music: lock the phone or switch apps, the timer keeps going and the result is recorded when you come back — even after closing the app |
+| 🎲 **Random draw** | Can't decide? Draw from your wishes (+20 %) or your chores (+50 %), filtered by available time, energy and place. One-off and recurring tasks leave the draw once done and come back on schedule |
+| 🔁 **Routines** | Chain 2 to 6 activities with a free break between steps; progress survives a reload |
+| 🎯 **Weekly goal** | A flexible Monday-to-Sunday target (minutes and active days, all domains or one), plus a building to aim for |
+| 🏗️ **City** | 16 buildings unlocked by the minutes of their domain, 6 decorations, land up to 11×11. Buildings level up with practice, windows light up at night. Name your city and export it as a PNG |
+| 📒 **Journal** | Today, streak, time done, 7-day chart, progress per domain, latest sessions |
+| 💾 **Backups** | Export to a file (on iPhone: “Save to Files”) or a text, restore on another device; a reminder appears after 14 days |
 
-Les sauvegardes **VBE1** restent importables. Les nouveaux exports **VBE2** contiennent aussi les modes, routines et objectifs ; ils nécessitent cette nouvelle version de l’app. Une session en cours n’est pas transportée par l’export.
+### Rewards
 
-La progression de l’ancienne version locale est copiée vers un stockage v2 distinct, sans supprimer l’original. Une ancienne fenêtre ne peut ainsi pas écraser les nouveaux champs. Si une ancienne session est encore en cours, l’app demande de la terminer avant la reprise. Les anciennes fenêtres ne synchronisent plus leurs changements avec la v2 après migration.
+- 💰 **1 M coins** per completed minute
+- 🔥 **Streak**: +10 % per consecutive day, up to +50 %
+- 🎲 **Draw**: first draw accepted +20 % (wish) or +50 % (chore) from 3 available ideas, halved on each paid re-roll
+- 🧭 **5 domains** — Esprit (mind), Corps (body), Calme (calm), Foyer (home), Créativité (creativity) — each unlocking its own buildings, then the Clock Tower after 1,000 minutes in total
 
-En cas de stockage illisible, l’original est préservé avant réparation. En cas de quota atteint ou de stockage refusé, un avertissement reste visible et propose l’export. Il peut être nécessaire de libérer de la place avant de réessayer.
+## 📱 Install on a phone
 
-Le code conserve une intégration optionnelle au stockage du compte Claude uniquement si l’environnement Claude fournit son API. Cette intégration n’est pas active sur GitHub Pages.
+1. Open **<https://lubachma.github.io/ville-du-bien-etre/>** (the HTTPS address, not an HTML file received as an attachment).
+2. **iPhone**: in Safari, **Share → Add to Home Screen → Add**. **Android**: Chrome menu → **Install app** or **Add to Home screen**.
+3. Launch it from its icon. In the settings, wait for **“Disponible hors connexion”** before relying on offline mode.
 
-## Développer et vérifier
+Install it before you start: a city started in a browser tab doesn't move to the installed app by itself (transfer it with **Réglages → Sauvegarde**). The in-app help lives in **Réglages → Bien démarrer et installer l’app**.
 
-Node.js 20 ou plus récent est nécessaire pour les outils ; le site publié n’en a pas besoin.
+## 🔒 Data & privacy
 
-```sh
+- Progress stays in the browser's local storage. No account, no analytics, no ads; the host only receives the requests needed to download the site, never your activities.
+- **Réglages → Sauvegarde** exports a file or a text and restores it on another device. Clearing browser data or uninstalling the app can delete the city — keep a copy.
+- **VBE1** backups (first version) remain importable; **VBE2** exports also carry modes, routines and goals. A running session isn't exported.
+- Progress from the first version is copied to a separate v2 storage without deleting the original, and unreadable data is preserved before any repair.
+
+## 🚀 Quick start
+
+```bash
 npm ci
-npm run build
-npm run check
-npm test
-npx playwright install chromium
-npm run test:browser
-npm run serve
+npm run build      # src/ → app.js + sw.js
+npm run serve      # http://127.0.0.1:8766
 ```
 
-L’app locale est accessible sur `http://127.0.0.1:8766`. Les tests navigateur utilisent des profils jetables et un serveur sous `/ville-du-bien-etre/` pour vérifier les chemins de GitHub Pages. Ils ne modifient pas la progression du navigateur habituel. Sur un Mac avec Chrome déjà installé, `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` évite d’installer Chromium.
+Requires Node.js ≥ 20 for the tooling only — the published site is plain static files.
 
-Pour vérifier aussi le moteur WebKit : `npx playwright install webkit`, puis `BROWSER=webkit npm run test:browser`. Cela complète les tests Chrome sans remplacer les essais sur un iPhone physique.
+## 🛠️ Stack
 
-- `src/` : règles, stockage, dessin de ville, parcours, sessions et installation.
-- `styles.css`, `styles-activities.css`, `styles-features.css` : styles.
-- `index.html` : structure des écrans.
-- `scripts/build.mjs` : produit `app.js` et l’empreinte du cache hors ligne.
-- `scripts/sw-template.js` : source du service worker.
-- `tests/` : tests métier et parcours navigateur.
+Vanilla JavaScript, no framework and no runtime dependency · Canvas 2D isometric renderer · Service Worker (offline first, updates on demand) · Web Locks (one session across tabs) · Screen Wake Lock · Web Audio (end chime) · Web Share (backup files) · node:test + Playwright
 
-**Ne pas modifier directement `app.js` ou `sw.js`** : ils sont générés par le build. Aucun framework n’est nécessaire dans le navigateur.
+The build is a small Node script: it concatenates `src/` into `app.js` and stamps the service worker with a content hash.
 
-## Publier sur GitHub Pages
+## 📜 Scripts
 
-Le dossier local doit être ajouté à un dépôt GitHub avec son `package-lock.json`, ses sources et le dossier `.github/`. Ne pas envoyer `node_modules/` ou `test-results/`.
+| Command | Role |
+|---------|------|
+| `npm run build` | Generates `app.js` and `sw.js` from `src/` |
+| `npm run check` | JavaScript syntax and manifest validation |
+| `npm test` | Unit tests (node:test): rules, storage, merges, sessions, backups |
+| `npm run test:browser` | Playwright scenarios: mobile layouts, offline under the Pages subpath, sessions, migration, updates |
+| `npm run serve` | Local server on port 8766 |
+| `npm run package` | Prepares the deployable `dist/` folder |
 
-1. Dans le dépôt GitHub : **Settings → Pages → Source → GitHub Actions**.
-2. Dans **Actions**, choisir **Déployer sur GitHub Pages**, puis **Run workflow** sur la branche contenant l’app.
-3. Le workflow construit, vérifie le code, exécute les tests puis publie uniquement les fichiers statiques de `dist/`. L’adresse publiée apparaît dans le résultat du déploiement.
+Browser tests need `npx playwright install chromium`, or `PLAYWRIGHT_CHANNEL=chrome` to reuse an installed Chrome; `BROWSER=webkit` runs them on WebKit too.
 
-Le workflow est **manuel** : un simple envoi de modifications ne déclenche pas une publication. Configuration fondée sur la [documentation GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+**Never edit `app.js` or `sw.js` by hand** — they are generated by the build.
 
-Pour préparer les fichiers sans publier :
+## 🚢 Deployment
 
-```sh
-npm run package
+GitHub Pages, through the **manual** workflow [`pages.yml`](.github/workflows/pages.yml): **Actions → Déployer sur GitHub Pages → Run workflow**, or `gh workflow run pages.yml`. It builds, checks, runs the unit and browser tests, then publishes only the static files of `dist/` — a push alone never publishes. All paths are relative, so `dist/` also works at the root of any static host.
+
+Installed apps get the new version with a **“Mettre à jour”** prompt, applied after the running session; the city is kept. Before sharing a version, check on a real iPhone and Android: install from the link, first offline launch, free activity with the screen locked, coming back after closing, backup/restore and update.
+
+## 📁 Structure
+
+```
+src/
+├── 00-core.js          # constants, buildings, DOM and formatting helpers
+├── 10-state.js         # state, validation, 3-way merge, storage, v1 → v2 migration
+├── 20-rules.js         # days, streaks, rewards, unlocks, prices
+├── 30-paint.js         # isometric painter and the drawing of every building
+├── 35-city.js          # city canvas: layout, touch and keyboard, levels, snapshot
+├── 40-ui.js            # navigation, sheets, toasts, city view
+├── 41-activities.js    # activities, modes, frequencies, start and edit sheets
+├── 42-draw.js          # contextual random draw
+├── 43-journal.js       # indicators, weekly chart, history
+├── 44-shop.js          # shop, land expansion, building sheet
+├── 45-settings.js      # settings, backups, reminders
+├── 46-features.js      # weekly goals, routines, levels, personalization, PNG export
+├── 47-accessibility.js # keyboard radios, focus trap
+├── 48-status.js        # storage and update banners, help
+├── 50-session.js       # timer, focus and free modes, anti-cheat, end chime
+├── 60-boot.js          # events and startup
+└── 70-install.js       # install prompt, offline cache, updates
+scripts/                # build, check, package, serve, service worker template
+tests/                  # unit tests (VM) and Playwright scenarios
 ```
 
-Le dossier `dist/` peut aussi être publié comme site statique. Tous les chemins sont relatifs : le site fonctionne à la racine d’un domaine ou sous le nom d’un dépôt.
+## 📄 License
 
-## Mises à jour et vérification sur téléphone
-
-Le build change automatiquement la version hors ligne quand un fichier publié change. Une nouvelle version prête apparaît dans l’app ; elle s’applique avec **Mettre à jour**, après la session en cours. La ville est conservée. Le cache conserve une version cohérente du HTML, des styles et du JavaScript.
-
-Avant de partager une version, vérifier sur un vrai iPhone et un vrai Android : installation depuis le lien, première ouverture hors connexion, activité libre écran verrouillé, retour après fermeture, sauvegarde/restauration et mise à jour. Les tests automatisés ne remplacent pas ces contrôles matériels.
-
-## Licences
-
-Polices Figtree et Young Serif : SIL Open Font License 1.1, textes conservés dans `fonts/` et dans la version publiée.
+MIT — see [LICENSE](LICENSE). Fonts Figtree and Young Serif: SIL Open Font License 1.1, texts kept in `fonts/` and in the published site.
