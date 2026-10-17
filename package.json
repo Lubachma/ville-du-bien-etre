@@ -1,0 +1,18 @@
+{
+  "name": "ville-du-bien-etre",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Activités, habitudes et ville personnelle, sans serveur applicatif.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "package": "npm run build && node scripts/package.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test tests/*.test.cjs",
+    "test:browser": "node tests/browser.cjs",
+    "serve": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  },
+  "engines": { "node": ">=20" }
+}

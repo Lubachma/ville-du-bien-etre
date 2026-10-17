@@ -1,0 +1,28 @@
+/* Activités et tirage adaptés au contexte */
+.activity-fields, .draw-filter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.activity-fields .field, .draw-filter-fields .field { min-width: 0; }
+.activity-fields .select, .draw-filter-fields .select { min-width: 0; padding-inline: 8px; }
+.activity-options { grid-column: 1 / -1; }
+.activity-options[open] { padding-bottom: 4px; }
+.activity-options > .note { margin-top: 10px; }
+.draw-filters { display: grid; gap: 10px; padding: 14px; }
+.draw-filter-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.draw-filters .note { margin: 0; }
+.draw-filter-actions { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.draw-filter-count { color: var(--muted); font-size: 13px; }
+.act-mode, .task-status { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.task-waiting { background: var(--surface-2); }
+.act .task-status { text-align: left; }
+.act-wrap .act { width: 100%; height: 100%; }
+.act-wrap .act-name { padding-right: 22px; }
+.mode-choices .chip { flex: 1; padding-inline: 10px; }
+.rows .row-sub { flex-wrap: wrap; }
+.rows .task-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: end; gap: 4px; }
+.task-reset { margin-top: 4px; justify-self: start; }
+@media (max-width: 390px) {
+  .draw-filter-fields { grid-template-columns: 1fr; }
+  .draw-filter-fields .field { grid-template-columns: 1fr 1.3fr; align-items: center; }
+  .draw-filter-fields label { font-size: 12px; }
+  .activity-fields { grid-template-columns: 1fr; }
+  .mode-choices .chip { font-size: 14px; }
+}
