@@ -1095,6 +1095,7 @@ DICT.en = {
   'harmony.verdure.hint': { one: '{n} more nature item would add greenery', other: '{n} more nature items would add greenery' },
   'harmony.variete.hint': { one: 'Buildings from one more domain would add variety', other: 'Buildings from {n} more domains would add variety' },
   'harmony.details.hint': { one: 'A decoration next to one more building would add a little touch', other: 'A decoration next to {n} more buildings would add little touches' },
+  'harmony.details.buildings': { one: 'One more building, with a decoration next to it, would add a little touch', other: '{n} more buildings, each with a decoration next to it, would add little touches' },
   'harmony.quartiers.hint': { one: 'One more neighbourhood set would make a neighbourhood', other: '{n} more neighbourhood sets would make neighbourhoods' },
   'harmony.lumieres.hint': { one: 'One more street lamp or lantern would make your town glow at night', other: '{n} more street lamps or lanterns would make your town glow at night' },
   'harmony.star': 'New harmony star: {name} · +{coins}',

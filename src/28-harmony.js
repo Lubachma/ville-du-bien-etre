@@ -9,7 +9,8 @@ function neighbourTiles(city, tile) {
   return city.tiles.filter(other => other !== tile && Math.abs(other.x - tile.x) <= 1 && Math.abs(other.y - tile.y) <= 1);
 }
 // Les cinq critères, dans l'ordre de HARMONY ; « missing » dit ce qu'il faudrait encore pour le conseil (au moins 1 tant que le
-// critère n'est pas rempli, 0 ensuite).
+// critère n'est pas rempli, 0 ensuite), et « hint » la clé du conseil. Avec moins de 4 bâtiments, « Petits détails » demande
+// d'abord des bâtiments : un décor de plus n'y suffirait pas.
 function harmonyCriteria(city = S.city) {
   const buildings = city.tiles.filter(tile => isDomainItem(tile.item)), n = buildings.length;
   const count = items => city.tiles.filter(tile => items.includes(tile.item)).length;
@@ -20,11 +21,14 @@ function harmonyCriteria(city = S.city) {
   const rules = {
     verdure: [nature >= 2 && nature * 3 >= n, Math.max(2, Math.ceil(n / 3)) - nature],
     variete: [domains >= 3, 3 - domains],
-    details: [n >= 4 && adorned * 4 >= n * 3, Math.ceil(Math.max(n, 4) * 3 / 4) - adorned],
+    details: [n >= 4 && adorned * 4 >= n * 3, n < 4 ? 4 - n : Math.ceil(n * 3 / 4) - adorned, n < 4 ? 'harmony.details.buildings' : ''],
     quartiers: [sets >= 2, 2 - sets],
     lumieres: [lights >= Math.max(1, Math.ceil(n / 5)), Math.max(1, Math.ceil(n / 5)) - lights],
   };
-  return HARMONY.map(id => { const [met, missing] = rules[id]; return { id, met, missing: met ? 0 : Math.max(1, missing) }; });
+  return HARMONY.map(id => {
+    const [met, missing, hint] = rules[id];
+    return { id, met, missing: met ? 0 : Math.max(1, missing), hint: hint || 'harmony.' + id + '.hint' };
+  });
 }
 // Étoiles gagnées : une clé « star:<critère> » dans les cadeaux, datée du jour où elle a été gagnée.
 function starsEarned() { return HARMONY.filter(id => S.gifts && S.gifts['star:' + id]); }

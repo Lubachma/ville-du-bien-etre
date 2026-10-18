@@ -1095,6 +1095,7 @@ DICT.fr = {
   'harmony.verdure.hint': { one: 'Encore {n} élément de nature apporterait de la verdure', other: 'Encore {n} éléments de nature apporteraient de la verdure' },
   'harmony.variete.hint': { one: "Des bâtiments d'un domaine de plus apporteraient de la variété", other: 'Des bâtiments de {n} domaines de plus apporteraient de la variété' },
   'harmony.details.hint': { one: "Un décor à côté d'un bâtiment de plus ajouterait un petit détail", other: 'Un décor à côté de {n} bâtiments de plus ajouterait de petits détails' },
+  'harmony.details.buildings': { one: 'Un bâtiment de plus, avec un décor à côté, ajouterait un petit détail', other: '{n} bâtiments de plus, chacun avec un décor à côté, ajouteraient de petits détails' },
   'harmony.quartiers.hint': { one: 'Un ensemble de voisinage de plus formerait un quartier', other: '{n} ensembles de voisinage de plus formeraient des quartiers' },
   'harmony.lumieres.hint': { one: 'Un lampadaire ou une lanterne de plus ferait briller ta ville le soir', other: '{n} lampadaires ou lanternes de plus feraient briller ta ville le soir' },
   'harmony.star': "Nouvelle étoile d'harmonie : {name} · +{coins}",

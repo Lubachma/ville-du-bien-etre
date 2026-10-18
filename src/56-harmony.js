@@ -57,7 +57,7 @@ function openHarmonySheet() {
       return h('li', { class: 'harmony-row' + (at ? ' earned' : '') },
         h('span', { class: 'harmony-star', 'aria-hidden': 'true' }, t(at ? 'harmony.starOn' : 'harmony.starOff')),
         h('span', { class: 'harmony-text' }, h('strong', {}, t('harmony.' + c.id)),
-          h('span', { class: 'note' }, at ? t('harmony.earnedOn', { date: carnetDate(at) }) : t('harmony.' + c.id + '.hint', { n: c.missing }))));
+          h('span', { class: 'note' }, at ? t('harmony.earnedOn', { date: carnetDate(at) }) : t(c.hint, { n: c.missing }))));
     })));
   });
 }

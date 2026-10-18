@@ -1560,6 +1560,7 @@ DICT.fr = {
   'harmony.verdure.hint': { one: 'Encore {n} élément de nature apporterait de la verdure', other: 'Encore {n} éléments de nature apporteraient de la verdure' },
   'harmony.variete.hint': { one: "Des bâtiments d'un domaine de plus apporteraient de la variété", other: 'Des bâtiments de {n} domaines de plus apporteraient de la variété' },
   'harmony.details.hint': { one: "Un décor à côté d'un bâtiment de plus ajouterait un petit détail", other: 'Un décor à côté de {n} bâtiments de plus ajouterait de petits détails' },
+  'harmony.details.buildings': { one: 'Un bâtiment de plus, avec un décor à côté, ajouterait un petit détail', other: '{n} bâtiments de plus, chacun avec un décor à côté, ajouteraient de petits détails' },
   'harmony.quartiers.hint': { one: 'Un ensemble de voisinage de plus formerait un quartier', other: '{n} ensembles de voisinage de plus formeraient des quartiers' },
   'harmony.lumieres.hint': { one: 'Un lampadaire ou une lanterne de plus ferait briller ta ville le soir', other: '{n} lampadaires ou lanternes de plus feraient briller ta ville le soir' },
   'harmony.star': "Nouvelle étoile d'harmonie : {name} · +{coins}",
@@ -2722,6 +2723,7 @@ DICT.en = {
   'harmony.verdure.hint': { one: '{n} more nature item would add greenery', other: '{n} more nature items would add greenery' },
   'harmony.variete.hint': { one: 'Buildings from one more domain would add variety', other: 'Buildings from {n} more domains would add variety' },
   'harmony.details.hint': { one: 'A decoration next to one more building would add a little touch', other: 'A decoration next to {n} more buildings would add little touches' },
+  'harmony.details.buildings': { one: 'One more building, with a decoration next to it, would add a little touch', other: '{n} more buildings, each with a decoration next to it, would add little touches' },
   'harmony.quartiers.hint': { one: 'One more neighbourhood set would make a neighbourhood', other: '{n} more neighbourhood sets would make neighbourhoods' },
   'harmony.lumieres.hint': { one: 'One more street lamp or lantern would make your town glow at night', other: '{n} more street lamps or lanterns would make your town glow at night' },
   'harmony.star': 'New harmony star: {name} · +{coins}',
@@ -4729,7 +4731,8 @@ function neighbourTiles(city, tile) {
   return city.tiles.filter(other => other !== tile && Math.abs(other.x - tile.x) <= 1 && Math.abs(other.y - tile.y) <= 1);
 }
 // Les cinq critères, dans l'ordre de HARMONY ; « missing » dit ce qu'il faudrait encore pour le conseil (au moins 1 tant que le
-// critère n'est pas rempli, 0 ensuite).
+// critère n'est pas rempli, 0 ensuite), et « hint » la clé du conseil. Avec moins de 4 bâtiments, « Petits détails » demande
+// d'abord des bâtiments : un décor de plus n'y suffirait pas.
 function harmonyCriteria(city = S.city) {
   const buildings = city.tiles.filter(tile => isDomainItem(tile.item)), n = buildings.length;
   const count = items => city.tiles.filter(tile => items.includes(tile.item)).length;
@@ -4740,11 +4743,14 @@ function harmonyCriteria(city = S.city) {
   const rules = {
     verdure: [nature >= 2 && nature * 3 >= n, Math.max(2, Math.ceil(n / 3)) - nature],
     variete: [domains >= 3, 3 - domains],
-    details: [n >= 4 && adorned * 4 >= n * 3, Math.ceil(Math.max(n, 4) * 3 / 4) - adorned],
+    details: [n >= 4 && adorned * 4 >= n * 3, n < 4 ? 4 - n : Math.ceil(n * 3 / 4) - adorned, n < 4 ? 'harmony.details.buildings' : ''],
     quartiers: [sets >= 2, 2 - sets],
     lumieres: [lights >= Math.max(1, Math.ceil(n / 5)), Math.max(1, Math.ceil(n / 5)) - lights],
   };
-  return HARMONY.map(id => { const [met, missing] = rules[id]; return { id, met, missing: met ? 0 : Math.max(1, missing) }; });
+  return HARMONY.map(id => {
+    const [met, missing, hint] = rules[id];
+    return { id, met, missing: met ? 0 : Math.max(1, missing), hint: hint || 'harmony.' + id + '.hint' };
+  });
 }
 // Étoiles gagnées : une clé « star:<critère> » dans les cadeaux, datée du jour où elle a été gagnée.
 function starsEarned() { return HARMONY.filter(id => S.gifts && S.gifts['star:' + id]); }
@@ -9843,15 +9849,22 @@ function buildAmbience(ctx, kind, gain = 1) {
 }
 // L'ambiance qui joue : un graphe, son fondu, et son nom.
 const Ambience = {
-  kind: 'none', graph: null, fade: null, waiting: false,
+  kind: 'none', graph: null, fade: null, waiting: false, token: 0,
+  // Joue fn quand le son est ouvert : aussitôt s'il l'est, sinon dès que le navigateur l'a repris (le son se met en veille quelques
+  // secondes après chaque son). Une demande plus récente, ou un arrêt, annule celle qui attend. Sans contexte audio, rien.
+  whenRunning(fn) {
+    const c = Chime.ctx, token = ++this.token;
+    if (!c) return false;
+    const go = () => { if (token === this.token && c.state === 'running') fn(); };
+    if (c.state === 'running') go(); else c.resume().then(go, () => {});
+    return true;
+  },
   // Démarre l'ambiance choisie, en fondu d'entrée de 3 s ; rien pour « Aucune ». Sans son ouvert (après un rechargement, le
   // navigateur attend un geste), elle démarre au premier toucher.
   start(kind = S.settings.ambience) {
     this.stop();
-    if (kind === 'none' || this.play(kind, 3)) return;
-    const c = Chime.ctx;
-    if (c && c.state === 'suspended') c.resume().then(() => { if (c.state === 'running' && this.wanted()) this.play(S.settings.ambience, 3); }, () => {});
-    this.waitForGesture();
+    if (kind === 'none') return;
+    if (!this.whenRunning(() => { if (this.wanted()) this.play(kind, 3); }) || Chime.ctx.state !== 'running') this.waitForGesture();
   },
   // Une séance tourne ici, avec une ambiance choisie, et rien ne joue encore.
   wanted() { return typeof run !== 'undefined' && !!run && !this.graph && S.settings.ambience !== 'none'; },
@@ -9864,8 +9877,7 @@ const Ambience = {
       this.waiting = false;
       if (!this.wanted()) return;
       Chime.unlock(true);
-      const c = Chime.ctx, go = () => { if (this.wanted()) this.play(S.settings.ambience, 1); };
-      if (c && c.state === 'running') go(); else if (c) c.resume().then(go, () => {});
+      this.whenRunning(() => { if (this.wanted()) this.play(S.settings.ambience, 1); });
     };
     document.addEventListener('pointerdown', resume, true);
     document.addEventListener('keydown', resume, true);
@@ -9886,6 +9898,7 @@ const Ambience = {
   },
   // S'éteint en douceur en « seconds », puis s'arrête.
   fadeOut(seconds) {
+    this.token++;   // une ambiance qui attendait le son n'a plus lieu d'être
     const c = Chime.ctx, graph = this.graph, fade = this.fade;
     if (!graph || !c) return;
     const t0 = c.currentTime;
@@ -9902,16 +9915,18 @@ const Ambience = {
   // Une autre ambiance, en fondu croisé court.
   switch(kind) {
     this.fadeOut(.3);
-    this.play(kind, 1);
+    this.whenRunning(() => this.play(kind, 1));
   },
-  // Aperçu dans les réglages, pendant le geste : 3 s, puis un fondu de sortie.
+  // Aperçu dans les réglages, pendant le geste : 3 s, puis un fondu de sortie ; le son est ensuite remis en veille.
   preview(kind) {
     Chime.unlock(true);
     this.stop();
-    if (!this.play(kind, .3)) return;
-    const graph = this.graph;
-    setTimeout(() => { if (this.graph === graph && !(typeof run !== 'undefined' && run)) this.fadeOut(.8); }, 2500);
-    Chime.rest(5000);
+    this.whenRunning(() => {
+      if (!this.play(kind, .3)) return;
+      const graph = this.graph;
+      setTimeout(() => { if (this.graph === graph && !(typeof run !== 'undefined' && run)) this.fadeOut(.8); }, 2500);
+      Chime.rest(5000);
+    });
   },
   // Niveaux d'une ambiance rendue 4 s hors ligne, au volume normal : crête et moyenne quadratique.
   async measure(kind) {
@@ -10690,7 +10705,7 @@ function openHarmonySheet() {
       return h('li', { class: 'harmony-row' + (at ? ' earned' : '') },
         h('span', { class: 'harmony-star', 'aria-hidden': 'true' }, t(at ? 'harmony.starOn' : 'harmony.starOff')),
         h('span', { class: 'harmony-text' }, h('strong', {}, t('harmony.' + c.id)),
-          h('span', { class: 'note' }, at ? t('harmony.earnedOn', { date: carnetDate(at) }) : t('harmony.' + c.id + '.hint', { n: c.missing }))));
+          h('span', { class: 'note' }, at ? t('harmony.earnedOn', { date: carnetDate(at) }) : t(c.hint, { n: c.missing }))));
     })));
   });
 }

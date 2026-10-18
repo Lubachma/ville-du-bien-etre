@@ -51,7 +51,8 @@ test('étape 5 : fusion du souhait, cadeau en double remboursé', () => {
 
 // Une ville de 7 × 7 faite des éléments donnés : [élément, x, y].
 const cityOf = list => ({ size: 7, tiles: list.map(([item, x, y], i) => ({ id: 't' + i, item, x, y, at: T0, paid: 0 })) });
-const crit = (a, list, id) => plain(a.harmonyCriteria(cityOf(list)).find(c => c.id === id));
+// Un critère, sans la clé de son conseil (vérifiée à part).
+const crit = (a, list, id) => { const { hint, ...rest } = plain(a.harmonyCriteria(cityOf(list)).find(c => c.id === id)); return rest; };
 // Six bâtiments de la ligne du haut, et un septième.
 const SIX = [['maison', 0, 0], ['boulangerie', 1, 0], ['bibliotheque', 2, 0], ['terrain', 3, 0], ['jardin', 4, 0], ['kiosque', 5, 0]];
 const SEVEN = [...SIX, ['maison', 6, 0]];
@@ -94,6 +95,16 @@ test('harmonie : lumières du soir', () => {
   assert.equal(crit(a, [...five, ['lampadaire', 0, 6]], 'lumieres').met, true);
   assert.deepEqual(crit(a, [...SIX, ['lanterne', 0, 6]], 'lumieres'), { id: 'lumieres', met: false, missing: 1 });
   assert.equal(crit(a, [...SIX, ['lanterne', 0, 6], ['lampadaire', 1, 6]], 'lumieres').met, true);
+});
+
+test('harmonie : le conseil de « Petits détails » parle de bâtiments tant qu’il y en a moins de 4', () => {
+  const a = app(), details = list => plain(a.harmonyCriteria(cityOf(list)).find(c => c.id === 'details'));
+  assert.deepEqual(details([['maison', 0, 0], ['bibliotheque', 3, 0], ['terrain', 6, 0], ['banc', 1, 0], ['banc', 4, 0], ['banc', 5, 0]]),
+    { id: 'details', met: false, missing: 1, hint: 'harmony.details.buildings' });
+  assert.deepEqual(details([['maison', 0, 0], ['bibliotheque', 3, 0]]), { id: 'details', met: false, missing: 2, hint: 'harmony.details.buildings' });
+  assert.deepEqual(details([['maison', 0, 0], ['bibliotheque', 3, 0], ['terrain', 6, 0], ['jardin', 0, 3], ['banc', 1, 1]]),
+    { id: 'details', met: false, missing: 2, hint: 'harmony.details.hint' });
+  assert.equal(plain(a.harmonyCriteria(cityOf([])).find(c => c.id === 'verdure')).hint, 'harmony.verdure.hint');
 });
 
 test('étoiles : 10 M une seule fois, gardées après un retrait', () => {

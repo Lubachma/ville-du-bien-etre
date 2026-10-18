@@ -171,7 +171,7 @@ async function harmonySheet(browser, baseURL) {
     await button.click();
     assert.equal(await page.locator('#sheetTitle').innerText(), 'Harmonie de ta ville');
     const text = await page.locator('#sheetBody').innerText();
-    assert.match(text, /Verdure\s+Gagnée le[\s\S]*Variété\s+Gagnée le[\s\S]*Petits détails\s+Un décor à côté de 3 bâtiments de plus ajouterait de petits détails/);
+    assert.match(text, /Verdure\s+Gagnée le[\s\S]*Variété\s+Gagnée le[\s\S]*Petits détails\s+Un bâtiment de plus, avec un décor à côté, ajouterait un petit détail/);
     assert.match(text, /Quartiers\s+2 ensembles de voisinage de plus formeraient des quartiers[\s\S]*Lumières du soir\s+Un lampadaire ou une lanterne de plus ferait briller ta ville le soir/);
     assert.doesNotMatch(text, /manque/i);
     assert.equal(await fitsSheet(page), true);
@@ -334,8 +334,26 @@ async function ambienceDuringSession(browser, baseURL) {
   return 'Ambiance : changée pendant la séance';
 }
 
+// Le son se met en veille quelques secondes après chaque son : l'aperçu suivant doit quand même se faire entendre.
+async function ambiencePreviewAfterIdle(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { ambience: 'none' });
+  try {
+    await page.locator('#settingsBtn').click();
+    const group = page.locator('#settingsSessions').getByRole('radiogroup', { name: 'Ambiance pendant les séances', exact: true });
+    await group.getByRole('radio', { name: 'Vagues', exact: true }).click();
+    const first = (await sources(page)).started;
+    assert.ok(first > 0);
+    await page.clock.fastForward(6000);
+    await page.waitForFunction(() => window.__ville && true);
+    await group.getByRole('radio', { name: 'Pluie', exact: true }).click();
+    await page.waitForFunction(n => window.__sources.started > n, first, { timeout: 3000 });
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Ambiance : l’aperçu s’entend même après la mise en veille du son';
+}
+
 const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble, harmonySheet, ambienceLevels, ambienceWithSession,
-  ambienceStopsOnAbandon, ambienceAfterReload, ambienceSettings, ambienceDuringSession];
+  ambienceStopsOnAbandon, ambienceAfterReload, ambienceSettings, ambienceDuringSession, ambiencePreviewAfterIdle];
 async function runHarmony(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

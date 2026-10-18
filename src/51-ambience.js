@@ -72,15 +72,22 @@ function buildAmbience(ctx, kind, gain = 1) {
 }
 // L'ambiance qui joue : un graphe, son fondu, et son nom.
 const Ambience = {
-  kind: 'none', graph: null, fade: null, waiting: false,
+  kind: 'none', graph: null, fade: null, waiting: false, token: 0,
+  // Joue fn quand le son est ouvert : aussitôt s'il l'est, sinon dès que le navigateur l'a repris (le son se met en veille quelques
+  // secondes après chaque son). Une demande plus récente, ou un arrêt, annule celle qui attend. Sans contexte audio, rien.
+  whenRunning(fn) {
+    const c = Chime.ctx, token = ++this.token;
+    if (!c) return false;
+    const go = () => { if (token === this.token && c.state === 'running') fn(); };
+    if (c.state === 'running') go(); else c.resume().then(go, () => {});
+    return true;
+  },
   // Démarre l'ambiance choisie, en fondu d'entrée de 3 s ; rien pour « Aucune ». Sans son ouvert (après un rechargement, le
   // navigateur attend un geste), elle démarre au premier toucher.
   start(kind = S.settings.ambience) {
     this.stop();
-    if (kind === 'none' || this.play(kind, 3)) return;
-    const c = Chime.ctx;
-    if (c && c.state === 'suspended') c.resume().then(() => { if (c.state === 'running' && this.wanted()) this.play(S.settings.ambience, 3); }, () => {});
-    this.waitForGesture();
+    if (kind === 'none') return;
+    if (!this.whenRunning(() => { if (this.wanted()) this.play(kind, 3); }) || Chime.ctx.state !== 'running') this.waitForGesture();
   },
   // Une séance tourne ici, avec une ambiance choisie, et rien ne joue encore.
   wanted() { return typeof run !== 'undefined' && !!run && !this.graph && S.settings.ambience !== 'none'; },
@@ -93,8 +100,7 @@ const Ambience = {
       this.waiting = false;
       if (!this.wanted()) return;
       Chime.unlock(true);
-      const c = Chime.ctx, go = () => { if (this.wanted()) this.play(S.settings.ambience, 1); };
-      if (c && c.state === 'running') go(); else if (c) c.resume().then(go, () => {});
+      this.whenRunning(() => { if (this.wanted()) this.play(S.settings.ambience, 1); });
     };
     document.addEventListener('pointerdown', resume, true);
     document.addEventListener('keydown', resume, true);
@@ -115,6 +121,7 @@ const Ambience = {
   },
   // S'éteint en douceur en « seconds », puis s'arrête.
   fadeOut(seconds) {
+    this.token++;   // une ambiance qui attendait le son n'a plus lieu d'être
     const c = Chime.ctx, graph = this.graph, fade = this.fade;
     if (!graph || !c) return;
     const t0 = c.currentTime;
@@ -131,16 +138,18 @@ const Ambience = {
   // Une autre ambiance, en fondu croisé court.
   switch(kind) {
     this.fadeOut(.3);
-    this.play(kind, 1);
+    this.whenRunning(() => this.play(kind, 1));
   },
-  // Aperçu dans les réglages, pendant le geste : 3 s, puis un fondu de sortie.
+  // Aperçu dans les réglages, pendant le geste : 3 s, puis un fondu de sortie ; le son est ensuite remis en veille.
   preview(kind) {
     Chime.unlock(true);
     this.stop();
-    if (!this.play(kind, .3)) return;
-    const graph = this.graph;
-    setTimeout(() => { if (this.graph === graph && !(typeof run !== 'undefined' && run)) this.fadeOut(.8); }, 2500);
-    Chime.rest(5000);
+    this.whenRunning(() => {
+      if (!this.play(kind, .3)) return;
+      const graph = this.graph;
+      setTimeout(() => { if (this.graph === graph && !(typeof run !== 'undefined' && run)) this.fadeOut(.8); }, 2500);
+      Chime.rest(5000);
+    });
   },
   // Niveaux d'une ambiance rendue 4 s hors ligne, au volume normal : crête et moyenne quadratique.
   async measure(kind) {
