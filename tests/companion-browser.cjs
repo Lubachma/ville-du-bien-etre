@@ -201,8 +201,68 @@ async function townHiddenAndVisit(browser, baseURL) {
   return 'Compagnon : masqué, ou en visite, il ne se montre pas';
 }
 
+const openSheetOf = page => page.locator('#companionBtn').click().then(() => page.locator('#sheet').waitFor());
+
+// La fiche : animal et niveau, temps ensemble et prochain cadeau (rien au niveau 10), mot du jour.
+async function sheetContent(browser, baseURL) {
+  for (const [minutes, lines, absent] of [[70, /Lapin · complicité niveau 3[\s\S]*1\sh\s10 ensemble · prochain cadeau dans 50\smin\s:\sdes lunettes rondes/, null],
+    [1800, /Lapin · complicité niveau 10[\s\S]*30\sh ensemble/, /prochain cadeau/]]) {
+    const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { companion: pet({ minutes }) }), NOW);
+    try {
+      await openSheetOf(page);
+      const text = await page.locator('#sheetBody').innerText();
+      assert.match(text, lines);
+      if (absent) assert.doesNotMatch(text, absent);
+      const word = await page.evaluate(() => __ville.companion.word());
+      assert.ok(word && text.replace(/\s/g, ' ').includes(word.replace(/\s/g, ' ')), word);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Compagnon : sa fiche, son niveau, son mot du jour';
+}
+
+// La garde-robe : les accessoires gagnés se choisissent, les suivants attendent leur niveau ; le choix est gardé.
+async function wardrobe(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { companion: pet({ minutes: 70 }) }), NOW);
+  try {
+    await openSheetOf(page);
+    const group = page.locator('#sheetBody').getByRole('radiogroup', { name: 'Garde-robe', exact: true });
+    const item = name => group.getByRole('radio', { name: new RegExp('^' + name) });
+    assert.deepEqual([await item('Écharpe').isDisabled(), await item('Bonnet').isDisabled(), await item('Lunettes rondes').isDisabled()], [false, false, true]);
+    assert.match(await item('Lunettes rondes').innerText(), /Niveau 4/);
+    await item('Bonnet').click();
+    assert.equal(await page.evaluate(() => __ville.companion.state().wear), 'bonnet');
+    assert.equal(await item('Bonnet').getAttribute('aria-checked'), 'true');
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    assert.equal(await page.evaluate(() => __ville.companion.state().wear), 'bonnet');
+    await openSheetOf(page);
+    await item('Aucun').click();
+    assert.equal(await page.evaluate(() => __ville.companion.state().wear), '');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Compagnon : la garde-robe';
+}
+
+// Un nom de 20 caractères sans espace : la fiche ne déborde pas à 320 px, en français puis en anglais.
+async function sheetLongName(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { companion: pet({ name: 'W'.repeat(20), minutes: 70 }) }), NOW,
+    { viewport: { width: 320, height: 640 } });
+  try {
+    for (const lang of ['fr', 'en']) {
+      if (lang === 'en') await toEnglish(page);
+      await openSheetOf(page);
+      assert.equal(await fitsSheet(page), true, lang);
+      assert.equal(await page.evaluate(() => document.querySelector('#sheetTitle').scrollWidth <= document.querySelector('#sheetTitle').clientWidth + 1), true, lang);
+      await page.locator('#sheetClose').click();
+    }
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Compagnon : sa fiche tient à 320 px, même avec un nom long';
+}
+
 const SCENARIOS = [paintAll, inviteAfterFirstSession, adoptDefault, adoptLongName, suggestedNameFollowsLanguage, townDayNight, townTapAndButton,
-  townHiddenAndVisit];
+  townHiddenAndVisit, sheetContent, wardrobe, sheetLongName];
 async function runCompanion(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

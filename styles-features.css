@@ -108,3 +108,18 @@
 .companion-btn { position: absolute; z-index: 2; left: 10px; bottom: 10px; padding: 0; background: var(--surface); border-color: var(--line); box-shadow: var(--shadow); }
 .companion-btn canvas { width: 34px; height: 34px; }
 .companion-big { display: block; width: 132px; height: 132px; margin: 0 auto; }
+/* Fiche du compagnon : son niveau, son mot du jour, la garde-robe en petites cases. */
+.companion-level { margin: 8px 0 2px; text-align: center; font-weight: 700; }
+.companion-level + .note { margin: 0; text-align: center; }
+.companion-word { margin: 12px 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); font-style: italic; }
+.companion-wardrobe { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; margin: 8px 0 14px; }
+.companion-wardrobe button {
+  display: grid; justify-items: center; align-content: start; gap: 2px; min-width: 0; padding: 6px 4px 8px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink);
+  font-size: 12px; font-weight: 700; line-height: 1.2; text-align: center; overflow-wrap: anywhere;
+}
+.companion-wardrobe button[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.companion-wardrobe button[disabled] { opacity: .55; }
+.companion-wardrobe button .note { font-size: 11px; font-weight: 600; }
+.companion-wardrobe canvas { width: 52px; height: 52px; }
+#sheetTitle { overflow-wrap: anywhere; }

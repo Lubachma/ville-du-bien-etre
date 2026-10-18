@@ -1223,4 +1223,13 @@ DICT.fr = {
   'companion.saved': 'Modifications enregistrées',
   // Étape 6 : le compagnon dans la ville.
   'companion.buttonLabel': '{name}, ton compagnon',
+  // Étape 6 : la fiche du compagnon.
+  'companion.levelLine': '{species} · complicité niveau {level}',
+  'companion.progress': '{time} ensemble · prochain cadeau dans {next} : {thing}',
+  'companion.progressMax': '{time} ensemble',
+  'companion.quote': '« {word} »',
+  'companion.wardrobe': 'Garde-robe',
+  'companion.wearNone': 'Aucun',
+  'companion.wearLevel': 'Niveau {level}',
+  'companion.edit': 'Modifier',
 };

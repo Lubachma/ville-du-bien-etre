@@ -1699,6 +1699,15 @@ DICT.fr = {
   'companion.saved': 'Modifications enregistrées',
   // Étape 6 : le compagnon dans la ville.
   'companion.buttonLabel': '{name}, ton compagnon',
+  // Étape 6 : la fiche du compagnon.
+  'companion.levelLine': '{species} · complicité niveau {level}',
+  'companion.progress': '{time} ensemble · prochain cadeau dans {next} : {thing}',
+  'companion.progressMax': '{time} ensemble',
+  'companion.quote': '« {word} »',
+  'companion.wardrobe': 'Garde-robe',
+  'companion.wearNone': 'Aucun',
+  'companion.wearLevel': 'Niveau {level}',
+  'companion.edit': 'Modifier',
 };
 
 
@@ -2928,6 +2937,15 @@ DICT.en = {
   'companion.saved': 'Changes saved',
   // Step 6: the companion in the town.
   'companion.buttonLabel': '{name}, your companion',
+  // Step 6: the companion's sheet.
+  'companion.levelLine': '{species} · friendship level {level}',
+  'companion.progress': '{time} together · next gift in {next}: {thing}',
+  'companion.progressMax': '{time} together',
+  'companion.quote': '“{word}”',
+  'companion.wardrobe': 'Wardrobe',
+  'companion.wearNone': 'None',
+  'companion.wearLevel': 'Level {level}',
+  'companion.edit': 'Edit',
 };
 
 
@@ -11311,14 +11329,38 @@ function renderCompanionButton() {
   btn.setAttribute('aria-label', frTypo(t('companion.buttonLabel', { name: companionName() })));
   btn.onclick = () => openCompanionSheet();
 }
-// Fiche du compagnon (à son nom).
+// Fiche du compagnon, à son nom : lui en grand, son animal et son niveau, le temps passé ensemble et le prochain cadeau, son mot du
+// jour, la garde-robe (« Aucun » et les neuf accessoires ; ceux à venir montrent leur niveau), et « Modifier ».
 function openCompanionSheet() {
   const c = S.companion;
   if (!c) return;
   openSheet(companionName(), body => {
-    const cv = h('canvas', { class: 'companion-big', 'aria-hidden': 'true' });
-    paintCompanion(cv, { species: c.species, wear: c.wear, pose: 'idle' }, 132);
-    body.append(cv);
+    const big = h('canvas', { class: 'companion-big', 'aria-hidden': 'true' }), level = companionLevel(), next = companionNext();
+    const together = fmtMin(Math.floor(c.minutes));
+    const wardrobe = h('div', { class: 'companion-wardrobe', role: 'radiogroup', 'aria-label': t('companion.wardrobe') });
+    const unlocked = ['', ...wearUnlocked(level)];
+    const paint = () => {
+      paintCompanion(big, { species: c.species, wear: c.wear, pose: 'idle' }, 132);
+      $$('button', wardrobe).forEach(b => b.setAttribute('aria-checked', String(b.dataset.wear === c.wear)));
+    };
+    ['', ...COMPANION_WEAR].forEach((id, i) => {
+      const cv = h('canvas', { 'aria-hidden': 'true' }), open = unlocked.includes(id);
+      paintCompanion(cv, { species: c.species, wear: id, pose: 'idle' }, 52);   // en entier : le sac et la cape se voient
+      wardrobe.append(h('button', { type: 'button', role: 'radio', 'data-wear': id, disabled: open ? null : true, onclick: () => {
+        if (!wearCompanion(id)) return;
+        commit();
+        paint();
+      } }, cv, h('span', {}, t(id ? 'companion.wear.' + id : 'companion.wearNone')),
+      open ? null : h('span', { class: 'note' }, t('companion.wearLevel', { level: i + 1 }))));
+    });
+    paint();
+    body.append(big,
+      h('p', { class: 'companion-level' }, t('companion.levelLine', { species: t('companion.species.' + c.species), level })),
+      h('p', { class: 'note' }, next ? t('companion.progress', { time: together, next: fmtMin(Math.ceil(next.left)), thing: t('companion.wearThing.' + next.wear) })
+        : t('companion.progressMax', { time: together })),
+      h('p', { class: 'companion-word' }, t('companion.quote', { word: companionWord() })),
+      h('h3', { class: 'section-title' }, t('companion.wardrobe')), wardrobe,
+      h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => openCompanionChoice({ edit: true }) }, t('companion.edit')));
   });
 }
 
@@ -11472,7 +11514,7 @@ function boot(hotData) {
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
     harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
     ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume) },
-    companion: { state: () => S.companion, name: () => companionName(), spot: () => City.companionSpot(), box: () => City.companionBox(), bounds: (look, size) => companionBounds(look, size), paint: (cv, look, size, opts) => paintCompanion(cv, look, size, opts) } };
+    companion: { state: () => S.companion, name: () => companionName(), level: () => companionLevel(), word: day => companionWord(day), spot: () => City.companionSpot(), box: () => City.companionBox(), bounds: (look, size) => companionBounds(look, size), paint: (cv, look, size, opts) => paintCompanion(cv, look, size, opts) } };
 }
 
 let booted = false;

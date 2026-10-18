@@ -1223,4 +1223,13 @@ DICT.en = {
   'companion.saved': 'Changes saved',
   // Step 6: the companion in the town.
   'companion.buttonLabel': '{name}, your companion',
+  // Step 6: the companion's sheet.
+  'companion.levelLine': '{species} · friendship level {level}',
+  'companion.progress': '{time} together · next gift in {next}: {thing}',
+  'companion.progressMax': '{time} together',
+  'companion.quote': '“{word}”',
+  'companion.wardrobe': 'Wardrobe',
+  'companion.wearNone': 'None',
+  'companion.wearLevel': 'Level {level}',
+  'companion.edit': 'Edit',
 };
