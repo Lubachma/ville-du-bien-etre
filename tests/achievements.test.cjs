@@ -14,6 +14,8 @@ const entry = (at, extra = {}) => ({ id: 'h' + at, name: 'x', cat: 'esprit', min
 const days = n => Object.fromEntries(Array.from({ length: n }, (_, i) => [new Date(Date.UTC(2026, 6, 1 + i, 12)).toISOString().slice(0, 10), 10]));
 const tiles = (item, n, extra = {}) => Array.from({ length: n }, (_, i) => ({ id: item + i, item, x: i % 11, y: Math.floor(i / 11), at: T0, paid: 0, ...extra }));
 const met = { first: T0, count: 1, last: '2026-10-18' };
+// Le lundi de la i-ième semaine à partir du 6 juillet 2026.
+const mondays = i => new Date(Date.UTC(2026, 6, 6 + 7 * i, 12)).toISOString().slice(0, 10);
 const VISITOR_IDS = ['chat', 'herisson', 'ecureuil', 'cigogne', 'canards', 'renard', 'chouette', 'montgolfiere', 'bonhomme', 'glaces', 'accordeon', 'artiste'];
 // Chaque cas prépare la ville juste avant le seuil (at = false) ou au seuil (at = true).
 const CASES = {
@@ -55,6 +57,10 @@ const CASES = {
   'ville-hospitaliere': (s, at) => { s.visits = Object.fromEntries(VISITOR_IDS.slice(0, at ? 12 : 11).map(id => [id, met])); },
   'jour-de-fete': (s, at) => { s.gifts = at ? { 'visit:2026-10-18': T0, 'fest:printemps:2027': T0 } : { 'visit:2026-10-18': T0 }; },
   'quatre-saisons': (s, at) => { s.seasons = Object.fromEntries(['spring', 'summer', 'autumn', 'winter'].slice(0, at ? 4 : 3).map(k => [k, T0])); },
+  'premier-defi': (s, at) => { s.gifts = at ? { 'visit:2026-10-18': T0, 'chal:2026-10-12:long': T0 } : { 'visit:2026-10-18': T0 }; },
+  'defis-en-serie': (s, at) => { s.gifts = Object.fromEntries(Array.from({ length: at ? 12 : 11 }, (_, i) => ['chal:' + mondays(i) + ':long', T0])); },
+  'semaine-complete': (s, at) => { s.gifts = Object.fromEntries(['domains', 'morning', 'draw'].slice(0, at ? 3 : 2).map(id => ['chal:2026-10-12:' + id, T0])); },
+  'carte-postale': (s, at) => { s.postcards = at ? { '0123456789ab': { code: 'AQcA', name: 'Léa', size: 7, count: 1, at: T0 } } : {}; },
 };
 
 test('chaque succès est faux juste avant son seuil et vrai au seuil', () => {
@@ -123,4 +129,7 @@ test('progression montrée dans le carnet', () => {
   assert.deepEqual(plain(a.achievementProgress(a.def('esprit-curieux'))), { have: 42, need: 60, unit: 'min' });
   assert.deepEqual(plain(a.achievementProgress(a.def('sept-jours'))), { have: 3, need: 7, unit: 'n' });
   assert.equal(a.achievementProgress(a.def('leve-tot')), null);
+  a.state.gifts = { 'visit:2026-10-18': T0, 'chal:2026-10-12:long': T0, 'chal:2026-10-12:draw': T0 };
+  assert.deepEqual(plain(a.achievementProgress(a.def('defis-en-serie'))), { have: 2, need: 12, unit: 'n' });
+  assert.deepEqual(plain(a.achievementProgress(a.def('carte-postale'))), { have: 0, need: 1, unit: 'n' });
 });

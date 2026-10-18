@@ -249,6 +249,22 @@ function settingsStreak(focus) {
   if (focus) setTimeout(() => { const el = $(focus, section); if (el) el.focus({ preventScroll: true }); }, 0);
   return section;
 }
+// Rituels : bilans et récapitulatifs qui s'ouvrent d'eux-mêmes (coupés, ils restent dans le Journal), défis de la semaine,
+// humeur demandée après une séance. Tous activés par défaut.
+function settingsRituals() {
+  const toggle = (key, label) => {
+    const sw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings[key] !== false), 'aria-label': label, onclick: () => {
+      S.settings[key] = S.settings[key] === false;
+      sw.setAttribute('aria-checked', String(S.settings[key]));
+      commit();
+    } });
+    return h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, label), sw);
+  };
+  return settingsBlock('settingsRituals',
+    h('div', { class: 'setting' }, h('span', { class: 'section-title' }, t('settings.ritualsTitle')), toggle('rituals', t('settings.rituals')), h('p', { class: 'note' }, t('settings.ritualsNote'))),
+    toggle('challenges', t('settings.challenges')),
+    toggle('mood', t('settings.mood')));
+}
 // Semaine et rappel : début de semaine (série et objectif), rappel quotidien ajouté à l'agenda.
 function settingsWeek() {
   const starts = ['mon', 'sun'], labels = { mon: t('settings.weekMon'), sun: t('settings.weekSun') };
@@ -383,7 +399,7 @@ function settingsReset() {
 }
 function openSettings() {
   openSheet(t('nav.settings'), body => {
-    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsWeek(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
+    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsWeek(), settingsRituals(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
     sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
   });
 }

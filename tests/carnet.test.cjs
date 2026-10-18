@@ -10,7 +10,7 @@ test('compteurs du carnet', () => {
   const a = app();
   a.state.achievements = { 'premier-pas': T0, hameau: T0 };
   a.state.sets = { cocon: T0 };
-  assert.deepEqual(plain(a.carnetCounts()), { achievements: { have: 2, total: 38 }, collection: { have: 7, total: 50 }, sets: { have: 1, total: 12 }, visits: { have: 0, total: 12 } });
+  assert.deepEqual(plain(a.carnetCounts()), { achievements: { have: 2, total: 42 }, collection: { have: 7, total: 50 }, sets: { have: 1, total: 12 }, visits: { have: 0, total: 12 } });
   a.state.visits = { chat: { first: T0, count: 2, last: '2026-10-18' } };
   assert.deepEqual(plain(a.carnetCounts().visits), { have: 1, total: 12 });
 });

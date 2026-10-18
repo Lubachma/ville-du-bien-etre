@@ -477,6 +477,7 @@ async function postcardsInCarnet(browser, baseURL) {
       assert.match(await cards.first().innerText(), /Léa[\s\S]*Visitée le/);
       assert.equal(await cards.first().locator('canvas').count(), 1);
       assert.equal(await page.evaluate(() => Object.values(__ville.state.postcards)[0].count), items);
+      assert.ok(await page.evaluate(() => __ville.state.achievements['carte-postale']), 'succès « Carte postale »');
       const w = await page.evaluate(() => ({ body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth, doc: document.documentElement.scrollWidth }));
       assert.ok(w.body <= w.client + 1 && w.doc <= 320, 'le carnet déborde à 320 px : ' + JSON.stringify(w));
       await cards.first().click();
@@ -497,8 +498,35 @@ async function postcardsInCarnet(browser, baseURL) {
   return 'Cartes postales des villes amies';
 }
 
+// Réglages des rituels : trois interrupteurs, gardés au rechargement ; « Défis de la semaine » coupé retire la carte des défis.
+async function ritualSettings(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }), '2026-10-21T10:00:00Z', { viewport: { width: 320, height: 640 } });
+  const names = ['Bilans au début de la semaine et du mois', 'Défis de la semaine', 'Demander mon humeur après une séance'];
+  const sw = name => page.locator('#settingsRituals').getByRole('switch', { name, exact: true });
+  try {
+    await page.locator('[data-tab="journal"]').click();
+    assert.equal(await page.locator('#challengesCard').count(), 1);
+    await page.locator('#settingsBtn').click();
+    for (const name of names) {
+      assert.equal(await sw(name).getAttribute('aria-checked'), 'true');
+      await sw(name).click();
+      assert.equal(await sw(name).getAttribute('aria-checked'), 'false');
+    }
+    await fitsSheet(page, 'les réglages');
+    await page.locator('#sheetClose').click();
+    assert.equal(await page.locator('#challengesCard').count(), 0);
+    assert.deepEqual(await page.evaluate(() => ['rituals', 'challenges', 'mood'].map(key => __ville.state.settings[key])), [false, false, false]);
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    await page.locator('#settingsBtn').click();
+    for (const name of names) assert.equal(await sw(name).getAttribute('aria-checked'), 'false');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Réglages des rituels';
+}
+
 const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage, visitFriend, shareCity,
-  postcardsInCarnet];
+  postcardsInCarnet, ritualSettings];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

@@ -67,10 +67,11 @@ function bindShare() {
   $('#shareCity').addEventListener('click', openShareSheet);
   $('#visitKeep').addEventListener('click', e => {
     if (!visiting || e.currentTarget.getAttribute('aria-disabled') === 'true' || !keepPostcard(visiting.snapshot, visiting.code)) return;
+    const progress = progressNow();   // le succès « Carte postale », gagné tout de suite
     commit();
-    toast(t('visit.kept'));
     e.currentTarget.textContent = frTypo(t('visit.keptShort'));
     e.currentTarget.setAttribute('aria-disabled', 'true');
+    cheer(progress, t('visit.kept'));
   });
   $('#visitShare').addEventListener('click', openShareSheet);
 }

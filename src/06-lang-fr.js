@@ -723,6 +723,11 @@ DICT.fr = {
 
   // Semaine et rappel quotidien
   'settings.weekTitle': 'Semaine et rappel',
+  'settings.ritualsTitle': 'Rituels',
+  'settings.rituals': 'Bilans au début de la semaine et du mois',
+  'settings.ritualsNote': "Coupés, ils ne s'ouvrent plus d'eux-mêmes et restent dans le Journal.",
+  'settings.challenges': 'Défis de la semaine',
+  'settings.mood': 'Demander mon humeur après une séance',
   'settings.weekStart': 'La semaine commence le',
   'settings.weekMon': 'Lundi',
   'settings.weekSun': 'Dimanche',
@@ -814,6 +819,14 @@ DICT.fr = {
   'ach.jour-de-fete.desc': 'Vis une première fête dans ta ville.',
   'ach.quatre-saisons.name': 'Quatre saisons',
   'ach.quatre-saisons.desc': 'Vois ta ville au fil des quatre saisons.',
+  'ach.premier-defi.name': 'Premier défi',
+  'ach.premier-defi.desc': 'Relève un défi de la semaine.',
+  'ach.defis-en-serie.name': 'Défis en série',
+  'ach.defis-en-serie.desc': 'Relève 12 défis de la semaine.',
+  'ach.semaine-complete.name': 'Semaine complète',
+  'ach.semaine-complete.desc': "Relève les trois défis d'une même semaine.",
+  'ach.carte-postale.name': 'Carte postale',
+  'ach.carte-postale.desc': "Garde la carte postale d'une ville amie.",
   'ach.sur-ta-lancee.descHidden': 'Cumule 7 jours actifs rapprochés ; les jours de repos font le pont.',
   // Ensembles de voisinage
   'set.coin-lecture.name': 'Coin lecture',

@@ -722,6 +722,11 @@ DICT.en = {
   'settings.vibrate': 'Vibrate at the end of a session',
 
   // Week and daily reminder
+  'settings.ritualsTitle': 'Rituals',
+  'settings.rituals': 'Reviews at the start of the week and month',
+  'settings.ritualsNote': 'Turned off, they no longer open by themselves and stay in the Journal.',
+  'settings.challenges': 'Weekly challenges',
+  'settings.mood': 'Ask how I feel after a session',
   'settings.weekTitle': 'Week and reminder',
   'settings.weekStart': 'The week starts on',
   'settings.weekMon': 'Monday',
@@ -814,6 +819,14 @@ DICT.en = {
   'ach.jour-de-fete.desc': 'Celebrate a first festival in your town.',
   'ach.quatre-saisons.name': 'Four seasons',
   'ach.quatre-saisons.desc': 'See your town through all four seasons.',
+  'ach.premier-defi.name': 'First challenge',
+  'ach.premier-defi.desc': 'Complete a weekly challenge.',
+  'ach.defis-en-serie.name': 'Challenge streak',
+  'ach.defis-en-serie.desc': 'Complete 12 weekly challenges.',
+  'ach.semaine-complete.name': 'Full week',
+  'ach.semaine-complete.desc': 'Complete all three challenges of the same week.',
+  'ach.carte-postale.name': 'Postcard',
+  'ach.carte-postale.desc': "Keep the postcard of a friend's town.",
   'ach.sur-ta-lancee.descHidden': 'Reach 7 active days close together; rest days bridge the gaps.',
   // Neighbourhood sets
   'set.coin-lecture.name': 'Reading nook',

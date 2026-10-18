@@ -30,6 +30,15 @@ const wondersDone = () => S.city.tiles.filter(tile => isWonder(tile.item) && til
 const visitorsMet = () => Object.keys(S.visits || {}).length;
 const festivalsLived = () => Object.keys(S.gifts || {}).filter(key => key.startsWith('fest:')).length;
 const seasonsSeen = () => Object.keys(S.seasons || {}).length;
+// Défis relevés (un cadeau chal:<semaine>:<défi> chacun), semaine aux n défis relevés, cartes postales gardées.
+const challengeGifts = () => Object.keys(S.gifts || {}).filter(key => key.startsWith('chal:'));
+const challengesDone = () => challengeGifts().length;
+function fullWeekDone(n) {
+  const perWeek = {};
+  for (const key of challengeGifts()) perWeek[key.split(':')[1]] = (perWeek[key.split(':')[1]] || 0) + 1;
+  return Object.values(perWeek).some(count => count >= n);
+}
+const postcardsKept = () => Object.keys(S.postcards || {}).length;
 // Premier jour (dans l'ordre) où la série atteint n ; null sinon.
 function streakDay(n) { return activeDays().find(d => streakDetail(d).days >= n) || null; }
 // Premier jour où, semaine par semaine, n domaines ont été pratiqués ; null sinon.
@@ -66,6 +75,9 @@ function achievementMet(def) {
     case 'visitors': return visitorsMet() >= def.n;
     case 'festivals': return festivalsLived() >= def.n;
     case 'seasons': return seasonsSeen() >= def.n;
+    case 'challenges': return challengesDone() >= def.n;
+    case 'fullWeek': return fullWeekDone(def.n);
+    case 'postcards': return postcardsKept() >= def.n;
     default: return false;
   }
 }
@@ -76,7 +88,7 @@ function achievementProgress(def) {
     catMinutes: () => S.stats.byCat[def.cat] || 0, totalMinutes: () => totalMinutes(),
     activeDays: () => activeDays().length, tiles: () => S.city.tiles.length, nature: natureCount,
     sets: () => Object.keys(S.sets || {}).length, wonders: wondersDone,
-    visitors: visitorsMet, festivals: festivalsLived, seasons: seasonsSeen,
+    visitors: visitorsMet, festivals: festivalsLived, seasons: seasonsSeen, challenges: challengesDone, postcards: postcardsKept,
   }[def.kind];
   if (!have) return null;
   return { have: Math.min(have(), def.n), need: def.n, unit: def.kind === 'catMinutes' || def.kind === 'totalMinutes' ? 'min' : 'n' };

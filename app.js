@@ -141,6 +141,10 @@ const ACHIEVEMENTS = [
   { id: 'ville-hospitaliere', family: 'life', kind: 'visitors', n: 12 },
   { id: 'jour-de-fete', family: 'life', kind: 'festivals', n: 1 },
   { id: 'quatre-saisons', family: 'life', kind: 'seasons', n: 4 },
+  { id: 'premier-defi', family: 'rituals', kind: 'challenges', n: 1 },
+  { id: 'defis-en-serie', family: 'rituals', kind: 'challenges', n: 12 },
+  { id: 'semaine-complete', family: 'rituals', kind: 'fullWeek', n: 3 },
+  { id: 'carte-postale', family: 'rituals', kind: 'postcards', n: 1 },
 ];
 const NATURE_ITEMS = ['arbre', 'cerisier', 'haie', 'fleurs', 'potager'];
 // Ensembles : trois éléments dans un même carré de 3 × 3 cases.
@@ -1170,6 +1174,11 @@ DICT.fr = {
 
   // Semaine et rappel quotidien
   'settings.weekTitle': 'Semaine et rappel',
+  'settings.ritualsTitle': 'Rituels',
+  'settings.rituals': 'Bilans au début de la semaine et du mois',
+  'settings.ritualsNote': "Coupés, ils ne s'ouvrent plus d'eux-mêmes et restent dans le Journal.",
+  'settings.challenges': 'Défis de la semaine',
+  'settings.mood': 'Demander mon humeur après une séance',
   'settings.weekStart': 'La semaine commence le',
   'settings.weekMon': 'Lundi',
   'settings.weekSun': 'Dimanche',
@@ -1261,6 +1270,14 @@ DICT.fr = {
   'ach.jour-de-fete.desc': 'Vis une première fête dans ta ville.',
   'ach.quatre-saisons.name': 'Quatre saisons',
   'ach.quatre-saisons.desc': 'Vois ta ville au fil des quatre saisons.',
+  'ach.premier-defi.name': 'Premier défi',
+  'ach.premier-defi.desc': 'Relève un défi de la semaine.',
+  'ach.defis-en-serie.name': 'Défis en série',
+  'ach.defis-en-serie.desc': 'Relève 12 défis de la semaine.',
+  'ach.semaine-complete.name': 'Semaine complète',
+  'ach.semaine-complete.desc': "Relève les trois défis d'une même semaine.",
+  'ach.carte-postale.name': 'Carte postale',
+  'ach.carte-postale.desc': "Garde la carte postale d'une ville amie.",
   'ach.sur-ta-lancee.descHidden': 'Cumule 7 jours actifs rapprochés ; les jours de repos font le pont.',
   // Ensembles de voisinage
   'set.coin-lecture.name': 'Coin lecture',
@@ -2257,6 +2274,11 @@ DICT.en = {
   'settings.vibrate': 'Vibrate at the end of a session',
 
   // Week and daily reminder
+  'settings.ritualsTitle': 'Rituals',
+  'settings.rituals': 'Reviews at the start of the week and month',
+  'settings.ritualsNote': 'Turned off, they no longer open by themselves and stay in the Journal.',
+  'settings.challenges': 'Weekly challenges',
+  'settings.mood': 'Ask how I feel after a session',
   'settings.weekTitle': 'Week and reminder',
   'settings.weekStart': 'The week starts on',
   'settings.weekMon': 'Monday',
@@ -2349,6 +2371,14 @@ DICT.en = {
   'ach.jour-de-fete.desc': 'Celebrate a first festival in your town.',
   'ach.quatre-saisons.name': 'Four seasons',
   'ach.quatre-saisons.desc': 'See your town through all four seasons.',
+  'ach.premier-defi.name': 'First challenge',
+  'ach.premier-defi.desc': 'Complete a weekly challenge.',
+  'ach.defis-en-serie.name': 'Challenge streak',
+  'ach.defis-en-serie.desc': 'Complete 12 weekly challenges.',
+  'ach.semaine-complete.name': 'Full week',
+  'ach.semaine-complete.desc': 'Complete all three challenges of the same week.',
+  'ach.carte-postale.name': 'Postcard',
+  'ach.carte-postale.desc': "Keep the postcard of a friend's town.",
   'ach.sur-ta-lancee.descHidden': 'Reach 7 active days close together; rest days bridge the gaps.',
   // Neighbourhood sets
   'set.coin-lecture.name': 'Reading nook',
@@ -3899,6 +3929,15 @@ const wondersDone = () => S.city.tiles.filter(tile => isWonder(tile.item) && til
 const visitorsMet = () => Object.keys(S.visits || {}).length;
 const festivalsLived = () => Object.keys(S.gifts || {}).filter(key => key.startsWith('fest:')).length;
 const seasonsSeen = () => Object.keys(S.seasons || {}).length;
+// Défis relevés (un cadeau chal:<semaine>:<défi> chacun), semaine aux n défis relevés, cartes postales gardées.
+const challengeGifts = () => Object.keys(S.gifts || {}).filter(key => key.startsWith('chal:'));
+const challengesDone = () => challengeGifts().length;
+function fullWeekDone(n) {
+  const perWeek = {};
+  for (const key of challengeGifts()) perWeek[key.split(':')[1]] = (perWeek[key.split(':')[1]] || 0) + 1;
+  return Object.values(perWeek).some(count => count >= n);
+}
+const postcardsKept = () => Object.keys(S.postcards || {}).length;
 // Premier jour (dans l'ordre) où la série atteint n ; null sinon.
 function streakDay(n) { return activeDays().find(d => streakDetail(d).days >= n) || null; }
 // Premier jour où, semaine par semaine, n domaines ont été pratiqués ; null sinon.
@@ -3935,6 +3974,9 @@ function achievementMet(def) {
     case 'visitors': return visitorsMet() >= def.n;
     case 'festivals': return festivalsLived() >= def.n;
     case 'seasons': return seasonsSeen() >= def.n;
+    case 'challenges': return challengesDone() >= def.n;
+    case 'fullWeek': return fullWeekDone(def.n);
+    case 'postcards': return postcardsKept() >= def.n;
     default: return false;
   }
 }
@@ -3945,7 +3987,7 @@ function achievementProgress(def) {
     catMinutes: () => S.stats.byCat[def.cat] || 0, totalMinutes: () => totalMinutes(),
     activeDays: () => activeDays().length, tiles: () => S.city.tiles.length, nature: natureCount,
     sets: () => Object.keys(S.sets || {}).length, wonders: wondersDone,
-    visitors: visitorsMet, festivals: festivalsLived, seasons: seasonsSeen,
+    visitors: visitorsMet, festivals: festivalsLived, seasons: seasonsSeen, challenges: challengesDone, postcards: postcardsKept,
   }[def.kind];
   if (!have) return null;
   return { have: Math.min(have(), def.n), need: def.n, unit: def.kind === 'catMinutes' || def.kind === 'totalMinutes' ? 'min' : 'n' };
@@ -8048,6 +8090,22 @@ function settingsStreak(focus) {
   if (focus) setTimeout(() => { const el = $(focus, section); if (el) el.focus({ preventScroll: true }); }, 0);
   return section;
 }
+// Rituels : bilans et récapitulatifs qui s'ouvrent d'eux-mêmes (coupés, ils restent dans le Journal), défis de la semaine,
+// humeur demandée après une séance. Tous activés par défaut.
+function settingsRituals() {
+  const toggle = (key, label) => {
+    const sw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings[key] !== false), 'aria-label': label, onclick: () => {
+      S.settings[key] = S.settings[key] === false;
+      sw.setAttribute('aria-checked', String(S.settings[key]));
+      commit();
+    } });
+    return h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, label), sw);
+  };
+  return settingsBlock('settingsRituals',
+    h('div', { class: 'setting' }, h('span', { class: 'section-title' }, t('settings.ritualsTitle')), toggle('rituals', t('settings.rituals')), h('p', { class: 'note' }, t('settings.ritualsNote'))),
+    toggle('challenges', t('settings.challenges')),
+    toggle('mood', t('settings.mood')));
+}
 // Semaine et rappel : début de semaine (série et objectif), rappel quotidien ajouté à l'agenda.
 function settingsWeek() {
   const starts = ['mon', 'sun'], labels = { mon: t('settings.weekMon'), sun: t('settings.weekSun') };
@@ -8182,7 +8240,7 @@ function settingsReset() {
 }
 function openSettings() {
   openSheet(t('nav.settings'), body => {
-    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsWeek(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
+    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsWeek(), settingsRituals(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
     sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
   });
 }
@@ -10020,10 +10078,11 @@ function bindShare() {
   $('#shareCity').addEventListener('click', openShareSheet);
   $('#visitKeep').addEventListener('click', e => {
     if (!visiting || e.currentTarget.getAttribute('aria-disabled') === 'true' || !keepPostcard(visiting.snapshot, visiting.code)) return;
+    const progress = progressNow();   // le succès « Carte postale », gagné tout de suite
     commit();
-    toast(t('visit.kept'));
     e.currentTarget.textContent = frTypo(t('visit.keptShort'));
     e.currentTarget.setAttribute('aria-disabled', 'true');
+    cheer(progress, t('visit.kept'));
   });
   $('#visitShare').addEventListener('click', openShareSheet);
 }

@@ -136,6 +136,10 @@ const ACHIEVEMENTS = [
   { id: 'ville-hospitaliere', family: 'life', kind: 'visitors', n: 12 },
   { id: 'jour-de-fete', family: 'life', kind: 'festivals', n: 1 },
   { id: 'quatre-saisons', family: 'life', kind: 'seasons', n: 4 },
+  { id: 'premier-defi', family: 'rituals', kind: 'challenges', n: 1 },
+  { id: 'defis-en-serie', family: 'rituals', kind: 'challenges', n: 12 },
+  { id: 'semaine-complete', family: 'rituals', kind: 'fullWeek', n: 3 },
+  { id: 'carte-postale', family: 'rituals', kind: 'postcards', n: 1 },
 ];
 const NATURE_ITEMS = ['arbre', 'cerisier', 'haie', 'fleurs', 'potager'];
 // Ensembles : trois éléments dans un même carré de 3 × 3 cases.
