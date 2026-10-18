@@ -42,3 +42,22 @@ function openVisitor() {
     if (typeof celebrate === 'function') celebrate(noticeProgress(), lead); else toast(lead);
   }
 }
+// Fêtes du jour, à la première ouverture : un cadeau par fête et par an, et un seul message pour toutes.
+// « Bonne {name} » ne va pas au Nouvel An : il a son propre vœu.
+function greetFestivals(day) {
+  const fresh = festivalsOn(day).filter(f => !S.gifts[f.key]);
+  if (!fresh.length) return [];
+  for (const f of fresh) {
+    S.gifts[f.key] = nowTs();
+    S.coins = clamp(S.coins + giftAmount(f.key), 0, COINS_MAX);
+  }
+  const lead = fresh.map(f => {
+    const coins = fmt(giftAmount(f.key));
+    if (f.id === 'anniversaire') return t('fest.birthday', { n: f.age, coins });
+    if (f.id === 'nouvel-an') return t('fest.newYear', { coins });
+    return t('fest.greet', { name: t('fest.' + f.id + '.name'), coins });
+  }).join(' · ');
+  commit();
+  if (typeof celebrate === 'function') celebrate(noticeProgress(), lead); else toast(lead);
+  return fresh.map(f => f.key);
+}

@@ -125,6 +125,22 @@ async function runAmbient(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Visiteur');
   }
+  // Fête : le jour de la Fête du printemps, un message et 5 M à la première ouverture, puis plus rien au rechargement.
+  {
+    const seed = town({ esprit: 5 }, [], { createdAt: Date.parse('2026-05-04T10:00:00Z'), coins: 1e8 });
+    const { context, page, errors } = await cityAt(browser, baseURL, seed, '2027-03-21T10:00:00Z');
+    try {
+      await page.waitForFunction(() => /Bonne Fête du printemps/.test(document.querySelector('#toast').textContent));
+      assert.equal(await page.evaluate(() => __ville.state.coins), 1e8 + 5e6);
+      await page.reload();
+      await page.waitForFunction(() => !!window.__ville);
+      await page.waitForTimeout(300);
+      assert.doesNotMatch(await page.locator('#toast').textContent(), /Fête du printemps/);
+      assert.equal(await page.evaluate(() => __ville.state.coins), 1e8 + 5e6);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Fête');
+  }
   return { scenarios };
 }
 

@@ -306,6 +306,14 @@ const City = (() => {
         if (tile.item === 'phare' && (tile.stage || 4) >= 4 && g.dark > .5) drawBeam(g, tile.x, tile.y, t);
       }
     }
+    // Fêtes du jour : une guirlande de fanions pour toutes, puis le décor de chacune. Les cases libres des bords avant
+    // (hors celle du visiteur) reçoivent citrouilles ou lanternes, sauf pendant une pose où elles doivent rester lisibles.
+    if (amb && amb.festivals.length) {
+      const t = g.anim ? pal.time : 0, sp = amb.visitor && amb.visitor.spot;
+      const spots = !clean && Mode.state ? [] : freeCells().filter(c => (c.x === N - 1 || c.y === N - 1) && !(sp && sp.x === c.x && sp.y === c.y));
+      drawBunting(g, N, [...new Set(amb.festivals.flatMap(f => FEST_COLORS[f.id]))], t);
+      for (const fest of amb.festivals) drawFestival(g, fest, amb, t, { w: W, h: H, ground: oy, size: N }, spots);
+    }
     // Teinte du moment, posée seulement sur ce qui est dessiné (l'île et ses éléments).
     const tint = byTime ? lightTint(amb) : null;
     if (tint) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); ctx.restore(); }

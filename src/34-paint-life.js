@@ -326,3 +326,192 @@ const VISITOR_DRAW = {
     ['#3f78c4', '#3a9a7a', '#e2b33c'].forEach((col, i) => g.circle(sx + s * (.04 + .03 * i), sy - s * (.22 - .03 * ((i + dab) % 3)), s * .014, g.c(col)));
   },
 };
+
+/* Fêtes. Les fanions courent d'un poteau à l'autre le long des deux bords avant de l'île (un poteau toutes les deux cases environ) ;
+   chaque fête ajoute son décor. Les hauteurs sont en largeurs de case. */
+const FEST_COLORS = {
+  'nouvel-an': ['#f2c14e', '#3f78c4', '#d0628f', '#f6f1e7'],
+  printemps: ['#f6b3c8', '#9fd18b', '#fbe0ea', '#f2c14e'],
+  ete: ['#f2c14e', '#d9573b', '#3f78c4'],
+  recoltes: ['#d98a2b', '#c4572f', '#e2b33c', '#7a8b3e'],
+  lumieres: ['#f2c14e', '#d9573b', '#3a9a7a', '#3f78c4'],
+  anniversaire: ['#d0628f', '#3f78c4', '#f2c14e', '#3a9a7a'],
+};
+const POLE_Z = .26;
+// Pieds des poteaux, du coin gauche au coin avant puis au coin droit.
+function festPoles(size) {
+  const spans = Math.max(1, Math.round(size / 2)), out = [];
+  for (let i = 0; i <= spans; i++) out.push([size * i / spans, size]);
+  for (let i = 1; i <= spans; i++) out.push([size, size - size * i / spans]);
+  return out;
+}
+// Points d'un cordon tendu entre les poteaux à la hauteur z, qui pend de sag au milieu de chaque travée : n points par travée,
+// chacun avec la direction du cordon.
+function festCord(g, size, z, sag, n) {
+  const poles = festPoles(size), pts = [];
+  for (let i = 0; i + 1 < poles.length; i++) {
+    const [ax, ay] = g.P(poles[i][0], poles[i][1], g.tw * z), [bx, by] = g.P(poles[i + 1][0], poles[i + 1][1], g.tw * z), len = Math.hypot(bx - ax, by - ay);
+    for (let k = 0; k < n; k++) {
+      const u = (k + .5) / n;
+      pts.push([ax + (bx - ax) * u, ay + (by - ay) * u + 4 * g.tw * sag * u * (1 - u), (bx - ax) / len, (by - ay) / len]);
+    }
+  }
+  return pts;
+}
+function strokeCord(g, size, z, sag, color) {
+  const poles = festPoles(size), ctx = g.ctx;
+  ctx.beginPath();
+  for (let i = 0; i + 1 < poles.length; i++) {
+    const [ax, ay] = g.P(poles[i][0], poles[i][1], g.tw * z), [bx, by] = g.P(poles[i + 1][0], poles[i + 1][1], g.tw * z);
+    ctx.moveTo(ax, ay);
+    ctx.quadraticCurveTo((ax + bx) / 2, (ay + by) / 2 + 2 * g.tw * sag, bx, by);
+  }
+  ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, g.tw * .008); ctx.stroke();
+}
+// Guirlande de fanions : des triangles aux couleurs de la fête, qui flottent un peu au vent.
+function drawBunting(g, size, colors, t) {
+  const tw = g.tw, pw = tw * .035, len = tw * .075;
+  for (const [x, y] of festPoles(size)) line(g, [g.P(x, y), g.P(x, y, tw * POLE_Z)], g.c('#8a6a4a'), tw * .015);
+  strokeCord(g, size, POLE_Z, .05, g.c('#6b5a44'));
+  festCord(g, size, POLE_Z, .05, Math.max(2, Math.round(size / Math.max(1, Math.round(size / 2)) * 4.5))).forEach(([x, y, dx, dy], i) => {
+    const flutter = g.anim ? Math.sin(t * 3 + i * .9) * tw * .012 : 0;
+    g.poly([[x - dx * pw, y - dy * pw], [x + dx * pw, y + dy * pw], [x + flutter, y + len]], g.c(colors[i % colors.length], .3));
+  });
+}
+
+// Confettis qui tombent sur toute la carte, en tournant.
+function drawConfetti(g, area, t, colors) {
+  const { w, h } = area, ctx = g.ctx;
+  for (let i = 0; i < 18; i++) {
+    const x = 6 + (rnd(i, 21) * w + Math.sin(t * .9 + i) * 10 + w) % (w - 12), y = 6 + (rnd(i, 22) * h + t * 22 * (.6 + rnd(i, 23) * .5)) % (h - 12);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(t * 2 + i);
+    g.poly([[-2.2, -1], [2.2, -1], [2.2, 1], [-2.2, 1]], g.c(colors[i % colors.length], .3));
+    ctx.restore();
+  }
+}
+// Feux d'artifice : trois gerbes qui s'ouvrent tour à tour dans le ciel, à droite du bouton Construire, chacune à une place nouvelle.
+// Sans animation, elles restent ouvertes à des moments différents.
+function drawFireworks(g, area, t) {
+  const { w, h } = area, ctx = g.ctx, R = Math.min(w, h) * .11, colors = ['#ffd36e', '#ff8fa3', '#8fd3ff'];
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const p = t * .45 + .35 + i * .2, k = p % 1, round = Math.floor(p);
+    const cx = w * (.42 + .2 * i) + (rnd(round, i) - .5) * w * .06, cy = h * .12 + R + rnd(round, i + 5) * Math.max(0, area.ground * .5 - R);
+    const r = R * (1 - (1 - Math.min(1, k / .7)) ** 2), fall = k * k * R * .3;
+    g.glow(cx, cy, R * .5, (.2 * (1 - k)).toFixed(2));
+    ctx.globalAlpha = 1 - k * k;
+    ctx.strokeStyle = colors[i];
+    ctx.lineWidth = Math.max(1, R * .04);
+    ctx.beginPath();
+    for (let j = 0; j < 14; j++) {
+      const a = j / 14 * Math.PI * 2 + i, c = Math.cos(a), s = Math.sin(a) * .9;
+      ctx.moveTo(cx + c * r * .55, cy + s * r * .55 + fall); ctx.lineTo(cx + c * r, cy + s * r + fall);
+    }
+    ctx.stroke();
+    for (let j = 0; j < 14; j++) {
+      const a = j / 14 * Math.PI * 2 + i;
+      g.circle(cx + Math.cos(a) * r, cy + Math.sin(a) * r * .9 + fall, Math.max(1.2, R * .05), '#fff6dc');
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+// Pétales de la fête du printemps, plus nombreux que ceux de la saison.
+function drawPetals(g, area, t) {
+  const { w, h } = area, ctx = g.ctx;
+  for (let i = 0; i < 14; i++) {
+    const x = 6 + (rnd(i, 31) * w + Math.sin(t * .5 + i) * 16 + w) % (w - 12), y = 6 + (rnd(i, 32) * h + t * 12 * (.6 + rnd(i, 33) * .5)) % (h - 12);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(t * 1.1 + i);
+    g.poly([[-3, 0], [0, -1.7], [3, 0], [0, 1.7]], g.c(i % 3 ? '#f6b3c8' : '#fbe0ea', .5));
+    ctx.restore();
+  }
+}
+// Notes de musique qui montent de l'île et s'effacent.
+function drawNotes(g, size, t) {
+  const tw = g.tw, ink = g.night ? '#f6f1e7' : '#2c2c2c';
+  for (let i = 0; i < 6; i++) {
+    const k = (t * .3 + i / 6) % 1, [x, y] = g.P(rnd(i, 41) * size, rnd(i, 42) * size, tw * (.2 + .6 * k));
+    const nx = x + Math.sin(t * 1.5 + i) * tw * .03;
+    g.ctx.globalAlpha = Math.sin(Math.PI * k);
+    g.circle(nx, y, tw * .022, ink);
+    line(g, [[nx + tw * .02, y], [nx + tw * .02, y - tw * .07], [nx + tw * .045, y - tw * .05]], ink, tw * .008);
+  }
+  g.ctx.globalAlpha = 1;
+}
+// Lampions de papier pendus au cordon des fanions, allumés la nuit.
+function drawLampions(g, size, t) {
+  const tw = g.tw;
+  festCord(g, size, POLE_Z, .05, 2).forEach(([x, y], i) => {
+    const sway = g.anim ? Math.sin(t * 1.4 + i) * tw * .006 : 0, cy = y + tw * .06;
+    line(g, [[x, y], [x + sway, cy - tw * .035]], g.c('#6b5a44'), tw * .006);
+    g.glow(x + sway, cy, tw * .1, .45);
+    ellipseFill(g, x + sway, cy, tw * .03, tw * .038, i % 2 ? '#f2a23c' : '#e8604c');
+  });
+}
+// Citrouille posée en (sx, sy), de rayon r.
+function drawPumpkin(g, sx, sy, r) {
+  ellipseFill(g, sx, sy - r * .8, r * 1.25, r * .85, g.c('#e07a2f'));
+  ellipseFill(g, sx, sy - r * .8, r * .5, r * .85, g.c('#c4572f'));
+  line(g, [[sx, sy - r * 1.6], [sx + r * .2, sy - r * 2]], g.c('#5f7a3a'), r * .3);
+}
+// Fête des récoltes : une citrouille au pied de chaque poteau, une botte de paille et ses citrouilles sur les cases libres.
+function drawHarvest(g, size, spots) {
+  const tw = g.tw;
+  for (const [x, y] of festPoles(size)) {
+    const [sx, sy] = g.P(clamp(x, .15, size - .15) - (x === size ? .12 : 0), clamp(y, .15, size - .15) - (y === size ? .12 : 0));
+    drawPumpkin(g, sx, sy, tw * .04);
+  }
+  for (const s of spots) {
+    g.box(s.x + .3, s.y + .3, s.x + .7, s.y + .58, 0, tw * .12, '#e2c26a');
+    const [sx, sy] = g.P(s.x + .62, s.y + .78);
+    drawPumpkin(g, sx, sy, tw * .05);
+    const [px, py] = g.P(s.x + .3, s.y + .75);
+    drawPumpkin(g, px, py, tw * .035);
+  }
+}
+// Fête des lumières : une guirlande d'ampoules sous les fanions, qui scintille la nuit, et des lanternes sur les cases libres.
+function drawLights(g, size, spots, t) {
+  const tw = g.tw, colors = FEST_COLORS.lumieres;
+  strokeCord(g, size, .17, .04, g.c('#4a4f57'));
+  festCord(g, size, .17, .04, 6).forEach(([x, y], i) => {
+    const on = g.night ? .6 + .4 * Math.sin(t * 2 + i * 1.7) : 0, color = colors[i % colors.length];
+    if (on) g.glow(x, y + tw * .02, tw * .065, (.5 * on).toFixed(2));
+    g.circle(x, y + tw * .02, Math.max(1.2, tw * .018), on ? color : g.c(color, .3));
+  });
+  for (const s of spots) {
+    const [bx, by] = g.P(s.x + .5, s.y + .5), top = by - tw * .2;
+    line(g, [[bx, by], [bx, top]], g.c('#4a4f57'), tw * .012);
+    if (g.night) g.glow(bx, top - tw * .03, tw * .14, .5);
+    g.poly([[bx - tw * .025, top], [bx + tw * .025, top], [bx + tw * .025, top - tw * .06], [bx - tw * .025, top - tw * .06]], g.night ? '#ffd47a' : g.c('#f6e7b8'));
+    g.poly([[bx - tw * .035, top - tw * .06], [bx + tw * .035, top - tw * .06], [bx, top - tw * .09]], g.c('#3b3b3b'));
+  }
+}
+// Anniversaire : un bouquet de ballons attaché à chacun des deux poteaux des coins, penché vers l'île pour rester dans le cadre.
+function drawBalloons(g, size, t) {
+  const tw = g.tw, colors = FEST_COLORS.anniversaire;
+  [[0, size, 1], [size, 0, -1]].forEach(([x, y, lean], side) => {
+    const [px, py] = g.P(x, y, tw * POLE_Z);
+    [[.03, -.4], [.11, -.5], [.18, -.38]].forEach(([dx, dy], i) => {
+      const bob = g.anim ? Math.sin(t * 1.2 + i + side * 2) * tw * .012 : 0, bx = px + lean * dx * tw, by = py + dy * tw + bob;
+      line(g, [[px, py], [bx, by + tw * .085]], g.c('#6b5a44'), tw * .006);
+      ellipseFill(g, bx, by, tw * .065, tw * .08, g.c(colors[(i + side * 2) % colors.length], .3));
+      g.poly([[bx - tw * .012, by + tw * .09], [bx + tw * .012, by + tw * .09], [bx, by + tw * .075]], g.c(colors[(i + side * 2) % colors.length], .3));
+      g.circle(bx - lean * tw * .022, by - tw * .03, tw * .014, 'rgba(255,255,255,.55)');
+    });
+  });
+}
+// Décor d'une fête, par-dessus la ville. area = { w, h, ground, size } ; spots = cases libres des bords avant (trois au plus servent).
+function drawFestival(g, fest, amb, t, area, spots = []) {
+  const N = area.size, few = spots.length <= 3 ? spots : [0, 1, 2].map(k => spots[Math.round(k * (spots.length - 1) / 2)]);
+  g.ctx.save();
+  switch (fest.id) {
+    case 'nouvel-an': if (g.night) drawFireworks(g, area, t); else drawConfetti(g, area, t, FEST_COLORS['nouvel-an']); break;
+    case 'printemps': drawPetals(g, area, t); strokeCord(g, N, .15, .04, g.c('#5f8f4a'));
+      festCord(g, N, .15, .04, 5).forEach(([x, y], i) => { g.circle(x, y, g.tw * .022, g.c(i % 2 ? '#f6b3c8' : '#fbf6ec', .3)); g.circle(x, y, g.tw * .009, g.c('#f2c14e', .3)); });
+      break;
+    case 'ete': drawNotes(g, N, t); if (g.night) drawLampions(g, N, t); break;
+    case 'recoltes': drawHarvest(g, N, few); break;
+    case 'lumieres': drawLights(g, N, few, t); break;
+    case 'anniversaire': drawBalloons(g, N, t); drawConfetti(g, area, t, FEST_COLORS.anniversaire); break;
+  }
+  g.ctx.restore();
+}

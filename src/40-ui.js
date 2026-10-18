@@ -148,6 +148,8 @@ function renderView(tab) {
 }
 
 function renderVille() {
+  // Jour de fête : son cadeau et son message à la première ouverture (et au passage de minuit, l'appli ouverte).
+  greetFestivals(today());
   const n = S.city.tiles.length, N = S.city.size;
   const parts = [t('city.captionBuildings', { n }), t('city.captionLand', { size: N })];
   if (todayMinutes() > 0) parts.push(t('city.captionToday', { time: fmtMin(todayMinutes()) }));

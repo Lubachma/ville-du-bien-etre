@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js', '53-visits.js'];
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'VISITORS', 'meetVisitor', 'claimVisitGift', 'today', 'shiftDay'];
+const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'VISITORS', 'meetVisitor', 'claimVisitGift', 'today', 'shiftDay', 'greetFestivals'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 const app = (globals = {}) => loadApp(FILES, { expose: EXPOSE, globals });
 
@@ -60,4 +60,17 @@ test('cadeau du visiteur : une fois par jour, et pas pour un jour déjà passé'
   // Horloge reculée d'un jour : la veille est déjà passée, rien de plus.
   assert.equal(a.claimVisitGift(a.shiftDay(day, -1)), false);
   assert.equal(a.state.coins, coins + 2e6);
+});
+
+test("fête : un cadeau une fois par an, 10 M pour l'anniversaire, un seul message", () => {
+  const messages = [], a = app({ commit: () => true, toast: m => messages.push(m) });
+  a.state.clock.tz = 'Europe/Zurich'; a.state.createdAt = Date.parse('2026-03-21T09:00:00Z');
+  const coins = a.state.coins;
+  assert.deepEqual(plain(a.greetFestivals('2027-03-21')), ['fest:printemps:2027', 'fest:anniversaire:2027']);
+  assert.deepEqual(plain(a.greetFestivals('2027-03-21')), []);
+  assert.equal(a.state.coins, coins + 5e6 + 10e6);
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /Fête du printemps.*1\u00a0an/);
+  a.greetFestivals('2026-12-31');
+  assert.match(messages[1], /^Bonne année/);
 });
