@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
   '25-challenges.js', '26-summaries.js', '46-features.js'];
-const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay', 'pendingRitual', 'markRitual', 'setMood', 'moodInsights', 'moodDifficult'];
+const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay', 'pendingRitual', 'markRitual', 'setMood', 'moodInsights', 'moodDifficult', 'periodActive'];
 function app(now = '2026-10-27T12:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
   a.state.clock.tz = 'Europe/Zurich'; a.state.clock.maxSeen = 0; a.state.createdAt = Date.parse('2026-05-04T09:00:00Z');
@@ -53,6 +53,8 @@ test('récapitulatifs : bornes du mois et de l’année, chiffres du mois, pas d
   assert.equal(a.monthKey('2026-10-27'), '2026-10');
   const m = plain(a.recapSummary('month', '2026-10'));
   assert.deepEqual([m.minutes, m.activeDays, m.sessions, m.favorite, m.bestDay], [120, 4, 5, 'corps', { day: '2026-10-21', minutes: 55 }]);
+  assert.deepEqual(m.byCat, { esprit: 35, corps: 45, calme: 40 });
+  assert.deepEqual([a.periodActive('month', '2026-10'), a.periodActive('month', '2026-09')], [true, false]);
   assert.equal(a.recapSummary('year', '2026').sessions, null);
 });
 

@@ -245,7 +245,46 @@ async function moodCards(browser, baseURL) {
   return 'Ce qui te fait du bien, et les moments difficiles';
 }
 
-const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards];
+// Récapitulatifs : au premier lundi de novembre, le mois d'octobre s'ouvre avant le bilan de la semaine (une fenêtre par
+// ouverture), puis reste dans le Journal ; en janvier, c'est l'année. À 320 px, rien ne déborde, en français et en anglais.
+async function recapsOnce(browser, baseURL) {
+  const seed = { ...filledWeek(), rituals: { week: '', month: '', year: '' } }, options = { viewport: { width: 320, height: 640 } };
+  const nov = await cityAt(browser, baseURL, seed, '2026-11-02T09:00:00Z', options);
+  try {
+    const { page } = nov;
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Octobre 2026');
+    assert.match(await page.locator('#sheetBody').innerText(), /Ton mois en un coup d'œil[\s\S]*Temps de pratique[\s\S]*Tes domaines[\s\S]*Ton plus beau jour/);
+    await fitsSheet(page, 'le récapitulatif du mois (fr)');
+    await page.locator('#sheetClose').click();
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Ta semaine');
+    await page.locator('#sheetClose').click();
+    await page.locator('[data-tab="journal"]').click();
+    const cards = page.locator('#ritualCards');
+    assert.match(await cards.innerText(), /Ton mois[\s\S]*Octobre 2026/);
+    assert.doesNotMatch(await cards.innerText(), /Ton année/);
+    await toEnglish(page);
+    await cards.getByRole('button', { name: 'View', exact: true }).click();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'October 2026');
+    await fitsSheet(page, 'le récapitulatif du mois (en)');
+    assert.deepEqual(nov.errors, []);
+  } finally { await nov.context.close(); }
+  const jan = await cityAt(browser, baseURL, seed, '2027-01-04T09:00:00Z', options);
+  try {
+    await jan.page.locator('#sheet').waitFor();
+    assert.equal(await jan.page.locator('#sheetTitle').innerText(), '2026');
+    assert.match(await jan.page.locator('#sheetBody').innerText(), /Ton année en un coup d'œil/);
+    assert.doesNotMatch(await jan.page.locator('#sheetBody').innerText(), /Séances réussies/);
+    await fitsSheet(jan.page, 'le récapitulatif de l’année (fr)');
+    assert.deepEqual(jan.errors, []);
+  } finally { await jan.context.close(); }
+  return 'Récapitulatifs du mois et de l’année';
+}
+
+const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

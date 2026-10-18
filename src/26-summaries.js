@@ -11,7 +11,7 @@ function periodDays(from, to) {
 const inPeriod = (day, from, to) => typeof day === 'string' && day >= from && day <= to;
 const tsInPeriod = (ts, from, to) => validTs(ts) && inPeriod(dayOf(ts), from, to);
 
-// Ce qu'une période a apporté : temps de pratique, jours actifs, séances, domaines, beaux moments, nouveautés de la ville,
+// Ce qu'une période a apporté : temps de pratique, jours actifs, séances, domaines (et leurs minutes), beaux moments, nouveautés de la ville,
 // défis et succès, humeurs notées (sur l'écran seulement).
 function periodSummary(from, to) {
   const stats = S.stats.effort || S.stats, daily = S.stats.dailyCats || {}, days = periodDays(from, to);
@@ -25,7 +25,7 @@ function periodSummary(from, to) {
     from, to,
     minutes: days.reduce((sum, day) => sum + minutesOn(day), 0),
     activeDays: days.filter(day => minutesOn(day) >= 1).length,
-    sessions: sessions.length, cats,
+    sessions: sessions.length, cats, byCat: Object.fromEntries(cats.map(cat => [cat, catMinutes(cat)])),
     favorite: cats.length ? cats.reduce((best, cat) => (catMinutes(cat) > catMinutes(best) ? cat : best)) : null,
     longest: longest ? { name: longest.name, min: longest.min } : null, bestDay,
     // Éléments posés (sauf ceux du départ), ensembles découverts, visiteurs rencontrés pour la première fois.
@@ -60,6 +60,9 @@ function recapSummary(kind, key) {
   return { ...summary, kind, key, sessions: kind === 'year' ? null : summary.sessions };
 }
 
+// Une période qui a eu du temps de pratique.
+function periodActive(kind, key) { const { from, to } = periodRange(kind, key); return periodSummary(from, to).minutes > 0; }
+
 // Bilan ou récapitulatif dû à l'ouverture, une seule fois chacun : l'année passée en janvier, puis le mois passé, puis la
 // semaine passée. Jamais pour une période où la ville n'existait pas encore ; mois et année seulement s'ils ont eu de l'activité.
 // Un marqueur de semaine à moins de 7 jours compte encore (changer le début de semaine ne rouvre pas le bilan).
@@ -67,9 +70,8 @@ function pendingRitual(day = today()) {
   if (S.settings.rituals === false) return null;
   const born = dayOf(S.createdAt), marks = S.rituals || {}, year = day.slice(0, 4), month = monthKey(day);
   const lastYear = String(Number(year) - 1), lastMonth = monthKey(shiftDay(month + '-01', -1));
-  const active = (kind, key) => { const { from, to } = periodRange(kind, key); return periodSummary(from, to).minutes > 0; };
-  if (month.endsWith('-01') && (marks.year || '') < lastYear && born < year + '-01-01' && active('year', lastYear)) return { kind: 'year', key: lastYear };
-  if ((marks.month || '') < lastMonth && born < month + '-01' && active('month', lastMonth)) return { kind: 'month', key: lastMonth };
+  if (month.endsWith('-01') && (marks.year || '') < lastYear && born < year + '-01-01' && periodActive('year', lastYear)) return { kind: 'year', key: lastYear };
+  if ((marks.month || '') < lastMonth && born < month + '-01' && periodActive('month', lastMonth)) return { kind: 'month', key: lastMonth };
   const week = weekStartOf(day), lastWeek = shiftDay(week, -7);
   if (born < week && (!marks.week || marks.week < shiftDay(lastWeek, -6))) return { kind: 'week', key: lastWeek };
   return null;

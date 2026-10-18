@@ -17,7 +17,7 @@
 .chal-row.done .chal-state { color: var(--accent-ink); font-weight: 700; }
 /* Bilans : phrase d'accueil, chiffres, domaines en pastilles, beaux moments, puis la semaine qui commence ; cartes du Journal. */
 .review-headline { font-family: var(--font-display); font-size: 21px; line-height: 1.25; margin: 2px 0 12px; }
-.review-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.review-figures { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
 .review-figure { display: grid; gap: 2px; padding: 10px; border-radius: var(--radius); background: var(--surface-2); text-align: center; min-width: 0; }
 .review-figure strong { font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .review-figure span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
@@ -67,3 +67,6 @@
 .mood-support { display: grid; gap: 10px; background: var(--accent-soft); border-color: transparent; }
 .mood-support p { margin: 0; }
 .mood-support .btn { justify-self: end; }
+/* Récapitulatifs : chaque partie (domaines, ville) sous un filet. */
+.recap-part { display: grid; gap: 8px; padding-top: 12px; margin-bottom: 12px; border-top: 1px solid var(--line); }
+.recap-part p, .recap-part .meters, .recap-part .review-moments { margin: 0; }

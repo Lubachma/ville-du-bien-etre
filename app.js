@@ -1462,6 +1462,17 @@ DICT.fr = {
   'mood.row': '{good} sur {total}',
   'mood.support': "Tes dernières séances ont été difficiles. Une activité tranquille, un moment dehors ou parler à quelqu'un de confiance peut aider. Si ça dure, un professionnel de santé peut t'accompagner.",
   'mood.thanks': 'Merci',
+  'recap.leadMonth': "Ton mois en un coup d'œil",
+  'recap.leadYear': "Ton année en un coup d'œil",
+  'recap.bestDay': 'Ton plus beau jour : {day}, {time}',
+  'recap.cats': 'Tes domaines',
+  'recap.city': 'Ta ville',
+  'recap.sets': { one: '{n} ensemble découvert', other: '{n} ensembles découverts' },
+  'recap.achievements': { one: '{n} succès gagné', other: '{n} succès gagnés' },
+  'recap.share': "Partager l'image",
+  'recap.cardMonth': 'Ton mois',
+  'recap.cardYear': 'Ton année',
+  'recap.open': 'Voir',
   'city.listVisitor': 'Visiteur du jour : {name}',
   'fest.nouvel-an.name': 'Nouvel An',
   'fest.printemps.name': 'Fête du printemps',
@@ -2507,6 +2518,17 @@ DICT.en = {
   'mood.row': '{good} of {total}',
   'mood.support': 'Your last sessions have been hard. A quiet activity, some time outside or talking to someone you trust can help. If it lasts, a health professional can support you.',
   'mood.thanks': 'Thank you',
+  'recap.leadMonth': 'Your month at a glance',
+  'recap.leadYear': 'Your year at a glance',
+  'recap.bestDay': 'Your best day: {day}, {time}',
+  'recap.cats': 'Your areas',
+  'recap.city': 'Your town',
+  'recap.sets': { one: '{n} set discovered', other: '{n} sets discovered' },
+  'recap.achievements': { one: '{n} achievement earned', other: '{n} achievements earned' },
+  'recap.share': 'Share the picture',
+  'recap.cardMonth': 'Your month',
+  'recap.cardYear': 'Your year',
+  'recap.open': 'View',
   'city.listVisitor': 'Visitor of the day: {name}',
   'fest.nouvel-an.name': 'New Year',
   'fest.printemps.name': 'Spring festival',
@@ -4234,7 +4256,7 @@ function periodDays(from, to) {
 const inPeriod = (day, from, to) => typeof day === 'string' && day >= from && day <= to;
 const tsInPeriod = (ts, from, to) => validTs(ts) && inPeriod(dayOf(ts), from, to);
 
-// Ce qu'une période a apporté : temps de pratique, jours actifs, séances, domaines, beaux moments, nouveautés de la ville,
+// Ce qu'une période a apporté : temps de pratique, jours actifs, séances, domaines (et leurs minutes), beaux moments, nouveautés de la ville,
 // défis et succès, humeurs notées (sur l'écran seulement).
 function periodSummary(from, to) {
   const stats = S.stats.effort || S.stats, daily = S.stats.dailyCats || {}, days = periodDays(from, to);
@@ -4248,7 +4270,7 @@ function periodSummary(from, to) {
     from, to,
     minutes: days.reduce((sum, day) => sum + minutesOn(day), 0),
     activeDays: days.filter(day => minutesOn(day) >= 1).length,
-    sessions: sessions.length, cats,
+    sessions: sessions.length, cats, byCat: Object.fromEntries(cats.map(cat => [cat, catMinutes(cat)])),
     favorite: cats.length ? cats.reduce((best, cat) => (catMinutes(cat) > catMinutes(best) ? cat : best)) : null,
     longest: longest ? { name: longest.name, min: longest.min } : null, bestDay,
     // Éléments posés (sauf ceux du départ), ensembles découverts, visiteurs rencontrés pour la première fois.
@@ -4283,6 +4305,9 @@ function recapSummary(kind, key) {
   return { ...summary, kind, key, sessions: kind === 'year' ? null : summary.sessions };
 }
 
+// Une période qui a eu du temps de pratique.
+function periodActive(kind, key) { const { from, to } = periodRange(kind, key); return periodSummary(from, to).minutes > 0; }
+
 // Bilan ou récapitulatif dû à l'ouverture, une seule fois chacun : l'année passée en janvier, puis le mois passé, puis la
 // semaine passée. Jamais pour une période où la ville n'existait pas encore ; mois et année seulement s'ils ont eu de l'activité.
 // Un marqueur de semaine à moins de 7 jours compte encore (changer le début de semaine ne rouvre pas le bilan).
@@ -4290,9 +4315,8 @@ function pendingRitual(day = today()) {
   if (S.settings.rituals === false) return null;
   const born = dayOf(S.createdAt), marks = S.rituals || {}, year = day.slice(0, 4), month = monthKey(day);
   const lastYear = String(Number(year) - 1), lastMonth = monthKey(shiftDay(month + '-01', -1));
-  const active = (kind, key) => { const { from, to } = periodRange(kind, key); return periodSummary(from, to).minutes > 0; };
-  if (month.endsWith('-01') && (marks.year || '') < lastYear && born < year + '-01-01' && active('year', lastYear)) return { kind: 'year', key: lastYear };
-  if ((marks.month || '') < lastMonth && born < month + '-01' && active('month', lastMonth)) return { kind: 'month', key: lastMonth };
+  if (month.endsWith('-01') && (marks.year || '') < lastYear && born < year + '-01-01' && periodActive('year', lastYear)) return { kind: 'year', key: lastYear };
+  if ((marks.month || '') < lastMonth && born < month + '-01' && periodActive('month', lastMonth)) return { kind: 'month', key: lastMonth };
   const week = weekStartOf(day), lastWeek = shiftDay(week, -7);
   if (born < week && (!marks.week || marks.week < shiftDay(lastWeek, -6))) return { kind: 'week', key: lastWeek };
   return null;
@@ -9533,7 +9557,7 @@ function maybeOpenRitual() {
   markRitual(due.kind, due.key);
   commit({ silent: true });
   if (due.kind === 'week') openWeekReview(due.key);
-  else if (typeof openRecap === 'function') openRecap(due.kind, due.key);
+  else openRecap(due.kind, due.key);
   return true;
 }
 const reviewDay = day => dayFmt('short').format(keyToUTC(day));
@@ -9575,17 +9599,61 @@ function openWeekReview(week) {
     body.append(next);
   }, { keep: true });   // une lecture : une synchronisation au démarrage ne la referme pas
 }
-// Carte d'un bilan en haut du Journal, pour le revoir.
-const ritualCard = (title, sub, open) => h('section', { class: 'card ritual-card' },
-  h('div', { class: 'feature-between' }, h('h3', {}, title), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: open }, t('review.again'))),
+// Le nom d'un mois avec son année et une majuscule : « Octobre 2026 ». Sans « de » ni « d' », pour ne pas dépendre de l'élision.
+function monthTitle(key) {
+  const [year, month] = key.split('-').map(Number);
+  const text = new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(year, month - 1, 1)));
+  return text.charAt(0).toLocaleUpperCase(locale()) + text.slice(1);
+}
+const recapTitle = (kind, key) => (kind === 'year' ? key : monthTitle(key));
+// Une liste de beaux moments, ou rien s'il n'y en a pas.
+const recapList = items => (items.some(Boolean) ? h('ul', { class: 'review-moments' }, ...items.filter(Boolean).map(text => h('li', {}, text))) : null);
+// Fenêtre du récapitulatif d'un mois ou d'une année : les chiffres, les domaines en barres, les beaux moments, la ville, puis
+// l'image à partager. L'humeur reste à l'écran, et seulement pour un mois : le journal ne garde pas toutes les séances d'une année.
+function openRecap(kind, key) {
+  const r = recapSummary(kind, key), month = kind === 'month';
+  openSheet(recapTitle(kind, key), body => {
+    const figures = [reviewFigure(t('review.minutes'), fmtEffort(r.minutes)), reviewFigure(t('review.days'), String(r.activeDays))];
+    if (r.sessions != null) figures.push(reviewFigure(t('review.sessions'), String(r.sessions)));
+    body.append(h('p', { class: 'sub' }, t(month ? 'recap.leadMonth' : 'recap.leadYear')), h('div', { class: 'review-figures', vars: { '--n': figures.length } }, ...figures));
+    if (r.cats.length) {
+      const sum = r.cats.reduce((total, cat) => total + r.byCat[cat], 0) || 1;
+      body.append(h('section', { class: 'recap-part' }, h('h3', { class: 'section-title' }, t('recap.cats')), h('p', {}, t('review.favorite', { cat: catName(r.favorite) })),
+        h('div', { class: 'meters' }, ...r.cats.map(cat => h('div', { class: 'meter-row' },
+          h('div', { class: 'meter-top' }, h('span', { class: 'name' }, catDot(cat), catName(cat)), h('span', { class: 'val' }, fmtMin(r.byCat[cat]))),
+          h('div', { class: 'meter', vars: { '--c': catVar(cat) }, 'aria-hidden': 'true' }, h('span', { style: 'width:' + Math.round(r.byCat[cat] / sum * 100) + '%' })))))));
+    }
+    body.append(...[recapList([
+      r.bestDay && t('recap.bestDay', { day: dayFmt('long').format(keyToUTC(r.bestDay.day)), time: fmtMin(r.bestDay.minutes) }),
+      r.longest && t('review.longest', { name: displayName(r.longest.name), min: r.longest.min }),
+      r.challenges && t('review.challenges', { n: r.challenges }),
+      r.achievements && t('recap.achievements', { n: r.achievements }),
+      month && r.moods.total && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
+    ])].filter(Boolean));
+    const city = recapList([r.built && t('review.built', { n: r.built }), r.sets && t('recap.sets', { n: r.sets }),
+      r.visitors && t('review.visitors', { n: r.visitors }), r.festivals && t('review.festivals', { n: r.festivals })]);
+    if (city) body.append(h('section', { class: 'recap-part' }, h('h3', { class: 'section-title' }, t('recap.city')), city));
+    body.append(h('div', { class: 'review-actions' },
+      typeof shareRecapImage === 'function' ? h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => shareRecapImage(kind, key) }, icon('upload'), t('recap.share')) : null,
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: closeSheet }, t('common.close'))));
+  }, { keep: true });   // une lecture, comme le bilan de la semaine
+}
+// Carte d'un bilan ou d'un récapitulatif en haut du Journal, pour le (re)voir.
+const ritualCard = (title, sub, open, label) => h('section', { class: 'card ritual-card' },
+  h('div', { class: 'feature-between' }, h('h3', {}, title), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: open }, label)),
   h('p', { class: 'sub' }, sub));
-// En haut du Journal : la semaine dernière, toute la semaine (si la ville existait déjà).
+// En haut du Journal : la semaine dernière, toute la semaine (si la ville existait déjà) ; le mois passé, tout le mois suivant ;
+// l'année passée, en janvier. Un mois ou une année seulement s'ils ont eu du temps de pratique. Le réglage des bilans coupé,
+// les cartes restent.
 function renderRitualCards() {
   if (!$('#view-journal')) return;
   let box = $('#ritualCards');
   if (!box) { box = h('div', { id: 'ritualCards', class: 'ritual-cards' }); $('#kpis').after(box); }
-  const week = weekStartOf(today()), last = shiftDay(week, -7), cards = [];
-  if (dayOf(S.createdAt) < week) cards.push(ritualCard(t('review.card'), t('review.range', { from: reviewDay(last), to: reviewDay(shiftDay(last, 6)) }), () => openWeekReview(last)));
+  const day = today(), born = dayOf(S.createdAt), week = weekStartOf(day), last = shiftDay(week, -7), month = monthKey(day), year = day.slice(0, 4);
+  const lastMonth = monthKey(shiftDay(month + '-01', -1)), lastYear = String(Number(year) - 1), cards = [];
+  if (born < week) cards.push(ritualCard(t('review.card'), t('review.range', { from: reviewDay(last), to: reviewDay(shiftDay(last, 6)) }), () => openWeekReview(last), t('review.again')));
+  if (born < month + '-01' && periodActive('month', lastMonth)) cards.push(ritualCard(t('recap.cardMonth'), monthTitle(lastMonth), () => openRecap('month', lastMonth), t('recap.open')));
+  if (month.endsWith('-01') && born < year + '-01-01' && periodActive('year', lastYear)) cards.push(ritualCard(t('recap.cardYear'), lastYear, () => openRecap('year', lastYear), t('recap.open')));
   box.replaceChildren(...cards);
   box.hidden = !cards.length;
 }
