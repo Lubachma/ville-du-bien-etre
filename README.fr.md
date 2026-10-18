@@ -6,7 +6,7 @@
 
 **Fais grandir une ville en prenant soin de toi.** Chaque activité réelle se fait avec un chrono et rapporte des pièces, qui construisent une ville isométrique dont les fenêtres s’allument la nuit.
 
-**[▶ Ouvrir l’app](https://lubachma.github.io/ville-du-bien-etre/)** — rien à installer, pas de compte.
+**[▶ Ouvrir l’app](https://lubachma.github.io/ville-du-bien-etre/)** — rien à installer, pas de compte. En français ou en anglais.
 
 100 % local — ta ville reste sur ton appareil (stockage du navigateur). Installable sur iPhone et Android, fonctionne hors connexion. Pensée pour être partagée entre amis : chacun garde sa propre ville.
 
@@ -30,17 +30,28 @@
 | 🚶 **Activité libre** | Marche, sport, musique : écran verrouillé ou autre app, le chrono continue et le résultat est enregistré à ton retour, même après fermeture de l’app |
 | 🎲 **Tirage au sort** | Tu ne sais pas quoi faire ? Tirage parmi tes envies (+20 %) ou tes obligations (+50 %), selon ton temps, ton énergie et ton lieu. Les tâches ponctuelles ou récurrentes quittent le tirage une fois faites, puis reviennent selon leur fréquence |
 | 🔁 **Routines** | Enchaîne 2 à 6 activités, avec une pause libre entre les étapes ; la progression survit au rechargement |
-| 🎯 **Objectif de la semaine** | Un cap souple du lundi au dimanche (minutes et jours actifs, tous domaines ou un seul), et un bâtiment à viser |
+| 🎯 **Objectif de la semaine** | Un cap souple (minutes et jours actifs, tous domaines ou un seul), et un bâtiment à viser ; la semaine commence le lundi ou le dimanche |
 | 🏗️ **Ville** | 16 bâtiments débloqués par les minutes de leur domaine, 6 décors, terrain jusqu’à 11×11. Les bâtiments gagnent des niveaux avec la pratique. Nom de ville et export en image PNG |
 | 📒 **Journal** | Aujourd’hui, série, temps effectué, graphique des 7 derniers jours, progression par domaine, dernières sessions |
+| 🌱 **Série bienveillante** | 0 à 2 jours de repos par semaine, un mode pause, un cadeau de bon retour (+20 %) après une coupure, et jamais de message culpabilisant. La série peut être masquée ; son bonus continue de s’appliquer |
+| 🌍 **Langues** | Français et anglais, selon le téléphone ou au choix dans les réglages. Le changement est immédiat, sans recharger ; les exemples d’activités jamais renommés suivent la langue |
 | 💾 **Sauvegardes** | Export en fichier (sur iPhone : « Enregistrer dans Fichiers ») ou en texte, restauration sur un autre appareil ; rappel au bout de 14 jours |
 
 ### Récompenses
 
 - 💰 **1 M de pièces** par minute terminée
-- 🔥 **Série** : +10 % par jour d’affilée, jusqu’à +50 %
+- 🔥 **Série** : +10 % par jour actif d’affilée, jusqu’à +50 % ; les jours de repos (2 par semaine par défaut) et les pauses la maintiennent
+- 🌅 **Bon retour** : +20 % pour la première session après au moins 2 jours sans session
 - 🎲 **Tirage** : premier tirage accepté +20 % (envie) ou +50 % (obligation) dès 3 idées disponibles, divisé par deux à chaque relance payante
 - 🧭 **5 domaines** — Esprit, Corps, Calme, Foyer, Créativité — qui débloquent chacun leurs bâtiments, puis la Tour de l’horloge après 1 000 minutes au total
+
+## ⚙️ Réglages
+
+- **Langue** : automatique (la langue du téléphone, sinon l’anglais), Français ou English.
+- **Sessions** : tolérance de sortie (5, 10 ou 20 s), écran allumé, son de fin (carillon, bol ou clochettes ; doux, normal ou fort), vibration.
+- **Série** : jours de repos par semaine, pause, série masquée.
+- **Semaine et rappel** : la semaine commence le lundi ou le dimanche ; un rappel quotidien ajouté à ton agenda (fichier `.ics` ou Google Agenda), car l’app elle-même n’envoie pas de notification.
+- **Apparence** (auto, jour, nuit), **mode strict** (Accès guidé ou épinglage d’application), **sauvegarde** et **tout recommencer**.
 
 ## 📱 Installer sur téléphone
 
@@ -69,7 +80,7 @@ Node.js ≥ 20 est nécessaire pour les outils seulement : le site publié n’e
 
 ## 🛠️ Stack
 
-JavaScript sans framework ni dépendance à l’exécution · rendu isométrique en Canvas 2D · Service Worker (hors connexion d’abord, mises à jour à la demande) · Web Locks (une seule session entre onglets) · Screen Wake Lock · Web Audio (carillon de fin) · Web Share (fichiers de sauvegarde) · node:test + Playwright
+JavaScript sans framework ni dépendance à l’exécution · rendu isométrique en Canvas 2D · Service Worker (hors connexion d’abord, mises à jour à la demande) · Web Locks (une seule session entre onglets) · Screen Wake Lock · Web Audio (sons de fin) · Web Share (fichiers de sauvegarde et d’agenda) · Intl (pluriels, dates et nombres selon la langue) · node:test + Playwright
 
 Le build est un petit script Node : il assemble `src/` en `app.js` et donne au service worker une empreinte de contenu.
 
@@ -79,8 +90,8 @@ Le build est un petit script Node : il assemble `src/` en `app.js` et donne au s
 |----------|------|
 | `npm run build` | Génère `app.js` et `sw.js` depuis `src/` |
 | `npm run check` | Syntaxe JavaScript et manifeste |
-| `npm test` | Tests unitaires (node:test) : règles, stockage, fusions, sessions, sauvegardes |
-| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour |
+| `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda |
+| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son et rappel |
 | `npm run serve` | Serveur local sur le port 8766 |
 | `npm run package` | Prépare le dossier publiable `dist/` |
 
@@ -99,8 +110,11 @@ Les apps installées reçoivent la nouvelle version avec un bouton **Mettre à j
 ```
 src/
 ├── 00-core.js          # constantes, bâtiments, utilitaires DOM et formats
+├── 05-i18n.js          # traduction : t(), pluriels, choix de la langue, textes fixes de la page
+├── 06-lang-fr.js       # textes français
+├── 07-lang-en.js       # textes anglais
 ├── 10-state.js         # état, validation, fusion à trois voies, stockage, migration v1 → v2
-├── 20-rules.js         # jours, séries, gains, déblocages, prix
+├── 20-rules.js         # jours, série (jours de repos, pause), gains, déblocages, prix
 ├── 30-paint.js         # dessin isométrique de chaque bâtiment
 ├── 35-city.js          # canvas de la ville : disposition, tactile et clavier, niveaux, capture
 ├── 40-ui.js            # navigation, fenêtres, annonces, vue Ville
@@ -108,11 +122,12 @@ src/
 ├── 42-draw.js          # tirage au sort selon le contexte
 ├── 43-journal.js       # indicateurs, graphique de la semaine, historique
 ├── 44-shop.js          # boutique, terrain, fiche de bâtiment
-├── 45-settings.js      # réglages, sauvegardes, rappels
+├── 45-settings.js      # sections des réglages, changement de langue, sauvegardes
 ├── 46-features.js      # objectifs, routines, niveaux, personnalisation, export PNG
 ├── 47-accessibility.js # boutons radio au clavier, focus dans les fenêtres
 ├── 48-status.js        # bandeaux de stockage et de mise à jour, aide
-├── 50-session.js       # chrono, modes Concentration et Activité libre, anti-triche, carillon
+├── 49-reminder.js      # rappel quotidien : fichier .ics et lien Google Agenda
+├── 50-session.js       # chrono, modes Concentration et Activité libre, anti-triche, sons de fin
 ├── 60-boot.js          # événements et démarrage
 └── 70-install.js       # installation, cache hors connexion, mises à jour
 scripts/                # build, vérification, packaging, serveur, modèle du service worker

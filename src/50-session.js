@@ -537,9 +537,9 @@ function showSuccess(a, total, fresh) {
     }
     const lines = h('ul', { class: 'res-lines' },
       h('li', {}, h('span', {}, t('result.baseLine', { min: a.min })), h('span', {}, fmt(a.min * RATE))),
-      a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, '+' + a.drawPct + NB + '%')) : null,
-      a.streakPct ? h('li', {}, h('span', {}, S.settings.hideStreak ? t('result.consistency') : t('result.streak', { n: a.streakDays })), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
-      a.returnPct ? h('li', {}, h('span', {}, t('result.welcomeBack')), h('span', {}, '+' + a.returnPct + NB + '%')) : null,
+      a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, t('unit.bonusPct', { pct: a.drawPct }))) : null,
+      a.streakPct ? h('li', {}, h('span', {}, S.settings.hideStreak ? t('result.consistency') : t('result.streak', { n: a.streakDays })), h('span', {}, t('unit.bonusPct', { pct: a.streakPct }))) : null,
+      a.returnPct ? h('li', {}, h('span', {}, t('result.welcomeBack')), h('span', {}, t('unit.bonusPct', { pct: a.returnPct }))) : null,
       h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmt(S.coins))));
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });

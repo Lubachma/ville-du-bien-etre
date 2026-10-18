@@ -564,7 +564,7 @@ DICT.fr = {
   'settings.resetFinishSession': 'Termine la session en cours avant de recommencer.',
   'settings.resetDone': 'Nouvelle ville créée.',
   'settings.helpButton': 'Bien démarrer et installer l’app',
-  'settings.earnings': 'Gains : 1\u00a0M par minute. Bonus : premier tirage accepté +20\u00a0% (envie) ou +50\u00a0% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10\u00a0% par jour (max +50\u00a0%).',
+  'settings.rules': 'Gains : 1\u00a0M par minute. Bonus : premier tirage accepté +20\u00a0% (envie) ou +50\u00a0% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10\u00a0% par jour (max +50\u00a0%), que tes jours de repos n’interrompent pas ; bon retour +20\u00a0% pour la première session après au moins 2 jours sans session.',
 
   // État du stockage, mode hors connexion, aide et installation
   'storage.export': 'Exporter ma progression',
@@ -659,4 +659,7 @@ DICT.fr = {
   'reminder.downloaded': "Fichier d'agenda téléchargé : ouvre-le pour ajouter le rappel.",
   'reminder.summary': 'Ville du bien-être : un moment pour toi',
   'reminder.description': "Ouvre la Ville du bien-être depuis l'icône de ton écran d'accueil.",
+
+  // Pourcentage de bonus
+  'unit.bonusPct': '+{pct}\u00a0%',
 };

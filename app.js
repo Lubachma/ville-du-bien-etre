@@ -862,7 +862,7 @@ DICT.fr = {
   'settings.resetFinishSession': 'Termine la session en cours avant de recommencer.',
   'settings.resetDone': 'Nouvelle ville créée.',
   'settings.helpButton': 'Bien démarrer et installer l’app',
-  'settings.earnings': 'Gains : 1\u00a0M par minute. Bonus : premier tirage accepté +20\u00a0% (envie) ou +50\u00a0% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10\u00a0% par jour (max +50\u00a0%).',
+  'settings.rules': 'Gains : 1\u00a0M par minute. Bonus : premier tirage accepté +20\u00a0% (envie) ou +50\u00a0% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10\u00a0% par jour (max +50\u00a0%), que tes jours de repos n’interrompent pas ; bon retour +20\u00a0% pour la première session après au moins 2 jours sans session.',
 
   // État du stockage, mode hors connexion, aide et installation
   'storage.export': 'Exporter ma progression',
@@ -957,6 +957,9 @@ DICT.fr = {
   'reminder.downloaded': "Fichier d'agenda téléchargé : ouvre-le pour ajouter le rappel.",
   'reminder.summary': 'Ville du bien-être : un moment pour toi',
   'reminder.description': "Ouvre la Ville du bien-être depuis l'icône de ton écran d'accueil.",
+
+  // Pourcentage de bonus
+  'unit.bonusPct': '+{pct}\u00a0%',
 };
 
 
@@ -1527,7 +1530,7 @@ DICT.en = {
   'settings.resetFinishSession': 'Finish the current session before starting over.',
   'settings.resetDone': 'New town created.',
   'settings.helpButton': 'Getting started and installing the app',
-  'settings.earnings': 'Earnings: 1\u00a0M per minute. Bonuses: first accepted draw +20% (wish) or +50% (chore) from 3 ideas, halved with each redraw; daily streak +10% per day (max +50%).',
+  'settings.rules': "Earnings: 1\u00a0M per minute. Bonuses: first accepted draw +20% (wish) or +50% (chore) from 3 ideas, halved with each redraw; daily streak +10% per day (max +50%), which your rest days don't interrupt; welcome back +20% for the first session after at least 2 days without one.",
 
   // Storage status, offline mode, help and install
   'storage.export': 'Export my progress',
@@ -1622,6 +1625,9 @@ DICT.en = {
   'reminder.downloaded': 'Calendar file downloaded: open it to add the reminder.',
   'reminder.summary': 'Ville du bien-être: a moment for you',
   'reminder.description': 'Open Ville du bien-être from your home screen icon.',
+
+  // Bonus percentage
+  'unit.bonusPct': '+{pct}%',
 };
 
 
@@ -4519,7 +4525,7 @@ function settingsReset() {
     City.relayout();
     toast(t('settings.resetDone'));
   });
-  return settingsBlock('settingsReset', reset, h('p', { class: 'note' }, t('settings.earnings')));
+  return settingsBlock('settingsReset', reset, h('p', { class: 'note' }, t('settings.rules')));
 }
 function openSettings() {
   openSheet(t('nav.settings'), body => {
@@ -5547,9 +5553,9 @@ function showSuccess(a, total, fresh) {
     }
     const lines = h('ul', { class: 'res-lines' },
       h('li', {}, h('span', {}, t('result.baseLine', { min: a.min })), h('span', {}, fmt(a.min * RATE))),
-      a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, '+' + a.drawPct + NB + '%')) : null,
-      a.streakPct ? h('li', {}, h('span', {}, S.settings.hideStreak ? t('result.consistency') : t('result.streak', { n: a.streakDays })), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
-      a.returnPct ? h('li', {}, h('span', {}, t('result.welcomeBack')), h('span', {}, '+' + a.returnPct + NB + '%')) : null,
+      a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, t('unit.bonusPct', { pct: a.drawPct }))) : null,
+      a.streakPct ? h('li', {}, h('span', {}, S.settings.hideStreak ? t('result.consistency') : t('result.streak', { n: a.streakDays })), h('span', {}, t('unit.bonusPct', { pct: a.streakPct }))) : null,
+      a.returnPct ? h('li', {}, h('span', {}, t('result.welcomeBack')), h('span', {}, t('unit.bonusPct', { pct: a.returnPct }))) : null,
       h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmt(S.coins))));
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });

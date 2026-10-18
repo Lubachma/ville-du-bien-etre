@@ -349,7 +349,7 @@ function settingsReset() {
     City.relayout();
     toast(t('settings.resetDone'));
   });
-  return settingsBlock('settingsReset', reset, h('p', { class: 'note' }, t('settings.earnings')));
+  return settingsBlock('settingsReset', reset, h('p', { class: 'note' }, t('settings.rules')));
 }
 function openSettings() {
   openSheet(t('nav.settings'), body => {

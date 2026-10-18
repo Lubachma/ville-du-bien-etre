@@ -564,7 +564,7 @@ DICT.en = {
   'settings.resetFinishSession': 'Finish the current session before starting over.',
   'settings.resetDone': 'New town created.',
   'settings.helpButton': 'Getting started and installing the app',
-  'settings.earnings': 'Earnings: 1\u00a0M per minute. Bonuses: first accepted draw +20% (wish) or +50% (chore) from 3 ideas, halved with each redraw; daily streak +10% per day (max +50%).',
+  'settings.rules': "Earnings: 1\u00a0M per minute. Bonuses: first accepted draw +20% (wish) or +50% (chore) from 3 ideas, halved with each redraw; daily streak +10% per day (max +50%), which your rest days don't interrupt; welcome back +20% for the first session after at least 2 days without one.",
 
   // Storage status, offline mode, help and install
   'storage.export': 'Export my progress',
@@ -659,4 +659,7 @@ DICT.en = {
   'reminder.downloaded': 'Calendar file downloaded: open it to add the reminder.',
   'reminder.summary': 'Ville du bien-être: a moment for you',
   'reminder.description': 'Open Ville du bien-être from your home screen icon.',
+
+  // Bonus percentage
+  'unit.bonusPct': '+{pct}%',
 };

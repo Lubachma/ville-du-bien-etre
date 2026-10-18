@@ -240,3 +240,11 @@ test('aucun mot de perte dans les textes', () => {
   }
   assert.deepEqual(found, []);
 });
+
+test('pourcentage de bonus selon la langue', () => {
+  const { setLang, t } = app();
+  setLang('fr');
+  assert.equal(t('unit.bonusPct', { pct: 20 }), '+20 %');
+  setLang('en');
+  assert.equal(t('unit.bonusPct', { pct: 20 }), '+20%');
+});
