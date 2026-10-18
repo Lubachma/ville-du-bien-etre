@@ -1405,6 +1405,26 @@ DICT.fr = {
   'visit.thanks': 'Merci ! {coins} pour ta ville.',
   'visit.new': 'Nouveau visiteur : {name} !',
   'visit.newDay': 'Un nouveau jour commence dans ta ville.',
+  'chal.title': 'Défis de la semaine',
+  'chal.note': 'Trois défis à ta mesure, renouvelés chaque semaine.',
+  'chal.domains': { one: 'Pratique {n} domaine', other: 'Pratique {n} domaines différents' },
+  'chal.comeback': 'Retrouve le domaine {cat}',
+  'chal.long': "Une séance d'au moins {m}\u00a0min",
+  'chal.twoAreas': 'Deux domaines le même jour',
+  'chal.morning': 'Une séance avant 9\u00a0h',
+  'chal.evening': 'Une séance après 20\u00a0h',
+  'chal.weekend': 'Une séance le week-end',
+  'chal.draw': "Une activité tirée au sort, jusqu'au bout",
+  'chal.routine': 'Une routine en entier',
+  'chal.visitors': 'Dis bonjour à deux visiteurs',
+  'chal.build': 'Un nouvel élément dans ta ville',
+  'chal.focus': 'Une séance en Concentration',
+  'chal.reward': '+{coins}',
+  'chal.relieved': 'Relevé',
+  'chal.swap': 'Changer',
+  'chal.swapLabel': 'Changer le défi : {text}',
+  'chal.minutes': '{have} / {need}\u00a0min',
+  'chal.done': 'Défi relevé : {text} · +{coins}',
   'city.listVisitor': 'Visiteur du jour : {name}',
   'fest.nouvel-an.name': 'Nouvel An',
   'fest.printemps.name': 'Fête du printemps',
@@ -2393,6 +2413,26 @@ DICT.en = {
   'visit.thanks': 'Thank you! {coins} for your town.',
   'visit.new': 'New visitor: {name}!',
   'visit.newDay': 'A new day begins in your town.',
+  'chal.title': 'Weekly challenges',
+  'chal.note': 'Three challenges your size, new every week.',
+  'chal.domains': { one: 'Practice {n} area', other: 'Practice {n} different areas' },
+  'chal.comeback': 'Get back to {cat}',
+  'chal.long': 'One session of at least {m}\u00a0min',
+  'chal.twoAreas': 'Two areas on the same day',
+  'chal.morning': 'A session before 9\u00a0am',
+  'chal.evening': 'A session after 8\u00a0pm',
+  'chal.weekend': 'A weekend session',
+  'chal.draw': 'A drawn activity, all the way',
+  'chal.routine': 'A whole routine',
+  'chal.visitors': 'Say hello to two visitors',
+  'chal.build': 'Something new in your town',
+  'chal.focus': 'A Focus session',
+  'chal.reward': '+{coins}',
+  'chal.relieved': 'Done',
+  'chal.swap': 'Swap',
+  'chal.swapLabel': 'Swap the challenge: {text}',
+  'chal.minutes': '{have} / {need}\u00a0min',
+  'chal.done': 'Challenge done: {text} · +{coins}',
   'city.listVisitor': 'Visitor of the day: {name}',
   'fest.nouvel-an.name': 'New Year',
   'fest.printemps.name': 'Spring festival',
@@ -4076,6 +4116,34 @@ function challengeProgress(ch, week = challengeWeek()) {
   return { have, need, done: have >= need };
 }
 function challengeKey(ch, week) { return 'chal:' + week + ':' + ch.id; }
+
+// Défis relevés pas encore payés : 5 M chacun, une seule fois, pour la semaine du jour seulement (rien pour une semaine passée).
+// Changer le début de semaine ne fait pas payer deux fois : ni le même défi, ni plus de trois, à moins de 7 jours d'une semaine payée.
+function claimChallenges(day = today()) {
+  if (S.settings.challenges === false) return [];
+  const week = challengeWeek(day), near = Object.keys(S.gifts || {}).filter(key => key.startsWith('chal:'))
+    .map(key => ({ week: key.slice(5, 15), id: key.slice(16) })).filter(g => Math.abs(keyToUTC(g.week) - keyToUTC(week)) <= 6 * 86400000);
+  const paid = [];
+  for (const ch of weekChallenges(week)) {
+    const key = challengeKey(ch, week);
+    if (S.gifts[key] || near.length >= 3 || near.some(g => g.id === ch.id) || !challengeProgress(ch, week).done) continue;
+    S.gifts[key] = nowTs();
+    S.coins = clamp(S.coins + GIFTS.challenge, 0, COINS_MAX);
+    near.push({ week, id: ch.id });
+    paid.push({ ...ch, key });
+  }
+  return paid;
+}
+// Changer un défi : une fois par semaine, un défi pas encore relevé qui a un suivant dans sa famille.
+function swapChallenge(index, day = today()) {
+  const week = challengeWeek(day);
+  if (S.challenges && S.challenges.week === week && S.challenges.swapped >= 0) return false;
+  const ch = weekChallenges(week)[index];
+  if (!ch || S.gifts[challengeKey(ch, week)] || challengeProgress(ch, week).done) return false;
+  if (CHALLENGES.filter(other => other.family === ch.family && challengePossible(other)).length < 2) return false;
+  S.challenges = { week, swapped: index };
+  return true;
+}
 
 
 /* ---- 30-paint.js ---- */
@@ -7030,6 +7098,7 @@ function renderJournal() {
     kpi(t('journal.kpiEffort'), fmtEffort(totalEffortMinutes()), S.earned ? t('journal.kpiEffortSubEarned', { time: fmtMin(totalMinutes()), coins: fmt(S.earned) }) : t('journal.kpiEffortSub', { time: fmtMin(totalMinutes()) })),
     kpi(t('journal.kpiSessions'), String(S.stats.ok), t('journal.kpiInterrupted', { n: S.stats.ko })));
   renderGoals();
+  if (typeof renderChallengesCard === 'function') renderChallengesCard();
   renderCarnetCard();
   renderWeekChart();
   renderMeters();
@@ -8757,7 +8826,9 @@ async function completeSession() {
     S.active = null;
     if (typeof completeTask === 'function') completeTask(a);
     if (typeof onRoutineSessionComplete === 'function') onRoutineSessionComplete(a, total);
-    // Succès obtenus : le bilan les montre, avec leur décor offert (qui n'apparaît donc pas une seconde fois en déblocage).
+    // Défis relevés par cette séance, puis succès (certains suivent les défis) : le bilan montre les deux, les succès avec leur
+    // décor offert (qui n'apparaît donc pas une seconde fois en déblocage).
+    const challenges = typeof claimChallenges === 'function' ? claimChallenges(day) : [];
     const earned = typeof checkAchievements === 'function' ? checkAchievements() : [];
     const gifts = earned.map(id => achievementDef(id).reward).filter(Boolean);
     const fresh = [...unlockedSet()].filter(x => !before.has(x) && !gifts.includes(x));
@@ -8765,7 +8836,7 @@ async function completeSession() {
     clearBeat();
     bump();
     Chime.play();
-    showSuccess(a, total, fresh, earned);
+    showSuccess(a, total, fresh, earned, challenges);
     return true;
   });
   if (!result && run && run.id === id) run.finishing = false;
@@ -8789,7 +8860,7 @@ function showResult(build) {
   updateInert();
   setTimeout(() => { const title = res.querySelector('.res-title'); if (title) title.focus({ preventScroll: true }); }, 30);
 }
-function showSuccess(a, total, fresh, earned = []) {
+function showSuccess(a, total, fresh, earned = [], challenges = []) {
   showResult(res => {
     const burst = h('div', { class: 'burst', 'aria-hidden': 'true' });
     if (!reducedMotion()) {
@@ -8819,6 +8890,8 @@ function showSuccess(a, total, fresh, earned = []) {
         if (gift) { pic = h('canvas', { 'aria-hidden': 'true' }); City.thumb(pic, gift, 56); }
         return h('div', { class: 'res-unlock' }, pic, h('span', {}, t('result.achievement', { name: achName(id) }) + (gift ? ' · ' + t('result.gift', { item: itemName(gift) }) : '')));
       }),
+      ...challenges.map(ch => h('div', { class: 'res-unlock' }, h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon('check')),
+        h('span', {}, t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) })))),
       h('div', { class: 'res-actions' },
         h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), t('city.build')),
         h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
@@ -9010,7 +9083,9 @@ function carnetVisits() {
 }
 
 // Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.
-function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
+function celebrate({ achievements = [], sets = [], challenges = [] } = {}, lead = '') {
+  // Défis relevés : leur ligne suit le texte d'ouverture.
+  lead = [lead, ...challenges.map(ch => t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) }))].filter(Boolean).join(' · ');
   // Au démarrage, le message de rattrapage en attente rejoint ce message-ci.
   const note = lead || achievements.length || sets.length ? takeCarnetNote() : '';
   if (!achievements.length && !sets.length) {
@@ -9032,9 +9107,11 @@ function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
   toast(line(shown), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') }, line(n > 1 ? t('ach.spokenMany', { n, names }) : shown));
 }
 // Après une pose, un déplacement, un agrandissement ou une étape : ce qui vient d'être obtenu, sans rien afficher.
+// Les défis relevés passent avant les succès, pour que ceux qui en dépendent suivent dans le même message.
 function noticeProgress() {
+  const challenges = typeof claimChallenges === 'function' ? claimChallenges() : [];
   const sets = discoverSets();
-  return { sets, achievements: checkAchievements() };
+  return { sets, achievements: checkAchievements(), challenges };
 }
 // Ville d'avant la mise à jour ou sauvegarde restaurée : tout ce qui était déjà mérité, en un seul message.
 // Au démarrage (defer), le message attend : il rejoint le premier message de la ville (une fête), sinon flushCarnetNote l'affiche.
@@ -9098,8 +9175,9 @@ function openVisitor() {
           openVisitor();
           return;
         }
+        const progress = progressNow();
         closeSheet(); commit(); bump();
-        toast(t('visit.thanks', { coins: fmt(GIFTS.visit) }));
+        cheer(progress, t('visit.thanks', { coins: fmt(GIFTS.visit) }));
       } }, icon('sparkle'), t('visit.gift', { coins: fmt(GIFTS.visit) }));
     body.append(h('div', { class: 'bsheet' }, cv, h('div', { class: 'bsheet-text' }, h('p', {}, line), h('span', { class: 'note' }, t('visit.count', { n: S.visits[v.id].count })))), gift);
   });
@@ -9138,13 +9216,17 @@ function noteSeason(day) {
   S.seasons[season] = nowTs();
   return true;
 }
-// À chaque affichage de la Ville : la saison vue, puis les fêtes du jour. Un seul enregistrement : celui des fêtes
-// quand il y en a, sinon un enregistrement discret pour la saison, avec les succès qu'elle donne.
+// À chaque affichage de la Ville : la saison vue, les fêtes du jour, puis les défis relevés. Un seul enregistrement : celui
+// des fêtes quand il y en a, sinon celui des défis payés, sinon un enregistrement discret pour la saison ; avec les succès.
 function liveTick(day = today()) {
   const season = noteSeason(day);
-  if (greetFestivals(day).length || !season) return;
+  if (greetFestivals(day).length) return;
+  const claimed = typeof claimChallenges === 'function' ? claimChallenges(day) : [];
+  if (!season && !claimed.length) return;
   const progress = progressNow();
-  commit({ silent: true });
+  progress.challenges = [...claimed, ...(progress.challenges || [])];
+  // Des pièces en plus : l'en-tête se met à jour ; une saison seule s'enregistre discrètement.
+  commit(claimed.length ? {} : { silent: true });
   cheer(progress, '');
 }
 // Début de la légende de la ville : moment, météo (et arc-en-ciel), visiteur de passage et fêtes du jour.
@@ -9157,6 +9239,36 @@ function ambientCaption(amb) {
   }
   for (const fest of amb.festivals || []) parts.push(t('fest.' + fest.id + '.name'));
   return parts.join(' · ');
+}
+
+
+/* ---- 54-rituals.js ---- */
+/* =========================================================================
+   Rituels : défis de la semaine, bilans, récapitulatifs et humeur (interface).
+   ========================================================================= */
+// Texte d'un défi, avec sa cible de la semaine.
+function challengeText(ch) { return t('chal.' + ch.id, { n: ch.n, cat: ch.cat ? catName(ch.cat) : '', m: ch.m }); }
+
+// Carte « Défis de la semaine » du Journal, sous l'objectif de la semaine ; absente quand les défis sont coupés.
+function renderChallengesCard() {
+  if (!$('#view-journal')) return;
+  let card = $('#challengesCard');
+  if (S.settings.challenges === false) { if (card) card.remove(); return; }
+  if (!card) {
+    card = h('section', { id: 'challengesCard', class: 'card feature-card', 'aria-label': t('chal.title') });
+    ($('#goalsCard') || $('#kpis')).after(card);
+  }
+  const week = challengeWeek(), swapped = S.challenges && S.challenges.week === week && S.challenges.swapped >= 0;
+  const rows = weekChallenges(week).map((ch, i) => {
+    const p = challengeProgress(ch, week), done = p.done || !!S.gifts[challengeKey(ch, week)], text = challengeText(ch);
+    const value = ch.id === 'long' ? t('chal.minutes', { have: p.have, need: p.need }) : p.have + ' / ' + p.need;
+    return h('li', { class: 'chal-row' + (done ? ' done' : '') },
+      h('span', { class: 'chal-text' }, text),
+      h('span', { class: 'chal-state' }, done ? t('chal.relieved') : value + ' · ' + t('chal.reward', { coins: fmt(GIFTS.challenge) })),
+      swapped || done ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('chal.swapLabel', { text }),
+        onclick: () => { if (swapChallenge(i)) commit(); } }, t('chal.swap')));
+  });
+  card.replaceChildren(h('h3', {}, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));
 }
 
 
@@ -9296,7 +9408,8 @@ function boot(hotData) {
     if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (run && !run.ended ? { run: { id: run.id, elapsed: run.elapsed, exits: run.exits } } : {}));
   } catch (e) { /* pas de rechargement à chaud ici */ }
   if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
-    ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors } };
+    ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors },
+    rituals: { challenges: () => weekChallenges() } };
 }
 
 let booted = false;

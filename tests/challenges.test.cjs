@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '25-challenges.js'];
-const EXPOSE = ['CHALLENGES', 'challengeWeek', 'challengeTargets', 'weekChallenges', 'challengeProgress', 'challengeKey', 'shiftDay'];
+const EXPOSE = ['CHALLENGES', 'challengeWeek', 'challengeTargets', 'weekChallenges', 'challengeProgress', 'challengeKey', 'shiftDay', 'claimChallenges', 'swapChallenge'];
 // Mercredi 21 octobre 2026 : la semaine commence le lundi 19.
 function app(now = '2026-10-21T12:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
@@ -74,4 +74,34 @@ test('défis : le défi changé est le suivant de sa famille', () => {
   assert.notEqual(after[1].id, before[1].id);
   assert.equal(family(a, after[1].id), 'moment');
   assert.deepEqual([after[0], after[2]], [before[0], before[2]]);
+});
+
+test('défis : 5 M par défi relevé, une seule fois, et rien de plus en changeant le début de semaine', () => {
+  const a = app(); fill(a);
+  const coins = a.state.coins, got = plain(a.claimChallenges('2026-10-21'));
+  assert.equal(got.length, 3);
+  assert.ok(got.every(c => c.key.startsWith('chal:2026-10-19:')));
+  assert.equal(a.state.coins, coins + 15e6);
+  assert.deepEqual(plain(a.claimChallenges('2026-10-21')), []);
+  a.state.settings.weekStart = 'sun';
+  assert.deepEqual(plain(a.claimChallenges('2026-10-21')), []);
+  assert.equal(a.state.coins, coins + 15e6);
+});
+
+test('défis : coupés dans les réglages, ni défi ni pièce', () => {
+  const a = app(); fill(a); a.state.settings.challenges = false;
+  assert.deepEqual(plain(a.claimChallenges('2026-10-21')), []);
+});
+
+test('défis : rien pour une semaine passée', () => {
+  const a = app('2026-10-28T12:00:00Z'); fill(a);
+  assert.deepEqual(plain(a.claimChallenges('2026-10-28')), []);
+});
+
+test('défis : un seul changement par semaine, dans la même famille', () => {
+  const a = app(), before = plain(a.weekChallenges('2026-10-19'));
+  assert.equal(a.swapChallenge(1, '2026-10-21'), true);
+  const after = plain(a.weekChallenges('2026-10-19'));
+  assert.notEqual(after[1].id, before[1].id);
+  assert.equal(a.swapChallenge(0, '2026-10-21'), false);
 });

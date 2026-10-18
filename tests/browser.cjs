@@ -12,6 +12,9 @@ const key = 'ville-bien-etre/v2';
 const errors = [];
 const contexts = [];
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+// Une séance peut relever un défi de la semaine (tiré selon la vraie date) : 5 M de plus par défi relevé.
+const challengeCoins = state => 5e6 * Object.keys(state.gifts || {}).filter(key => key.startsWith('chal:')).length;
+const coinsWithChallenges = page => page.evaluate(() => __ville.state.coins - 5e6 * Object.keys(__ville.state.gifts || {}).filter(key => key.startsWith('chal:')).length);
 async function newPage(browser, url, options = {}) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR', ...options });
   contexts.push(context);
@@ -97,7 +100,7 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
       await page.clock.runFor(300700);
       await page.waitForFunction(() => __ville.state.stats.ok === 1);
       const state = await page.evaluate(() => __ville.state);
-      assert.equal(state.coins, 10000000); assert.equal(state.stats.byCat.calme, 5); assert.equal(state.history[0].elapsedSec, 300);
+      assert.equal(state.coins - challengeCoins(state), 10000000); assert.equal(state.stats.byCat.calme, 5); assert.equal(state.history[0].elapsedSec, 300);
       assert.match(await page.locator('#sessResult').innerText(), /Jardin zen/);
       await page.getByRole('button', { name: 'Retour à la ville', exact: true }).click();
       await page.getByRole('button', { name: 'Construire', exact: true }).click();
@@ -105,7 +108,7 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
       await page.locator('#city').focus(); await page.locator('#city').press('ArrowLeft'); await page.locator('#city').press('ArrowLeft');
       await page.locator('#city').press('Enter'); await page.locator('#placeConfirm').click();
       await page.reload(); await page.waitForFunction(() => __ville.state.city.tiles.some(t => t.item === 'jardin'));
-      assert.equal(await page.evaluate(() => __ville.state.coins), 2000000);
+      assert.equal(await coinsWithChallenges(page), 2000000);
       await context.close(); console.log('PASS: focus session reward/unlock, construction and reload persistence');
     }
     {
@@ -117,7 +120,7 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
       assert.equal(await page.evaluate(() => __ville.state.active.id), activeId);
       await page.clock.runFor(211000); await page.waitForFunction(() => __ville.state.stats.ok === 1);
       await page.reload(); await page.waitForFunction(() => window.__ville);
-      assert.equal(await page.evaluate(() => __ville.state.coins), 10000000);
+      assert.equal(await coinsWithChallenges(page), 10000000);
       assert.equal(await page.evaluate(() => __ville.state.history.filter(e => e.id === __ville.state.history[0].id).length), 1);
       await context.close(); console.log('PASS: free session survives reload and rewards once');
     }
@@ -242,6 +245,10 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
       console.log('PASS: ' + result.scenarios.join('; '));
     }
     {
+      const result = await require('./rituals-browser.cjs').runRituals(browser, baseURL + '#debug');
+      console.log('PASS: ' + result.scenarios.join('; '));
+    }
+    {
       const { context, page } = await newPage(browser, baseURL + '#debug');
       await page.evaluate(() => {
         window.installCalls = 0;
@@ -268,7 +275,7 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
       await page.getByRole('button', { name: 'Retour à la ville', exact: true }).click();
       await Promise.all([page.waitForNavigation(), page.locator('#updateNotice').getByRole('button', { name: 'Mettre à jour', exact: true }).click()]);
       await page.waitForFunction(() => __ville.state.stats.ok === 1 && VillePWA.version.endsWith('-test-update'));
-      assert.equal(await page.evaluate(() => __ville.state.coins), 10000000);
+      assert.equal(await coinsWithChallenges(page), 10000000);
       await other.waitForFunction(() => VillePWA.reloadAvailable && !__ville.state.active);
       assert.equal(await other.evaluate(() => window.keepThisPage), true);
       await Promise.all([other.waitForNavigation(), other.locator('#updateNotice').getByRole('button', { name: 'Mettre à jour', exact: true }).click()]);

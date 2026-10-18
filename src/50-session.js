@@ -537,7 +537,9 @@ async function completeSession() {
     S.active = null;
     if (typeof completeTask === 'function') completeTask(a);
     if (typeof onRoutineSessionComplete === 'function') onRoutineSessionComplete(a, total);
-    // Succès obtenus : le bilan les montre, avec leur décor offert (qui n'apparaît donc pas une seconde fois en déblocage).
+    // Défis relevés par cette séance, puis succès (certains suivent les défis) : le bilan montre les deux, les succès avec leur
+    // décor offert (qui n'apparaît donc pas une seconde fois en déblocage).
+    const challenges = typeof claimChallenges === 'function' ? claimChallenges(day) : [];
     const earned = typeof checkAchievements === 'function' ? checkAchievements() : [];
     const gifts = earned.map(id => achievementDef(id).reward).filter(Boolean);
     const fresh = [...unlockedSet()].filter(x => !before.has(x) && !gifts.includes(x));
@@ -545,7 +547,7 @@ async function completeSession() {
     clearBeat();
     bump();
     Chime.play();
-    showSuccess(a, total, fresh, earned);
+    showSuccess(a, total, fresh, earned, challenges);
     return true;
   });
   if (!result && run && run.id === id) run.finishing = false;
@@ -569,7 +571,7 @@ function showResult(build) {
   updateInert();
   setTimeout(() => { const title = res.querySelector('.res-title'); if (title) title.focus({ preventScroll: true }); }, 30);
 }
-function showSuccess(a, total, fresh, earned = []) {
+function showSuccess(a, total, fresh, earned = [], challenges = []) {
   showResult(res => {
     const burst = h('div', { class: 'burst', 'aria-hidden': 'true' });
     if (!reducedMotion()) {
@@ -599,6 +601,8 @@ function showSuccess(a, total, fresh, earned = []) {
         if (gift) { pic = h('canvas', { 'aria-hidden': 'true' }); City.thumb(pic, gift, 56); }
         return h('div', { class: 'res-unlock' }, pic, h('span', {}, t('result.achievement', { name: achName(id) }) + (gift ? ' · ' + t('result.gift', { item: itemName(gift) }) : '')));
       }),
+      ...challenges.map(ch => h('div', { class: 'res-unlock' }, h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon('check')),
+        h('span', {}, t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) })))),
       h('div', { class: 'res-actions' },
         h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), t('city.build')),
         h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));

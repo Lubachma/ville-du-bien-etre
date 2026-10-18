@@ -73,3 +73,31 @@ function challengeProgress(ch, week = challengeWeek()) {
   return { have, need, done: have >= need };
 }
 function challengeKey(ch, week) { return 'chal:' + week + ':' + ch.id; }
+
+// Défis relevés pas encore payés : 5 M chacun, une seule fois, pour la semaine du jour seulement (rien pour une semaine passée).
+// Changer le début de semaine ne fait pas payer deux fois : ni le même défi, ni plus de trois, à moins de 7 jours d'une semaine payée.
+function claimChallenges(day = today()) {
+  if (S.settings.challenges === false) return [];
+  const week = challengeWeek(day), near = Object.keys(S.gifts || {}).filter(key => key.startsWith('chal:'))
+    .map(key => ({ week: key.slice(5, 15), id: key.slice(16) })).filter(g => Math.abs(keyToUTC(g.week) - keyToUTC(week)) <= 6 * 86400000);
+  const paid = [];
+  for (const ch of weekChallenges(week)) {
+    const key = challengeKey(ch, week);
+    if (S.gifts[key] || near.length >= 3 || near.some(g => g.id === ch.id) || !challengeProgress(ch, week).done) continue;
+    S.gifts[key] = nowTs();
+    S.coins = clamp(S.coins + GIFTS.challenge, 0, COINS_MAX);
+    near.push({ week, id: ch.id });
+    paid.push({ ...ch, key });
+  }
+  return paid;
+}
+// Changer un défi : une fois par semaine, un défi pas encore relevé qui a un suivant dans sa famille.
+function swapChallenge(index, day = today()) {
+  const week = challengeWeek(day);
+  if (S.challenges && S.challenges.week === week && S.challenges.swapped >= 0) return false;
+  const ch = weekChallenges(week)[index];
+  if (!ch || S.gifts[challengeKey(ch, week)] || challengeProgress(ch, week).done) return false;
+  if (CHALLENGES.filter(other => other.family === ch.family && challengePossible(other)).length < 2) return false;
+  S.challenges = { week, swapped: index };
+  return true;
+}

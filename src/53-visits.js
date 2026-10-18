@@ -43,8 +43,9 @@ function openVisitor() {
           openVisitor();
           return;
         }
+        const progress = progressNow();
         closeSheet(); commit(); bump();
-        toast(t('visit.thanks', { coins: fmt(GIFTS.visit) }));
+        cheer(progress, t('visit.thanks', { coins: fmt(GIFTS.visit) }));
       } }, icon('sparkle'), t('visit.gift', { coins: fmt(GIFTS.visit) }));
     body.append(h('div', { class: 'bsheet' }, cv, h('div', { class: 'bsheet-text' }, h('p', {}, line), h('span', { class: 'note' }, t('visit.count', { n: S.visits[v.id].count })))), gift);
   });
@@ -83,13 +84,17 @@ function noteSeason(day) {
   S.seasons[season] = nowTs();
   return true;
 }
-// À chaque affichage de la Ville : la saison vue, puis les fêtes du jour. Un seul enregistrement : celui des fêtes
-// quand il y en a, sinon un enregistrement discret pour la saison, avec les succès qu'elle donne.
+// À chaque affichage de la Ville : la saison vue, les fêtes du jour, puis les défis relevés. Un seul enregistrement : celui
+// des fêtes quand il y en a, sinon celui des défis payés, sinon un enregistrement discret pour la saison ; avec les succès.
 function liveTick(day = today()) {
   const season = noteSeason(day);
-  if (greetFestivals(day).length || !season) return;
+  if (greetFestivals(day).length) return;
+  const claimed = typeof claimChallenges === 'function' ? claimChallenges(day) : [];
+  if (!season && !claimed.length) return;
   const progress = progressNow();
-  commit({ silent: true });
+  progress.challenges = [...claimed, ...(progress.challenges || [])];
+  // Des pièces en plus : l'en-tête se met à jour ; une saison seule s'enregistre discrètement.
+  commit(claimed.length ? {} : { silent: true });
   cheer(progress, '');
 }
 // Début de la légende de la ville : moment, météo (et arc-en-ciel), visiteur de passage et fêtes du jour.

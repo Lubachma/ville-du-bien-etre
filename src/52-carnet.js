@@ -140,7 +140,9 @@ function carnetVisits() {
 }
 
 // Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.
-function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
+function celebrate({ achievements = [], sets = [], challenges = [] } = {}, lead = '') {
+  // Défis relevés : leur ligne suit le texte d'ouverture.
+  lead = [lead, ...challenges.map(ch => t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) }))].filter(Boolean).join(' · ');
   // Au démarrage, le message de rattrapage en attente rejoint ce message-ci.
   const note = lead || achievements.length || sets.length ? takeCarnetNote() : '';
   if (!achievements.length && !sets.length) {
@@ -162,9 +164,11 @@ function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
   toast(line(shown), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') }, line(n > 1 ? t('ach.spokenMany', { n, names }) : shown));
 }
 // Après une pose, un déplacement, un agrandissement ou une étape : ce qui vient d'être obtenu, sans rien afficher.
+// Les défis relevés passent avant les succès, pour que ceux qui en dépendent suivent dans le même message.
 function noticeProgress() {
+  const challenges = typeof claimChallenges === 'function' ? claimChallenges() : [];
   const sets = discoverSets();
-  return { sets, achievements: checkAchievements() };
+  return { sets, achievements: checkAchievements(), challenges };
 }
 // Ville d'avant la mise à jour ou sauvegarde restaurée : tout ce qui était déjà mérité, en un seul message.
 // Au démarrage (defer), le message attend : il rejoint le premier message de la ville (une fête), sinon flushCarnetNote l'affiche.
