@@ -824,4 +824,5 @@ DICT.fr = {
   'city.nextStage': { m: 'Prochaine étape du {item} : encore {time} au total.', f: 'Prochaine étape de la {item} : encore {time} au total.' },
   'city.stageReady': { m: "Tu peux construire l'étape {stage} du {item}.", f: "Tu peux construire l'étape {stage} de la {item}." },
   'city.listItemStage': '{item}, case {x}, {y} · étape {stage} sur 4',
+  'set.discovered': 'Nouvel ensemble : {name} !',
 };

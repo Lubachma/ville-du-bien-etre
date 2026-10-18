@@ -824,4 +824,5 @@ DICT.en = {
   'city.nextStage': 'Next stage of the {item}: {time} more in total.',
   'city.stageReady': 'You can build stage {stage} of the {item}.',
   'city.listItemStage': '{item}, square {x}, {y} · stage {stage} of 4',
+  'set.discovered': 'New set: {name}!',
 };

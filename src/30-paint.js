@@ -145,6 +145,14 @@ function makePainter(ctx, tw, ox, oy, pal) {
     ctx.fill();
   };
   g.shadow = (cx, cy, r) => g.ell(cx + .04, cy + .06, r, 0, night ? 'rgba(0,0,0,.28)' : 'rgba(40,60,30,.16)');
+  // Pavage clair sous les éléments d'un ensemble formé (plus sombre la nuit).
+  g.paving = (x, y) => {
+    g.tile(x, y, .02, night ? '#5c5547' : '#e8dfcb', night ? 'rgba(0,0,0,.25)' : 'rgba(120,100,70,.25)', 1);
+    for (let i = 0; i < 6; i++) {
+      const u = .2 + rnd(x * 3 + i, y * 5 - i) * .6, v = .2 + rnd(y * 7 + i, x + i * 2) * .6;
+      g.ell(x + u, y + v, .05, 0, night ? '#504a3e' : '#d9ceb6');
+    }
+  };
   // Échafaudage en bois autour de la case, haut de « height » px : « back » avant le bâtiment, « front » après lui.
   g.scaffold = (x, y, height, side = 'both') => {
     const wood = g.c('#a77b4f'), i = .1, lw = Math.max(1.2, tw * .022);

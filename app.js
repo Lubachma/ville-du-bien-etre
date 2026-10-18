@@ -1209,6 +1209,7 @@ DICT.fr = {
   'city.nextStage': { m: 'Prochaine étape du {item} : encore {time} au total.', f: 'Prochaine étape de la {item} : encore {time} au total.' },
   'city.stageReady': { m: "Tu peux construire l'étape {stage} du {item}.", f: "Tu peux construire l'étape {stage} de la {item}." },
   'city.listItemStage': '{item}, case {x}, {y} · étape {stage} sur 4',
+  'set.discovered': 'Nouvel ensemble : {name} !',
 };
 
 
@@ -2039,6 +2040,7 @@ DICT.en = {
   'city.nextStage': 'Next stage of the {item}: {time} more in total.',
   'city.stageReady': 'You can build stage {stage} of the {item}.',
   'city.listItemStage': '{item}, square {x}, {y} · stage {stage} of 4',
+  'set.discovered': 'New set: {name}!',
 };
 
 
@@ -3157,6 +3159,51 @@ function nextSize() { return SIZES[SIZES.indexOf(S.city.size) + 1] || null; }
 
 
 
+/* ---- 22-sets.js ---- */
+/* =========================================================================
+   Ensembles de voisinage : trois éléments dans un même carré de 3 × 3 cases.
+   Un ensemble découvert le reste, même si on le défait ensuite.
+   ========================================================================= */
+function setName(id) { return t('set.' + id + '.name'); }
+// Pour chaque ensemble formé, ses cases : le premier carré trouvé (lignes puis colonnes),
+// et dans ce carré la première case de chaque élément.
+function formedSets(city = S.city) {
+  const found = new Map(), at = new Map();
+  for (const tile of city.tiles) at.set(tile.x + ',' + tile.y, tile);
+  for (const set of SETS) {
+    search: for (let y0 = 0; y0 <= city.size - 3; y0++) {
+      for (let x0 = 0; x0 <= city.size - 3; x0++) {
+        const ids = [];
+        for (const item of set.items) {
+          let hit = null;
+          for (let dy = 0; dy < 3 && !hit; dy++) for (let dx = 0; dx < 3 && !hit; dx++) {
+            const tile = at.get((x0 + dx) + ',' + (y0 + dy));
+            if (tile && tile.item === item) hit = tile;
+          }
+          if (!hit) break;
+          ids.push(hit.id);
+        }
+        if (ids.length === set.items.length) { found.set(set.id, ids); break search; }
+      }
+    }
+  }
+  return found;
+}
+// Cases à paver : celles des ensembles formés en ce moment.
+function pavedTileIds(city = S.city) {
+  const ids = new Set();
+  for (const list of formedSets(city).values()) list.forEach(id => ids.add(id));
+  return ids;
+}
+// Inscrit les ensembles formés pas encore découverts, dans l'ordre de la table, et les renvoie.
+function discoverSets(now = Date.now()) {
+  if (!S.sets) S.sets = {};
+  const fresh = [...formedSets().keys()].filter(id => !S.sets[id]);
+  for (const id of fresh) S.sets[id] = now;
+  return fresh;
+}
+
+
 /* ---- 30-paint.js ---- */
 /* =========================================================================
    Ville isométrique (canvas)
@@ -3305,6 +3352,14 @@ function makePainter(ctx, tw, ox, oy, pal) {
     ctx.fill();
   };
   g.shadow = (cx, cy, r) => g.ell(cx + .04, cy + .06, r, 0, night ? 'rgba(0,0,0,.28)' : 'rgba(40,60,30,.16)');
+  // Pavage clair sous les éléments d'un ensemble formé (plus sombre la nuit).
+  g.paving = (x, y) => {
+    g.tile(x, y, .02, night ? '#5c5547' : '#e8dfcb', night ? 'rgba(0,0,0,.25)' : 'rgba(120,100,70,.25)', 1);
+    for (let i = 0; i < 6; i++) {
+      const u = .2 + rnd(x * 3 + i, y * 5 - i) * .6, v = .2 + rnd(y * 7 + i, x + i * 2) * .6;
+      g.ell(x + u, y + v, .05, 0, night ? '#504a3e' : '#d9ceb6');
+    }
+  };
   // Échafaudage en bois autour de la case, haut de « height » px : « back » avant le bâtiment, « front » après lui.
   g.scaffold = (x, y, height, side = 'both') => {
     const wood = g.c('#a77b4f'), i = .1, lw = Math.max(1.2, tw * .022);
@@ -4256,6 +4311,9 @@ const City = (() => {
         g.tile(x, y, 0, night ? (alt ? '#2d4a3a' : '#2a4536') : (alt ? '#acd292' : '#a5cc8b'), night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
       }
     }
+    // Ensembles formés : un pavage commun sous leurs éléments.
+    const paved = pavedTileIds();
+    for (const tl of S.city.tiles) if (paved.has(tl.id)) g.paving(tl.x, tl.y);
     if (!clean && Mode.state) {
       for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
         const occ = tileOf(x, y);
@@ -4461,11 +4519,12 @@ const Mode = {
       const tile = { id: uid(), item: st.item, x: st.target.x, y: st.target.y, at: Date.now(), paid: price };
       if (isWonder(st.item)) tile.stage = 1;
       S.city.tiles.push(tile);
+      const sets = discoverSets();
       this.state = null;
       City.pop(tile.id);
       commit();
       bump();
-      toast(t('city.built', name));
+      toast(sets.length ? t('set.discovered', { name: setName(sets[0]) }) : t('city.built', name));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
@@ -4473,9 +4532,10 @@ const Mode = {
       this.state = null;
       tile.x = st.target.x;
       tile.y = st.target.y;
+      const sets = discoverSets();
       City.pop(tile.id);
       commit();
-      toast(t('city.moved'));
+      toast(sets.length ? t('set.discovered', { name: setName(sets[0]) }) : t('city.moved'));
     }
   },
   cancel() { this.state = null; this.render(); City.draw(); },

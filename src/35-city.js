@@ -72,6 +72,9 @@ const City = (() => {
         g.tile(x, y, 0, night ? (alt ? '#2d4a3a' : '#2a4536') : (alt ? '#acd292' : '#a5cc8b'), night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
       }
     }
+    // Ensembles formés : un pavage commun sous leurs éléments.
+    const paved = pavedTileIds();
+    for (const tl of S.city.tiles) if (paved.has(tl.id)) g.paving(tl.x, tl.y);
     if (!clean && Mode.state) {
       for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
         const occ = tileOf(x, y);
@@ -277,11 +280,12 @@ const Mode = {
       const tile = { id: uid(), item: st.item, x: st.target.x, y: st.target.y, at: Date.now(), paid: price };
       if (isWonder(st.item)) tile.stage = 1;
       S.city.tiles.push(tile);
+      const sets = discoverSets();
       this.state = null;
       City.pop(tile.id);
       commit();
       bump();
-      toast(t('city.built', name));
+      toast(sets.length ? t('set.discovered', { name: setName(sets[0]) }) : t('city.built', name));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
@@ -289,9 +293,10 @@ const Mode = {
       this.state = null;
       tile.x = st.target.x;
       tile.y = st.target.y;
+      const sets = discoverSets();
       City.pop(tile.id);
       commit();
-      toast(t('city.moved'));
+      toast(sets.length ? t('set.discovered', { name: setName(sets[0]) }) : t('city.moved'));
     }
   },
   cancel() { this.state = null; this.render(); City.draw(); },

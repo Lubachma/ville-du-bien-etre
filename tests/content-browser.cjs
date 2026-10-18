@@ -45,6 +45,25 @@ async function runContent(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Merveille : chantier et étape au seuil');
   }
+  // Ensemble : la troisième pièce posée forme le Coin lecture ; le déplacer ensuite ne retire pas la découverte.
+  {
+    const { context, page, errors } = await newTown(browser, baseURL, town({ esprit: 5 }, [
+      { id: 'b', item: 'bibliotheque', x: 2, y: 3, at: 1.8e12, paid: 10e6 }, { id: 'c', item: 'banc', x: 4, y: 3, at: 1.8e12, paid: 2e6 }]));
+    try {
+      await page.locator('#buildBtn').click();
+      await page.getByRole('button', { name: /^Placer Arbre pour/ }).click();
+      await page.locator('#city').press('Enter'); await page.locator('#placeConfirm').click();    // case (3, 3), entre les deux
+      await page.waitForFunction(() => !!__ville.state.sets['coin-lecture']);
+      assert.match(await page.locator('#toast').innerText(), /Nouvel ensemble\s:\sCoin lecture/);
+      await openTile(page, 'Banc');
+      await page.getByRole('button', { name: /Déplacer/ }).click();
+      for (const key of ['ArrowRight', 'ArrowRight', 'ArrowDown', 'ArrowDown', 'ArrowDown']) await page.locator('#city').press(key);
+      await page.locator('#city').press('Enter'); await page.locator('#placeConfirm').click();
+      assert.equal(await page.evaluate(() => !!__ville.state.sets['coin-lecture']), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Ensemble : découverte à la pose, gardée après un déplacement');
+  }
   return { scenarios };
 }
 module.exports = { runContent, newTown, town, openTile };
