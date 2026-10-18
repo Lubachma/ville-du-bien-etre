@@ -123,3 +123,10 @@
 .companion-wardrobe button .note { font-size: 11px; font-weight: 600; }
 .companion-wardrobe canvas { width: 52px; height: 52px; }
 #sheetTitle { overflow-wrap: anywhere; }
+/* Compagnon pendant la séance : dans l'anneau, sous le minuteur ; sur l'écran de fin, il se réjouit à côté de ses lignes. */
+#sessCompanion { width: clamp(76px, 26vw, 104px); height: clamp(76px, 26vw, 104px); justify-self: center; }
+.res-companion-block { display: flex; align-items: center; gap: 12px; width: 100%; margin: 4px 0 8px; text-align: left; }
+.res-companion { display: block; width: 96px; height: 96px; flex: none; margin: 0 auto; }
+.res-companion-text { display: grid; gap: 6px; justify-items: start; min-width: 0; overflow-wrap: anywhere; }
+.res-companion-text p { margin: 0; }
+.res-companion-time { font-weight: 700; }

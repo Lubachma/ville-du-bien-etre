@@ -339,6 +339,7 @@ function showRun(a) {
   $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? t('session.ruleFree') : t('session.ruleFocus', { grace: S.settings.grace })));
   $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
   if (typeof renderAmbienceButton === 'function') renderAmbienceButton();
+  if (typeof renderSessionCompanion === 'function') renderSessionCompanion(a);
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
   $('#sessRun').hidden = false;
@@ -459,6 +460,7 @@ function endRun() {
   releaseWake();
   // Fin, abandon, interruption ou séance finie ailleurs : l'ambiance s'arrête aussitôt (déjà éteinte si la séance est allée au bout).
   if (typeof Ambience !== 'undefined') Ambience.stop();
+  if (typeof stopSessionCompanion === 'function') stopSessionCompanion();
   Chime.rest(3000);
   run = null;
   return r;
@@ -497,6 +499,7 @@ async function failSession(reason, awayMs) {
     const e = sessionHistory(a, false, elapsedSec, { reason, away: Math.round((awayMs || 0) / 1000) });
     pushHistory(e);
     addEffort(a, elapsedSec, e.day);
+    if (typeof addCompanionMinutes === 'function') addCompanionMinutes(elapsedSec / 60);   // le temps fait ensemble compte aussi
     S.stats.ko += 1;
     S.active = null;
     restoreDraw(a);
@@ -520,6 +523,7 @@ function failInterrupted(silent) {
   const elapsedSec = Math.floor(a.elapsedSec || 0), e = sessionHistory(a, false, elapsedSec, { reason: 'closed' });
   pushHistory(e);
   addEffort(a, elapsedSec, e.day);
+  if (typeof addCompanionMinutes === 'function') addCompanionMinutes(elapsedSec / 60);
   S.stats.ko += 1;
   S.active = null;
   restoreDraw(a);
@@ -552,6 +556,9 @@ async function completeSession() {
     S.active = null;
     if (typeof completeTask === 'function') completeTask(a);
     if (typeof onRoutineSessionComplete === 'function') onRoutineSessionComplete(a, total);
+    // Compagnon : le temps de la séance, avant les succès (certains suivent la complicité) ; le mot du jour à la première du jour.
+    const companion = typeof addCompanionMinutes === 'function' ? addCompanionMinutes(a.min) : null;
+    const firstToday = S.history.filter(e => e.ok && e.day === day).length === 1;
     // Défis relevés par cette séance, puis succès (certains suivent les défis) : le bilan montre les deux, les succès avec leur
     // décor offert (qui n'apparaît donc pas une seconde fois en déblocage).
     const challenges = typeof claimChallenges === 'function' ? claimChallenges(day) : [];
@@ -562,7 +569,7 @@ async function completeSession() {
     clearBeat();
     bump();
     Chime.play();
-    showSuccess(a, total, fresh, earned, challenges);
+    showSuccess(a, total, fresh, earned, challenges, companion, firstToday);
     return true;
   });
   if (!result && run && run.id === id) run.finishing = false;
@@ -588,7 +595,7 @@ function showResult(build) {
   updateInert();
   setTimeout(() => { const title = res.querySelector('.res-title'); if (title) title.focus({ preventScroll: true }); }, 30);
 }
-function showSuccess(a, total, fresh, earned = [], challenges = []) {
+function showSuccess(a, total, fresh, earned = [], challenges = [], companion = null, firstToday = false) {
   showResult(res => {
     const burst = h('div', { class: 'burst', 'aria-hidden': 'true' });
     if (!reducedMotion()) {
@@ -612,7 +619,7 @@ function showSuccess(a, total, fresh, earned = [], challenges = []) {
       h('div', { class: 'res-figure' }, burst, icon('coin'), '+' + fmt(total)),
       h('h2', { class: 'res-title', tabindex: '-1' }, t('result.success')),
       h('p', { class: 'sub' }, displayName(a.name) + ' · ' + a.min + NB + 'min'),
-      lines, ...unlocks, ...earned.map(id => {
+      lines, typeof companionResult === 'function' ? companionResult(companion, firstToday) : null, ...unlocks, ...earned.map(id => {
         const gift = achievementDef(id).reward;
         let pic = h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon('sparkle'));
         if (gift) { pic = h('canvas', { 'aria-hidden': 'true' }); City.thumb(pic, gift, 56); }
@@ -637,6 +644,7 @@ function showFail(a, reason, awayMs, elapsed) {
   showResult(res => {
     res.append(
       h('div', { class: 'res-fail' }, icon('lost', 'ic-big')),
+      typeof companionFail === 'function' ? companionFail() : null,
       h('h2', { class: 'res-title', tabindex: '-1' }, t('result.interrupted')),
       h('p', { class: 'sub' }, done ? t('result.subDone', { name: displayName(a.name), min: a.min, n: done }) : displayName(a.name) + ' · ' + a.min + NB + 'min'),
       h('p', {}, why),

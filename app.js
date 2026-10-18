@@ -1708,6 +1708,11 @@ DICT.fr = {
   'companion.wearNone': 'Aucun',
   'companion.wearLevel': 'Niveau {level}',
   'companion.edit': 'Modifier',
+  // Étape 6 : le compagnon pendant la séance et à la fin.
+  'companion.together': '+{min} min ensemble',
+  'companion.levelUp': 'Complicité niveau {level} : {name} reçoit {thing}',
+  'companion.wearIt': 'Lui mettre',
+  'companion.wornDone': "C'est fait",
 };
 
 
@@ -2946,6 +2951,11 @@ DICT.en = {
   'companion.wearNone': 'None',
   'companion.wearLevel': 'Level {level}',
   'companion.edit': 'Edit',
+  // Step 6: the companion during and after a session.
+  'companion.together': '+{min} min together',
+  'companion.levelUp': 'Friendship level {level}: {name} gets {thing}',
+  'companion.wearIt': 'Put it on',
+  'companion.wornDone': 'Done',
 };
 
 
@@ -9960,6 +9970,7 @@ function showRun(a) {
   $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? t('session.ruleFree') : t('session.ruleFocus', { grace: S.settings.grace })));
   $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
   if (typeof renderAmbienceButton === 'function') renderAmbienceButton();
+  if (typeof renderSessionCompanion === 'function') renderSessionCompanion(a);
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
   $('#sessRun').hidden = false;
@@ -10080,6 +10091,7 @@ function endRun() {
   releaseWake();
   // Fin, abandon, interruption ou séance finie ailleurs : l'ambiance s'arrête aussitôt (déjà éteinte si la séance est allée au bout).
   if (typeof Ambience !== 'undefined') Ambience.stop();
+  if (typeof stopSessionCompanion === 'function') stopSessionCompanion();
   Chime.rest(3000);
   run = null;
   return r;
@@ -10118,6 +10130,7 @@ async function failSession(reason, awayMs) {
     const e = sessionHistory(a, false, elapsedSec, { reason, away: Math.round((awayMs || 0) / 1000) });
     pushHistory(e);
     addEffort(a, elapsedSec, e.day);
+    if (typeof addCompanionMinutes === 'function') addCompanionMinutes(elapsedSec / 60);   // le temps fait ensemble compte aussi
     S.stats.ko += 1;
     S.active = null;
     restoreDraw(a);
@@ -10141,6 +10154,7 @@ function failInterrupted(silent) {
   const elapsedSec = Math.floor(a.elapsedSec || 0), e = sessionHistory(a, false, elapsedSec, { reason: 'closed' });
   pushHistory(e);
   addEffort(a, elapsedSec, e.day);
+  if (typeof addCompanionMinutes === 'function') addCompanionMinutes(elapsedSec / 60);
   S.stats.ko += 1;
   S.active = null;
   restoreDraw(a);
@@ -10173,6 +10187,9 @@ async function completeSession() {
     S.active = null;
     if (typeof completeTask === 'function') completeTask(a);
     if (typeof onRoutineSessionComplete === 'function') onRoutineSessionComplete(a, total);
+    // Compagnon : le temps de la séance, avant les succès (certains suivent la complicité) ; le mot du jour à la première du jour.
+    const companion = typeof addCompanionMinutes === 'function' ? addCompanionMinutes(a.min) : null;
+    const firstToday = S.history.filter(e => e.ok && e.day === day).length === 1;
     // Défis relevés par cette séance, puis succès (certains suivent les défis) : le bilan montre les deux, les succès avec leur
     // décor offert (qui n'apparaît donc pas une seconde fois en déblocage).
     const challenges = typeof claimChallenges === 'function' ? claimChallenges(day) : [];
@@ -10183,7 +10200,7 @@ async function completeSession() {
     clearBeat();
     bump();
     Chime.play();
-    showSuccess(a, total, fresh, earned, challenges);
+    showSuccess(a, total, fresh, earned, challenges, companion, firstToday);
     return true;
   });
   if (!result && run && run.id === id) run.finishing = false;
@@ -10209,7 +10226,7 @@ function showResult(build) {
   updateInert();
   setTimeout(() => { const title = res.querySelector('.res-title'); if (title) title.focus({ preventScroll: true }); }, 30);
 }
-function showSuccess(a, total, fresh, earned = [], challenges = []) {
+function showSuccess(a, total, fresh, earned = [], challenges = [], companion = null, firstToday = false) {
   showResult(res => {
     const burst = h('div', { class: 'burst', 'aria-hidden': 'true' });
     if (!reducedMotion()) {
@@ -10233,7 +10250,7 @@ function showSuccess(a, total, fresh, earned = [], challenges = []) {
       h('div', { class: 'res-figure' }, burst, icon('coin'), '+' + fmt(total)),
       h('h2', { class: 'res-title', tabindex: '-1' }, t('result.success')),
       h('p', { class: 'sub' }, displayName(a.name) + ' · ' + a.min + NB + 'min'),
-      lines, ...unlocks, ...earned.map(id => {
+      lines, typeof companionResult === 'function' ? companionResult(companion, firstToday) : null, ...unlocks, ...earned.map(id => {
         const gift = achievementDef(id).reward;
         let pic = h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon('sparkle'));
         if (gift) { pic = h('canvas', { 'aria-hidden': 'true' }); City.thumb(pic, gift, 56); }
@@ -10258,6 +10275,7 @@ function showFail(a, reason, awayMs, elapsed) {
   showResult(res => {
     res.append(
       h('div', { class: 'res-fail' }, icon('lost', 'ic-big')),
+      typeof companionFail === 'function' ? companionFail() : null,
       h('h2', { class: 'res-title', tabindex: '-1' }, t('result.interrupted')),
       h('p', { class: 'sub' }, done ? t('result.subDone', { name: displayName(a.name), min: a.min, n: done }) : displayName(a.name) + ' · ' + a.min + NB + 'min'),
       h('p', {}, why),
@@ -11365,6 +11383,61 @@ function openCompanionSheet() {
 }
 
 
+/* ---- 58-companion-session.js ---- */
+/* =========================================================================
+   Compagnon (séance) : il fait l'activité avec toi dans l'anneau, puis se réjouit sur l'écran de fin.
+   ========================================================================= */
+let sessCompanion = { timer: 0, shown: false, pose: '', animated: false };
+// Le compagnon dans l'anneau, sous le minuteur, dans le geste du domaine de la séance : une image toutes les 400 ms si la ville peut
+// s'animer, sinon une seule. Rien sans compagnon affiché.
+function renderSessionCompanion(a) {
+  stopSessionCompanion();
+  const cv = $('#sessCompanion'), c = S.companion, shown = !!c && S.settings.companionShown !== false;
+  if (!cv) return;
+  cv.hidden = !shown;
+  sessCompanion = { timer: 0, shown, pose: shown ? companionPose(a.cat) : '', animated: false };
+  if (!shown) return;
+  const look = { species: c.species, wear: c.wear, pose: sessCompanion.pose }, paint = () => paintCompanion(cv, look, 112, { t: performance.now() / 1000 });
+  paint();
+  if (S.settings.ambient === false || reducedMotion()) return;
+  sessCompanion.animated = true;
+  sessCompanion.timer = setInterval(() => { if (document.visibilityState === 'visible') paint(); }, 400);
+}
+function stopSessionCompanion() { clearInterval(sessCompanion.timer); sessCompanion.timer = 0; }
+function sessionCompanionState() { return { shown: sessCompanion.shown, pose: sessCompanion.pose, animated: sessCompanion.animated }; }
+
+// Écran de fin d'une séance réussie : le compagnon qui se réjouit, le temps passé ensemble, le mot du jour à la première séance du
+// jour, et un niveau gagné (le plus haut, s'il y en a plusieurs) avec son accessoire et « Lui mettre ». Rien sans compagnon affiché.
+function companionResult(gain, firstToday) {
+  const c = S.companion;
+  if (!c || !gain || S.settings.companionShown === false) return null;
+  const cv = h('canvas', { class: 'res-companion', 'aria-hidden': 'true' }), cheer = wear => paintCompanion(cv, { species: c.species, wear, pose: 'cheer' }, 96, { t: .3 });
+  cheer(c.wear);
+  const lines = [h('p', { class: 'res-companion-time' }, t('companion.together', { min: Math.round(gain.gained) }))];
+  if (firstToday) lines.push(h('p', { class: 'companion-word' }, t('companion.quote', { word: companionWord() })));
+  if (gain.after > gain.before) {
+    const wear = COMPANION_WEAR[gain.after - 2];
+    const put = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => {
+      if (!wearCompanion(wear)) return;
+      commit({ silent: true });
+      cheer(wear);
+      put.textContent = frTypo(t('companion.wornDone'));
+      put.disabled = true;
+    } }, t('companion.wearIt'));
+    lines.push(h('p', { class: 'res-companion-level' }, t('companion.levelUp', { level: gain.after, name: companionName(), thing: t('companion.wearThing.' + wear) })), put);
+  }
+  return h('div', { class: 'res-companion-block' }, cv, h('div', { class: 'res-companion-text' }, ...lines));
+}
+// Écran d'une séance interrompue : le compagnon, simplement assis, sans un mot de plus.
+function companionFail() {
+  const c = S.companion;
+  if (!c || S.settings.companionShown === false) return null;
+  const cv = h('canvas', { class: 'res-companion', 'aria-hidden': 'true' });
+  paintCompanion(cv, { species: c.species, wear: c.wear, pose: 'idle' }, 96);
+  return cv;
+}
+
+
 /* ---- 60-boot.js ---- */
 /* =========================================================================
    Événements et démarrage
@@ -11514,7 +11587,7 @@ function boot(hotData) {
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
     harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
     ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume) },
-    companion: { state: () => S.companion, name: () => companionName(), level: () => companionLevel(), word: day => companionWord(day), spot: () => City.companionSpot(), box: () => City.companionBox(), bounds: (look, size) => companionBounds(look, size), paint: (cv, look, size, opts) => paintCompanion(cv, look, size, opts) } };
+    companion: { state: () => S.companion, name: () => companionName(), level: () => companionLevel(), word: day => companionWord(day), spot: () => City.companionSpot(), box: () => City.companionBox(), session: () => sessionCompanionState(), bounds: (look, size) => companionBounds(look, size), paint: (cv, look, size, opts) => paintCompanion(cv, look, size, opts) } };
 }
 
 let booted = false;

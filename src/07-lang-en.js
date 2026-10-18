@@ -1232,4 +1232,9 @@ DICT.en = {
   'companion.wearNone': 'None',
   'companion.wearLevel': 'Level {level}',
   'companion.edit': 'Edit',
+  // Step 6: the companion during and after a session.
+  'companion.together': '+{min} min together',
+  'companion.levelUp': 'Friendship level {level}: {name} gets {thing}',
+  'companion.wearIt': 'Put it on',
+  'companion.wornDone': 'Done',
 };

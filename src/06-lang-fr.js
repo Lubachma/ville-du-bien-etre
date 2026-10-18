@@ -1232,4 +1232,9 @@ DICT.fr = {
   'companion.wearNone': 'Aucun',
   'companion.wearLevel': 'Niveau {level}',
   'companion.edit': 'Modifier',
+  // Étape 6 : le compagnon pendant la séance et à la fin.
+  'companion.together': '+{min} min ensemble',
+  'companion.levelUp': 'Complicité niveau {level} : {name} reçoit {thing}',
+  'companion.wearIt': 'Lui mettre',
+  'companion.wornDone': "C'est fait",
 };

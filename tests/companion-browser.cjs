@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { town } = require('./content-browser.cjs');
 const { cityAt } = require('./ambient-browser.cjs');
+const { activities, startSession } = require('./rituals-browser.cjs');
 
 // Étape 6, le compagnon : chaque scénario est une fonction à part, qu'on peut lancer seule.
 const at = iso => Date.parse(iso);
@@ -40,11 +41,13 @@ async function toEnglish(page) {
   await page.locator('#settingsLang').getByRole('radio', { name: 'English', exact: true }).click();
   await page.locator('#sheetClose').click();
 }
-// Mesure que rien ne déborde : dans la fenêtre ouverte, ou dans une partie de la page.
+// Mesure que rien ne déborde : dans la fenêtre ouverte, ou dans une partie de la page (sans ses décors cachés aux lecteurs d'écran,
+// comme les étincelles de l'écran de fin).
 const fitsSheet = page => page.evaluate(() => document.querySelector('#sheetBody').scrollWidth <= document.querySelector('#sheetBody').clientWidth + 1
   && document.documentElement.scrollWidth <= innerWidth);
 const fitsIn = (page, sel) => page.evaluate(s => document.documentElement.scrollWidth <= innerWidth
-  && [...document.querySelectorAll(s + ', ' + s + ' *')].every(el => el.scrollWidth <= el.clientWidth + 1 && el.getBoundingClientRect().right <= innerWidth + 1), sel);
+  && [...document.querySelectorAll(s + ', ' + s + ' *')].filter(el => !el.closest('[aria-hidden="true"]'))
+    .every(el => el.scrollWidth <= el.clientWidth + 1 && el.getBoundingClientRect().right <= innerWidth + 1), sel);
 const toastMatches = (page, re) => page.waitForFunction(source => new RegExp(source).test(document.querySelector('#toast').textContent), re.source, { timeout: 5000 });
 const meet = page => page.locator('#companionInvite').getByRole('button').first().click();
 
@@ -261,8 +264,135 @@ async function sheetLongName(browser, baseURL) {
   return 'Compagnon : sa fiche tient à 320 px, même avec un nom long';
 }
 
+// Une ville avec une activité de 5 min par domaine (« Pratique esprit »…), son de fin coupé, horloge contrôlée ; « extra » ajoute
+// un compagnon ou des réglages, « viewport » change la taille de l'écran.
+async function sessionPage(browser, baseURL, extra = {}, viewport = { width: 390, height: 844 }) {
+  const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich' });
+  const page = await context.newPage(), errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.clock.install({ time: new Date(NOW) });
+  const { settings = {}, ...rest } = extra;
+  await page.addInitScript(state => {
+    window.__VILLE_DEBUG__ = true;
+    if (!localStorage.getItem('ville-bien-etre/v2')) localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state));
+  }, seed([tile('maison', 3, 3)], { activities: activities(), ...rest, settings: { lang: 'fr', sound: false, ...settings } }));
+  await page.goto(baseURL.replace(/#.*$/, ''));
+  await page.waitForFunction(() => !!window.__ville);
+  return { context, page, errors };
+}
+const abandonSession = async page => { await page.locator('#abandonBtn').click(); await page.locator('#abandonBtn').click(); await page.locator('#sessResult').waitFor(); };
+const backToCity = page => page.locator('#sessResult').getByRole('button', { name: 'Retour à la ville', exact: true }).click();
+
+// Pendant la séance, dans l'anneau : le geste du domaine ; immobile sans animation ; rien quand il est masqué ; dans l'anneau à 320 px.
+async function sessionPoses(browser, baseURL) {
+  {
+    const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet() });
+    try {
+      for (const [cat, pose] of [['esprit', 'read'], ['corps', 'stretch'], ['calme', 'meditate'], ['foyer', 'water'], ['crea', 'paint']]) {
+        await startSession(page, 'Pratique ' + cat, 5);
+        assert.equal(await page.locator('#sessCompanion').isVisible(), true, cat);
+        assert.deepEqual(await page.evaluate(() => __ville.companion.session()), { shown: true, pose, animated: true }, cat);
+        await abandonSession(page);
+        await backToCity(page);
+      }
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet() }, { width: 320, height: 568 });
+    try {
+      await startSession(page, 'Pratique esprit', 5);
+      const fit = await page.evaluate(() => {
+        const ring = document.querySelector('.ring-wrap').getBoundingClientRect(), cv = document.querySelector('#sessCompanion').getBoundingClientRect();
+        return document.documentElement.scrollWidth <= innerWidth && cv.left >= ring.left && cv.right <= ring.right && cv.top >= ring.top && cv.bottom <= ring.bottom;
+      });
+      assert.equal(fit, true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  for (const [settings, expected] of [[{ ambient: false }, { shown: true, pose: 'read', animated: false }], [{ companionShown: false }, { shown: false, pose: '', animated: false }]]) {
+    const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet(), settings });
+    try {
+      await startSession(page, 'Pratique esprit', 5);
+      assert.deepEqual(await page.evaluate(() => __ville.companion.session()), expected, JSON.stringify(settings));
+      assert.equal(await page.locator('#sessCompanion').isVisible(), expected.shown);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Compagnon : il fait ta séance avec toi, dans le geste de son domaine';
+}
+
+// L'écran de fin : le temps ensemble, le mot du jour à la première séance du jour, le niveau gagné et « Lui mettre ». Masqué, il
+// gagne quand même le temps, sans rien montrer.
+async function successScreen(browser, baseURL) {
+  {
+    const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet({ minutes: 15 }) });
+    try {
+      await startSession(page, 'Pratique esprit', 10);
+      await page.clock.fastForward(10 * 60000 + 1000);
+      await page.locator('#sessResult').waitFor();
+      const res = page.locator('#sessResult'), word = await page.evaluate(() => __ville.companion.word());
+      const text = (await res.innerText()).replace(/\s/g, ' ');
+      assert.match(text, /\+10 min ensemble/);
+      assert.match(text, /Complicité niveau 2 : Pompon reçoit une écharpe/);
+      assert.ok(text.includes(word.replace(/\s/g, ' ')), word);
+      await res.getByRole('button', { name: 'Lui mettre', exact: true }).click();
+      assert.equal(await page.evaluate(() => __ville.companion.state().wear), 'echarpe');
+      assert.equal(await res.getByRole('button', { name: "C'est fait", exact: true }).isDisabled(), true);
+      await backToCity(page);
+      // La deuxième séance du jour : pas de mot du jour.
+      await startSession(page, 'Pratique corps', 5);
+      await page.clock.fastForward(5 * 60000 + 1000);
+      await page.locator('#sessResult').waitFor();
+      const second = (await page.locator('#sessResult').innerText()).replace(/\s/g, ' ');
+      assert.match(second, /\+5 min ensemble/);
+      assert.ok(!second.includes(word.replace(/\s/g, ' ')), second);
+      assert.equal(Math.round(await page.evaluate(() => __ville.companion.state().minutes)), 30);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet({ minutes: 15 }), settings: { companionShown: false } });
+  try {
+    await startSession(page, 'Pratique esprit', 10);
+    await page.clock.fastForward(10 * 60000 + 1000);
+    await page.locator('#sessResult').waitFor();
+    assert.doesNotMatch(await page.locator('#sessResult').innerText(), /ensemble/);
+    assert.equal(Math.round(await page.evaluate(() => __ville.companion.state().minutes)), 25);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Compagnon : l’écran de fin, le niveau gagné et « Lui mettre »';
+}
+
+// Une séance abandonnée après 6 min : le temps compte pour la complicité, l'écran d'interruption montre le compagnon sans un mot de plus.
+async function interruptedCounts(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet({ minutes: 15 }) });
+  try {
+    await startSession(page, 'Pratique calme', 10);
+    await page.clock.fastForward(6 * 60000);
+    await abandonSession(page);
+    assert.equal(Math.round(await page.evaluate(() => __ville.companion.state().minutes)), 21);
+    assert.equal(await page.locator('#sessResult canvas.res-companion').count(), 1);
+    assert.doesNotMatch(await page.locator('#sessResult').innerText(), /ensemble|Complicité/);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Compagnon : une séance interrompue compte aussi, sans un mot de plus';
+}
+
+// Un nom de 20 caractères sans espace : l'écran de fin tient à 320 px.
+async function successLongName(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet({ name: 'W'.repeat(20), minutes: 15 }) }, { width: 320, height: 640 });
+  try {
+    await startSession(page, 'Pratique esprit', 10);
+    await page.clock.fastForward(10 * 60000 + 1000);
+    await page.locator('#sessResult').waitFor();
+    assert.equal(await fitsIn(page, '#sessResult'), true);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Compagnon : l’écran de fin tient à 320 px, même avec un nom long';
+}
+
 const SCENARIOS = [paintAll, inviteAfterFirstSession, adoptDefault, adoptLongName, suggestedNameFollowsLanguage, townDayNight, townTapAndButton,
-  townHiddenAndVisit, sheetContent, wardrobe, sheetLongName];
+  townHiddenAndVisit, sheetContent, wardrobe, sheetLongName, sessionPoses, successScreen, interruptedCounts, successLongName];
 async function runCompanion(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
