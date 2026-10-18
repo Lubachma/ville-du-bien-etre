@@ -216,10 +216,10 @@ function buildWonderStage(tile) {
   return true;
 }
 // Domaines pratiqués depuis le début de la semaine : les fleurs du Grand Arbre en prennent les couleurs.
-function weekCats(day = today()) {
+function weekCats(day = today(), state = S) {
   const seen = new Set();
   for (let d = weekStartOf(day); d <= day; d = shiftDay(d, 1)) {
-    for (const [cat, min] of Object.entries(S.stats.dailyCats[d] || {})) if (min > 0) seen.add(cat);
+    for (const [cat, min] of Object.entries(state.stats.dailyCats[d] || {})) if (min > 0) seen.add(cat);
   }
   return CAT_ORDER.filter(cat => seen.has(cat));
 }
