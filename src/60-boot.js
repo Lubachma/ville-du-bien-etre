@@ -72,8 +72,12 @@ function bindEvents() {
     if (document.visibilityState === 'hidden') Store.flush();
     else { Store.pull(); checkActive(); refreshDay(); City.wake(); }
   });
-  // Chaque minute : la date, et la lumière et l'horloge d'une ville immobile.
-  setInterval(() => { refreshDay(); if (currentTab === 'ville' && document.visibilityState === 'visible') City.draw(); }, 60000);
+  // Chaque minute : la date, la légende (moment et météo) et la lumière et l'horloge d'une ville immobile.
+  setInterval(() => {
+    refreshDay();
+    if (document.visibilityState !== 'visible') return;
+    if (currentTab === 'ville' || City.bigState().open) { renderCityCaption(); City.draw(); }
+  }, 60000);
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   if (motion.addEventListener) motion.addEventListener('change', () => City.wake());
   window.addEventListener('blur', e => { if (e.target === window) updatePresence(); });

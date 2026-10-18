@@ -978,5 +978,5 @@ DICT.fr = {
   'life.weather.snow': 'Neige',
   'life.weather.fog': 'Brouillard',
   'life.rainbow': 'Arc-en-ciel',
-  'visit.here': '{name} est de passage',
+  'visit.here': { one: '{name} est de passage', other: '{name} sont de passage' },
 };

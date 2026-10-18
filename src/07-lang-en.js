@@ -978,5 +978,5 @@ DICT.en = {
   'life.weather.snow': 'Snow',
   'life.weather.fog': 'Fog',
   'life.rainbow': 'Rainbow',
-  'visit.here': '{name} is passing through',
+  'visit.here': { one: '{name} is passing through', other: '{name} are passing through' },
 };

@@ -175,13 +175,14 @@ const FESTIVALS = [
 ];
 // Cadeaux de la ville vivante, en pièces : visiteur du jour, fête, anniversaire de la ville.
 const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6 };
-// Visiteurs : saisons où ils viennent, météo qu'ils aiment, neige récente, endroit où ils se placent (24-ambient.js).
+// Visiteurs : saisons où ils viennent, météo qu'ils aiment, neige récente, endroit où ils se placent (24-ambient.js) ;
+// plural pour un nom au pluriel (les canards), qui accorde la légende.
 const VISITORS = [
   { id: 'chat', weather: ['sun', 'clouds', 'fog'], spot: 'bench' },
   { id: 'herisson', seasons: ['spring', 'summer', 'autumn'], spot: 'nature' },
   { id: 'ecureuil', seasons: ['autumn', 'winter'], spot: 'tree' },
   { id: 'cigogne', seasons: ['spring', 'summer'], spot: 'roof' },
-  { id: 'canards', seasons: ['spring', 'summer', 'autumn'], spot: 'pond' },
+  { id: 'canards', seasons: ['spring', 'summer', 'autumn'], spot: 'pond', plural: true },
   { id: 'renard', seasons: ['autumn', 'winter'], spot: 'edge' },
   { id: 'chouette', seasons: ['autumn', 'winter'], spot: 'tree' },
   { id: 'montgolfiere', seasons: ['spring', 'summer', 'autumn'], weather: ['sun', 'clouds'], spot: 'sky' },
@@ -1409,7 +1410,7 @@ DICT.fr = {
   'life.weather.snow': 'Neige',
   'life.weather.fog': 'Brouillard',
   'life.rainbow': 'Arc-en-ciel',
-  'visit.here': '{name} est de passage',
+  'visit.here': { one: '{name} est de passage', other: '{name} sont de passage' },
 };
 
 
@@ -2394,7 +2395,7 @@ DICT.en = {
   'life.weather.snow': 'Snow',
   'life.weather.fog': 'Fog',
   'life.rainbow': 'Rainbow',
-  'visit.here': '{name} is passing through',
+  'visit.here': { one: '{name} is passing through', other: '{name} are passing through' },
 };
 
 
@@ -3852,24 +3853,49 @@ function visitorSpot(visitor, day) {
     default: return pick(free);
   }
 }
-// Visiteur du jour (environ 5 jours sur 7) : saison, météo et place respectées, pas celui rencontré la veille
-// quand un autre peut venir, et trois fois plus de chances pour ceux qu'on n'a pas rencontrés avant ce jour.
-function visitorOf(day) {
-  if (chance(day + ':visit') >= VISIT_ODDS) return null;
-  const season = seasonOf(day), weather = dayWeather(day), yesterday = shiftDay(day, -1);
-  const snowy = weather === 'snow' || dayWeather(yesterday) === 'snow', visits = S.visits || {};
-  const base = [];
+// Visiteurs possibles un jour donné : saison, météo, neige récente et place respectées. Ils ne changent qu'avec la ville,
+// l'hémisphère ou la graine : on les garde, jour par jour, tant que ces données restent les mêmes.
+let visitorMemo = { sig: '', days: new Map(), picks: new Map() };
+function visitorMemoFor() {
+  const sig = [S.createdAt, S.clock.tz, S.settings.hemisphere, S.city.size, S.city.tiles.map(t => t.item + ':' + t.x + ',' + t.y).join(';')].join('|');
+  if (visitorMemo.sig !== sig) visitorMemo = { sig, days: new Map(), picks: new Map() };
+  return visitorMemo;
+}
+function visitorCandidates(day, memo = visitorMemoFor()) {
+  if (memo.days.has(day)) return memo.days.get(day);
+  const season = seasonOf(day), weather = dayWeather(day), snowy = weather === 'snow' || dayWeather(shiftDay(day, -1)) === 'snow', out = [];
   for (const v of VISITORS) {
     if ((v.seasons && !v.seasons.includes(season)) || (v.weather && !v.weather.includes(weather)) || (v.snow && !snowy)) continue;
     const spot = visitorSpot(v, day);
-    if (spot) base.push({ id: v.id, spot });
+    if (spot) out.push({ id: v.id, spot });
   }
-  const others = base.filter(c => !(visits[c.id] && visits[c.id].last === yesterday)), list = others.length ? others : base;
+  memo.days.set(day, out);
+  return out;
+}
+// Tirage d'un jour (environ 5 jours sur 7), sans le visiteur à éviter ni celui rencontré la veille quand un autre peut venir ;
+// trois fois plus de chances pour ceux qu'on n'avait pas encore rencontrés avant ce jour.
+function pickVisitor(day, avoid, memo) {
+  if (chance(day + ':visit') >= VISIT_ODDS) return null;
+  const base = visitorCandidates(day, memo), visits = S.visits || {}, yesterday = shiftDay(day, -1);
+  const others = base.filter(c => c.id !== avoid && !(visits[c.id] && visits[c.id].last === yesterday)), list = others.length ? others : base;
   if (!list.length) return null;
   const weight = c => (visits[c.id] && dayOf(visits[c.id].first) < day ? 1 : 3);
   let roll = chance(day + ':who') * list.reduce((sum, c) => sum + weight(c), 0);
   for (const c of list) { roll -= weight(c); if (roll < 0) return c; }
   return list[list.length - 1];
+}
+// Visiteur du jour : jamais celui de la veille quand un autre peut venir, même si on ne l'a pas rencontré. La veille se retrouve
+// en refaisant les tirages des 30 jours précédents, chacun sans le visiteur du jour d'avant : deux calculs faits à un jour
+// d'écart s'accordent alors sur la veille. Le résultat est gardé tant que la ville et les rencontres ne changent pas.
+const VISITOR_CHAIN = 30;
+function visitorOf(day) {
+  const memo = visitorMemoFor(), key = day + '|' + JSON.stringify(S.visits || {});
+  if (memo.picks.has(key)) return memo.picks.get(key);
+  let prev = null;
+  for (let i = VISITOR_CHAIN; i >= 1; i--) prev = pickVisitor(shiftDay(day, -i), prev && prev.id, memo);
+  const v = pickVisitor(day, prev && prev.id, memo);
+  memo.picks.set(key, v);
+  return v;
 }
 
 // L'ambiance de la ville à un instant : jour, minutes, saison, moment, météo, arc-en-ciel, fêtes et visiteur.
@@ -5703,7 +5729,7 @@ const City = (() => {
     big.open = true;
     big.zoom = big.shown = 1; big.pan = [0, 0]; big.anim = null; big.pointers.clear();
     $('#cityBig').hidden = false;
-    bigCanvas.setAttribute('aria-label', $('#cityCaption').textContent);
+    renderCityCaption();
     canvas = bigCanvas; ctx = canvas.getContext('2d');
     layout();
     $('#cityBigIn').disabled = false;
@@ -6376,14 +6402,20 @@ function renderView(tab) {
   else if (tab === 'journal') renderJournal();
 }
 
+// Légende de la ville : ce qui s'y passe (moment, météo, visiteur, fête), puis les constructions, le terrain et le temps du jour.
+// Le moment et la météo changent dans la journée : le tic de la minute la refait aussi, comme la description de la vue en grand.
+function renderCityCaption() {
+  const n = S.city.tiles.length, N = S.city.size;
+  const parts = [ambientCaption(ambientAt()), t('city.captionBuildings', { n }), t('city.captionLand', { size: N })];
+  if (todayMinutes() > 0) parts.push(t('city.captionToday', { time: fmtMin(todayMinutes()) }));
+  const text = frTypo(parts.join(' · '));
+  $('#cityCaption').textContent = text;
+  if (!$('#cityBig').hidden) $('#cityBigCanvas').setAttribute('aria-label', text);
+}
 function renderVille() {
   // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).
   liveTick();
-  const n = S.city.tiles.length, N = S.city.size;
-  // La légende commence par ce qui se passe dans la ville : moment, météo, visiteur, fête.
-  const parts = [ambientCaption(ambientAt()), t('city.captionBuildings', { n }), t('city.captionLand', { size: N })];
-  if (todayMinutes() > 0) parts.push(t('city.captionToday', { time: fmtMin(todayMinutes()) }));
-  $('#cityCaption').textContent = frTypo(parts.join(' · '));
+  renderCityCaption();
   const ew = $('#elsewhere');
   ew.replaceChildren();
   ew.hidden = activeState() !== 'elsewhere';
@@ -7156,11 +7188,13 @@ function restoreBackup(st) {
   Mode.state = null;
   closeSheet();
   refreshLang();
+  // Une sauvegarde d'avant la mise à jour reçoit ses succès d'un coup, datés, avant que la Ville réaffichée ne note la saison
+  // (qui les donnerait sinon à la date du jour). Leur message remplace celui de la restauration.
+  const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet({ defer: true }) : null;
   const saved = commit({ flush: true });
   City.relayout();
-  // Une sauvegarde d'avant la mise à jour reçoit ses succès d'un coup : ce message remplace le suivant.
-  const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet() : null;
-  if (!caught || (!caught.achievements.length && !caught.sets.length)) toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
+  if (caught && (caught.achievements.length || caught.sets.length)) flushCarnetNote();
+  else toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
 }
 
 /* Sauvegarde dans un fichier, et rappel quand la dernière date un peu (gardé par appareil). */
@@ -8925,7 +8959,10 @@ function liveTick(day = today()) {
 function ambientCaption(amb) {
   const parts = [t('life.moment.' + amb.moment.name), t('life.weather.' + amb.weather)];
   if (amb.rainbow) parts.push(t('life.rainbow'));
-  if (amb.visitor) parts.push(t('visit.here', { name: t('visitor.' + amb.visitor.id + '.name') }));
+  if (amb.visitor) {
+    const def = VISITORS.find(v => v.id === amb.visitor.id) || {};
+    parts.push(t('visit.here', { name: t('visitor.' + amb.visitor.id + '.name'), n: def.plural ? 2 : 1 }));
+  }
   for (const fest of amb.festivals || []) parts.push(t('fest.' + fest.id + '.name'));
   return parts.join(' · ');
 }
@@ -9006,8 +9043,12 @@ function bindEvents() {
     if (document.visibilityState === 'hidden') Store.flush();
     else { Store.pull(); checkActive(); refreshDay(); City.wake(); }
   });
-  // Chaque minute : la date, et la lumière et l'horloge d'une ville immobile.
-  setInterval(() => { refreshDay(); if (currentTab === 'ville' && document.visibilityState === 'visible') City.draw(); }, 60000);
+  // Chaque minute : la date, la légende (moment et météo) et la lumière et l'horloge d'une ville immobile.
+  setInterval(() => {
+    refreshDay();
+    if (document.visibilityState !== 'visible') return;
+    if (currentTab === 'ville' || City.bigState().open) { renderCityCaption(); City.draw(); }
+  }, 60000);
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   if (motion.addEventListener) motion.addEventListener('change', () => City.wake());
   window.addEventListener('blur', e => { if (e.target === window) updatePresence(); });

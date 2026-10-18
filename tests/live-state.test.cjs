@@ -5,7 +5,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js', '53-visits.js'];
 // Chaque tâche ajoute ici les noms qu'elle crée.
 const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'VISITORS', 'meetVisitor', 'claimVisitGift', 'today', 'shiftDay', 'greetFestivals',
-  'checkAchievements', 'noteSeason', 'liveTick', 'ambientCaption'];
+  'checkAchievements', 'noteSeason', 'liveTick', 'ambientCaption', 'setLang'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 const app = (globals = {}) => loadApp(FILES, { expose: EXPOSE, globals });
 
@@ -119,4 +119,12 @@ test('légende : le moment, la météo, le visiteur de passage et la fête', () 
   assert.equal(a.ambientCaption({ moment: { name: 'dusk' }, weather: 'rain', rainbow: false, visitor: { id: 'herisson' }, festivals: [{ id: 'printemps' }] }),
     'Crépuscule · Pluie · Le hérisson est de passage · Fête du printemps');
   assert.equal(a.ambientCaption({ moment: { name: 'day', t: .5 }, weather: 'sun', rainbow: true, visitor: null, festivals: [] }), 'Journée · Soleil · Arc-en-ciel');
+});
+
+test('légende : un visiteur au pluriel s’accorde, en français comme en anglais', () => {
+  const a = app(), amb = id => ({ moment: { name: 'day', t: .5 }, weather: 'sun', rainbow: false, visitor: { id }, festivals: [] });
+  assert.equal(a.ambientCaption(amb('canards')), 'Journée · Soleil · Les canards sont de passage');
+  a.setLang('en');
+  assert.equal(a.ambientCaption(amb('canards')), 'Daytime · Sunny · The ducks are passing through');
+  assert.equal(a.ambientCaption(amb('herisson')), 'Daytime · Sunny · The hedgehog is passing through');
 });

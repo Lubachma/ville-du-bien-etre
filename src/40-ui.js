@@ -149,14 +149,20 @@ function renderView(tab) {
   else if (tab === 'journal') renderJournal();
 }
 
+// Légende de la ville : ce qui s'y passe (moment, météo, visiteur, fête), puis les constructions, le terrain et le temps du jour.
+// Le moment et la météo changent dans la journée : le tic de la minute la refait aussi, comme la description de la vue en grand.
+function renderCityCaption() {
+  const n = S.city.tiles.length, N = S.city.size;
+  const parts = [ambientCaption(ambientAt()), t('city.captionBuildings', { n }), t('city.captionLand', { size: N })];
+  if (todayMinutes() > 0) parts.push(t('city.captionToday', { time: fmtMin(todayMinutes()) }));
+  const text = frTypo(parts.join(' · '));
+  $('#cityCaption').textContent = text;
+  if (!$('#cityBig').hidden) $('#cityBigCanvas').setAttribute('aria-label', text);
+}
 function renderVille() {
   // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).
   liveTick();
-  const n = S.city.tiles.length, N = S.city.size;
-  // La légende commence par ce qui se passe dans la ville : moment, météo, visiteur, fête.
-  const parts = [ambientCaption(ambientAt()), t('city.captionBuildings', { n }), t('city.captionLand', { size: N })];
-  if (todayMinutes() > 0) parts.push(t('city.captionToday', { time: fmtMin(todayMinutes()) }));
-  $('#cityCaption').textContent = frTypo(parts.join(' · '));
+  renderCityCaption();
   const ew = $('#elsewhere');
   ew.replaceChildren();
   ew.hidden = activeState() !== 'elsewhere';

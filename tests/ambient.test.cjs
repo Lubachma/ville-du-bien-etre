@@ -178,6 +178,26 @@ test("visiteur : plus souvent ceux pas encore rencontrés, jamais celui d'hier q
   assert.notEqual((a.visitorOf(day) || {}).id, 'chat');
 });
 
+test("visiteur : jamais deux jours de suite quand un autre peut venir, même sans l'avoir rencontré", () => {
+  const a = app();
+  place(a, [['etang', 1, 1], ['arbre', 3, 1], ['maison', 5, 1], ['banc', 1, 4], ['kiosque', 4, 4], ['chemin', 6, 6]]);
+  // Ceux qui peuvent venir ce jour-là : saison, météo, neige récente et place.
+  const possible = day => a.VISITORS.filter(v => {
+    const season = a.seasonOf(day), weather = a.dayWeather(day), snowy = weather === 'snow' || a.dayWeather(a.shiftDay(day, -1)) === 'snow';
+    return !(v.seasons && !v.seasons.includes(season)) && !(v.weather && !v.weather.includes(weather)) && !(v.snow && !snowy) && a.visitorSpot(v, day);
+  }).map(v => v.id);
+  let pairs = 0;
+  const repeats = [];
+  for (let i = 1; i < 730; i++) {
+    const day = a.shiftDay('2026-01-01', i), v = a.visitorOf(day), prev = a.visitorOf(a.shiftDay(day, -1));
+    if (!v || !prev) continue;
+    pairs++;
+    if (v.id === prev.id && possible(day).some(id => id !== v.id)) repeats.push(day + ' ' + v.id);
+  }
+  assert.ok(pairs > 300, String(pairs));
+  assert.deepEqual(repeats, []);
+});
+
 test('rencontrer le visiteur du jour ne le change pas', () => {
   const a = app();
   place(a, [['etang', 1, 1], ['arbre', 3, 1], ['banc', 1, 4]]);

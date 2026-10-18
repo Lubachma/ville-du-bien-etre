@@ -82,7 +82,10 @@ function liveTick(day = today()) {
 function ambientCaption(amb) {
   const parts = [t('life.moment.' + amb.moment.name), t('life.weather.' + amb.weather)];
   if (amb.rainbow) parts.push(t('life.rainbow'));
-  if (amb.visitor) parts.push(t('visit.here', { name: t('visitor.' + amb.visitor.id + '.name') }));
+  if (amb.visitor) {
+    const def = VISITORS.find(v => v.id === amb.visitor.id) || {};
+    parts.push(t('visit.here', { name: t('visitor.' + amb.visitor.id + '.name'), n: def.plural ? 2 : 1 }));
+  }
   for (const fest of amb.festivals || []) parts.push(t('fest.' + fest.id + '.name'));
   return parts.join(' · ');
 }

@@ -327,4 +327,4 @@ async function runContent(browser, baseURL) {
   }
   return { scenarios };
 }
-module.exports = { runContent, newTown, town, openTile };
+module.exports = { runContent, newTown, town, openTile, signBackup };

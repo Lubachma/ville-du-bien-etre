@@ -56,11 +56,13 @@ function restoreBackup(st) {
   Mode.state = null;
   closeSheet();
   refreshLang();
+  // Une sauvegarde d'avant la mise à jour reçoit ses succès d'un coup, datés, avant que la Ville réaffichée ne note la saison
+  // (qui les donnerait sinon à la date du jour). Leur message remplace celui de la restauration.
+  const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet({ defer: true }) : null;
   const saved = commit({ flush: true });
   City.relayout();
-  // Une sauvegarde d'avant la mise à jour reçoit ses succès d'un coup : ce message remplace le suivant.
-  const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet() : null;
-  if (!caught || (!caught.achievements.length && !caught.sets.length)) toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
+  if (caught && (caught.achievements.length || caught.sets.length)) flushCarnetNote();
+  else toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
 }
 
 /* Sauvegarde dans un fichier, et rappel quand la dernière date un peu (gardé par appareil). */

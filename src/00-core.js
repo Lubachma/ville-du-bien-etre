@@ -170,13 +170,14 @@ const FESTIVALS = [
 ];
 // Cadeaux de la ville vivante, en pièces : visiteur du jour, fête, anniversaire de la ville.
 const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6 };
-// Visiteurs : saisons où ils viennent, météo qu'ils aiment, neige récente, endroit où ils se placent (24-ambient.js).
+// Visiteurs : saisons où ils viennent, météo qu'ils aiment, neige récente, endroit où ils se placent (24-ambient.js) ;
+// plural pour un nom au pluriel (les canards), qui accorde la légende.
 const VISITORS = [
   { id: 'chat', weather: ['sun', 'clouds', 'fog'], spot: 'bench' },
   { id: 'herisson', seasons: ['spring', 'summer', 'autumn'], spot: 'nature' },
   { id: 'ecureuil', seasons: ['autumn', 'winter'], spot: 'tree' },
   { id: 'cigogne', seasons: ['spring', 'summer'], spot: 'roof' },
-  { id: 'canards', seasons: ['spring', 'summer', 'autumn'], spot: 'pond' },
+  { id: 'canards', seasons: ['spring', 'summer', 'autumn'], spot: 'pond', plural: true },
   { id: 'renard', seasons: ['autumn', 'winter'], spot: 'edge' },
   { id: 'chouette', seasons: ['autumn', 'winter'], spot: 'tree' },
   { id: 'montgolfiere', seasons: ['spring', 'summer', 'autumn'], weather: ['sun', 'clouds'], spot: 'sky' },

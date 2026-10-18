@@ -114,24 +114,49 @@ function visitorSpot(visitor, day) {
     default: return pick(free);
   }
 }
-// Visiteur du jour (environ 5 jours sur 7) : saison, météo et place respectées, pas celui rencontré la veille
-// quand un autre peut venir, et trois fois plus de chances pour ceux qu'on n'a pas rencontrés avant ce jour.
-function visitorOf(day) {
-  if (chance(day + ':visit') >= VISIT_ODDS) return null;
-  const season = seasonOf(day), weather = dayWeather(day), yesterday = shiftDay(day, -1);
-  const snowy = weather === 'snow' || dayWeather(yesterday) === 'snow', visits = S.visits || {};
-  const base = [];
+// Visiteurs possibles un jour donné : saison, météo, neige récente et place respectées. Ils ne changent qu'avec la ville,
+// l'hémisphère ou la graine : on les garde, jour par jour, tant que ces données restent les mêmes.
+let visitorMemo = { sig: '', days: new Map(), picks: new Map() };
+function visitorMemoFor() {
+  const sig = [S.createdAt, S.clock.tz, S.settings.hemisphere, S.city.size, S.city.tiles.map(t => t.item + ':' + t.x + ',' + t.y).join(';')].join('|');
+  if (visitorMemo.sig !== sig) visitorMemo = { sig, days: new Map(), picks: new Map() };
+  return visitorMemo;
+}
+function visitorCandidates(day, memo = visitorMemoFor()) {
+  if (memo.days.has(day)) return memo.days.get(day);
+  const season = seasonOf(day), weather = dayWeather(day), snowy = weather === 'snow' || dayWeather(shiftDay(day, -1)) === 'snow', out = [];
   for (const v of VISITORS) {
     if ((v.seasons && !v.seasons.includes(season)) || (v.weather && !v.weather.includes(weather)) || (v.snow && !snowy)) continue;
     const spot = visitorSpot(v, day);
-    if (spot) base.push({ id: v.id, spot });
+    if (spot) out.push({ id: v.id, spot });
   }
-  const others = base.filter(c => !(visits[c.id] && visits[c.id].last === yesterday)), list = others.length ? others : base;
+  memo.days.set(day, out);
+  return out;
+}
+// Tirage d'un jour (environ 5 jours sur 7), sans le visiteur à éviter ni celui rencontré la veille quand un autre peut venir ;
+// trois fois plus de chances pour ceux qu'on n'avait pas encore rencontrés avant ce jour.
+function pickVisitor(day, avoid, memo) {
+  if (chance(day + ':visit') >= VISIT_ODDS) return null;
+  const base = visitorCandidates(day, memo), visits = S.visits || {}, yesterday = shiftDay(day, -1);
+  const others = base.filter(c => c.id !== avoid && !(visits[c.id] && visits[c.id].last === yesterday)), list = others.length ? others : base;
   if (!list.length) return null;
   const weight = c => (visits[c.id] && dayOf(visits[c.id].first) < day ? 1 : 3);
   let roll = chance(day + ':who') * list.reduce((sum, c) => sum + weight(c), 0);
   for (const c of list) { roll -= weight(c); if (roll < 0) return c; }
   return list[list.length - 1];
+}
+// Visiteur du jour : jamais celui de la veille quand un autre peut venir, même si on ne l'a pas rencontré. La veille se retrouve
+// en refaisant les tirages des 30 jours précédents, chacun sans le visiteur du jour d'avant : deux calculs faits à un jour
+// d'écart s'accordent alors sur la veille. Le résultat est gardé tant que la ville et les rencontres ne changent pas.
+const VISITOR_CHAIN = 30;
+function visitorOf(day) {
+  const memo = visitorMemoFor(), key = day + '|' + JSON.stringify(S.visits || {});
+  if (memo.picks.has(key)) return memo.picks.get(key);
+  let prev = null;
+  for (let i = VISITOR_CHAIN; i >= 1; i--) prev = pickVisitor(shiftDay(day, -i), prev && prev.id, memo);
+  const v = pickVisitor(day, prev && prev.id, memo);
+  memo.picks.set(key, v);
+  return v;
 }
 
 // L'ambiance de la ville à un instant : jour, minutes, saison, moment, météo, arc-en-ciel, fêtes et visiteur.

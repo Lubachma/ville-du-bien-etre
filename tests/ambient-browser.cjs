@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { town } = require('./content-browser.cjs');
+const { town, signBackup } = require('./content-browser.cjs');
 
 // Ville ouverte à un instant fixé avant le chargement : son horloge part de là (elle garde l'heure la plus avancée).
 async function cityAt(browser, baseURL, seed, time, options = {}) {
@@ -270,6 +270,44 @@ async function runAmbient(browser, baseURL) {
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Ville en grand');
+  }
+  // Restauration depuis l'onglet Ville : la Ville affichée note la saison, mais les succès rattrapés gardent leur vraie date.
+  {
+    const old = { v: 2, coins: 4e7, settings: { lang: 'fr' }, stats: { ok: 2, byCat: { calme: 80 }, days: { '2026-10-05': 40, '2026-10-06': 40 } },
+      city: { size: 7, tiles: [] }, clock: { tz: 'Europe/Zurich', maxSeen: 0, lastDay: '2026-10-06' } };
+    const { context, page, errors } = await cityAt(browser, baseURL, null, '2026-11-02T10:00:00Z');
+    try {
+      assert.equal(await page.locator('#view-ville').isVisible(), true);
+      await page.locator('#settingsBtn').click();
+      await page.locator('#importArea').fill(signBackup(old));
+      await page.getByRole('button', { name: 'Vérifier la sauvegarde', exact: true }).click();
+      await page.getByRole('button', { name: 'Remplacer ma ville par cette sauvegarde', exact: true }).click();
+      await page.getByRole('button', { name: 'Confirmer le remplacement', exact: true }).click();
+      await page.waitForFunction(() => __ville.state.stats.ok === 2);
+      assert.match(await page.locator('#toast').innerText(), /a déjà \d+ succès/);
+      // « Premier pas » se date d'après le premier jour actif ; « Grand calme », sans minutes par jour dans cette sauvegarde, prend celle du jour.
+      assert.equal(await page.evaluate(() => __ville.state.achievements['premier-pas']), Date.UTC(2026, 9, 5, 12));
+      assert.equal(await page.evaluate(() => !!__ville.state.achievements['grand-calme']), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Restauration depuis la Ville : succès à leur vraie date');
+  }
+  // Légende au fil de l'heure : l'app reste ouverte sur la Ville de 16 h à 21 h ; au tic de la minute, la légende dit le crépuscule.
+  {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich' });
+    const page = await context.newPage(), errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.clock.install({ time: new Date('2026-07-01T14:00:00Z') });
+    await page.addInitScript(state => localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state)), town({ esprit: 5 }, [], { settings: { lang: 'fr', ambient: false } }));
+    try {
+      await page.goto(baseURL);
+      await page.waitForFunction(() => !!window.__ville);
+      assert.match(await page.locator('#cityCaption').innerText(), /^Journée\s·\s/);
+      await page.clock.fastForward('05:00:00');
+      await page.waitForFunction(() => /^Crépuscule/.test(document.querySelector('#cityCaption').textContent), null, { timeout: 3000 });
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push("Légende au fil de l'heure");
   }
   return { scenarios };
 }

@@ -188,7 +188,7 @@ const City = (() => {
     big.open = true;
     big.zoom = big.shown = 1; big.pan = [0, 0]; big.anim = null; big.pointers.clear();
     $('#cityBig').hidden = false;
-    bigCanvas.setAttribute('aria-label', $('#cityCaption').textContent);
+    renderCityCaption();
     canvas = bigCanvas; ctx = canvas.getContext('2d');
     layout();
     $('#cityBigIn').disabled = false;
