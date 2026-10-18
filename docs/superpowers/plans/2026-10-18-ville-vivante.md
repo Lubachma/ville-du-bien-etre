@@ -1022,3 +1022,37 @@ test('fête : un cadeau une fois par an, 10 M pour l’anniversaire', () => {
   - ligne finale habituelle ;
   - aucun fichier modifié hors du commit.
 - [ ] **Step 5 : Commit** — `docs: étape 3 dans les README, planche de la ville vivante`.
+
+### Task 17 : Voir la ville en grand
+
+Ajoutée pendant la réalisation, à la demande de Ludovic (spécification, partie J).
+
+**Files:**
+- Modify: `index.html` (bouton `#cityExpand` dans `.sky` ; fenêtre `#cityBig`), `styles.css`, `src/35-city.js`, `src/06-lang-fr.js`, `src/07-lang-en.js`, `tests/ambient-browser.cjs`
+
+**Interfaces:**
+- Consumes : la boucle et `ambientRunning` (Task 8), `City.visitorBox` et `openVisitor` (Task 12).
+- Produces (`index.html`) : `<div class="city-big" id="cityBig" role="dialog" aria-modal="true" aria-labelledby="cityBigTitle" hidden>` avec :
+  - un titre caché `#cityBigTitle` ;
+  - un canevas `#cityBigCanvas` ;
+  - les boutons `#cityBigIn`, `#cityBigOut` et `#cityBigClose`.
+- Produces (`35-city.js`) :
+  - `City.openBig()`, `City.closeBig()` et `City.bigState(): { open, zoom }`, pour les tests ;
+  - le rendu suit un seul canevas à la fois : `#cityBigCanvas` tant que la vue est ouverte, `#city` sinon ;
+  - la vue remplit l'écran : la case n'est plus plafonnée à 76 px, et le zoom la multiplie, de 1 à 3 (× 1,5 par bouton). La molette et le pincement zooment autour du point visé ; le glissement déplace la vue, bornée pour que la ville reste visible ;
+  - `ambientRunning()` vaut aussi vrai vue ouverte (fenêtres et session mises à part) ;
+  - à l'ouverture, `history.pushState({ cityBig: true }, '')` ; `popstate` ferme la vue ; le bouton × revient en arrière dans l'historique.
+- **Toucher la ville** hors pose et hors bâtiment appelle `City.openBig()`.
+- **Textes** : `city.expand` (« Voir ma ville en grand »), `city.bigTitle` (« Ta ville en grand »), `city.zoomIn`, `city.zoomOut`, `city.bigClose`.
+
+- [ ] **Step 1 : Parcours navigateur** dans `runAmbient` :
+  1. **toucher une case vide** de `#city` : `#cityBig` est visible et le focus est sur `#cityBigClose` ;
+  2. **zoom** : `#cityBigIn` donne `bigState().zoom === 1.5` ; une molette vers le haut sur le canevas l'augmente encore ; jamais au-delà de 3 ;
+  3. **Échap** ferme la vue et rend le focus à `#cityExpand` ;
+  4. **retour** : rouvrir avec `#cityExpand`, puis `page.goBack()` ferme la vue sans quitter la page (`#city` toujours là) ;
+  5. **bâtiment** : toucher un bâtiment de la carte ouvre toujours sa fiche, pas la vue en grand ;
+  6. **à 320 px**, rien ne déborde et les trois boutons restent visibles.
+- [ ] **Step 2 : Le voir échouer** — Run: `npm run build && PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Expected: FAIL, `#cityBig` introuvable.
+- [ ] **Step 3 : Implémenter.**
+- [ ] **Step 4 : Vérifier** — les trois commandes. Expected: `ℹ fail 0` ; une ligne `PASS` « Ville en grand ».
+- [ ] **Step 5 : Commit** — `feat(ville): voir sa ville en grand`.

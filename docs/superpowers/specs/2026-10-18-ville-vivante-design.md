@@ -324,6 +324,33 @@ Pour un joueur à 30 min par jour (environ 30 M par jour), les visiteurs ajouten
 
 *Choix de Claude :* l'étape 2 a lié les pièces aux vraies activités, et les succès ne donnent que des décors. Les cadeaux de visiteurs et de fêtes font une petite exception, assumée : ils restent symboliques, et c'est le plaisir de la rencontre qui fait revenir, pas le montant.
 
+## Partie J — Voir la ville en grand
+
+Demandée par Ludovic pendant la réalisation : « qu'on puisse cliquer sur la ville et la voir en grand ».
+
+### Ce qui est décidé
+
+**Ouvrir la vue en grand :**
+- en touchant la ville hors d'un bâtiment, quand on ne pose rien. Aujourd'hui, ce toucher ne fait rien ;
+- ou avec un bouton « Agrandir », dans le coin haut droit de la carte de la ville, accessible au clavier.
+
+Toucher un bâtiment ouvre toujours sa fiche, comme avant.
+
+**La vue en grand :**
+- elle prend tout l'écran, avec le ciel, et la ville le remplit ;
+- **zoom** jusqu'à × 3, en pinçant, à la molette ou avec les boutons + et − ;
+- un double toucher zoome sur ce point ;
+- on se déplace en faisant glisser, sans pouvoir perdre la ville de vue ;
+- la ville y vit comme dans sa carte : même boucle et même sobriété ;
+- **toucher le visiteur** ouvre sa fiche. *Choix de Claude : les bâtiments ne s'y ouvrent pas, la vue sert à regarder.*
+
+**La fermer :** bouton ×, touche Échap, ou le geste retour du téléphone, qui ferme la vue sans quitter l'app.
+
+**Accessibilité :**
+- la vue est une fenêtre, avec un titre lu par les lecteurs d'écran (« Ta ville en grand ») ;
+- le focus va sur le bouton de fermeture et revient au bouton « Agrandir » à la fermeture ;
+- avec les animations réduites, le zoom se fait sans transition.
+
 ## Données et compatibilité
 
 **Nouveaux champs :**
