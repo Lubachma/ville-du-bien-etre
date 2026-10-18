@@ -31,8 +31,12 @@
 | 🎲 **Tirage au sort** | Tu ne sais pas quoi faire ? Tirage parmi tes envies (+20 %) ou tes obligations (+50 %), selon ton temps, ton énergie et ton lieu. Les tâches ponctuelles ou récurrentes quittent le tirage une fois faites, puis reviennent selon leur fréquence |
 | 🔁 **Routines** | Enchaîne 2 à 6 activités, avec une pause libre entre les étapes ; la progression survit au rechargement |
 | 🎯 **Objectif de la semaine** | Un cap souple (minutes et jours actifs, tous domaines ou un seul), et un bâtiment à viser ; la semaine commence le lundi ou le dimanche |
-| 🏗️ **Ville** | 16 bâtiments débloqués par les minutes de leur domaine, 6 décors, terrain jusqu’à 11×11. Les bâtiments gagnent des niveaux avec la pratique. Nom de ville et export en image PNG |
+| 🏗️ **Ville** | 50 éléments : 30 bâtiments débloqués par les minutes de leur domaine, la Tour de l’horloge, 16 décors et 3 merveilles ; terrain jusqu’à 11×11. Boutique par rubriques, avec raccourcis et silhouettes des éléments à venir. Les bâtiments gagnent des niveaux avec la pratique. Nom de ville et export en image PNG |
+| 🌳 **Merveilles** | Grand Arbre, Phare et Grande Roue : uniques, bâtis en quatre étapes que débloque le total de minutes (de 1 500 à 7 600 min). Le Grand Arbre fleurit aux couleurs des domaines pratiqués dans la semaine |
+| 🧩 **Ensembles de voisinage** | 12 trios à découvrir en posant trois éléments dans un même carré de 3×3 cases (un banc et un arbre près de la bibliothèque, par exemple) ; un pavage commun les relie |
+| 🔨 **Construction animée** | Échafaudage, poussière et petit rebond à chaque pose ; une note qui monte quand on enchaîne les poses, des confettis à l’inauguration d’une merveille. Aucune animation si le téléphone demande de les réduire |
 | 📒 **Journal** | Aujourd’hui, série, temps effectué, graphique des 7 derniers jours, progression par domaine, dernières sessions |
+| 🏆 **Collection et succès** | Un carnet dans le Journal : 33 succès (premiers pas, domaines, moments de la journée, régularité, temps, ville), dont 5 qui offrent un décor ; la collection des 50 éléments et les ensembles découverts. Une ville existante reçoit d’un coup les succès déjà mérités |
 | 🌱 **Série bienveillante** | 0 à 2 jours de repos par semaine, un mode pause, un cadeau de bon retour (+20 %) après une coupure, et jamais de message culpabilisant. La série peut être masquée ; son bonus continue de s’appliquer |
 | 🌍 **Langues** | Français et anglais, selon le téléphone ou au choix dans les réglages. Le changement est immédiat, sans recharger ; les exemples d’activités jamais renommés suivent la langue |
 | 💾 **Sauvegardes** | Export en fichier (sur iPhone : « Enregistrer dans Fichiers ») ou en texte, restauration sur un autre appareil ; rappel au bout de 14 jours |
@@ -43,7 +47,7 @@
 - 🔥 **Série** : +10 % par jour actif d’affilée, jusqu’à +50 % ; les jours de repos (2 par semaine par défaut) et les pauses la maintiennent
 - 🌅 **Bon retour** : +20 % pour la première session qui relance une série, après au moins 2 jours sans session
 - 🎲 **Tirage** : premier tirage accepté +20 % (envie) ou +50 % (obligation) dès 3 idées disponibles, divisé par deux à chaque relance payante
-- 🧭 **5 domaines** — Esprit, Corps, Calme, Foyer, Créativité — qui débloquent chacun leurs bâtiments, puis la Tour de l’horloge après 1 000 minutes au total
+- 🧭 **5 domaines** — Esprit, Corps, Calme, Foyer, Créativité — qui débloquent chacun leurs bâtiments, puis la Tour de l’horloge après 1 000 minutes au total et les merveilles à partir de 1 500
 
 ## ⚙️ Réglages
 
@@ -90,8 +94,9 @@ Le build est un petit script Node : il assemble `src/` en `app.js` et donne au s
 |----------|------|
 | `npm run build` | Génère `app.js` et `sw.js` depuis `src/` |
 | `npm run check` | Syntaxe JavaScript et manifeste |
-| `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda |
-| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son et rappel |
+| `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda, succès, ensembles, merveilles, dessins |
+| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son, rappel, carnet, merveilles, boutique et pose |
+| `npm run board` | Planche des dessins dans `test-results/planche/` : ville de jour et de nuit, merveilles par étape, écran de 320 px, vignettes du carnet |
 | `npm run serve` | Serveur local sur le port 8766 |
 | `npm run package` | Prépare le dossier publiable `dist/` |
 
@@ -114,9 +119,14 @@ src/
 ├── 06-lang-fr.js       # textes français
 ├── 07-lang-en.js       # textes anglais
 ├── 10-state.js         # état, validation, fusion à trois voies, stockage, migration v1 → v2
-├── 20-rules.js         # jours, série (jours de repos, pause), gains, déblocages, prix
-├── 30-paint.js         # dessin isométrique de chaque bâtiment
-├── 35-city.js          # canvas de la ville : disposition, tactile et clavier, niveaux, capture
+├── 20-rules.js         # jours, série (jours de repos, pause), gains, déblocages, prix, étapes des merveilles
+├── 22-sets.js          # ensembles de voisinage : repérage, pavage, découverte
+├── 23-achievements.js  # succès : conditions, progression, dates
+├── 30-paint.js         # pinceau isométrique et dessins des 22 premiers éléments
+├── 31-paint-buildings.js # dessins des 15 nouveaux bâtiments
+├── 32-paint-decor.js   # dessins des 10 nouveaux décors
+├── 33-paint-wonders.js # dessins des merveilles, étape par étape
+├── 35-city.js          # canvas de la ville : disposition, tactile et clavier, niveaux, effets de pose, capture
 ├── 40-ui.js            # navigation, fenêtres, annonces, vue Ville
 ├── 41-activities.js    # activités, modes, fréquences, fenêtres de lancement et d’édition
 ├── 42-draw.js          # tirage au sort selon le contexte
@@ -127,7 +137,8 @@ src/
 ├── 47-accessibility.js # boutons radio au clavier, focus dans les fenêtres
 ├── 48-status.js        # bandeaux de stockage et de mise à jour, aide
 ├── 49-reminder.js      # rappel quotidien : fichier .ics et lien Google Agenda
-├── 50-session.js       # chrono, modes Concentration et Activité libre, anti-triche, sons de fin
+├── 50-session.js       # chrono, modes Concentration et Activité libre, anti-triche, sons de fin et de pose
+├── 52-carnet.js        # carnet (succès, collection, ensembles), célébrations, rattrapage
 ├── 60-boot.js          # événements et démarrage
 └── 70-install.js       # installation, cache hors connexion, mises à jour
 scripts/                # build, vérification, packaging, serveur, modèle du service worker
