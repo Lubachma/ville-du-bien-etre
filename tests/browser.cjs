@@ -258,6 +258,10 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
       console.log('PASS: ' + result.scenarios.join('; '));
     }
     {
+      const result = await require('./companion-browser.cjs').runCompanion(browser, baseURL + '#debug');
+      console.log('PASS: ' + result.scenarios.join('; '));
+    }
+    {
       const { context, page } = await newPage(browser, baseURL + '#debug');
       await page.evaluate(() => {
         window.installCalls = 0;
