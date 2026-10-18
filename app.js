@@ -582,6 +582,145 @@ DICT.fr = {
   'draw.modeEnergy': '{mode} · énergie {energy}',
   'draw.listFull': 'La liste est pleine ({max} idées).',
   'draw.added': 'Ajouté à la liste.',
+
+  // Journal : chiffres, graphique, progression et historique
+  'common.edit': 'Modifier',
+  'unit.days': { one: '{n}\u00a0jour', other: '{n}\u00a0jours' },
+  'journal.kpiToday': "Aujourd'hui",
+  'journal.kpiTodaySub': { one: '{time} réussies · {n}\u00a0session', other: '{time} réussies · {n}\u00a0sessions' },
+  'journal.kpiStreak': 'Série',
+  'journal.kpiStreakKeep': "Fais une session aujourd'hui pour la garder",
+  'journal.kpiStreakBonus': 'Bonus actuel +{pct}\u00a0%',
+  'journal.kpiEffort': 'Temps effectué',
+  'journal.kpiEffortSub': 'Dont {time} réussies',
+  'journal.kpiEffortSubEarned': 'Dont {time} réussies · {coins} gagnés',
+  'journal.kpiSessions': 'Sessions',
+  'journal.kpiInterrupted': { one: '{n}\u00a0interrompue', other: '{n}\u00a0interrompues' },
+  'journal.chartLabel': 'Minutes par jour sur les 7 derniers jours, détail dans le tableau ci-dessous',
+  'journal.todayShort': 'auj.',
+  'journal.barLabel': '{day} : {time}',
+  'journal.chartHint': 'Touche une barre pour voir le détail.',
+  'journal.chartEmpty': 'Aucune session réussie cette semaine pour le moment.',
+  'journal.colDay': 'Jour',
+  'journal.colMinutes': 'Minutes',
+  'journal.allUnlockedCat': 'Tous les bâtiments {of} sont débloqués.',
+  'journal.meterFirst': '{item} : après ta première session.',
+  'journal.meterNext': '{item} à {time} (encore {left}).',
+  'journal.meterLabel': 'Progression {of}',
+  'journal.reasonAway': 'app quittée',
+  'journal.reasonAwayFor': 'app quittée {time}',
+  'journal.reasonClosed': 'app fermée pendant la session',
+  'journal.reasonAbandoned': 'abandonnée',
+  'journal.historyEmpty': 'Pas encore de session. Lance une activité pour remplir ton journal.',
+  'journal.srcWish': 'tirage (envie)',
+  'journal.srcChore': 'tirage (obligation)',
+  'journal.srcRoutine': 'routine',
+  'journal.durationOf': '{done} sur {min}\u00a0min',
+  'journal.durationUnknown': '{min}\u00a0min prévues · temps effectué non enregistré',
+  'journal.interrupted': 'Interrompue',
+
+  // Objectif de la semaine
+  'goal.valueOf': '{value} sur {target}',
+  'goal.cardLabel': 'Objectif hebdomadaire',
+  'goal.reached': 'Objectif atteint !',
+  'goal.title': 'Mon rythme de la semaine',
+  'goal.allDomains': 'Tous les domaines',
+  'goal.minutesDone': 'Minutes effectuées',
+  'goal.activeDays': 'Jours actifs',
+  'goal.doneNote': 'Tu as atteint ton rythme. La suite est du bonus, à ton envie.',
+  'goal.note': 'Dès 1 minute effectuée, le jour compte. Choisis tes jours de repos : aucun jour imposé, aucune pénalité.',
+  'goal.buildingLeftCat': 'Mon bâtiment : {item} · encore {time} {of}',
+  'goal.buildingLeftTotal': 'Mon bâtiment : {item} · encore {time} au total',
+  'goal.buildingUnlocked': 'Mon bâtiment : {item} · débloqué, à construire dans la boutique',
+  'goal.sheetTitle': 'Mon objectif de la semaine',
+  'goal.letCityGuide': 'Laisser la ville me guider',
+  'goal.itemUnlocked': '{item} · débloqué',
+  'goal.intro': 'Un cap du lundi au dimanche, à adapter à ta semaine. Chaque minute effectuée remplit cet objectif, même si tu interromps une session. Un jour actif compte dès 1 minute.',
+  'goal.saved': 'Ton rythme est enregistré.',
+  'goal.minutesPerWeek': 'Minutes par semaine',
+  'goal.domain': 'Domaine de l’objectif',
+  'goal.building': 'Bâtiment à viser',
+  'goal.buildingNote': 'Le bâtiment suit tes minutes réussies dans son domaine, même si ton objectif hebdomadaire concerne un autre domaine. Les pièces restent nécessaires pour le construire.',
+
+  // Routines
+  'routine.title': 'Mes routines',
+  'routine.manage': 'Gérer',
+  'routine.emptyIntro': 'Enchaîne 2 à 6 activités : respiration, lecture, étirements… À chaque étape, tu choisis quand continuer.',
+  'routine.createFirst': 'Créer ma première routine',
+  'routine.launch': 'Lancer',
+  'routine.missing': 'Une activité a été supprimée : modifie cette routine.',
+  'routine.scheduled': 'Une activité est devenue ponctuelle ou récurrente : modifie cette routine.',
+  'routine.summary': { one: '{n} étape · {time}', other: '{n} étapes · {time}' },
+  'routine.progressDone': '{name} · terminée',
+  'routine.progressSteps': '{name} · {done}/{total} étapes',
+  'routine.doneSummary': '{time} réalisées · {coins} gagnés',
+  'routine.stepRunning': 'Une étape est en cours.',
+  'routine.pausedNext': 'En pause · prochaine étape : {name}',
+  'routine.paused': 'En pause',
+  'routine.resume': 'Reprendre la routine',
+  'routine.start': 'Commencer la routine',
+  'routine.closeSummary': 'Fermer le bilan',
+  'routine.endHere': 'Terminer ici',
+  'routine.endConfirm': 'Confirmer la fin',
+  'routine.sheetIntro': 'Les étapes se suivent dans l’ordre choisi. Chaque activité garde son mode et sa durée. La pause entre deux étapes est libre.',
+  'routine.deletedActivity': 'Activité supprimée',
+  'routine.create': 'Créer une routine',
+  'routine.limitReached': 'Tu as atteint {max} routines. Tu peux modifier ou supprimer une routine existante.',
+  'routine.editTitle': 'Modifier la routine',
+  'routine.newTitle': 'Nouvelle routine',
+  'routine.namePlaceholder': 'Ex. Mon réveil en douceur',
+  'routine.activityToAdd': 'Activité à ajouter',
+  'routine.stepsLabel': 'Étapes dans l’ordre',
+  'routine.add': 'Ajouter',
+  'routine.moveUp': 'Monter l’étape {n} : {name}',
+  'routine.moveDown': 'Descendre l’étape {n} : {name}',
+  'routine.removeStep': 'Retirer l’étape {n} : {name}',
+  'routine.total': '{n}/6 étapes · {time}',
+  'routine.errorCount': 'Choisis entre 2 et 6 étapes.',
+  'routine.errorInvalid': 'Retire les activités supprimées, ponctuelles ou récurrentes.',
+  'routine.deletedElsewhere': 'Cette routine a été supprimée sur un autre écran.',
+  'routine.errorLimit': 'La limite de {max} routines est atteinte.',
+  'routine.saved': 'Routine enregistrée.',
+  'routine.addStep': 'Ajouter une étape',
+  'routine.editorNote': 'Les routines utilisent les activités toujours disponibles, que tu peux répéter. Les tâches ponctuelles ou récurrentes se lancent séparément. Une routine commencée conserve ses étapes initiales.',
+  'routine.saveButton': 'Enregistrer la routine',
+  'routine.noActivities': 'Ajoute d’abord tes activités dans l’onglet Activités.',
+  'routine.delete': 'Supprimer la routine',
+  'routine.deleteConfirm': 'Confirmer la suppression',
+  'routine.deleted': 'Routine supprimée.',
+  'routine.finishCurrent': 'Termine d’abord la session en cours.',
+  'routine.cannotLaunch': 'Cette routine contient une activité supprimée ou planifiée. Modifie ses étapes.',
+  'routine.sessionRunning': 'Une session est déjà en cours.',
+  'routine.replaceTitle': 'Remplacer la routine en pause ?',
+  'routine.replaceText': 'Les étapes déjà réussies de « {old} » restent dans ton journal. La suite sera remplacée par « {new} ».',
+  'routine.startNew': 'Commencer la nouvelle routine',
+  'routine.keepPaused': 'Garder la routine en pause',
+  'routine.alreadyDone': 'Cette routine est déjà terminée ou a été remplacée.',
+  'routine.resultDone': 'Routine terminée !',
+  'routine.resultStep': '{name} · étape {done}/{total}',
+  'routine.resultDoneNote': 'Toutes les étapes sont dans ton journal. Tu peux prendre le temps de profiter de ta ville.',
+  'routine.resultNext': 'Fais une pause si tu le souhaites. À suivre : {name} · {min}\u00a0min.',
+  'routine.nextStep': 'Étape suivante',
+  'routine.later': 'Reprendre plus tard',
+
+  // Niveaux, personnalisation et image de la ville
+  'level.name1': 'Naissance',
+  'level.name2': 'Épanouissement',
+  'level.name3': 'Rayonnement',
+  'level.nextCat': 'Niveau {level} · {name} · niveau {next} à {time} {of}',
+  'level.nextTotal': 'Niveau {level} · {name} · niveau {next} à {time} au total',
+  'level.max': 'Niveau {level} · {name} · niveau maximum',
+  'city.personalTitle': 'Ma ville à moi',
+  'city.renamed': 'Ta ville a un nouveau nom.',
+  'city.nameLabel': 'Nom de ma ville',
+  'city.saveName': 'Enregistrer le nom',
+  'city.growsTitle': 'Une ville qui grandit avec toi',
+  'city.growsText': 'Les bâtiments gagnent des niveaux avec les minutes réussies dans leur domaine. Après leur seuil de déblocage, 2 heures de pratique mènent au niveau 2, puis 6 heures au niveau 3. Les décors restent libres.',
+  'city.growsNote': 'Touche un bâtiment de ta ville pour voir son niveau et le prochain seuil. Les niveaux sont gratuits et restent acquis, même après des jours de repos.',
+  'city.saveImage': 'Enregistrer une image de ma ville',
+  'png.footer': 'Ville du bien-être · {time} pour prendre soin de moi',
+  'png.downloaded': 'Image de ta ville téléchargée.',
+  'png.failed': 'Impossible de créer l’image pour le moment. Réessaie depuis la ville.',
 };
 
 
@@ -876,6 +1015,145 @@ DICT.en = {
   'draw.modeEnergy': '{mode} · {energy} energy',
   'draw.listFull': 'The list is full ({max} ideas).',
   'draw.added': 'Added to the list.',
+
+  // Journal: figures, chart, progress and history
+  'common.edit': 'Edit',
+  'unit.days': { one: '{n}\u00a0day', other: '{n}\u00a0days' },
+  'journal.kpiToday': 'Today',
+  'journal.kpiTodaySub': { one: '{time} completed · {n}\u00a0session', other: '{time} completed · {n}\u00a0sessions' },
+  'journal.kpiStreak': 'Streak',
+  'journal.kpiStreakKeep': 'Do a session today to keep it',
+  'journal.kpiStreakBonus': 'Current bonus +{pct}%',
+  'journal.kpiEffort': 'Time spent',
+  'journal.kpiEffortSub': 'Including {time} completed',
+  'journal.kpiEffortSubEarned': 'Including {time} completed · {coins} earned',
+  'journal.kpiSessions': 'Sessions',
+  'journal.kpiInterrupted': { one: '{n}\u00a0interrupted', other: '{n}\u00a0interrupted' },
+  'journal.chartLabel': 'Minutes per day over the last 7 days, details in the table below',
+  'journal.todayShort': 'today',
+  'journal.barLabel': '{day}: {time}',
+  'journal.chartHint': 'Tap a bar to see the details.',
+  'journal.chartEmpty': 'No completed session this week yet.',
+  'journal.colDay': 'Day',
+  'journal.colMinutes': 'Minutes',
+  'journal.allUnlockedCat': 'All {cat} buildings are unlocked.',
+  'journal.meterFirst': '{item}: after your first session.',
+  'journal.meterNext': '{item} at {time} ({left} to go).',
+  'journal.meterLabel': '{cat} progress',
+  'journal.reasonAway': 'app left',
+  'journal.reasonAwayFor': 'app left for {time}',
+  'journal.reasonClosed': 'app closed during the session',
+  'journal.reasonAbandoned': 'stopped',
+  'journal.historyEmpty': 'No sessions yet. Start an activity to fill your journal.',
+  'journal.srcWish': 'draw (wish)',
+  'journal.srcChore': 'draw (chore)',
+  'journal.srcRoutine': 'routine',
+  'journal.durationOf': '{done} of {min}\u00a0min',
+  'journal.durationUnknown': '{min}\u00a0min planned · time spent not recorded',
+  'journal.interrupted': 'Interrupted',
+
+  // Weekly goal
+  'goal.valueOf': '{value} of {target}',
+  'goal.cardLabel': 'Weekly goal',
+  'goal.reached': 'Goal reached!',
+  'goal.title': 'My weekly rhythm',
+  'goal.allDomains': 'All domains',
+  'goal.minutesDone': 'Minutes done',
+  'goal.activeDays': 'Active days',
+  'goal.doneNote': 'You have reached your rhythm. Anything more is a bonus, as you like.',
+  'goal.note': 'From 1 minute done, the day counts. Pick your rest days: no required day, no penalty.',
+  'goal.buildingLeftCat': 'My building: {item} · {time} more {of}',
+  'goal.buildingLeftTotal': 'My building: {item} · {time} more in total',
+  'goal.buildingUnlocked': 'My building: {item} · unlocked, ready to build in the shop',
+  'goal.sheetTitle': 'My goal for the week',
+  'goal.letCityGuide': 'Let the town guide me',
+  'goal.itemUnlocked': '{item} · unlocked',
+  'goal.intro': 'A target from Monday to Sunday, to fit your week. Every minute done fills this goal, even if you interrupt a session. An active day counts from 1 minute.',
+  'goal.saved': 'Your rhythm is saved.',
+  'goal.minutesPerWeek': 'Minutes per week',
+  'goal.domain': 'Goal domain',
+  'goal.building': 'Building to aim for',
+  'goal.buildingNote': 'The building follows your completed minutes in its domain, even if your weekly goal is about another domain. You still need coins to build it.',
+
+  // Routines
+  'routine.title': 'My routines',
+  'routine.manage': 'Manage',
+  'routine.emptyIntro': 'Chain 2 to 6 activities: breathing, reading, stretching… At each step, you choose when to continue.',
+  'routine.createFirst': 'Create my first routine',
+  'routine.launch': 'Start',
+  'routine.missing': 'An activity was deleted: edit this routine.',
+  'routine.scheduled': 'An activity became one-off or recurring: edit this routine.',
+  'routine.summary': { one: '{n} step · {time}', other: '{n} steps · {time}' },
+  'routine.progressDone': '{name} · done',
+  'routine.progressSteps': '{name} · {done}/{total} steps',
+  'routine.doneSummary': '{time} done · {coins} earned',
+  'routine.stepRunning': 'A step is in progress.',
+  'routine.pausedNext': 'Paused · next step: {name}',
+  'routine.paused': 'Paused',
+  'routine.resume': 'Resume the routine',
+  'routine.start': 'Start the routine',
+  'routine.closeSummary': 'Close the summary',
+  'routine.endHere': 'End here',
+  'routine.endConfirm': 'Confirm end',
+  'routine.sheetIntro': 'Steps follow the order you choose. Each activity keeps its mode and duration. The break between two steps is up to you.',
+  'routine.deletedActivity': 'Deleted activity',
+  'routine.create': 'Create a routine',
+  'routine.limitReached': 'You have reached {max} routines. You can edit or delete an existing routine.',
+  'routine.editTitle': 'Edit routine',
+  'routine.newTitle': 'New routine',
+  'routine.namePlaceholder': 'E.g. My gentle wake-up',
+  'routine.activityToAdd': 'Activity to add',
+  'routine.stepsLabel': 'Steps in order',
+  'routine.add': 'Add',
+  'routine.moveUp': 'Move step {n} up: {name}',
+  'routine.moveDown': 'Move step {n} down: {name}',
+  'routine.removeStep': 'Remove step {n}: {name}',
+  'routine.total': '{n}/6 steps · {time}',
+  'routine.errorCount': 'Choose between 2 and 6 steps.',
+  'routine.errorInvalid': 'Remove deleted, one-off or recurring activities.',
+  'routine.deletedElsewhere': 'This routine was deleted on another screen.',
+  'routine.errorLimit': 'The limit of {max} routines is reached.',
+  'routine.saved': 'Routine saved.',
+  'routine.addStep': 'Add a step',
+  'routine.editorNote': 'Routines use always-available activities that you can repeat. One-off or recurring tasks are started separately. A routine in progress keeps its original steps.',
+  'routine.saveButton': 'Save the routine',
+  'routine.noActivities': 'First add your activities in the Activities tab.',
+  'routine.delete': 'Delete the routine',
+  'routine.deleteConfirm': 'Confirm deletion',
+  'routine.deleted': 'Routine deleted.',
+  'routine.finishCurrent': 'Finish the current session first.',
+  'routine.cannotLaunch': 'This routine contains a deleted or scheduled activity. Edit its steps.',
+  'routine.sessionRunning': 'A session is already in progress.',
+  'routine.replaceTitle': 'Replace the paused routine?',
+  'routine.replaceText': 'The steps already completed in “{old}” stay in your journal. The rest will be replaced by “{new}”.',
+  'routine.startNew': 'Start the new routine',
+  'routine.keepPaused': 'Keep the routine paused',
+  'routine.alreadyDone': 'This routine is already finished or was replaced.',
+  'routine.resultDone': 'Routine complete!',
+  'routine.resultStep': '{name} · step {done}/{total}',
+  'routine.resultDoneNote': 'All the steps are in your journal. Take your time to enjoy your town.',
+  'routine.resultNext': 'Take a break if you like. Up next: {name} · {min}\u00a0min.',
+  'routine.nextStep': 'Next step',
+  'routine.later': 'Continue later',
+
+  // Levels, personalisation and town picture
+  'level.name1': 'Sprouting',
+  'level.name2': 'Blooming',
+  'level.name3': 'Radiant',
+  'level.nextCat': 'Level {level} · {name} · level {next} at {time} {of}',
+  'level.nextTotal': 'Level {level} · {name} · level {next} at {time} in total',
+  'level.max': 'Level {level} · {name} · top level',
+  'city.personalTitle': 'My very own town',
+  'city.renamed': 'Your town has a new name.',
+  'city.nameLabel': "My town's name",
+  'city.saveName': 'Save the name',
+  'city.growsTitle': 'A town that grows with you',
+  'city.growsText': 'Buildings gain levels with the completed minutes in their domain. After their unlock threshold, 2 hours of practice lead to level 2, then 6 hours to level 3. Decorations stay free.',
+  'city.growsNote': 'Tap a building in your town to see its level and the next threshold. Levels are free and stay yours, even after rest days.',
+  'city.saveImage': 'Save a picture of my town',
+  'png.footer': 'Ville du bien-être · {time} of self-care',
+  'png.downloaded': 'Picture of your town downloaded.',
+  'png.failed': 'Could not create the picture right now. Try again from the town.',
 };
 
 
@@ -3139,14 +3417,14 @@ function fmtEffort(minutes) {
 }
 
 function renderJournal() {
-  const st = streak(), tm = todayMinutes(), t = today();
-  const todayCount = S.history.filter(e => e.ok && (e.day || dayOf(e.at)) === t).length;
+  const st = streak(), tm = todayMinutes(), day = today();
+  const todayCount = S.history.filter(e => e.ok && (e.day || dayOf(e.at)) === day).length;
   const kpi = (label, value, sub) => h('div', { class: 'kpi' }, h('span', { class: 'k-label' }, label), h('span', { class: 'k-value' }, value), sub ? h('span', { class: 'k-sub' }, sub) : null);
   $('#kpis').replaceChildren(
-    kpi("Aujourd'hui", fmtEffort(todayEffortMinutes()), fmtMin(tm) + ' réussies · ' + plural(todayCount, 'session', 'sessions')),
-    kpi('Série', plural(st, 'jour', 'jours'), st && !tm ? "Fais une session aujourd'hui pour la garder" : 'Bonus actuel +' + streakBonus(st) + NB + '%'),
-    kpi('Temps effectué', fmtEffort(totalEffortMinutes()), 'Dont ' + fmtMin(totalMinutes()) + ' réussies' + (S.earned ? ' · ' + fmt(S.earned) + ' gagnés' : '')),
-    kpi('Sessions', String(S.stats.ok), plural(S.stats.ko, 'interrompue', 'interrompues')));
+    kpi(t('journal.kpiToday'), fmtEffort(todayEffortMinutes()), t('journal.kpiTodaySub', { time: fmtMin(tm), n: todayCount })),
+    kpi(t('journal.kpiStreak'), t('unit.days', { n: st }), st && !tm ? t('journal.kpiStreakKeep') : t('journal.kpiStreakBonus', { pct: streakBonus(st) })),
+    kpi(t('journal.kpiEffort'), fmtEffort(totalEffortMinutes()), S.earned ? t('journal.kpiEffortSubEarned', { time: fmtMin(totalMinutes()), coins: fmt(S.earned) }) : t('journal.kpiEffortSub', { time: fmtMin(totalMinutes()) })),
+    kpi(t('journal.kpiSessions'), String(S.stats.ok), t('journal.kpiInterrupted', { n: S.stats.ko })));
   renderGoals();
   renderWeekChart();
   renderMeters();
@@ -3154,9 +3432,9 @@ function renderJournal() {
 }
 function niceMax(v) { for (const c of [15, 30, 45, 60, 90, 120, 180, 240, 360, 480, 720]) if (v <= c) return c; return Math.ceil(v / 60) * 60; }
 function renderWeekChart() {
-  const t = today();
+  const day = today();
   const days = [];
-  for (let i = 6; i >= 0; i--) { const k = shiftDay(t, -i); days.push({ k, v: S.stats.days[k] || 0 }); }
+  for (let i = 6; i >= 0; i--) { const k = shiftDay(day, -i); days.push({ k, v: S.stats.days[k] || 0 }); }
   const max = Math.max(...days.map(x => x.v));
   const top = niceMax(Math.max(max, 1));
   const W = 320, H = 156, padL = 30, padR = 6, padT = 18, padB = 24, plotH = H - padT - padB;
@@ -3165,7 +3443,7 @@ function renderWeekChart() {
   const svg = document.createElementNS(SVGNS, 'svg');
   svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Minutes par jour sur les 7 derniers jours, détail dans le tableau ci-dessous');
+  svg.setAttribute('aria-label', t('journal.chartLabel'));
   const el = (tag, attrs, text) => { const e = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; svg.append(e); return e; };
   el('line', { class: 'grid', x1: padL, x2: W - padR, y1: y(top), y2: y(top) });
   el('line', { class: 'grid', x1: padL, x2: W - padR, y1: y(top / 2), y2: y(top / 2) });
@@ -3184,18 +3462,18 @@ function renderWeekChart() {
       bars[i] = el('path', { class: 'bar', d: 'M' + x0 + ',' + (yy + hh) + 'V' + (yy + r) + 'Q' + x0 + ',' + yy + ' ' + (x0 + r) + ',' + yy + 'H' + (x0 + bw - r) + 'Q' + (x0 + bw) + ',' + yy + ' ' + (x0 + bw) + ',' + (yy + r) + 'V' + (yy + hh) + 'Z' });
       if (isToday || i === maxIdx) el('text', { class: 't-val', x: cx, y: yy - 5, 'text-anchor': 'middle' }, String(dd.v));
     }
-    el('text', { class: 't-axis' + (isToday ? ' today' : ''), x: cx, y: H - 6, 'text-anchor': 'middle' }, isToday ? 'auj.' : dayFmt('weekday').format(keyToUTC(dd.k)).replace('.', ''));
-    const label = dayLabel(dd.k) + ' : ' + fmtMin(dd.v);
+    el('text', { class: 't-axis' + (isToday ? ' today' : ''), x: cx, y: H - 6, 'text-anchor': 'middle' }, isToday ? t('journal.todayShort') : dayFmt('weekday').format(keyToUTC(dd.k)).replace('.', ''));
+    const label = t('journal.barLabel', { day: dayLabel(dd.k), time: fmtMin(dd.v) });
     const hit = el('rect', { class: 'hit', x: cx - band / 2, y: padT - 10, width: band, height: plotH + 10 + padB, 'aria-hidden': 'true' });
     const show = () => { readout.textContent = frTypo(label.charAt(0).toUpperCase() + label.slice(1)); bars.forEach((b, j) => b && b.classList.toggle('hot', j !== i)); };
     hit.addEventListener('pointerenter', show);
     hit.addEventListener('click', show);
     hit.addEventListener('pointerleave', () => bars.forEach(b => b && b.classList.remove('hot')));
   });
-  readout.textContent = max > 0 ? 'Touche une barre pour voir le détail.' : 'Aucune session réussie cette semaine pour le moment.';
+  readout.textContent = max > 0 ? t('journal.chartHint') : t('journal.chartEmpty');
   $('#weekChart').replaceChildren(svg);
   const tbl = $('#weekTable');
-  tbl.replaceChildren(h('tr', {}, h('th', { scope: 'col' }, 'Jour'), h('th', { scope: 'col' }, 'Minutes')));
+  tbl.replaceChildren(h('tr', {}, h('th', { scope: 'col' }, t('journal.colDay')), h('th', { scope: 'col' }, t('journal.colMinutes'))));
   for (const dd of days.slice().reverse()) tbl.append(h('tr', {}, h('td', {}, dayLabel(dd.k)), h('td', {}, String(dd.v))));
 }
 function renderMeters() {
@@ -3204,36 +3482,36 @@ function renderMeters() {
   for (const c of CAT_ORDER) {
     const have = S.stats.byCat[c] || 0;
     const next = Object.keys(ITEMS).filter(k => ITEMS[k].group === c && lockInfo(k)).sort((a, b) => ITEMS[a].need - ITEMS[b].need)[0];
-    let pct = 100, note = 'Tous les bâtiments ' + catOf(c) + ' sont débloqués.';
+    let pct = 100, note = t('journal.allUnlockedCat', { cat: catName(c), of: catOf(c) });
     if (next) {
       const need = ITEMS[next].need;
       pct = clamp(have / need * 100, 0, 100);
-      note = need === 1 ? itemName(next) + ' : après ta première session.' : itemName(next) + ' à ' + fmtMin(need) + ' (encore ' + fmtMin(need - have) + ').';
+      note = need === 1 ? t('journal.meterFirst', { item: itemName(next) }) : t('journal.meterNext', { item: itemName(next), time: fmtMin(need), left: fmtMin(need - have) });
     }
     wrap.append(h('div', { class: 'meter-row' },
       h('div', { class: 'meter-top' }, h('span', { class: 'name' }, catDot(c), catName(c)), h('span', { class: 'val' }, fmtMin(have))),
-      h('div', { class: 'meter', vars: { '--c': catVar(c) }, role: 'progressbar', 'aria-label': 'Progression ' + catOf(c), 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct)) }, h('span', { style: 'width:' + pct + '%' })),
+      h('div', { class: 'meter', vars: { '--c': catVar(c) }, role: 'progressbar', 'aria-label': t('journal.meterLabel', { cat: catName(c), of: catOf(c) }), 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct)) }, h('span', { style: 'width:' + pct + '%' })),
       h('span', { class: 'meter-note' }, note)));
   }
 }
 function reasonText(e) {
-  if (e.reason === 'away') return "app quittée" + (e.away ? ' ' + fmtAway(e.away * 1000) : '');
-  if (e.reason === 'closed') return 'app fermée pendant la session';
-  return 'abandonnée';
+  if (e.reason === 'away') return e.away ? t('journal.reasonAwayFor', { time: fmtAway(e.away * 1000) }) : t('journal.reasonAway');
+  if (e.reason === 'closed') return t('journal.reasonClosed');
+  return t('journal.reasonAbandoned');
 }
 function renderHistory() {
   const ul = $('#history');
   ul.replaceChildren();
-  if (!S.history.length) { ul.append(h('li', {}, h('span', { class: 'empty-state' }, 'Pas encore de session. Lance une activité pour remplir ton journal.'))); return; }
+  if (!S.history.length) { ul.append(h('li', {}, h('span', { class: 'empty-state' }, t('journal.historyEmpty')))); return; }
   for (const e of S.history.slice(0, 25)) {
-    const src = e.source === 'wishes' ? ' · tirage (envie)' : e.source === 'chores' ? ' · tirage (obligation)' : e.source === 'routine' ? ' · routine' : '';
-    const duration = e.ok ? e.min + NB + 'min' : typeof e.elapsedSec === 'number' ? fmtEffort(e.elapsedSec / 60) + ' sur ' + e.min + NB + 'min' : e.min + NB + 'min prévues · temps effectué non enregistré';
+    const src = e.source === 'wishes' ? ' · ' + t('journal.srcWish') : e.source === 'chores' ? ' · ' + t('journal.srcChore') : e.source === 'routine' ? ' · ' + t('journal.srcRoutine') : '';
+    const duration = e.ok ? e.min + NB + 'min' : typeof e.elapsedSec === 'number' ? t('journal.durationOf', { done: fmtEffort(e.elapsedSec / 60), min: e.min }) : t('journal.durationUnknown', { min: e.min });
     ul.append(h('li', {},
       h('div', { class: 'h-main' },
-        h('span', { class: 'h-title' }, catDot(e.cat), e.name),
+        h('span', { class: 'h-title' }, catDot(e.cat), displayName(e.name)),
         h('span', { class: 'h-sub' }, whenLabel(e.at) + ' · ' + duration + src + (e.ok ? '' : ' · ' + reasonText(e)))),
       e.ok ? h('span', { class: 'h-val' }, '+' + fmt(e.reward))
-           : h('span', { class: 'h-val lost' }, icon('lost'), 'Interrompue')));
+           : h('span', { class: 'h-val lost' }, icon('lost'), t('journal.interrupted'))));
   }
 }
 
@@ -3594,44 +3872,45 @@ function featureMeter(label, value, target) {
   const pct = Math.round(clamp(value / target * 100, 0, 100));
   return h('div', { class: 'goal-meter' },
     h('div', { class: 'feature-between' }, h('span', {}, label), h('strong', {}, dec1(value) + ' / ' + target)),
-    h('div', { class: 'meter', vars: { '--c': 'var(--accent)' }, role: 'progressbar', 'aria-label': label, 'aria-valuemin': '0', 'aria-valuemax': String(target), 'aria-valuenow': String(Math.min(value, target)), 'aria-valuetext': dec1(value) + ' sur ' + target }, h('span', { style: 'width:' + pct + '%' })));
+    h('div', { class: 'meter', vars: { '--c': 'var(--accent)' }, role: 'progressbar', 'aria-label': label, 'aria-valuemin': '0', 'aria-valuemax': String(target), 'aria-valuenow': String(Math.min(value, target)), 'aria-valuetext': t('goal.valueOf', { value: dec1(value), target }) }, h('span', { style: 'width:' + pct + '%' })));
 }
 function renderGoals() {
   const parent = $('#view-journal');
   if (!parent) return;
   let card = $('#goalsCard');
-  if (!card) { card = h('section', { id: 'goalsCard', class: 'card feature-card', 'aria-label': 'Objectif hebdomadaire' }); $('#kpis').after(card); }
+  if (!card) { card = h('section', { id: 'goalsCard', class: 'card feature-card', 'aria-label': t('goal.cardLabel') }); $('#kpis').after(card); }
   const p = goalProgress(), g = p.goal;
   const range = dayFmt('short').format(keyToUTC(p.start)) + ' – ' + dayFmt('short').format(keyToUTC(p.end));
   card.replaceChildren(
-    h('div', { class: 'feature-between' }, h('h3', {}, p.done ? 'Objectif atteint !' : 'Mon rythme de la semaine'),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openGoals }, 'Modifier')),
-    h('p', { class: 'sub' }, range + ' · ' + (g.cat === 'all' ? 'Tous les domaines' : catName(g.cat))),
-    featureMeter('Minutes effectuées', p.minutes, g.minutes), featureMeter('Jours actifs', p.activeDays, g.days),
-    h('p', { class: 'note' }, p.done ? 'Tu as atteint ton rythme. La suite est du bonus, à ton envie.' : 'Dès 1 minute effectuée, le jour compte. Choisis tes jours de repos : aucun jour imposé, aucune pénalité.'));
+    h('div', { class: 'feature-between' }, h('h3', {}, p.done ? t('goal.reached') : t('goal.title')),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openGoals }, t('common.edit'))),
+    h('p', { class: 'sub' }, range + ' · ' + (g.cat === 'all' ? t('goal.allDomains') : catName(g.cat))),
+    featureMeter(t('goal.minutesDone'), p.minutes, g.minutes), featureMeter(t('goal.activeDays'), p.activeDays, g.days),
+    h('p', { class: 'note' }, p.done ? t('goal.doneNote') : t('goal.note')));
   if (g.building && ITEMS[g.building]) {
     const lock = lockInfo(g.building);
-    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, 'Mon bâtiment : ', h('strong', {}, itemName(g.building)), lock ? ' · encore ' + fmtMin(lock.need - lock.have) + (lock.cat ? ' ' + catOf(lock.cat) : ' au total') : ' · débloqué, à construire dans la boutique')));
+    const params = { item: h('strong', {}, itemName(g.building)), time: lock ? fmtMin(lock.need - lock.have) : '', cat: lock && lock.cat ? catName(lock.cat) : '', of: lock && lock.cat ? catOf(lock.cat) : '' };
+    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, !lock ? tParts('goal.buildingUnlocked', params) : lock.cat ? tParts('goal.buildingLeftCat', params) : tParts('goal.buildingLeftTotal', params))));
   }
 }
 function openGoals() {
   const initial = S.goals || { minutes: 60, days: 3, cat: 'all', building: '' };
-  openSheet('Mon objectif de la semaine', body => {
+  openSheet(t('goal.sheetTitle'), body => {
     const minutes = h('input', { class: 'input', id: 'goalMinutes', type: 'number', min: '5', max: '1260', step: '1', value: initial.minutes, required: true, inputmode: 'numeric' });
-    const days = h('select', { class: 'select', id: 'goalDays' }, Array.from({ length: 7 }, (_, i) => h('option', { value: i + 1, selected: i + 1 === initial.days }, plural(i + 1, 'jour', 'jours'))));
-    const cat = h('select', { class: 'select', id: 'goalCat' }, h('option', { value: 'all', selected: initial.cat === 'all' }, 'Tous les domaines'), catOptions(initial.cat));
-    const building = h('select', { class: 'select', id: 'goalBuilding' }, h('option', { value: '', selected: !initial.building }, 'Laisser la ville me guider'), Object.keys(ITEMS).filter(k => ITEMS[k].group !== 'decor').map(k => h('option', { value: k, selected: k === initial.building }, itemName(k) + (lockInfo(k) ? '' : ' · débloqué'))));
-    body.append(h('p', {}, 'Un cap du lundi au dimanche, à adapter à ta semaine. Chaque minute effectuée remplit cet objectif, même si tu interromps une session. Un jour actif compte dès 1 minute.'),
+    const days = h('select', { class: 'select', id: 'goalDays' }, Array.from({ length: 7 }, (_, i) => h('option', { value: i + 1, selected: i + 1 === initial.days }, t('unit.days', { n: i + 1 }))));
+    const cat = h('select', { class: 'select', id: 'goalCat' }, h('option', { value: 'all', selected: initial.cat === 'all' }, t('goal.allDomains')), catOptions(initial.cat));
+    const building = h('select', { class: 'select', id: 'goalBuilding' }, h('option', { value: '', selected: !initial.building }, t('goal.letCityGuide')), Object.keys(ITEMS).filter(k => ITEMS[k].group !== 'decor').map(k => h('option', { value: k, selected: k === initial.building }, lockInfo(k) ? itemName(k) : t('goal.itemUnlocked', { item: itemName(k) }))));
+    body.append(h('p', {}, t('goal.intro')),
       h('form', { class: 'add-form', onsubmit: e => {
         e.preventDefault();
         S.goals = { minutes: int(Number(minutes.value), 5, 1260, 60), days: int(Number(days.value), 1, 7, 3), cat: isCat(cat.value) ? cat.value : 'all', building: isItem(building.value) ? building.value : '' };
-        closeSheet(); commit(); toast('Ton rythme est enregistré.');
+        closeSheet(); commit(); toast(t('goal.saved'));
       } },
-      h('div', { class: 'row-2' }, h('div', { class: 'field' }, h('label', { for: 'goalMinutes' }, 'Minutes par semaine'), minutes), h('div', { class: 'field' }, h('label', { for: 'goalDays' }, 'Jours actifs'), days)),
-      h('div', { class: 'field' }, h('label', { for: 'goalCat' }, 'Domaine de l’objectif'), cat),
-      h('div', { class: 'field' }, h('label', { for: 'goalBuilding' }, 'Bâtiment à viser'), building),
-      h('p', { class: 'note' }, 'Le bâtiment suit tes minutes réussies dans son domaine, même si ton objectif hebdomadaire concerne un autre domaine. Les pièces restent nécessaires pour le construire.'),
-      h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'submit' }, icon('check'), 'Enregistrer')));
+      h('div', { class: 'row-2' }, h('div', { class: 'field' }, h('label', { for: 'goalMinutes' }, t('goal.minutesPerWeek')), minutes), h('div', { class: 'field' }, h('label', { for: 'goalDays' }, t('goal.activeDays')), days)),
+      h('div', { class: 'field' }, h('label', { for: 'goalCat' }, t('goal.domain')), cat),
+      h('div', { class: 'field' }, h('label', { for: 'goalBuilding' }, t('goal.building')), building),
+      h('p', { class: 'note' }, t('goal.buildingNote')),
+      h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'submit' }, icon('check'), t('common.save'))));
   });
 }
 
@@ -3658,21 +3937,21 @@ function renderRoutines() {
   const parent = $('#view-activites');
   if (!parent) return;
   let card = $('#routinesCard');
-  if (!card) { card = h('section', { id: 'routinesCard', class: 'card feature-card', 'aria-label': 'Mes routines' }); parent.append(card); }
-  card.replaceChildren(h('div', { class: 'feature-between' }, h('h3', {}, 'Mes routines'), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openRoutines }, 'Gérer')));
+  if (!card) { card = h('section', { id: 'routinesCard', class: 'card feature-card', 'aria-label': t('routine.title') }); parent.append(card); }
+  card.replaceChildren(h('div', { class: 'feature-between' }, h('h3', {}, t('routine.title')), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openRoutines }, t('routine.manage'))));
   const progress = S.routineRun;
   if (progress) card.append(routineProgressCard(progress));
   const routines = S.routines || [];
   if (!routines.length) {
-    card.append(h('p', { class: 'sub' }, 'Enchaîne 2 à 6 activités : respiration, lecture, étirements… À chaque étape, tu choisis quand continuer.'),
-      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => openRoutineEditor() }, icon('plus'), 'Créer ma première routine'));
+    card.append(h('p', { class: 'sub' }, t('routine.emptyIntro')),
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => openRoutineEditor() }, icon('plus'), t('routine.createFirst')));
     return;
   }
   const list = h('ul', { class: 'routine-list' });
   for (const routine of routines) {
     const d = routineSummary(routine);
-    const btn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', disabled: d.missing || d.scheduled || !!S.active, onclick: () => launchRoutine(routine.id) }, icon('play'), 'Lancer');
-    list.append(h('li', {}, h('div', { class: 'routine-main' }, h('strong', {}, routine.name), h('p', { class: 'note' }, d.missing ? 'Une activité a été supprimée : modifie cette routine.' : d.scheduled ? 'Une activité est devenue ponctuelle ou récurrente : modifie cette routine.' : routine.activityIds.length + ' étapes · ' + fmtMin(d.minutes))), btn));
+    const btn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', disabled: d.missing || d.scheduled || !!S.active, onclick: () => launchRoutine(routine.id) }, icon('play'), t('routine.launch'));
+    list.append(h('li', {}, h('div', { class: 'routine-main' }, h('strong', {}, routine.name), h('p', { class: 'note' }, d.missing ? t('routine.missing') : d.scheduled ? t('routine.scheduled') : t('routine.summary', { n: routine.activityIds.length, time: fmtMin(d.minutes) }))), btn));
   }
   card.append(list);
 }
@@ -3680,76 +3959,76 @@ function routineProgressCard(progress) {
   const done = progress.status === 'done', active = routineIsActive(progress);
   const next = progress.steps[progress.next];
   const box = h('div', { class: 'routine-progress' },
-    h('strong', {}, progress.name + (done ? ' · terminée' : ' · ' + progress.completed + '/' + progress.steps.length + ' étapes')),
-    h('p', { class: 'note' }, done ? fmtMin(progress.minutes) + ' réalisées · ' + fmt(progress.reward) + ' gagnés' : active ? 'Une étape est en cours.' : 'En pause' + (next ? ' · prochaine étape : ' + next.name : '')));
-  if (!done && !active) box.append(h('button', { class: 'btn btn-primary btn-sm', type: 'button', disabled: !!S.active, onclick: () => continueRoutine(progress.id) }, icon('play'), progress.completed ? 'Reprendre la routine' : 'Commencer la routine'));
+    h('strong', {}, done ? t('routine.progressDone', { name: progress.name }) : t('routine.progressSteps', { name: progress.name, done: progress.completed, total: progress.steps.length })),
+    h('p', { class: 'note' }, done ? t('routine.doneSummary', { time: fmtMin(progress.minutes), coins: fmt(progress.reward) }) : active ? t('routine.stepRunning') : next ? t('routine.pausedNext', { name: displayName(next.name) }) : t('routine.paused')));
+  if (!done && !active) box.append(h('button', { class: 'btn btn-primary btn-sm', type: 'button', disabled: !!S.active, onclick: () => continueRoutine(progress.id) }, icon('play'), progress.completed ? t('routine.resume') : t('routine.start')));
   if (!active) {
-    const stop = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, done ? 'Fermer le bilan' : 'Terminer ici');
+    const stop = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, done ? t('routine.closeSummary') : t('routine.endHere'));
     const finish = () => { if (S.routineRun && S.routineRun.id === progress.id && !routineIsActive()) { S.routineRun = null; closeSheet(); commit(); } };
-    if (done) stop.addEventListener('click', finish); else twoStep(stop, 'Terminer ici', 'Confirmer la fin', finish);
+    if (done) stop.addEventListener('click', finish); else twoStep(stop, t('routine.endHere'), t('routine.endConfirm'), finish);
     box.append(stop);
   }
   return box;
 }
 function openRoutines() {
-  openSheet('Mes routines', body => {
-    body.append(h('p', {}, 'Les étapes se suivent dans l’ordre choisi. Chaque activité garde son mode et sa durée. La pause entre deux étapes est libre.'));
+  openSheet(t('routine.title'), body => {
+    body.append(h('p', {}, t('routine.sheetIntro')));
     if (S.routineRun) body.append(routineProgressCard(S.routineRun));
     for (const routine of S.routines || []) {
       const d = routineSummary(routine);
       body.append(h('div', { class: 'routine-edit-row' },
-        h('div', { class: 'routine-main' }, h('strong', {}, routine.name), h('p', { class: 'note' }, d.steps.map(a => a ? a.name : 'Activité supprimée').join(' → '))),
-        h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => openRoutineEditor(routine.id) }, 'Modifier')));
+        h('div', { class: 'routine-main' }, h('strong', {}, routine.name), h('p', { class: 'note' }, d.steps.map(a => a ? displayName(a.name) : t('routine.deletedActivity')).join(' → '))),
+        h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => openRoutineEditor(routine.id) }, t('common.edit'))));
     }
-    body.append(h('button', { class: 'btn btn-primary', type: 'button', disabled: (S.routines || []).length >= 20, onclick: () => openRoutineEditor() }, icon('plus'), 'Créer une routine'));
-    if ((S.routines || []).length >= 20) body.append(h('p', { class: 'note' }, 'Tu as atteint 20 routines. Tu peux modifier ou supprimer une routine existante.'));
+    body.append(h('button', { class: 'btn btn-primary', type: 'button', disabled: (S.routines || []).length >= 20, onclick: () => openRoutineEditor() }, icon('plus'), t('routine.create')));
+    if ((S.routines || []).length >= 20) body.append(h('p', { class: 'note' }, t('routine.limitReached', { max: 20 })));
   });
 }
 function openRoutineEditor(id) {
   const current = id ? (S.routines || []).find(r => r.id === id) : null;
   if (id && !current) return;
   let selected = current ? [...current.activityIds] : [];
-  openSheet(current ? 'Modifier la routine' : 'Nouvelle routine', body => {
-    const name = h('input', { class: 'input', id: 'routineName', maxlength: '40', value: current ? current.name : '', required: true, placeholder: 'Ex. Mon réveil en douceur' });
-    const choices = h('select', { class: 'select', id: 'routineActivity', 'aria-label': 'Activité à ajouter' }, S.activities.filter(a => !a.repeat || a.repeat === 'always').map(a => h('option', { value: a.id }, a.name + ' · ' + a.min + NB + 'min')));
-    const steps = h('ol', { class: 'routine-steps', 'aria-label': 'Étapes dans l’ordre' });
+  openSheet(current ? t('routine.editTitle') : t('routine.newTitle'), body => {
+    const name = h('input', { class: 'input', id: 'routineName', maxlength: '40', value: current ? current.name : '', required: true, placeholder: t('routine.namePlaceholder') });
+    const choices = h('select', { class: 'select', id: 'routineActivity', 'aria-label': t('routine.activityToAdd') }, S.activities.filter(a => !a.repeat || a.repeat === 'always').map(a => h('option', { value: a.id }, displayName(a.name) + ' · ' + a.min + NB + 'min')));
+    const steps = h('ol', { class: 'routine-steps', 'aria-label': t('routine.stepsLabel') });
     const error = h('p', { class: 'note', role: 'status' });
-    const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { if (selected.length < 6 && S.activities.some(a => a.id === choices.value && (!a.repeat || a.repeat === 'always'))) { selected.push(choices.value); drawSteps(); } } }, icon('plus'), 'Ajouter');
+    const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { if (selected.length < 6 && S.activities.some(a => a.id === choices.value && (!a.repeat || a.repeat === 'always'))) { selected.push(choices.value); drawSteps(); } } }, icon('plus'), t('routine.add'));
     const total = h('p', { class: 'note' });
     function drawSteps() {
       steps.replaceChildren();
       selected.forEach((activityId, i) => {
         const a = S.activities.find(x => x.id === activityId);
-        const label = a ? a.name : 'Activité supprimée';
-        const up = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', disabled: i === 0, 'aria-label': 'Monter l’étape ' + (i + 1) + ' : ' + label, onclick: () => { [selected[i - 1], selected[i]] = [selected[i], selected[i - 1]]; drawSteps(); const target = steps.children[i - 1].querySelector('button'); (target.disabled ? steps.children[i - 1].querySelectorAll('button')[1] : target).focus(); } }, '↑');
-        const down = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', disabled: i === selected.length - 1, 'aria-label': 'Descendre l’étape ' + (i + 1) + ' : ' + label, onclick: () => { [selected[i], selected[i + 1]] = [selected[i + 1], selected[i]]; drawSteps(); const target = steps.children[i + 1].querySelectorAll('button')[1]; (target.disabled ? steps.children[i + 1].querySelector('button') : target).focus(); } }, '↓');
-        const del = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': 'Retirer l’étape ' + (i + 1) + ' : ' + label, onclick: () => { selected.splice(i, 1); drawSteps(); add.focus(); } }, icon('trash'));
-        steps.append(h('li', {}, h('span', { class: 'routine-step-name' }, (i + 1) + '. ' + label, a ? h('span', { class: 'note' }, a.min + NB + 'min · ' + (a.mode === 'free' ? 'Activité libre' : 'Concentration')) : null), h('div', { class: 'routine-step-actions' }, up, down, del)));
+        const label = a ? displayName(a.name) : t('routine.deletedActivity');
+        const up = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', disabled: i === 0, 'aria-label': t('routine.moveUp', { n: i + 1, name: label }), onclick: () => { [selected[i - 1], selected[i]] = [selected[i], selected[i - 1]]; drawSteps(); const target = steps.children[i - 1].querySelector('button'); (target.disabled ? steps.children[i - 1].querySelectorAll('button')[1] : target).focus(); } }, '↑');
+        const down = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', disabled: i === selected.length - 1, 'aria-label': t('routine.moveDown', { n: i + 1, name: label }), onclick: () => { [selected[i], selected[i + 1]] = [selected[i + 1], selected[i]]; drawSteps(); const target = steps.children[i + 1].querySelectorAll('button')[1]; (target.disabled ? steps.children[i + 1].querySelector('button') : target).focus(); } }, '↓');
+        const del = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('routine.removeStep', { n: i + 1, name: label }), onclick: () => { selected.splice(i, 1); drawSteps(); add.focus(); } }, icon('trash'));
+        steps.append(h('li', {}, h('span', { class: 'routine-step-name' }, (i + 1) + '. ' + label, a ? h('span', { class: 'note' }, a.min + NB + 'min · ' + activityModeLabel(a.mode)) : null), h('div', { class: 'routine-step-actions' }, up, down, del)));
       });
       add.disabled = selected.length >= 6 || !S.activities.some(a => !a.repeat || a.repeat === 'always');
-      total.textContent = frTypo(selected.length + '/6 étapes · ' + fmtMin(selected.reduce((sum, key) => sum + ((S.activities.find(a => a.id === key) || {}).min || 0), 0)));
+      total.textContent = frTypo(t('routine.total', { n: selected.length, time: fmtMin(selected.reduce((sum, key) => sum + ((S.activities.find(a => a.id === key) || {}).min || 0), 0)) }));
       error.textContent = '';
     }
     body.append(h('form', { class: 'add-form', onsubmit: e => {
       e.preventDefault();
       const title = name.value.trim().slice(0, 40);
       if (!title) { name.focus(); return; }
-      if (selected.length < 2 || selected.length > 6) { error.textContent = 'Choisis entre 2 et 6 étapes.'; return; }
-      if (selected.some(key => !S.activities.some(a => a.id === key && (!a.repeat || a.repeat === 'always')))) { error.textContent = 'Retire les activités supprimées, ponctuelles ou récurrentes.'; return; }
+      if (selected.length < 2 || selected.length > 6) { error.textContent = t('routine.errorCount'); return; }
+      if (selected.some(key => !S.activities.some(a => a.id === key && (!a.repeat || a.repeat === 'always')))) { error.textContent = t('routine.errorInvalid'); return; }
       S.routines = S.routines || [];
       const existing = id && S.routines.find(r => r.id === id);
-      if (id && !existing) { toast('Cette routine a été supprimée sur un autre écran.'); closeSheet(); return; }
+      if (id && !existing) { toast(t('routine.deletedElsewhere')); closeSheet(); return; }
       if (existing) { existing.name = title; existing.activityIds = [...selected]; }
-      else { if (S.routines.length >= 20) { error.textContent = 'La limite de 20 routines est atteinte.'; return; } S.routines.push({ id: uid(), name: title, activityIds: [...selected] }); }
-      closeSheet(); commit(); toast('Routine enregistrée.');
-    } }, h('div', { class: 'field' }, h('label', { for: 'routineName' }, 'Nom'), name),
-      h('div', { class: 'field' }, h('label', { for: 'routineActivity' }, 'Ajouter une étape'), h('div', { class: 'routine-add' }, choices, add)),
-      steps, total, h('p', { class: 'note' }, 'Les routines utilisent les activités toujours disponibles, que tu peux répéter. Les tâches ponctuelles ou récurrentes se lancent séparément. Une routine commencée conserve ses étapes initiales.'), error,
-      h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'submit' }, icon('check'), 'Enregistrer la routine')));
-    if (!S.activities.length) body.append(h('p', { class: 'note' }, 'Ajoute d’abord tes activités dans l’onglet Activités.'));
+      else { if (S.routines.length >= 20) { error.textContent = t('routine.errorLimit', { max: 20 }); return; } S.routines.push({ id: uid(), name: title, activityIds: [...selected] }); }
+      closeSheet(); commit(); toast(t('routine.saved'));
+    } }, h('div', { class: 'field' }, h('label', { for: 'routineName' }, t('act.name')), name),
+      h('div', { class: 'field' }, h('label', { for: 'routineActivity' }, t('routine.addStep')), h('div', { class: 'routine-add' }, choices, add)),
+      steps, total, h('p', { class: 'note' }, t('routine.editorNote')), error,
+      h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'submit' }, icon('check'), t('routine.saveButton'))));
+    if (!S.activities.length) body.append(h('p', { class: 'note' }, t('routine.noActivities')));
     if (current) {
-      const remove = h('button', { class: 'btn btn-ghost', type: 'button' }, 'Supprimer la routine');
-      twoStep(remove, 'Supprimer la routine', 'Confirmer la suppression', () => { S.routines = S.routines.filter(r => r.id !== id); closeSheet(); commit(); toast('Routine supprimée.'); });
+      const remove = h('button', { class: 'btn btn-ghost', type: 'button' }, t('routine.delete'));
+      twoStep(remove, t('routine.delete'), t('routine.deleteConfirm'), () => { S.routines = S.routines.filter(r => r.id !== id); closeSheet(); commit(); toast(t('routine.deleted')); });
       body.append(remove);
     }
     drawSteps();
@@ -3757,26 +4036,26 @@ function openRoutineEditor(id) {
 }
 function launchRoutine(id) {
   Store.pullLocal();
-  if (S.active) { toast('Termine d’abord la session en cours.'); return; }
+  if (S.active) { toast(t('routine.finishCurrent')); return; }
   const routine = (S.routines || []).find(r => r.id === id);
   if (!routine) return;
   const next = makeRoutineRun(routine);
-  if (!next) { toast('Cette routine contient une activité supprimée ou planifiée. Modifie ses étapes.'); return; }
+  if (!next) { toast(t('routine.cannotLaunch')); return; }
   const start = () => {
     Store.pullLocal();
-    if (S.active) { toast('Une session est déjà en cours.'); return; }
+    if (S.active) { toast(t('routine.sessionRunning')); return; }
     S.routineRun = next; closeSheet(); commit({ flush: true }); continueRoutine(next.id);
   };
   if (S.routineRun && S.routineRun.status !== 'done') {
-    openSheet('Remplacer la routine en pause ?', body => body.append(
-      h('p', {}, 'Les étapes déjà réussies de « ' + S.routineRun.name + ' » restent dans ton journal. La suite sera remplacée par « ' + routine.name + ' ».'),
-      h('button', { class: 'btn btn-primary', type: 'button', onclick: start }, 'Commencer la nouvelle routine'), h('button', { class: 'btn btn-secondary', type: 'button', onclick: closeSheet }, 'Garder la routine en pause')));
+    openSheet(t('routine.replaceTitle'), body => body.append(
+      h('p', {}, t('routine.replaceText', { old: S.routineRun.name, new: routine.name })),
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: start }, t('routine.startNew')), h('button', { class: 'btn btn-secondary', type: 'button', onclick: closeSheet }, t('routine.keepPaused'))));
   } else start();
 }
 function continueRoutine(id) {
-  if (S.active) { toast('Termine d’abord la session en cours.'); return; }
+  if (S.active) { toast(t('routine.finishCurrent')); return; }
   const progress = S.routineRun;
-  if (!progress || progress.id !== id || progress.status === 'done') { toast('Cette routine est déjà terminée ou a été remplacée.'); return; }
+  if (!progress || progress.id !== id || progress.status === 'done') { toast(t('routine.alreadyDone')); return; }
   const step = progress.steps[progress.next];
   if (!step) return;
   closeSheet();
@@ -3798,12 +4077,12 @@ function renderRoutineResult(res, a) {
   const progress = S.routineRun;
   if (!progress || progress.id !== a.routineRunId) return;
   const done = progress.status === 'done', next = progress.steps[progress.next];
-  const box = h('div', { class: 'routine-result' }, h('h3', {}, done ? 'Routine terminée !' : progress.name + ' · étape ' + progress.completed + '/' + progress.steps.length),
-    h('p', {}, fmtMin(progress.minutes) + ' réalisées · ' + fmt(progress.reward) + ' gagnés'));
-  if (done) box.append(h('p', { class: 'note' }, 'Toutes les étapes sont dans ton journal. Tu peux prendre le temps de profiter de ta ville.'));
-  else if (next) box.append(h('p', { class: 'note' }, 'Fais une pause si tu le souhaites. À suivre : ' + next.name + ' · ' + next.min + NB + 'min.'),
-    h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => continueRoutine(progress.id) }, icon('play'), 'Étape suivante'),
-    h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => { closeSession(); go('activites'); } }, 'Reprendre plus tard'));
+  const box = h('div', { class: 'routine-result' }, h('h3', {}, done ? t('routine.resultDone') : t('routine.resultStep', { name: progress.name, done: progress.completed, total: progress.steps.length })),
+    h('p', {}, t('routine.doneSummary', { time: fmtMin(progress.minutes), coins: fmt(progress.reward) })));
+  if (done) box.append(h('p', { class: 'note' }, t('routine.resultDoneNote')));
+  else if (next) box.append(h('p', { class: 'note' }, t('routine.resultNext', { name: displayName(next.name), min: next.min })),
+    h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => continueRoutine(progress.id) }, icon('play'), t('routine.nextStep')),
+    h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => { closeSession(); go('activites'); } }, t('routine.later')));
   const actions = $('.res-actions', res);
   if (actions) actions.before(box); else res.append(box);
 }
@@ -3822,18 +4101,19 @@ function buildingLevel(key) { return buildingLevelInfo(key).level; }
 function buildingLevelText(key) {
   const info = buildingLevelInfo(key), it = ITEMS[key];
   if (!info.level) return '';
-  const labels = ['Naissance', 'Épanouissement', 'Rayonnement'];
-  return 'Niveau ' + info.level + ' · ' + labels[info.level - 1] + (info.level < 3 ? ' · niveau ' + (info.level + 1) + ' à ' + fmtMin(info.thresholds[info.level - 1]) + (it.needTotal ? ' au total' : ' ' + catOf(it.group)) : ' · niveau maximum');
+  const labels = [t('level.name1'), t('level.name2'), t('level.name3')];
+  const params = { level: info.level, name: labels[info.level - 1], next: info.level + 1, time: fmtMin(info.thresholds[info.level - 1] || 0), cat: it.needTotal ? '' : catName(it.group), of: it.needTotal ? '' : catOf(it.group) };
+  return info.level >= 3 ? t('level.max', params) : it.needTotal ? t('level.nextTotal', params) : t('level.nextCat', params);
 }
 function openCityPersonalization() {
-  openSheet('Ma ville à moi', body => {
+  openSheet(t('city.personalTitle'), body => {
     const name = h('input', { class: 'input', id: 'cityName', maxlength: '40', value: cityName(), required: true });
-    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = name.value.trim().slice(0, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast('Ta ville a un nouveau nom.'); } },
-      h('div', { class: 'field' }, h('label', { for: 'cityName' }, 'Nom de ma ville'), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), 'Enregistrer le nom')),
-      h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, 'Une ville qui grandit avec toi'),
-      h('p', {}, 'Les bâtiments gagnent des niveaux avec les minutes réussies dans leur domaine. Après leur seuil de déblocage, 2 heures de pratique mènent au niveau 2, puis 6 heures au niveau 3. Les décors restent libres.'),
-      h('p', { class: 'note' }, 'Touche un bâtiment de ta ville pour voir son niveau et le prochain seuil. Les niveaux sont gratuits et restent acquis, même après des jours de repos.'),
-      h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: exportCityImage }, icon('download'), 'Enregistrer une image de ma ville'));
+    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = name.value.trim().slice(0, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast(t('city.renamed')); } },
+      h('div', { class: 'field' }, h('label', { for: 'cityName' }, t('city.nameLabel')), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), t('city.saveName'))),
+      h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, t('city.growsTitle')),
+      h('p', {}, t('city.growsText')),
+      h('p', { class: 'note' }, t('city.growsNote')),
+      h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: exportCityImage }, icon('download'), t('city.saveImage')));
   });
 }
 async function exportCityImage() {
@@ -3862,17 +4142,17 @@ async function exportCityImage() {
     ctx.fillText(frTypo(cityName()), margin, head * .55, width - margin * 2);
     ctx.drawImage(source, 0, head, width, cityH);
     ctx.fillStyle = cssVar('--muted') || '#536459'; ctx.font = footFont;
-    ctx.fillText(frTypo('Ville du bien-être · ' + fmtEffort(totalEffortMinutes()) + ' pour prendre soin de moi'), margin, out.height - foot * .5, width - margin * 2);
+    ctx.fillText(frTypo(t('png.footer', { time: fmtEffort(totalEffortMinutes()) })), margin, out.height - foot * .5, width - margin * 2);
     const blob = await new Promise(resolve => out.toBlob(resolve, 'image/png'));
-    if (!blob) throw new Error('PNG indisponible');
+    if (!blob) throw new Error('toBlob');
     const filename = 'ma-ville-' + today() + '.png';
     if (isIOS() && typeof File === 'function') {
       const file = new File([blob], filename, { type: 'image/png' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
     }
     const url = URL.createObjectURL(blob), link = h('a', { href: url, download: filename, hidden: true });
-    document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000); toast('Image de ta ville téléchargée.');
-  } catch (e) { toast('Impossible de créer l’image pour le moment. Réessaie depuis la ville.'); }
+    document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000); toast(t('png.downloaded'));
+  } catch (e) { toast(t('png.failed')); }
 }
 
 
