@@ -284,8 +284,58 @@ async function ambienceAfterReload(browser, baseURL) {
   return 'Ambiance : après un rechargement, elle reprend au premier toucher';
 }
 
+// Réglages › Sessions : choisir « Vagues » l'enregistre (gardé au rechargement) et fait entendre un aperçu de 3 s ; à 320 px, en
+// français puis en anglais, rien ne déborde.
+async function ambienceSettings(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { ambience: 'none' });
+  try {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.locator('#settingsBtn').click();
+    const group = page.locator('#settingsSessions').getByRole('radiogroup', { name: 'Ambiance pendant les séances', exact: true });
+    await group.getByRole('radio', { name: 'Vagues', exact: true }).click();
+    assert.equal(await page.evaluate(() => __ville.state.settings.ambience), 'waves');
+    assert.ok((await sources(page)).started > 0);
+    await page.clock.fastForward(4000);
+    const after = await sources(page);
+    assert.equal(after.stopped, after.started, JSON.stringify(after));
+    assert.match(await page.locator('#settingsSessions').innerText(), /Volume de l'ambiance[\s\S]*Sur iPhone, l'ambiance s'arrête quand l'écran se verrouille\./);
+    assert.equal(await fitsSheet(page), true);
+    await page.locator('#sheetClose').click();
+    await toEnglish(page);
+    await page.locator('#settingsBtn').click();
+    assert.equal(await page.locator('#settingsSessions').getByRole('radio', { name: 'Waves', exact: true }).getAttribute('aria-checked'), 'true');
+    assert.equal(await fitsSheet(page), true);
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    assert.equal(await page.evaluate(() => __ville.state.settings.ambience), 'waves');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Ambiance : choisie dans les réglages, avec un aperçu';
+}
+
+// Pendant la séance : « Ambiance : Vagues » ouvre le choix ; « Pluie » change le bouton, devient le choix par défaut et se fait
+// entendre aussitôt.
+async function ambienceDuringSession(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { ambience: 'waves' });
+  try {
+    await startSession(page, 'Pratique calme', 5);
+    const button = page.locator('#ambienceBtn');
+    assert.match(await button.innerText(), /^Ambiance\s:\sVagues$/);
+    const before = await sources(page);
+    await button.click();
+    await page.locator('#sheetBody').getByRole('radio', { name: 'Pluie', exact: true }).click();
+    assert.equal(await page.evaluate(() => __ville.state.settings.ambience), 'rain');
+    const after = await sources(page);
+    assert.ok(after.started > before.started && after.stopped >= before.started, JSON.stringify([before, after]));
+    await page.locator('#sheetClose').click();
+    assert.match(await button.innerText(), /^Ambiance\s:\sPluie$/);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Ambiance : changée pendant la séance';
+}
+
 const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble, harmonySheet, ambienceLevels, ambienceWithSession,
-  ambienceStopsOnAbandon, ambienceAfterReload];
+  ambienceStopsOnAbandon, ambienceAfterReload, ambienceSettings, ambienceDuringSession];
 async function runHarmony(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

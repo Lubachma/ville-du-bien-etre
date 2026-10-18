@@ -338,6 +338,7 @@ function showRun(a) {
   $('#timerSub').textContent = frTypo(t('session.gain', { coins: fmt(a.promised || rewardFor(a.min, a.drawPct).total) }));
   $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? t('session.ruleFree') : t('session.ruleFocus', { grace: S.settings.grace })));
   $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
+  if (typeof renderAmbienceButton === 'function') renderAmbienceButton();
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
   $('#sessRun').hidden = false;

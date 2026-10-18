@@ -24,6 +24,7 @@ function bindEvents() {
   $('#settingsBtn').addEventListener('click', openSettings);
   $('#personalizeCity').addEventListener('click', openCityPersonalization);
   $('#harmonyBtn').addEventListener('click', openHarmonySheet);
+  $('#ambienceBtn').addEventListener('click', openAmbienceSheet);
   $('#buildBtn').addEventListener('click', openShop);
   $('#ctaStart').addEventListener('click', () => go('activites', true));
   $('#ctaDraw').addEventListener('click', () => go('tirage', true));

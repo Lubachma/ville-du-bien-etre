@@ -155,3 +155,24 @@ const Ambience = {
     return { peak, rms: Math.sqrt(sum / data.length) };
   },
 };
+
+// Bouton de l'écran de la séance : « Ambiance : Pluie ».
+function renderAmbienceButton() {
+  const btn = $('#ambienceBtn');
+  if (btn) btn.lastChild.textContent = frTypo(t('ambience.button', { name: t('ambience.' + S.settings.ambience) }));
+}
+// Petite fenêtre de choix pendant la séance : le choix s'entend aussitôt et devient celui des prochaines séances.
+function openAmbienceSheet() {
+  openSheet(t('ambience.title'), body => {
+    const chips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': t('ambience.title') });
+    for (const kind of AMBIENCES) chips.append(h('button', { class: 'chip', type: 'button', role: 'radio', 'aria-checked': String(S.settings.ambience === kind), onclick: () => {
+      S.settings.ambience = kind;
+      commit({ silent: true });
+      $$('.chip', chips).forEach((b, i) => b.setAttribute('aria-checked', String(AMBIENCES[i] === kind)));
+      Chime.unlock(true);   // dans le geste : le son peut s'ouvrir
+      if (kind === 'none') Ambience.stop(); else Ambience.switch(kind);
+      renderAmbienceButton();
+    } }, t('ambience.' + kind)));
+    body.append(chips, h('p', { class: 'note' }, t('ambience.note')));
+  });
+}

@@ -203,6 +203,22 @@ function settingsSessions() {
     commit({ silent: true });
     if (S.settings.vibrate) { try { navigator.vibrate(160); } catch (e) { /* pas de vibreur */ } }
   } }) : null;
+  // Ambiance pendant les séances : une puce par ambiance, puis son volume ; chaque choix se fait entendre 3 s, pendant le geste.
+  const hear = () => { if (typeof Ambience === 'undefined') return; if (S.settings.ambience === 'none') Ambience.stop(); else Ambience.preview(S.settings.ambience); };
+  const ambienceChips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': t('settings.ambience') });
+  for (const kind of AMBIENCES) ambienceChips.append(h('button', { class: 'chip', type: 'button', role: 'radio', 'aria-checked': String(S.settings.ambience === kind), onclick: () => {
+    S.settings.ambience = kind;
+    commit({ silent: true });
+    $$('.chip', ambienceChips).forEach((b, i) => b.setAttribute('aria-checked', String(AMBIENCES[i] === kind)));
+    hear();
+  } }, t('ambience.' + kind)));
+  const volumes = Object.keys(SOUND_GAIN), ambienceVolume = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.ambienceVolume') });
+  for (const v of volumes) ambienceVolume.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.ambienceVolume === v), onclick: () => {
+    S.settings.ambienceVolume = v;
+    commit({ silent: true });
+    $$('button', ambienceVolume).forEach((b, i) => b.setAttribute('aria-checked', String(volumes[i] === v)));
+    hear();
+  } }, t({ soft: 'settings.volumeSoft', normal: 'settings.volumeNormal', loud: 'settings.volumeLoud' }[v])));
   return settingsBlock('settingsSessions',
     h('div', { class: 'setting' },
       h('span', { class: 'section-title' }, t('settings.grace')),
@@ -214,6 +230,10 @@ function settingsSessions() {
       h('p', { class: 'note' }, t('settings.soundNote')),
       h('span', { class: 'setting-label' }, t('settings.soundType')), typeSeg,
       h('span', { class: 'setting-label' }, t('settings.volume')), volumeSeg),
+    h('div', { class: 'setting' },
+      h('span', { class: 'setting-label' }, t('settings.ambience')), ambienceChips,
+      h('span', { class: 'setting-label' }, t('settings.ambienceVolume')), ambienceVolume,
+      h('p', { class: 'note' }, t('settings.ambienceNote'))),
     vibrateSw ? h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.vibrate')), vibrateSw) : null);
 }
 // Série : repos par semaine, pause, masquage. Un changement ne redessine que cette section.

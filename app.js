@@ -1505,6 +1505,18 @@ DICT.fr = {
   'recap.cardMonth': 'Ton mois',
   'recap.cardYear': 'Ton année',
   'recap.open': 'Voir',
+  'ambience.none': 'Aucune',
+  'ambience.rain': 'Pluie',
+  'ambience.waves': 'Vagues',
+  'ambience.fire': 'Feu de camp',
+  'ambience.wind': 'Vent',
+  'ambience.brown': 'Bruit doux',
+  'ambience.button': 'Ambiance : {name}',
+  'ambience.title': 'Ambiance',
+  'ambience.note': 'Ton choix reste pour les prochaines séances.',
+  'settings.ambience': 'Ambiance pendant les séances',
+  'settings.ambienceVolume': "Volume de l'ambiance",
+  'settings.ambienceNote': "Sur iPhone, l'ambiance s'arrête quand l'écran se verrouille.",
   'wish.title': 'Souhait du jour',
   'wish.line': "« J'aimerais {thing} juste à côté. »",
   'wish.hint': 'À poser dans une case voisine, même en diagonale.',
@@ -2648,6 +2660,18 @@ DICT.en = {
   'recap.cardMonth': 'Your month',
   'recap.cardYear': 'Your year',
   'recap.open': 'View',
+  'ambience.none': 'None',
+  'ambience.rain': 'Rain',
+  'ambience.waves': 'Waves',
+  'ambience.fire': 'Campfire',
+  'ambience.wind': 'Wind',
+  'ambience.brown': 'Soft noise',
+  'ambience.button': 'Ambience: {name}',
+  'ambience.title': 'Ambience',
+  'ambience.note': 'Your choice stays for your next sessions.',
+  'settings.ambience': 'Ambience during sessions',
+  'settings.ambienceVolume': 'Ambience volume',
+  'settings.ambienceNote': 'On iPhone, the ambience stops when the screen locks.',
   'wish.title': 'Wish of the day',
   'wish.line': "“I'd love {thing} right next to me.”",
   'wish.hint': 'In a neighbouring square, diagonals included.',
@@ -8284,6 +8308,22 @@ function settingsSessions() {
     commit({ silent: true });
     if (S.settings.vibrate) { try { navigator.vibrate(160); } catch (e) { /* pas de vibreur */ } }
   } }) : null;
+  // Ambiance pendant les séances : une puce par ambiance, puis son volume ; chaque choix se fait entendre 3 s, pendant le geste.
+  const hear = () => { if (typeof Ambience === 'undefined') return; if (S.settings.ambience === 'none') Ambience.stop(); else Ambience.preview(S.settings.ambience); };
+  const ambienceChips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': t('settings.ambience') });
+  for (const kind of AMBIENCES) ambienceChips.append(h('button', { class: 'chip', type: 'button', role: 'radio', 'aria-checked': String(S.settings.ambience === kind), onclick: () => {
+    S.settings.ambience = kind;
+    commit({ silent: true });
+    $$('.chip', ambienceChips).forEach((b, i) => b.setAttribute('aria-checked', String(AMBIENCES[i] === kind)));
+    hear();
+  } }, t('ambience.' + kind)));
+  const volumes = Object.keys(SOUND_GAIN), ambienceVolume = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.ambienceVolume') });
+  for (const v of volumes) ambienceVolume.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.ambienceVolume === v), onclick: () => {
+    S.settings.ambienceVolume = v;
+    commit({ silent: true });
+    $$('button', ambienceVolume).forEach((b, i) => b.setAttribute('aria-checked', String(volumes[i] === v)));
+    hear();
+  } }, t({ soft: 'settings.volumeSoft', normal: 'settings.volumeNormal', loud: 'settings.volumeLoud' }[v])));
   return settingsBlock('settingsSessions',
     h('div', { class: 'setting' },
       h('span', { class: 'section-title' }, t('settings.grace')),
@@ -8295,6 +8335,10 @@ function settingsSessions() {
       h('p', { class: 'note' }, t('settings.soundNote')),
       h('span', { class: 'setting-label' }, t('settings.soundType')), typeSeg,
       h('span', { class: 'setting-label' }, t('settings.volume')), volumeSeg),
+    h('div', { class: 'setting' },
+      h('span', { class: 'setting-label' }, t('settings.ambience')), ambienceChips,
+      h('span', { class: 'setting-label' }, t('settings.ambienceVolume')), ambienceVolume,
+      h('p', { class: 'note' }, t('settings.ambienceNote'))),
     vibrateSw ? h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.vibrate')), vibrateSw) : null);
 }
 // Série : repos par semaine, pause, masquage. Un changement ne redessine que cette section.
@@ -9348,6 +9392,7 @@ function showRun(a) {
   $('#timerSub').textContent = frTypo(t('session.gain', { coins: fmt(a.promised || rewardFor(a.min, a.drawPct).total) }));
   $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? t('session.ruleFree') : t('session.ruleFocus', { grace: S.settings.grace })));
   $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
+  if (typeof renderAmbienceButton === 'function') renderAmbienceButton();
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
   $('#sessRun').hidden = false;
@@ -9836,6 +9881,27 @@ const Ambience = {
     return { peak, rms: Math.sqrt(sum / data.length) };
   },
 };
+
+// Bouton de l'écran de la séance : « Ambiance : Pluie ».
+function renderAmbienceButton() {
+  const btn = $('#ambienceBtn');
+  if (btn) btn.lastChild.textContent = frTypo(t('ambience.button', { name: t('ambience.' + S.settings.ambience) }));
+}
+// Petite fenêtre de choix pendant la séance : le choix s'entend aussitôt et devient celui des prochaines séances.
+function openAmbienceSheet() {
+  openSheet(t('ambience.title'), body => {
+    const chips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': t('ambience.title') });
+    for (const kind of AMBIENCES) chips.append(h('button', { class: 'chip', type: 'button', role: 'radio', 'aria-checked': String(S.settings.ambience === kind), onclick: () => {
+      S.settings.ambience = kind;
+      commit({ silent: true });
+      $$('.chip', chips).forEach((b, i) => b.setAttribute('aria-checked', String(AMBIENCES[i] === kind)));
+      Chime.unlock(true);   // dans le geste : le son peut s'ouvrir
+      if (kind === 'none') Ambience.stop(); else Ambience.switch(kind);
+      renderAmbienceButton();
+    } }, t('ambience.' + kind)));
+    body.append(chips, h('p', { class: 'note' }, t('ambience.note')));
+  });
+}
 
 
 /* ---- 52-carnet.js ---- */
@@ -10612,6 +10678,7 @@ function bindEvents() {
   $('#settingsBtn').addEventListener('click', openSettings);
   $('#personalizeCity').addEventListener('click', openCityPersonalization);
   $('#harmonyBtn').addEventListener('click', openHarmonySheet);
+  $('#ambienceBtn').addEventListener('click', openAmbienceSheet);
   $('#buildBtn').addEventListener('click', openShop);
   $('#ctaStart').addEventListener('click', () => go('activites', true));
   $('#ctaDraw').addEventListener('click', () => go('tirage', true));
