@@ -1065,6 +1065,7 @@ DICT.en = {
   'wish.thing.statue': 'a statue',
   'settings.townWishes': "Residents' wishes",
   'wish.granted': "Wish granted · {building}: “Thank you, it's perfect!” · +{coins}",
+  'harmony.short': 'Harmony',
   'harmony.button': 'Harmony {stars}',
   'harmony.buttonLabel': { one: 'Harmony: {n} of 5 stars', other: 'Harmony: {n} of 5 stars' },
   'harmony.starOn': '★',

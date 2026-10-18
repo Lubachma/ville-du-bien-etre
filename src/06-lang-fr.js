@@ -1065,6 +1065,7 @@ DICT.fr = {
   'wish.thing.statue': 'une statue',
   'settings.townWishes': 'Souhaits des habitants',
   'wish.granted': "Souhait exaucé · {building} : « Merci, c'est parfait ! » · +{coins}",
+  'harmony.short': 'Harmonie',
   'harmony.button': 'Harmonie {stars}',
   'harmony.buttonLabel': { one: 'Harmonie : {n} étoile sur 5', other: 'Harmonie : {n} étoiles sur 5' },
   'harmony.starOn': '★',
