@@ -54,11 +54,12 @@ function expandCity() {
   S.city.size = ns;
   for (const tile of S.city.tiles) { tile.x += shift; tile.y += shift; }
   Mode.state = null;
+  const fresh = noticeProgress();
   closeSheet();
   commit();
   City.relayout();
   bump();
-  toast(t('shop.expanded', { size: ns }));
+  if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('shop.expanded', { size: ns }));
 }
 // Bouton d'une merveille dans la boutique : commencer le chantier, le continuer, ou rien une fois inaugurée.
 function wonderShopAction(key, sub) {
@@ -95,11 +96,12 @@ function openWonderSheet(tile) {
         next.ready && !next.affordable ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(next.price - S.coins) })) : null,
         h('button', { class: 'btn btn-primary btn-block', type: 'button', disabled: next.ready && next.affordable ? null : true, onclick: () => {
           if (!buildWonderStage(tile)) return;
+          const fresh = noticeProgress();
           closeSheet();
           commit();
           bump();
           const params = { item: itemName(key), stage: tile.stage, g: itemGender(key) };
-          toast(tile.stage >= ITEMS[key].wonder.length ? t('wonder.inaugurated', params) : t('wonder.stageBuilt', params));
+          celebrate(fresh, tile.stage >= ITEMS[key].wonder.length ? t('wonder.inaugurated', params) : t('wonder.stageBuilt', params));
         } }, t('wonder.build', { price: fmt(next.price) }))].filter(Boolean));
     }
     body.append(h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); Mode.startMove(tile); } }, icon('move'), t('shop.move')),

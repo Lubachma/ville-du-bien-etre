@@ -22,4 +22,34 @@ test('repère Nouveau : un succès ou un ensemble depuis la dernière ouverture'
   assert.equal(a.hasNewInCarnet(T0), true);
 });
 
+test('rattrapage : un seul message pour tout ce que la ville avait déjà', () => {
+  const calls = [];
+  const a = loadApp(FILES, { expose: ['catchUpCarnet'], globals: { toast: (msg, action) => calls.push([msg, !!action]), commit: () => true } });
+  a.state.clock.tz = 'Europe/Zurich';
+  Object.assign(a.state.stats, { ok: 3, days: { '2026-10-01': 30, '2026-10-02': 40 } });
+  a.state.stats.byCat.esprit = 70;
+  a.state.city.tiles = [{ id: 'b', item: 'bibliotheque', x: 0, y: 0, at: T0, paid: 10e6 }, { id: 'c', item: 'banc', x: 1, y: 0, at: T0, paid: 2e6 }, { id: 'd', item: 'arbre', x: 0, y: 1, at: T0, paid: 2e6 }];
+  const got = a.catchUpCarnet();
+  assert.deepEqual(plain(got.sets), ['coin-lecture']);
+  assert.ok(got.achievements.includes('bon-voisinage') && got.achievements.includes('premiere-pierre'), got.achievements.join());
+  assert.equal(calls.length, 1);
+  assert.match(calls[0][0], /^Ta ville a déjà \d+ succès/);
+  assert.equal(calls[0][1], true);
+  a.catchUpCarnet();
+  assert.equal(calls.length, 1);
+});
+
+test('rattrapage rapide pour une ville très remplie', () => {
+  const a = loadApp(FILES, { expose: ['catchUpCarnet'], globals: { toast() {}, commit: () => true } });
+  a.state.clock.tz = 'UTC';
+  for (let i = 0; i < 1000; i++) {
+    const day = new Date(Date.UTC(2023, 0, 1) + i * 86400000).toISOString().slice(0, 10);
+    a.state.stats.days[day] = 30; a.state.stats.dailyCats[day] = { esprit: 10, corps: 10, calme: 10 };
+  }
+  a.state.history = Array.from({ length: 150 }, (_, i) => ({ id: 'h' + i, name: 'x', cat: 'esprit', min: 10, ok: true, reward: 1, at: T0 - i * 86400000, source: 'direct', mode: 'focus' }));
+  const start = performance.now();
+  a.catchUpCarnet();
+  assert.ok(performance.now() - start < 1500, 'rattrapage trop lent');
+});
+
 module.exports = { FILES, T0 };

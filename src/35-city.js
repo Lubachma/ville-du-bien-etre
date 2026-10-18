@@ -295,12 +295,13 @@ const Mode = {
       const tile = { id: uid(), item: st.item, x: st.target.x, y: st.target.y, at: Date.now(), paid: price };
       if (isWonder(st.item)) tile.stage = 1;
       S.city.tiles.push(tile);
-      const sets = discoverSets();
+      const fresh = noticeProgress();
       this.state = null;
       City.pop(tile.id);
       commit();
       bump();
-      toast(sets.length ? t('set.discovered', { name: setName(sets[0]) }) : t('city.built', name));
+      // Un ensemble ou un succès : le message de fête remplace celui de la pose.
+      if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.built', name));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
@@ -308,10 +309,10 @@ const Mode = {
       this.state = null;
       tile.x = st.target.x;
       tile.y = st.target.y;
-      const sets = discoverSets();
+      const fresh = noticeProgress();
       City.pop(tile.id);
       commit();
-      toast(sets.length ? t('set.discovered', { name: setName(sets[0]) }) : t('city.moved'));
+      if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.moved'));
     }
   },
   cancel() { this.state = null; this.render(); City.draw(); },

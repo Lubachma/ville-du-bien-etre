@@ -58,7 +58,9 @@ function restoreBackup(st) {
   refreshLang();
   const saved = commit({ flush: true });
   City.relayout();
-  toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
+  // Une sauvegarde d'avant la mise à jour reçoit ses succès d'un coup : ce message remplace le suivant.
+  const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet() : null;
+  if (!caught || (!caught.achievements.length && !caught.sets.length)) toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
 }
 
 /* Sauvegarde dans un fichier, et rappel quand la dernière date un peu (gardé par appareil). */

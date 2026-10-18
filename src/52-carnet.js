@@ -98,3 +98,26 @@ function carnetSets() {
   };
   return h('ul', { class: 'carnet-list' }, ...SETS.filter(set => got[set.id]).map(row), ...SETS.filter(set => !got[set.id]).map(row));
 }
+
+// Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.
+function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
+  if (!achievements.length && !sets.length) { if (lead) toast(lead); return; }
+  const parts = [lead, ...sets.map(id => t('set.discovered', { name: setName(id) }))];
+  if (achievements.length === 1) parts.push(t('ach.toastOne', { name: achName(achievements[0]) }));
+  else if (achievements.length > 1) parts.push(t('ach.toastMany', { n: achievements.length }));
+  toast(parts.filter(Boolean).join(' · '), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') });
+}
+// Après une pose, un déplacement, un agrandissement ou une étape : ce qui vient d'être obtenu, sans rien afficher.
+function noticeProgress() {
+  const sets = discoverSets();
+  return { sets, achievements: checkAchievements() };
+}
+// Ville d'avant la mise à jour ou sauvegarde restaurée : tout ce qui était déjà mérité, en un seul message.
+function catchUpCarnet() {
+  const now = Date.now(), sets = discoverSets(now), achievements = checkAchievements(now, { retro: true });
+  if (!sets.length && !achievements.length) return { achievements, sets };
+  commit({ silent: true });
+  const text = t('carnet.catchUp', { n: achievements.length }) + (sets.length ? ' ' + t('carnet.catchUpSets', { n: sets.length }) : '');
+  toast(text, { label: t('carnet.open'), run: () => openCarnet() });
+  return { achievements, sets };
+}

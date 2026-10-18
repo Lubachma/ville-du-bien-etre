@@ -1227,6 +1227,13 @@ DICT.fr = {
   'set.unknown': 'Ensemble à découvrir',
   'set.hint': 'Place ces trois éléments dans un même carré de 3\u00a0×\u00a03 cases.',
   'set.foundOn': 'Découvert le {date}',
+  // Célébrations et rattrapage
+  'ach.toastOne': 'Succès : {name}',
+  'ach.toastMany': { one: '{n} nouveau succès', other: '{n} nouveaux succès' },
+  'carnet.catchUp': { one: 'Ta ville a déjà {n} succès : découvre-le dans ton carnet.', other: 'Ta ville a déjà {n} succès : découvre-les dans ton carnet.' },
+  'carnet.catchUpSets': { one: 'Elle a aussi formé {n} ensemble.', other: 'Elle a aussi formé {n} ensembles.' },
+  'result.achievement': 'Succès : {name}',
+  'result.gift': 'Cadeau : {item}',
 };
 
 
@@ -2074,6 +2081,13 @@ DICT.en = {
   'set.unknown': 'Set to discover',
   'set.hint': 'Place these three items within the same 3\u00a0×\u00a03 square.',
   'set.foundOn': 'Discovered on {date}',
+  // Celebrations and catch-up
+  'ach.toastOne': 'Achievement: {name}',
+  'ach.toastMany': { one: '{n} new achievement', other: '{n} new achievements' },
+  'carnet.catchUp': { one: 'Your town already has {n} achievement: see it in your notebook.', other: 'Your town already has {n} achievements: see them in your notebook.' },
+  'carnet.catchUpSets': { one: 'It has also formed {n} set.', other: 'It has also formed {n} sets.' },
+  'result.achievement': 'Achievement: {name}',
+  'result.gift': 'Gift: {item}',
 };
 
 
@@ -4682,12 +4696,13 @@ const Mode = {
       const tile = { id: uid(), item: st.item, x: st.target.x, y: st.target.y, at: Date.now(), paid: price };
       if (isWonder(st.item)) tile.stage = 1;
       S.city.tiles.push(tile);
-      const sets = discoverSets();
+      const fresh = noticeProgress();
       this.state = null;
       City.pop(tile.id);
       commit();
       bump();
-      toast(sets.length ? t('set.discovered', { name: setName(sets[0]) }) : t('city.built', name));
+      // Un ensemble ou un succès : le message de fête remplace celui de la pose.
+      if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.built', name));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
@@ -4695,10 +4710,10 @@ const Mode = {
       this.state = null;
       tile.x = st.target.x;
       tile.y = st.target.y;
-      const sets = discoverSets();
+      const fresh = noticeProgress();
       City.pop(tile.id);
       commit();
-      toast(sets.length ? t('set.discovered', { name: setName(sets[0]) }) : t('city.moved'));
+      if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.moved'));
     }
   },
   cancel() { this.state = null; this.render(); City.draw(); },
@@ -5476,11 +5491,12 @@ function expandCity() {
   S.city.size = ns;
   for (const tile of S.city.tiles) { tile.x += shift; tile.y += shift; }
   Mode.state = null;
+  const fresh = noticeProgress();
   closeSheet();
   commit();
   City.relayout();
   bump();
-  toast(t('shop.expanded', { size: ns }));
+  if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('shop.expanded', { size: ns }));
 }
 // Bouton d'une merveille dans la boutique : commencer le chantier, le continuer, ou rien une fois inaugurée.
 function wonderShopAction(key, sub) {
@@ -5517,11 +5533,12 @@ function openWonderSheet(tile) {
         next.ready && !next.affordable ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(next.price - S.coins) })) : null,
         h('button', { class: 'btn btn-primary btn-block', type: 'button', disabled: next.ready && next.affordable ? null : true, onclick: () => {
           if (!buildWonderStage(tile)) return;
+          const fresh = noticeProgress();
           closeSheet();
           commit();
           bump();
           const params = { item: itemName(key), stage: tile.stage, g: itemGender(key) };
-          toast(tile.stage >= ITEMS[key].wonder.length ? t('wonder.inaugurated', params) : t('wonder.stageBuilt', params));
+          celebrate(fresh, tile.stage >= ITEMS[key].wonder.length ? t('wonder.inaugurated', params) : t('wonder.stageBuilt', params));
         } }, t('wonder.build', { price: fmt(next.price) }))].filter(Boolean));
     }
     body.append(h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); Mode.startMove(tile); } }, icon('move'), t('shop.move')),
@@ -5621,7 +5638,9 @@ function restoreBackup(st) {
   refreshLang();
   const saved = commit({ flush: true });
   City.relayout();
-  toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
+  // Une sauvegarde d'avant la mise à jour reçoit ses succès d'un coup : ce message remplace le suivant.
+  const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet() : null;
+  if (!caught || (!caught.achievements.length && !caught.sets.length)) toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
 }
 
 /* Sauvegarde dans un fichier, et rappel quand la dernière date un peu (gardé par appareil). */
@@ -6899,12 +6918,15 @@ async function completeSession() {
     S.active = null;
     if (typeof completeTask === 'function') completeTask(a);
     if (typeof onRoutineSessionComplete === 'function') onRoutineSessionComplete(a, total);
-    const fresh = [...unlockedSet()].filter(x => !before.has(x));
+    // Succès obtenus : le bilan les montre, avec leur décor offert (qui n'apparaît donc pas une seconde fois en déblocage).
+    const earned = typeof checkAchievements === 'function' ? checkAchievements() : [];
+    const gifts = earned.map(id => achievementDef(id).reward).filter(Boolean);
+    const fresh = [...unlockedSet()].filter(x => !before.has(x) && !gifts.includes(x));
     commit({ flush: true });
     clearBeat();
     bump();
     Chime.play();
-    showSuccess(a, total, fresh);
+    showSuccess(a, total, fresh, earned);
     return true;
   });
   if (!result && run && run.id === id) run.finishing = false;
@@ -6928,7 +6950,7 @@ function showResult(build) {
   updateInert();
   setTimeout(() => { const title = res.querySelector('.res-title'); if (title) title.focus({ preventScroll: true }); }, 30);
 }
-function showSuccess(a, total, fresh) {
+function showSuccess(a, total, fresh, earned = []) {
   showResult(res => {
     const burst = h('div', { class: 'burst', 'aria-hidden': 'true' });
     if (!reducedMotion()) {
@@ -6952,7 +6974,12 @@ function showSuccess(a, total, fresh) {
       h('div', { class: 'res-figure' }, burst, icon('coin'), '+' + fmt(total)),
       h('h2', { class: 'res-title', tabindex: '-1' }, t('result.success')),
       h('p', { class: 'sub' }, displayName(a.name) + ' · ' + a.min + NB + 'min'),
-      lines, ...unlocks,
+      lines, ...unlocks, ...earned.map(id => {
+        const gift = achievementDef(id).reward;
+        let pic = h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon('sparkle'));
+        if (gift) { pic = h('canvas', { 'aria-hidden': 'true' }); City.thumb(pic, gift, 56); }
+        return h('div', { class: 'res-unlock' }, pic, h('span', {}, t('result.achievement', { name: achName(id) }) + (gift ? ' · ' + t('result.gift', { item: itemName(gift) }) : '')));
+      }),
       h('div', { class: 'res-actions' },
         h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), t('city.build')),
         h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
@@ -7103,6 +7130,29 @@ function carnetSets() {
   return h('ul', { class: 'carnet-list' }, ...SETS.filter(set => got[set.id]).map(row), ...SETS.filter(set => !got[set.id]).map(row));
 }
 
+// Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.
+function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
+  if (!achievements.length && !sets.length) { if (lead) toast(lead); return; }
+  const parts = [lead, ...sets.map(id => t('set.discovered', { name: setName(id) }))];
+  if (achievements.length === 1) parts.push(t('ach.toastOne', { name: achName(achievements[0]) }));
+  else if (achievements.length > 1) parts.push(t('ach.toastMany', { n: achievements.length }));
+  toast(parts.filter(Boolean).join(' · '), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') });
+}
+// Après une pose, un déplacement, un agrandissement ou une étape : ce qui vient d'être obtenu, sans rien afficher.
+function noticeProgress() {
+  const sets = discoverSets();
+  return { sets, achievements: checkAchievements() };
+}
+// Ville d'avant la mise à jour ou sauvegarde restaurée : tout ce qui était déjà mérité, en un seul message.
+function catchUpCarnet() {
+  const now = Date.now(), sets = discoverSets(now), achievements = checkAchievements(now, { retro: true });
+  if (!sets.length && !achievements.length) return { achievements, sets };
+  commit({ silent: true });
+  const text = t('carnet.catchUp', { n: achievements.length }) + (sets.length ? ' ' + t('carnet.catchUpSets', { n: sets.length }) : '');
+  toast(text, { label: t('carnet.open'), run: () => openCarnet() });
+  return { achievements, sets };
+}
+
 
 /* ---- 60-boot.js ---- */
 /* =========================================================================
@@ -7219,6 +7269,8 @@ function boot(hotData) {
   bindEvents();
   City.layout();
   renderAll();
+  // Ville d'avant la mise à jour : ses succès et ses ensembles déjà mérités, en un seul message.
+  catchUpCarnet();
   const hotRun = hotData && hotData.run;
   if (S.active && hotRun && hotRun.id === S.active.id) startSession(null, hotRun);
   else checkActive();

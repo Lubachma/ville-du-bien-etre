@@ -15,6 +15,8 @@ function loadApp(files, { now = '2026-10-18T12:00:00Z', expose = [], globals = {
     window: {}, document: { documentElement: {} }, navigator: { languages: ['fr-CH'] }, localStorage: memoryStorage(), ...globals });
   const source = files.map(file => fs.readFileSync(path.join(__dirname, '..', '..', 'src', file), 'utf8')).join('\n');
   vm.runInContext(source + `\nthis.api = { ${expose.join(', ')}, get state() { return S; }, set state(v) { S = v; } };`, context);
+  // Les remplaçants l'emportent aussi sur les fonctions du code chargé (commit, toast…).
+  Object.assign(context, globals);
   return context.api;
 }
 // Recopie une valeur de la machine virtuelle dans ce royaume : les comparaisons strictes refusent les prototypes d'ailleurs.

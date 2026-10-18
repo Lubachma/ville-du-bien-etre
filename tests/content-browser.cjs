@@ -1,4 +1,15 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
+// Signe une sauvegarde VBE2 comme l'app (00-core.js) : corps en base64, puis empreinte salée.
+function signBackup(state) {
+  const context = vm.createContext({ TextEncoder, TextDecoder, btoa, atob, Math, JSON });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', '00-core.js'), 'utf8')
+    + '\nthis.sign = s => { const body = b64encode(JSON.stringify(s)); return "VBE2." + body + "." + hash53(BACKUP_SALT + body); };', context);
+  return context.sign(state);
+}
 
 // Ville préparée une seule fois : un rechargement garde ce qui a changé.
 async function newTown(browser, baseURL, seed, options = {}) {
@@ -74,7 +85,10 @@ async function runContent(browser, baseURL) {
       const card = page.locator('#carnetCard');
       const text = await card.innerText();
       assert.match(text, /Nouveau/);
-      assert.match(text, /2 sur 33/);
+      // Le rattrapage au démarrage ajoute « Bon voisinage » : la ville a déjà un ensemble.
+      const have = await page.evaluate(() => Object.keys(__ville.state.achievements).length);
+      assert.equal(have, 3);
+      assert.match(text, /3 sur 33/);
       assert.match(text, /1 sur 12/);
       await card.getByRole('button', { name: 'Ouvrir le carnet', exact: true }).click();
       const body = page.locator('#sheetBody');
@@ -96,6 +110,82 @@ async function runContent(browser, baseURL) {
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Carnet : compteurs, onglets et repère Nouveau');
+  }
+  // Bilan de session : les succès obtenus et leur cadeau, sans déblocage en double.
+  {
+    const { context, page, errors } = await newTown(browser, baseURL, null);
+    try {
+      await page.clock.install();
+      await page.locator('[data-tab="activites"]').click();
+      await page.getByRole('button', { name: /^Méditation/ }).first().click();
+      await page.getByRole('radio', { name: '5 min', exact: true }).click();
+      await page.getByRole('radio', { name: 'Activité libre', exact: true }).click();
+      await page.getByRole('button', { name: /^Commencer/ }).click();
+      const warning = page.getByRole('button', { name: "C'est réglé, commencer", exact: true });
+      if (await warning.isVisible()) await warning.click();
+      await page.waitForFunction(() => window.__ville.activeState() === 'mine');
+      await page.clock.fastForward(301000);
+      await page.waitForFunction(() => __ville.state.stats.ok === 1);
+      const result = await page.locator('#sessResult').innerText();
+      assert.match(result, /Succès\s:\sPremier pas/);
+      assert.match(result, /Succès\s:\sPetit à petit/);
+      assert.match(result, /Cadeau\s:\sPas japonais/);
+      assert.doesNotMatch(result, /débloqué\s:\sPas japonais/);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Bilan : succès et cadeau');
+  }
+  // Pose du dixième élément : le message de fête propose d'ouvrir le carnet.
+  {
+    const nine = Array.from({ length: 9 }, (_, i) => ({ id: 'c' + i, item: 'chemin', x: i % 7, y: i < 7 ? 0 : 1, at: 1.75e12, paid: 5e5 }));
+    const { context, page, errors } = await newTown(browser, baseURL, town({ esprit: 5 }, nine));
+    try {
+      await page.locator('#buildBtn').click();
+      await page.getByRole('button', { name: /^Placer Arbre pour/ }).click();
+      await page.locator('#city').press('Enter'); await page.locator('#placeConfirm').click();
+      await page.waitForFunction(() => !!__ville.state.achievements.hameau);
+      assert.match(await page.locator('#toast').innerText(), /Succès\s:\sHameau/);
+      assert.equal(await page.locator('#toast').getByRole('button', { name: 'Ouvrir le carnet', exact: true }).count(), 1);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Pose : succès Hameau');
+  }
+  // Ville d'avant la mise à jour : un seul message de rattrapage, puis plus rien au rechargement.
+  {
+    const lecture = [['bibliotheque', 2, 2], ['banc', 3, 2], ['arbre', 2, 3]].map(([item, x, y], i) => ({ id: 'l' + i, item, x, y, at: 1.75e12, paid: 2e6 }));
+    const seed = { v: 2, coins: 5e7, settings: { lang: 'fr' }, stats: { ok: 3, byCat: { esprit: 70 }, days: { '2026-10-01': 30, '2026-10-02': 40 } },
+      city: { size: 7, tiles: lecture }, clock: { tz: 'Europe/Zurich', maxSeen: 0, lastDay: '2026-10-02' } };
+    const { context, page, errors } = await newTown(browser, baseURL, seed);
+    try {
+      const message = await page.locator('#toast').innerText();
+      const n = Number((message.match(/a déjà (\d+) succès/) || [])[1]);
+      assert.ok(n > 0, message);
+      assert.equal(await page.evaluate(() => Object.keys(__ville.state.achievements).length), n);
+      assert.equal(await page.evaluate(() => !!__ville.state.sets['coin-lecture']), true);
+      await page.reload();
+      await page.waitForFunction(() => !!window.__ville);
+      assert.equal(await page.locator('#toast').isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Ville existante : un seul message de rattrapage');
+  }
+  // Restauration d'une sauvegarde d'avant la mise à jour : ses succès sont recalculés.
+  {
+    const old = { v: 2, coins: 4e7, settings: { lang: 'fr' }, stats: { ok: 2, byCat: { calme: 80 }, days: { '2026-10-05': 40, '2026-10-06': 40 } },
+      city: { size: 7, tiles: [] }, clock: { tz: 'Europe/Zurich', maxSeen: 0, lastDay: '2026-10-06' } };
+    const { context, page, errors } = await newTown(browser, baseURL, null);
+    try {
+      await page.locator('#settingsBtn').click();
+      await page.locator('#importArea').fill(signBackup(old));
+      await page.getByRole('button', { name: 'Vérifier la sauvegarde', exact: true }).click();
+      await page.getByRole('button', { name: 'Remplacer ma ville par cette sauvegarde', exact: true }).click();
+      await page.getByRole('button', { name: 'Confirmer le remplacement', exact: true }).click();
+      await page.waitForFunction(() => __ville.state.stats.ok === 2);
+      assert.match(await page.locator('#toast').innerText(), /a déjà \d+ succès/);
+      assert.equal(await page.evaluate(() => !!__ville.state.achievements['grand-calme']), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Restauration : succès recalculés');
   }
   return { scenarios };
 }

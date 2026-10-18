@@ -112,6 +112,8 @@ function boot(hotData) {
   bindEvents();
   City.layout();
   renderAll();
+  // Ville d'avant la mise à jour : ses succès et ses ensembles déjà mérités, en un seul message.
+  catchUpCarnet();
   const hotRun = hotData && hotData.run;
   if (S.active && hotRun && hotRun.id === S.active.id) startSession(null, hotRun);
   else checkActive();

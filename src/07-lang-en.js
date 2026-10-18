@@ -841,4 +841,11 @@ DICT.en = {
   'set.unknown': 'Set to discover',
   'set.hint': 'Place these three items within the same 3\u00a0×\u00a03 square.',
   'set.foundOn': 'Discovered on {date}',
+  // Celebrations and catch-up
+  'ach.toastOne': 'Achievement: {name}',
+  'ach.toastMany': { one: '{n} new achievement', other: '{n} new achievements' },
+  'carnet.catchUp': { one: 'Your town already has {n} achievement: see it in your notebook.', other: 'Your town already has {n} achievements: see them in your notebook.' },
+  'carnet.catchUpSets': { one: 'It has also formed {n} set.', other: 'It has also formed {n} sets.' },
+  'result.achievement': 'Achievement: {name}',
+  'result.gift': 'Gift: {item}',
 };

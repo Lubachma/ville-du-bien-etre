@@ -841,4 +841,11 @@ DICT.fr = {
   'set.unknown': 'Ensemble à découvrir',
   'set.hint': 'Place ces trois éléments dans un même carré de 3\u00a0×\u00a03 cases.',
   'set.foundOn': 'Découvert le {date}',
+  // Célébrations et rattrapage
+  'ach.toastOne': 'Succès : {name}',
+  'ach.toastMany': { one: '{n} nouveau succès', other: '{n} nouveaux succès' },
+  'carnet.catchUp': { one: 'Ta ville a déjà {n} succès : découvre-le dans ton carnet.', other: 'Ta ville a déjà {n} succès : découvre-les dans ton carnet.' },
+  'carnet.catchUpSets': { one: 'Elle a aussi formé {n} ensemble.', other: 'Elle a aussi formé {n} ensembles.' },
+  'result.achievement': 'Succès : {name}',
+  'result.gift': 'Cadeau : {item}',
 };

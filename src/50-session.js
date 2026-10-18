@@ -497,12 +497,15 @@ async function completeSession() {
     S.active = null;
     if (typeof completeTask === 'function') completeTask(a);
     if (typeof onRoutineSessionComplete === 'function') onRoutineSessionComplete(a, total);
-    const fresh = [...unlockedSet()].filter(x => !before.has(x));
+    // Succès obtenus : le bilan les montre, avec leur décor offert (qui n'apparaît donc pas une seconde fois en déblocage).
+    const earned = typeof checkAchievements === 'function' ? checkAchievements() : [];
+    const gifts = earned.map(id => achievementDef(id).reward).filter(Boolean);
+    const fresh = [...unlockedSet()].filter(x => !before.has(x) && !gifts.includes(x));
     commit({ flush: true });
     clearBeat();
     bump();
     Chime.play();
-    showSuccess(a, total, fresh);
+    showSuccess(a, total, fresh, earned);
     return true;
   });
   if (!result && run && run.id === id) run.finishing = false;
@@ -526,7 +529,7 @@ function showResult(build) {
   updateInert();
   setTimeout(() => { const title = res.querySelector('.res-title'); if (title) title.focus({ preventScroll: true }); }, 30);
 }
-function showSuccess(a, total, fresh) {
+function showSuccess(a, total, fresh, earned = []) {
   showResult(res => {
     const burst = h('div', { class: 'burst', 'aria-hidden': 'true' });
     if (!reducedMotion()) {
@@ -550,7 +553,12 @@ function showSuccess(a, total, fresh) {
       h('div', { class: 'res-figure' }, burst, icon('coin'), '+' + fmt(total)),
       h('h2', { class: 'res-title', tabindex: '-1' }, t('result.success')),
       h('p', { class: 'sub' }, displayName(a.name) + ' · ' + a.min + NB + 'min'),
-      lines, ...unlocks,
+      lines, ...unlocks, ...earned.map(id => {
+        const gift = achievementDef(id).reward;
+        let pic = h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon('sparkle'));
+        if (gift) { pic = h('canvas', { 'aria-hidden': 'true' }); City.thumb(pic, gift, 56); }
+        return h('div', { class: 'res-unlock' }, pic, h('span', {}, t('result.achievement', { name: achName(id) }) + (gift ? ' · ' + t('result.gift', { item: itemName(gift) }) : '')));
+      }),
       h('div', { class: 'res-actions' },
         h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), t('city.build')),
         h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
