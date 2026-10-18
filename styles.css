@@ -419,9 +419,13 @@ main {
 /* Quatre choix : deux par ligne sur un téléphone, une seule ligne dès qu'il y a la place. */
 .seg.seg-4 { grid-template-columns: repeat(2, 1fr); border-radius: 26px; }
 @media (min-width: 480px) { .seg.seg-4 { grid-template-columns: repeat(4, 1fr); border-radius: 999px; } }
+/* Trois choix aux mots longs (saisons) : le premier sur toute la largeur, les deux autres côte à côte ; une ligne dès 480 px. */
+.seg.seg-1-2 { grid-template-columns: repeat(2, 1fr); border-radius: 26px; }
+.seg.seg-1-2 > :first-child { grid-column: 1 / -1; }
+@media (min-width: 480px) { .seg.seg-1-2 { grid-template-columns: repeat(3, 1fr); border-radius: 999px; } .seg.seg-1-2 > :first-child { grid-column: auto; } }
 a.btn { text-decoration: none; }
 .seg button {
-  min-height: 44px; border: 0; border-radius: 999px;
+  min-height: 44px; border: 0; border-radius: 999px; padding: 2px 4px;
   background: transparent; color: var(--ink-2); font-weight: 700; font-size: 14px;
 }
 .seg button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }

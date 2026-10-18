@@ -7298,7 +7298,8 @@ function settingsStart() {
     } }, t('pwa.checkButton'))));
 }
 function settingsLang() {
-  const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.lang') });
+  // « Automatique » sur toute la largeur, les deux langues dessous : à 320 px, le mot garde sa marge.
+  const seg = h('div', { class: 'seg seg-1-2', role: 'radiogroup', 'aria-label': t('settings.lang') });
   // Les noms des langues gardent leur propre langue, pour la lecture vocale.
   for (const [v, label] of langChoices()) seg.append(h('button', { type: 'button', role: 'radio', lang: v === 'auto' ? null : v, 'aria-checked': String(S.settings.lang === v), onclick: () => { if (S.settings.lang !== v) changeLang(v); } }, label));
   return settingsBlock('settingsLang', h('div', { class: 'setting' },
@@ -7416,8 +7417,8 @@ function settingsTheme() {
   // Ville vivante : ciel, saisons et animation. La ville se redessine tout de suite ; l'hémisphère change aussi la
   // légende et le visiteur du jour, donc la vue ouverte se met à jour.
   const live = (render = false) => { commit({ silent: !render }); City.draw(); City.wake(); };
-  const choice = (key, label, labels) => {
-    const values = Object.keys(labels), seg = h('div', { class: 'seg' + (values.length === 2 ? ' seg-2' : ''), role: 'radiogroup', 'aria-label': label });
+  const choice = (key, label, labels, layout = values => (values.length === 2 ? ' seg-2' : '')) => {
+    const values = Object.keys(labels), seg = h('div', { class: 'seg' + layout(values), role: 'radiogroup', 'aria-label': label });
     for (const v of values) seg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings[key] === v), onclick: () => {
       S.settings[key] = v;
       $$('button', seg).forEach((b, i) => b.setAttribute('aria-checked', String(values[i] === v)));
@@ -7426,7 +7427,8 @@ function settingsTheme() {
     return seg;
   };
   const skySeg = choice('sky', t('settings.sky'), { time: t('settings.skyTime'), theme: t('settings.skyTheme') });
-  const seasonSeg = choice('hemisphere', t('settings.seasons'), { auto: t('settings.seasonsAuto'), north: t('settings.seasonsNorth'), south: t('settings.seasonsSouth') });
+  // Mots longs (« Automatiques », « Hémisphère ») : deux lignes sur un téléphone pour que rien ne déborde.
+  const seasonSeg = choice('hemisphere', t('settings.seasons'), { auto: t('settings.seasonsAuto'), north: t('settings.seasonsNorth'), south: t('settings.seasonsSouth') }, () => ' seg-1-2');
   const ambientSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.ambient), 'aria-label': t('settings.ambient'), onclick: () => {
     S.settings.ambient = !S.settings.ambient;
     ambientSw.setAttribute('aria-checked', String(S.settings.ambient));
