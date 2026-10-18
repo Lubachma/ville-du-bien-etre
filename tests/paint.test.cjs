@@ -30,4 +30,10 @@ test('les 15 bâtiments se dessinent dans leur case, de jour comme de nuit', () 
   for (const key of BUILDINGS) assertInTile(a, key);
 });
 
+const DECOR = ['haie', 'cerisier', 'livres', 'lanterne', 'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue'];
+test('les 10 décors se dessinent dans leur case, de jour comme de nuit', () => {
+  const a = app(['31-paint-buildings.js', '32-paint-decor.js']);
+  for (const key of DECOR) assertInTile(a, key);
+});
+
 module.exports = { app, assertInTile, paint };
