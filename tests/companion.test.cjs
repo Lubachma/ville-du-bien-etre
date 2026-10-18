@@ -7,7 +7,7 @@ const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10
   '29-companion.js', '46-features.js'];
 const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'companionLevelOf', 'setLang', 'achievementMet', 'achievementProgress',
   'companionLevel', 'companionNext', 'wearUnlocked', 'companionName', 'adoptCompanion', 'editCompanion', 'addCompanionMinutes', 'wearCompanion',
-  'companionInvite', 'companionPose'];
+  'companionInvite', 'companionPose', 'companionWord', 'chance', 'dayWeather', 'seasonOf', 'visitorOf', 'festivalsOn', 'shiftDay', 't', 'DICT'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 function app(now = '2026-10-21T10:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
@@ -131,4 +131,84 @@ test('compagnon : succès d’arrivée et de niveau', () => {
   assert.deepEqual(plain(a.achievementProgress(level)), { have: 2, need: 5, unit: 'n' });
   a.addCompanionMinutes(215);
   assert.equal(a.achievementMet(level), true);
+});
+
+// Un jour où le mot du jour tombe sur la place k (sur 14), cherché dans l'ordre à partir de « from », et qui remplit « ok ».
+function dayFor(a, k, ok = () => true, from = '2026-01-01', days = 6000) {
+  for (let i = 0; i < days; i++) {
+    const day = a.shiftDay(from, i);
+    if (Math.floor(a.chance(day + ':compagnon') * 14) === k && ok(day)) return day;
+  }
+  throw new Error('aucun jour pour la place ' + k);
+}
+const entry = (day, cat, extra = {}) => ({ id: 'h' + day + cat, name: 'Lecture', cat, min: 10, mode: 'focus', elapsedSec: 600, ok: true, reward: 0, at: Date.parse(day + 'T08:00:00Z'), day, ...extra });
+
+test('mot du jour : le même toute la journée, un autre jour peut changer', () => {
+  const a = app();
+  assert.equal(a.companionWord('2026-10-20'), '');
+  a.adoptCompanion('lapin', '');
+  const word = a.companionWord('2026-10-20');
+  assert.ok(word.length > 10, word);
+  assert.equal(a.companionWord('2026-10-20'), word);
+  a.setLang('en');
+  assert.ok(a.companionWord('2026-10-20').length > 10);
+  assert.notEqual(a.companionWord('2026-10-20'), word);
+  a.setLang('fr');
+  const month = new Set(Array.from({ length: 30 }, (_, i) => a.companionWord(a.shiftDay('2026-10-01', i))));
+  assert.ok(month.size >= 5, [...month].join(' | '));
+});
+
+test('mot du jour : le retour passe en premier', () => {
+  const a = app();
+  a.adoptCompanion('lapin', '');
+  a.state.history = [entry('2026-10-16', 'esprit')];
+  assert.equal(a.companionWord('2026-10-19'), a.t('companion.word.back'));
+  a.state.history = [entry('2026-10-17', 'esprit'), entry('2026-10-12', 'corps')];
+  assert.notEqual(a.companionWord('2026-10-19'), a.t('companion.word.back'));
+  // Une séance interrompue sans rien de fait ne compte pas ; avec du temps fait, si.
+  a.state.history = [entry('2026-10-18', 'calme', { ok: false, elapsedSec: 0 }), entry('2026-10-15', 'corps')];
+  assert.equal(a.companionWord('2026-10-19'), a.t('companion.word.back'));
+  a.state.history = [entry('2026-10-18', 'calme', { ok: false, elapsedSec: 240 })];
+  assert.notEqual(a.companionWord('2026-10-19'), a.t('companion.word.back'));
+});
+
+test('mot du jour : chaque contexte a sa phrase', () => {
+  const a = app();
+  a.adoptCompanion('lapin', '');
+  // Place 0 : le domaine de la dernière séance d'hier ; sans séance hier, une petite phrase.
+  let day = dayFor(a, 0);
+  a.state.history = [entry(a.shiftDay(day, -1), 'calme'), entry(a.shiftDay(day, -1), 'corps', { at: Date.parse(a.shiftDay(day, -1) + 'T06:00:00Z') })];
+  assert.equal(a.companionWord(day), a.t('companion.word.cat.calme'));
+  a.state.history = [entry(a.shiftDay(day, -2), 'calme')];
+  assert.equal(a.companionWord(day), a.t('companion.word.small1'));
+  a.state.history = [];
+  // Places 1 et 2 : la météo et la saison du jour.
+  day = dayFor(a, 1);
+  assert.equal(a.companionWord(day), a.t('companion.word.weather.' + a.dayWeather(day)));
+  day = dayFor(a, 2);
+  assert.equal(a.companionWord(day), a.t('companion.word.season.' + a.seasonOf(day)));
+  // Place 3 : le visiteur du jour (au pluriel pour les canards).
+  day = dayFor(a, 3, d => !!a.visitorOf(d));
+  const v = a.visitorOf(day);
+  assert.equal(a.companionWord(day), a.t('companion.word.visitor', { visitor: a.t('visitor.' + v.id + '.name'), n: v.id === 'canards' ? 2 : 1 }));
+  // Place 4 : le souhait du jour, seulement s'il est de ce jour.
+  day = dayFor(a, 4);
+  a.state.townWish = { day, tile: 't1', item: 'banc' };
+  assert.equal(a.companionWord(day), a.t('companion.word.wish'));
+  a.state.townWish = { day: a.shiftDay(day, -1), tile: 't1', item: 'banc' };
+  assert.equal(a.companionWord(day), a.t('companion.word.small5'));
+  a.state.townWish = null;
+  // Place 5 : une fête du jour.
+  day = dayFor(a, 5, d => a.festivalsOn(d).length > 0);
+  assert.equal(a.companionWord(day), a.t('companion.word.festival', { name: a.t('fest.' + a.festivalsOn(day)[0].id + '.name') }));
+  // Places 6 à 13 : les huit petites phrases.
+  for (let k = 6; k < 14; k++) assert.equal(a.companionWord(dayFor(a, k)), a.t('companion.word.small' + (k - 5)));
+});
+
+test('mot du jour : jamais un reproche ni un accord', () => {
+  const a = app(), texts = lang => Object.entries(a.DICT[lang]).filter(([key]) => key.startsWith('companion.word.'))
+    .flatMap(([, v]) => (typeof v === 'string' ? [v] : Object.values(v)));
+  assert.ok(texts('fr').length >= 26 && texts('en').length >= 26);
+  for (const text of texts('fr')) assert.doesNotMatch(text, /triste|ennuie|manqu|attend|content|ravi|heureu|fier|fière|seul|perdu/i, text);
+  for (const text of texts('en')) assert.doesNotMatch(text, /sad|bored|miss|waiting|lonely|\bhe\b|\bshe\b|lost/i, text);
 });

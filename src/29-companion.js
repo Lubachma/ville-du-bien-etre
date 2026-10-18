@@ -42,3 +42,25 @@ function companionInvite() { return S.stats.ok >= 1 && !S.companion && !S.compan
 // Ce que fait le compagnon pendant une séance de ce domaine.
 const COMPANION_POSES = { esprit: 'read', corps: 'stretch', calme: 'meditate', foyer: 'water', crea: 'paint' };
 function companionPose(cat) { return COMPANION_POSES[cat] || 'idle'; }
+
+// Mot du jour : « Quelle joie de te revoir ! » après au moins 2 jours sans séance ; sinon une des 14 places, tirée pour la journée
+// (comme les visiteurs) : le domaine de la dernière séance d'hier, la météo, la saison, le visiteur, le souhait et une fête du jour,
+// puis huit petites choses. Une place sans son contexte prend une petite chose. '' sans compagnon.
+function companionWord(day = today()) {
+  if (!S.companion) return '';
+  const done = (S.history || []).filter(e => e.day < day && (e.ok || e.elapsedSec > 0))
+    .sort((p, q) => (q.day > p.day ? 1 : q.day < p.day ? -1 : q.at - p.at));
+  if (done.length && (keyToUTC(day) - keyToUTC(done[0].day)) / 86400000 >= 3) return t('companion.word.back');
+  const yesterday = done.find(e => e.day === shiftDay(day, -1)), visitor = visitorOf(day), fest = festivalsOn(day)[0];
+  const small = k => t('companion.word.small' + (1 + k % 8)), plural = visitor && (VISITORS.find(v => v.id === visitor.id) || {}).plural;
+  const slots = [
+    yesterday ? t('companion.word.cat.' + yesterday.cat) : small(0),
+    t('companion.word.weather.' + dayWeather(day)),
+    t('companion.word.season.' + seasonOf(day)),
+    visitor ? t('companion.word.visitor', { visitor: t('visitor.' + visitor.id + '.name'), n: plural ? 2 : 1 }) : small(3),
+    S.townWish && S.townWish.day === day ? t('companion.word.wish') : small(4),
+    fest ? t('companion.word.festival', { name: t('fest.' + fest.id + '.name') }) : small(5),
+    ...[0, 1, 2, 3, 4, 5, 6, 7].map(small),
+  ];
+  return slots[Math.floor(chance(day + ':compagnon') * slots.length)];
+}

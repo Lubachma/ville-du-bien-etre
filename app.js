@@ -1658,6 +1658,33 @@ DICT.fr = {
   'companion.wearThing.sac': 'un sac à dos',
   'companion.wearThing.casque': 'un casque audio',
   'companion.wearThing.cape': 'une cape étoilée',
+  // Étape 6 : le mot du jour du compagnon, à la première personne, sans accord ni reproche.
+  'companion.word.back': "Quelle joie de te revoir ! J'ai gardé ta ville bien au chaud.",
+  'companion.word.cat.esprit': "Notre séance d'hier m'a donné plein d'idées.",
+  'companion.word.cat.corps': "Mes pattes se souviennent encore de notre séance d'hier !",
+  'companion.word.cat.calme': "Je respire encore tout doucement depuis notre pause d'hier.",
+  'companion.word.cat.foyer': 'La maison sent encore bon le propre depuis hier.',
+  'companion.word.cat.crea': "J'ai encore un peu de peinture sur le bout du nez depuis hier.",
+  'companion.word.weather.sun': 'Le soleil chauffe mon coin préféré de la ville.',
+  'companion.word.weather.clouds': "J'ai compté les nuages ce matin : il y en avait beaucoup.",
+  'companion.word.weather.rain': 'Il pleut : un temps parfait pour un chocolat chaud.',
+  'companion.word.weather.snow': "Il neige ! J'ai fait un tout petit bonhomme de neige.",
+  'companion.word.weather.fog': 'Le brouillard cache la ville : on dirait un nuage posé sur les toits.',
+  'companion.word.season.spring': "Les premières fleurs sortent : j'en ai compté trois près du chemin.",
+  'companion.word.season.summer': "Il fait bon : j'ai fait une sieste à l'ombre d'un arbre.",
+  'companion.word.season.autumn': "Les feuilles craquent sous mes pattes, j'adore ce bruit.",
+  'companion.word.season.winter': "Il fait frais : j'ai réchauffé mes pattes près du feu.",
+  'companion.word.visitor': { one: "{visitor} m'a dit bonjour ce matin.", other: "{visitor} m'ont dit bonjour ce matin." },
+  'companion.word.wish': "Quelqu'un aimerait un décor juste à côté : tu as vu la bulle ?",
+  'companion.word.festival': "{name} aujourd'hui : j'ai sorti mes plus jolis rubans !",
+  'companion.word.small1': "J'ai trouvé un joli caillou près du chemin.",
+  'companion.word.small2': "Une coccinelle s'est posée sur ma patte ce matin.",
+  'companion.word.small3': "J'ai appris à siffler… presque.",
+  'companion.word.small4': "Les habitants m'ont fait coucou en passant.",
+  'companion.word.small5': "J'ai rangé ma petite étagère : c'est tout joli maintenant.",
+  'companion.word.small6': "J'ai regardé le ciel longtemps, c'était très reposant.",
+  'companion.word.small7': "J'ai compté les étoiles hier soir : au moins cent !",
+  'companion.word.small8': "Un petit oiseau m'a chanté une chanson.",
 };
 
 
@@ -2846,6 +2873,33 @@ DICT.en = {
   'companion.wearThing.sac': 'a backpack',
   'companion.wearThing.casque': 'headphones',
   'companion.wearThing.cape': 'a starry cape',
+  // Step 6: the companion's word of the day, in the first person, with no he / she and no reproach.
+  'companion.word.back': 'What a joy to see you again! I kept your town nice and cosy.',
+  'companion.word.cat.esprit': "Yesterday's session gave me lots of ideas.",
+  'companion.word.cat.corps': "My paws still remember yesterday's session!",
+  'companion.word.cat.calme': "I'm still breathing slowly after our pause yesterday.",
+  'companion.word.cat.foyer': 'The house still smells fresh since yesterday.',
+  'companion.word.cat.crea': 'I still have a little paint on the tip of my nose from yesterday.',
+  'companion.word.weather.sun': 'The sun is warming my favourite corner of town.',
+  'companion.word.weather.clouds': 'I counted the clouds this morning: there were lots.',
+  'companion.word.weather.rain': "It's raining: perfect weather for a hot chocolate.",
+  'companion.word.weather.snow': "It's snowing! I made a tiny snowman.",
+  'companion.word.weather.fog': 'The fog hides the town: it looks like a cloud resting on the roofs.',
+  'companion.word.season.spring': 'The first flowers are out: I counted three by the path.',
+  'companion.word.season.summer': "It's lovely out: I had a nap in the shade of a tree.",
+  'companion.word.season.autumn': 'The leaves crunch under my paws, I love that sound.',
+  'companion.word.season.winter': "It's chilly: I warmed my paws by the fire.",
+  'companion.word.visitor': { one: '{visitor} said hello to me this morning.', other: '{visitor} said hello to me this morning.' },
+  'companion.word.wish': 'Someone would love a decoration right next door: have you seen the bubble?',
+  'companion.word.festival': '{name} today: I put on my prettiest ribbons!',
+  'companion.word.small1': 'I found a pretty pebble by the path.',
+  'companion.word.small2': 'A ladybird landed on my paw this morning.',
+  'companion.word.small3': 'I learned to whistle… almost.',
+  'companion.word.small4': 'The residents waved at me as they went by.',
+  'companion.word.small5': 'I tidied my little shelf: it looks lovely now.',
+  'companion.word.small6': 'I watched the sky for a long time, it was very restful.',
+  'companion.word.small7': 'I counted the stars last night: at least a hundred!',
+  'companion.word.small8': 'A little bird sang me a song.',
 };
 
 
@@ -4963,6 +5017,28 @@ function companionInvite() { return S.stats.ok >= 1 && !S.companion && !S.compan
 // Ce que fait le compagnon pendant une séance de ce domaine.
 const COMPANION_POSES = { esprit: 'read', corps: 'stretch', calme: 'meditate', foyer: 'water', crea: 'paint' };
 function companionPose(cat) { return COMPANION_POSES[cat] || 'idle'; }
+
+// Mot du jour : « Quelle joie de te revoir ! » après au moins 2 jours sans séance ; sinon une des 14 places, tirée pour la journée
+// (comme les visiteurs) : le domaine de la dernière séance d'hier, la météo, la saison, le visiteur, le souhait et une fête du jour,
+// puis huit petites choses. Une place sans son contexte prend une petite chose. '' sans compagnon.
+function companionWord(day = today()) {
+  if (!S.companion) return '';
+  const done = (S.history || []).filter(e => e.day < day && (e.ok || e.elapsedSec > 0))
+    .sort((p, q) => (q.day > p.day ? 1 : q.day < p.day ? -1 : q.at - p.at));
+  if (done.length && (keyToUTC(day) - keyToUTC(done[0].day)) / 86400000 >= 3) return t('companion.word.back');
+  const yesterday = done.find(e => e.day === shiftDay(day, -1)), visitor = visitorOf(day), fest = festivalsOn(day)[0];
+  const small = k => t('companion.word.small' + (1 + k % 8)), plural = visitor && (VISITORS.find(v => v.id === visitor.id) || {}).plural;
+  const slots = [
+    yesterday ? t('companion.word.cat.' + yesterday.cat) : small(0),
+    t('companion.word.weather.' + dayWeather(day)),
+    t('companion.word.season.' + seasonOf(day)),
+    visitor ? t('companion.word.visitor', { visitor: t('visitor.' + visitor.id + '.name'), n: plural ? 2 : 1 }) : small(3),
+    S.townWish && S.townWish.day === day ? t('companion.word.wish') : small(4),
+    fest ? t('companion.word.festival', { name: t('fest.' + fest.id + '.name') }) : small(5),
+    ...[0, 1, 2, 3, 4, 5, 6, 7].map(small),
+  ];
+  return slots[Math.floor(chance(day + ':compagnon') * slots.length)];
+}
 
 
 /* ---- 30-paint.js ---- */
