@@ -40,6 +40,53 @@ async function runAmbient(browser, baseURL) {
     } finally { await noon.context.close(); }
     scenarios.push("Ciel selon l'heure");
   }
+  // Boucle sobre : environ 12 images par seconde, seulement quand on regarde la ville.
+  {
+    const tiles = Array.from({ length: 9 }, (_, i) => ({ id: 'b' + i, item: 'maison', x: i % 7, y: Math.floor(i / 7), at: 1.79e12, paid: 5e6 }));
+    const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }, tiles), null);
+    try {
+      const frames = () => page.evaluate(() => __ville.City.frames());
+      const during = async ms => { const before = await frames(); await page.waitForTimeout(ms); return (await frames()) - before; };
+      const still = async label => { await page.waitForTimeout(200); assert.equal(await during(500), 0, label); };
+      const shown = await during(1000);
+      assert.ok(shown >= 6 && shown <= 20, `${shown} images en 1 s`);
+      await page.locator('#buildBtn').click();
+      await still('fenêtre ouverte');
+      await page.locator('#sheetClose').click();
+      assert.ok(await during(600) > 0, 'reprise après la fenêtre');
+      await page.locator('[data-tab="journal"]').click();
+      await still('onglet Journal');
+      await page.locator('[data-tab="ville"]').click();
+      assert.ok(await during(600) > 0, 'reprise sur la Ville');
+      const visibility = state => page.evaluate(value => {
+        Object.defineProperty(document, 'visibilityState', { value, configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+      }, state);
+      await visibility('hidden');
+      await still('arrière-plan');
+      await visibility('visible');
+      assert.ok(await during(600) > 0, 'retour au premier plan');
+      // La ville sortie de l'écran en faisant défiler la vue.
+      await page.setViewportSize({ width: 390, height: 420 });
+      await page.locator('.city-list summary').click();
+      await page.evaluate(() => { const main = document.querySelector('#main'); main.scrollTop = main.scrollHeight; });
+      assert.equal(await page.evaluate(() => document.querySelector('#city').getBoundingClientRect().bottom <= 0), true, 'ville encore visible');
+      await still("ville hors de l'écran");
+      await page.evaluate(() => { document.querySelector('#main').scrollTop = 0; });
+      await page.setViewportSize({ width: 390, height: 844 });
+      assert.ok(await during(600) > 0, "ville revenue à l'écran");
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await still('animations réduites');
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await page.evaluate(() => __ville.City.wake());
+      assert.ok(await during(600) > 0, 'animations permises de nouveau');
+      await page.evaluate(() => { __ville.state.settings.ambient = false; __ville.City.wake(); });
+      await page.waitForTimeout(200);
+      assert.equal(await during(1000), 0, 'ville animée coupée');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Boucle sobre');
+  }
   return { scenarios };
 }
 

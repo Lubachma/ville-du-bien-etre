@@ -47,6 +47,7 @@ function closeSheet() {
   sheetOnClose = null; sheetOpener = null; sheetKeepOnSync = false;
   if (cb) cb();
   if (op && op.isConnected && typeof op.focus === 'function' && !op.closest('[inert]')) op.focus({ preventScroll: true });
+  City.wake();
 }
 function announce(msg) {
   const live = $('#live');

@@ -4764,6 +4764,23 @@ const City = (() => {
   const effects = new Map();
   let sparkles = [];
   const FX_TIME = { build: 1000, stage: 1000, move: 600, inaugurate: 1400, sparkle: 900 };
+  // Ville vivante : une image environ toutes les 83 ms (12 par seconde), seulement quand on la regarde.
+  const AMBIENT_MS = 83;
+  let ambientTimer = 0, frames = 0, onScreen = true;
+  function ambientRunning() {
+    return S.settings.ambient !== false && !reducedMotion() && currentTab === 'ville' && document.visibilityState === 'visible'
+      && $('#sheet').hidden && $('#session').hidden && onScreen;
+  }
+  // Prochaine image : pleine vitesse pendant un effet de pose, cadence douce pour l'ambiance, sinon rien.
+  function schedule(effects) {
+    if (effects) { raf = requestAnimationFrame(draw); return; }
+    if (ambientRunning()) ambientTimer = setTimeout(() => { ambientTimer = 0; raf = requestAnimationFrame(draw); }, AMBIENT_MS);
+  }
+  // Relance la ville (retour sur l'onglet, fenêtre fermée, réglage changé…) : une image, puis la bonne cadence.
+  function wake() { if (!raf && !ambientTimer) draw(); }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(entries => { onScreen = entries[entries.length - 1].isIntersecting; if (onScreen) wake(); }).observe(canvas);
+  }
 
   function layout() {
     const rect = canvas.getBoundingClientRect();
@@ -4848,11 +4865,14 @@ const City = (() => {
   function draw(options) {
     const clean = options && options.clean === true;
     cancelAnimationFrame(raf);
-    raf = 0;
+    clearTimeout(ambientTimer);
+    raf = 0; ambientTimer = 0;
     if (!W) layout();
     // Ambiance du moment : saison toujours ; obscurité, ciel et teinte selon l'heure, sauf « ciel selon l'apparence ».
     const pal = readPalette(), amb = typeof ambientAt === 'function' ? ambientAt() : null, byTime = !!amb && S.settings.sky !== 'theme';
     if (amb) { pal.season = amb.season; if (byTime) pal.dark = darkness(amb.moment); }
+    pal.time = performance.now() / 1000;
+    pal.anim = !clean && ambientRunning();
     applySky(amb, byTime);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
@@ -4935,7 +4955,8 @@ const City = (() => {
     if (!clean && keyboard && document.activeElement === canvas) {
       g.tile(cursor.x, cursor.y, 0, null, night ? '#ffffff' : '#1d2721', 2.5);
     }
-    if (animating) raf = requestAnimationFrame(draw);
+    frames++;
+    schedule(animating);
   }
 
   // Practice adds planters, then a golden pennant to buildings in that domain.
@@ -5056,7 +5077,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, focus: () => { keyboard = true; canvas.focus(); draw(); } };
+  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, focus: () => { keyboard = true; canvas.focus(); draw(); } };
 })();
 
 /* Placement / déplacement de bâtiments */
@@ -5198,6 +5219,7 @@ function closeSheet() {
   sheetOnClose = null; sheetOpener = null; sheetKeepOnSync = false;
   if (cb) cb();
   if (op && op.isConnected && typeof op.focus === 'function' && !op.closest('[inert]')) op.focus({ preventScroll: true });
+  City.wake();
 }
 function announce(msg) {
   const live = $('#live');
@@ -7761,9 +7783,12 @@ function bindEvents() {
   document.addEventListener('visibilitychange', () => {
     updatePresence();
     if (document.visibilityState === 'hidden') Store.flush();
-    else { Store.pull(); checkActive(); refreshDay(); }
+    else { Store.pull(); checkActive(); refreshDay(); City.wake(); }
   });
-  setInterval(refreshDay, 60000);
+  // Chaque minute : la date, et la lumière et l'horloge d'une ville immobile.
+  setInterval(() => { refreshDay(); if (currentTab === 'ville' && document.visibilityState === 'visible') City.draw(); }, 60000);
+  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (motion.addEventListener) motion.addEventListener('change', () => City.wake());
   window.addEventListener('blur', e => { if (e.target === window) updatePresence(); });
   window.addEventListener('focus', e => { if (e.target === window) { updatePresence(); Store.pull(); } });
   // Page fermée ou rechargée : la session ne peut plus finir, inutile de la faire attendre ailleurs.

@@ -69,9 +69,12 @@ function bindEvents() {
   document.addEventListener('visibilitychange', () => {
     updatePresence();
     if (document.visibilityState === 'hidden') Store.flush();
-    else { Store.pull(); checkActive(); refreshDay(); }
+    else { Store.pull(); checkActive(); refreshDay(); City.wake(); }
   });
-  setInterval(refreshDay, 60000);
+  // Chaque minute : la date, et la lumière et l'horloge d'une ville immobile.
+  setInterval(() => { refreshDay(); if (currentTab === 'ville' && document.visibilityState === 'visible') City.draw(); }, 60000);
+  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (motion.addEventListener) motion.addEventListener('change', () => City.wake());
   window.addEventListener('blur', e => { if (e.target === window) updatePresence(); });
   window.addEventListener('focus', e => { if (e.target === window) { updatePresence(); Store.pull(); } });
   // Page fermée ou rechargée : la session ne peut plus finir, inutile de la faire attendre ailleurs.
