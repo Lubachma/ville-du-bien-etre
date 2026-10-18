@@ -26,8 +26,9 @@ async function newTown(browser, baseURL, seed, options = {}) {
   await page.waitForFunction(() => !!window.__ville);
   return { context, page, errors };
 }
+// Les bilans de la semaine et du mois sont marqués comme vus : ils ne s'ouvrent d'eux-mêmes que si un test les demande (rituals).
 const town = (byCat, tiles = [], extra = {}) => ({ v: 2, coins: 3e9, settings: { lang: 'fr' }, stats: { ok: 1, byCat, days: { '2026-10-16': 10 } },
-  city: { size: 7, tiles }, clock: { tz: 'Europe/Zurich', maxSeen: 0, lastDay: '2026-10-16' }, ...extra });
+  city: { size: 7, tiles }, clock: { tz: 'Europe/Zurich', maxSeen: 0, lastDay: '2026-10-16' }, rituals: { week: '9999-12-31', month: '9999-12', year: '9999' }, ...extra });
 // Espions installés avant le chargement : oscillateurs créés, valeurs réglées (fréquences, volumes) et vibrations.
 function audioSpies() {
   window.__audio = { oscillators: 0, values: [] };

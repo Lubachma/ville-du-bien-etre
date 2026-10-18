@@ -15,6 +15,20 @@
 .chal-state { grid-column: 1; color: var(--muted); font-size: 13px; }
 .chal-row .btn { grid-column: 2; grid-row: 1 / span 2; }
 .chal-row.done .chal-state { color: var(--accent-ink); font-weight: 700; }
+/* Bilans : phrase d'accueil, chiffres, domaines en pastilles, beaux moments, puis la semaine qui commence ; cartes du Journal. */
+.review-headline { font-family: var(--font-display); font-size: 21px; line-height: 1.25; margin: 2px 0 12px; }
+.review-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.review-figure { display: grid; gap: 2px; padding: 10px; border-radius: var(--radius); background: var(--surface-2); text-align: center; min-width: 0; }
+.review-figure strong { font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.review-figure span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.review-cats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.review-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+.review-moments { margin: 0 0 16px; padding-left: 20px; display: grid; gap: 6px; }
+.review-next { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+.review-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.ritual-cards { display: grid; gap: 12px; }
+.ritual-cards[hidden] { display: none; }
+.ritual-card { display: grid; gap: 4px; }
 .routine-list, .routine-steps { margin: 0; padding: 0; list-style: none; display: grid; }
 .routine-list li, .routine-edit-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
 .routine-list li:first-child { padding-top: 0; border-top: 0; }

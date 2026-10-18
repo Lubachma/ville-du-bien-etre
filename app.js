@@ -1425,6 +1425,30 @@ DICT.fr = {
   'chal.swapLabel': 'Changer le défi : {text}',
   'chal.minutes': '{have} / {need}\u00a0min',
   'chal.done': 'Défi relevé : {text} · +{coins}',
+  'review.title': 'Ta semaine',
+  'review.range': 'Du {from} au {to}',
+  'review.great': 'Belle semaine !',
+  'review.full': 'Une semaine bien remplie',
+  'review.gentle': 'Une semaine tout en douceur',
+  'review.back': 'Bon retour ! Une nouvelle semaine commence.',
+  'review.minutes': 'Temps de pratique',
+  'review.days': 'Jours actifs',
+  'review.sessions': 'Séances réussies',
+  'review.longest': 'Ta plus longue séance : {name}, {min}\u00a0min',
+  'review.favorite': 'Ton domaine favori : {cat}',
+  'review.built': { one: '{n} élément posé dans ta ville', other: '{n} éléments posés dans ta ville' },
+  'review.visitors': { one: '{n} nouveau visiteur rencontré', other: '{n} nouveaux visiteurs rencontrés' },
+  'review.festivals': { one: '{n} fête vécue', other: '{n} fêtes vécues' },
+  'review.challenges': { one: '{n} défi relevé', other: '{n} défis relevés' },
+  'review.mood': { one: 'Après {good} séance sur {total}, tu te sentais bien', other: 'Après {good} séances sur {total}, tu te sentais bien' },
+  'review.goalDone': 'Objectif de la semaine atteint',
+  'review.goalSoFar': 'Objectif de la semaine : {minutes} sur {target}',
+  'review.gain': "+{time} par rapport à la semaine d'avant",
+  'review.next': 'Cette semaine',
+  'review.goal': 'Choisir mon objectif',
+  'review.go': "C'est parti",
+  'review.card': 'Ta semaine dernière',
+  'review.again': 'Revoir',
   'city.listVisitor': 'Visiteur du jour : {name}',
   'fest.nouvel-an.name': 'Nouvel An',
   'fest.printemps.name': 'Fête du printemps',
@@ -2433,6 +2457,30 @@ DICT.en = {
   'chal.swapLabel': 'Swap the challenge: {text}',
   'chal.minutes': '{have} / {need}\u00a0min',
   'chal.done': 'Challenge done: {text} · +{coins}',
+  'review.title': 'Your week',
+  'review.range': '{from} to {to}',
+  'review.great': 'What a week!',
+  'review.full': 'A well-filled week',
+  'review.gentle': 'A gentle week',
+  'review.back': 'Welcome back! A new week begins.',
+  'review.minutes': 'Practice time',
+  'review.days': 'Active days',
+  'review.sessions': 'Sessions completed',
+  'review.longest': 'Your longest session: {name}, {min}\u00a0min',
+  'review.favorite': 'Your favourite area: {cat}',
+  'review.built': { one: '{n} new item in your town', other: '{n} new items in your town' },
+  'review.visitors': { one: '{n} new visitor met', other: '{n} new visitors met' },
+  'review.festivals': { one: '{n} festival celebrated', other: '{n} festivals celebrated' },
+  'review.challenges': { one: '{n} challenge done', other: '{n} challenges done' },
+  'review.mood': { one: 'After {good} of {total} sessions, you felt good', other: 'After {good} of {total} sessions, you felt good' },
+  'review.goalDone': 'Weekly goal reached',
+  'review.goalSoFar': 'Weekly goal: {minutes} of {target}',
+  'review.gain': '+{time} compared with the week before',
+  'review.next': 'This week',
+  'review.goal': 'Choose my goal',
+  'review.go': "Let's go",
+  'review.card': 'Your last week',
+  'review.again': 'See again',
   'city.listVisitor': 'Visitor of the day: {name}',
   'fest.nouvel-an.name': 'New Year',
   'fest.printemps.name': 'Spring festival',
@@ -4207,6 +4255,26 @@ function periodRange(kind, key) {
 function recapSummary(kind, key) {
   const { from, to } = periodRange(kind, key), summary = periodSummary(from, to);
   return { ...summary, kind, key, sessions: kind === 'year' ? null : summary.sessions };
+}
+
+// Bilan ou récapitulatif dû à l'ouverture, une seule fois chacun : l'année passée en janvier, puis le mois passé, puis la
+// semaine passée. Jamais pour une période où la ville n'existait pas encore ; mois et année seulement s'ils ont eu de l'activité.
+// Un marqueur de semaine à moins de 7 jours compte encore (changer le début de semaine ne rouvre pas le bilan).
+function pendingRitual(day = today()) {
+  if (S.settings.rituals === false) return null;
+  const born = dayOf(S.createdAt), marks = S.rituals || {}, year = day.slice(0, 4), month = monthKey(day);
+  const lastYear = String(Number(year) - 1), lastMonth = monthKey(shiftDay(month + '-01', -1));
+  const active = (kind, key) => { const { from, to } = periodRange(kind, key); return periodSummary(from, to).minutes > 0; };
+  if (month.endsWith('-01') && (marks.year || '') < lastYear && born < year + '-01-01' && active('year', lastYear)) return { kind: 'year', key: lastYear };
+  if ((marks.month || '') < lastMonth && born < month + '-01' && active('month', lastMonth)) return { kind: 'month', key: lastMonth };
+  const week = weekStartOf(day), lastWeek = shiftDay(week, -7);
+  if (born < week && (!marks.week || marks.week < shiftDay(lastWeek, -6))) return { kind: 'week', key: lastWeek };
+  return null;
+}
+// Note qu'un bilan a été montré ; l'année montrée couvre aussi son mois de décembre.
+function markRitual(kind, key) {
+  S.rituals = { week: '', month: '', year: '', ...S.rituals, [kind]: key };
+  if (kind === 'year') S.rituals.month = key + '-12';
 }
 
 
@@ -6681,7 +6749,12 @@ function renderAll() {
   if (currentTab === 'ville') City.draw();
 }
 // Au retour dans l'app et chaque minute : on redessine si la date a changé depuis.
-function refreshDay() { if (today() !== renderedDay) renderAll(); }
+function refreshDay() {
+  if (today() === renderedDay) return;
+  renderAll();
+  // Un nouveau jour peut ouvrir une nouvelle semaine ou un nouveau mois : son bilan, une fois.
+  if (typeof maybeOpenRitual === 'function') maybeOpenRitual();
+}
 function applyTheme() {
   const root = document.documentElement;
   const want = S.settings.theme === 'light' || S.settings.theme === 'dark' ? S.settings.theme : '';
@@ -7161,6 +7234,7 @@ function renderJournal() {
     streakKpi(kpi, st, tm, day),
     kpi(t('journal.kpiEffort'), fmtEffort(totalEffortMinutes()), S.earned ? t('journal.kpiEffortSubEarned', { time: fmtMin(totalMinutes()), coins: fmt(S.earned) }) : t('journal.kpiEffortSub', { time: fmtMin(totalMinutes()) })),
     kpi(t('journal.kpiSessions'), String(S.stats.ok), t('journal.kpiInterrupted', { n: S.stats.ko })));
+  if (typeof renderRitualCards === 'function') renderRitualCards();
   renderGoals();
   if (typeof renderChallengesCard === 'function') renderChallengesCard();
   renderCarnetCard();
@@ -9335,6 +9409,72 @@ function renderChallengesCard() {
   card.replaceChildren(h('h3', {}, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));
 }
 
+// Bilan ou récapitulatif dû : il s'ouvre une seule fois, sur la Ville, quand aucune fenêtre ni séance n'est ouverte.
+function maybeOpenRitual() {
+  if (currentTab !== 'ville' || document.visibilityState !== 'visible' || !$('#sheet').hidden || !$('#cityBig').hidden) return false;
+  if (S.active || (typeof run !== 'undefined' && run)) return false;
+  const due = pendingRitual();
+  if (!due) return false;
+  markRitual(due.kind, due.key);
+  commit({ silent: true });
+  if (due.kind === 'week') openWeekReview(due.key);
+  else if (typeof openRecap === 'function') openRecap(due.kind, due.key);
+  return true;
+}
+const reviewDay = day => dayFmt('short').format(keyToUTC(day));
+// Un chiffre du bilan, avec son nom.
+const reviewFigure = (label, value) => h('div', { class: 'review-figure' }, h('strong', {}, value), h('span', {}, label));
+// Les pastilles des domaines pratiqués.
+const reviewCats = cats => h('div', { class: 'review-cats' }, ...cats.map(cat => h('span', { class: 'pill' }, h('i', { class: 'review-dot', vars: { '--c': 'var(--cat-' + cat + ')' } }), catName(cat))));
+// Les beaux moments d'une période, sans rien qui manque ni qui baisse.
+function reviewMoments(r) {
+  return [
+    r.longest && t('review.longest', { name: displayName(r.longest.name), min: r.longest.min }),
+    r.favorite && t('review.favorite', { cat: catName(r.favorite) }),
+    r.built && t('review.built', { n: r.built }),
+    r.visitors && t('review.visitors', { n: r.visitors }),
+    r.festivals && t('review.festivals', { n: r.festivals }),
+    r.challenges && t('review.challenges', { n: r.challenges }),
+    r.moods.total && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
+  ].filter(Boolean);
+}
+// Fenêtre « Ta semaine » : la semaine passée en chiffres et beaux moments, puis les défis et l'objectif de la semaine qui commence.
+function openWeekReview(week) {
+  const r = weekReview(week);
+  openSheet(t('review.title'), body => {
+    body.append(h('p', { class: 'sub' }, t('review.range', { from: reviewDay(r.from), to: reviewDay(r.to) })), h('p', { class: 'review-headline' }, t('review.' + r.headline)));
+    if (r.minutes > 0) {
+      const moments = [...reviewMoments(r), r.goal.done ? t('review.goalDone') : t('review.goalSoFar', { minutes: fmtMin(r.goal.minutes), target: fmtMin(r.goal.targetMinutes) }),
+        r.gain > 0 && t('review.gain', { time: fmtMin(r.gain) })].filter(Boolean);
+      body.append(h('div', { class: 'review-figures' }, reviewFigure(t('review.minutes'), fmtEffort(r.minutes)), reviewFigure(t('review.days'), String(r.activeDays)),
+        reviewFigure(t('review.sessions'), String(r.sessions))), reviewCats(r.cats), h('ul', { class: 'review-moments' }, ...moments.map(text => h('li', {}, text))));
+    }
+    const next = h('section', { class: 'review-next' }, h('h3', { class: 'section-title' }, t('review.next')));
+    if (S.settings.challenges !== false) {
+      next.append(h('ul', { class: 'chal-list' }, ...weekChallenges().map(ch => h('li', { class: 'chal-row' },
+        h('span', { class: 'chal-text' }, challengeText(ch)), h('span', { class: 'chal-state' }, t('chal.reward', { coins: fmt(GIFTS.challenge) }))))));
+    }
+    next.append(h('div', { class: 'review-actions' },
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => openGoals() }, t('review.goal')),
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: closeSheet }, t('review.go'))));
+    body.append(next);
+  }, { keep: true });   // une lecture : une synchronisation au démarrage ne la referme pas
+}
+// Carte d'un bilan en haut du Journal, pour le revoir.
+const ritualCard = (title, sub, open) => h('section', { class: 'card ritual-card' },
+  h('div', { class: 'feature-between' }, h('h3', {}, title), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: open }, t('review.again'))),
+  h('p', { class: 'sub' }, sub));
+// En haut du Journal : la semaine dernière, toute la semaine (si la ville existait déjà).
+function renderRitualCards() {
+  if (!$('#view-journal')) return;
+  let box = $('#ritualCards');
+  if (!box) { box = h('div', { id: 'ritualCards', class: 'ritual-cards' }); $('#kpis').after(box); }
+  const week = weekStartOf(today()), last = shiftDay(week, -7), cards = [];
+  if (dayOf(S.createdAt) < week) cards.push(ritualCard(t('review.card'), t('review.range', { from: reviewDay(last), to: reviewDay(shiftDay(last, 6)) }), () => openWeekReview(last)));
+  box.replaceChildren(...cards);
+  box.hidden = !cards.length;
+}
+
 
 /* ---- 60-boot.js ---- */
 /* =========================================================================
@@ -9463,6 +9603,8 @@ function boot(hotData) {
   catchUpCarnet({ defer: true });
   renderAll();
   flushCarnetNote();
+  // Début de semaine ou de mois : son bilan, une seule fois.
+  maybeOpenRitual();
   const hotRun = hotData && hotData.run;
   if (S.active && hotRun && hotRun.id === S.active.id) startSession(null, hotRun);
   else checkActive();
@@ -9473,7 +9615,7 @@ function boot(hotData) {
   } catch (e) { /* pas de rechargement à chaud ici */ }
   if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
     ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors },
-    rituals: { challenges: () => weekChallenges() } };
+    rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() } };
 }
 
 let booted = false;

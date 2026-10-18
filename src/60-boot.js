@@ -124,6 +124,8 @@ function boot(hotData) {
   catchUpCarnet({ defer: true });
   renderAll();
   flushCarnetNote();
+  // Début de semaine ou de mois : son bilan, une seule fois.
+  maybeOpenRitual();
   const hotRun = hotData && hotData.run;
   if (S.active && hotRun && hotRun.id === S.active.id) startSession(null, hotRun);
   else checkActive();
@@ -134,7 +136,7 @@ function boot(hotData) {
   } catch (e) { /* pas de rechargement à chaud ici */ }
   if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
     ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors },
-    rituals: { challenges: () => weekChallenges() } };
+    rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() } };
 }
 
 let booted = false;

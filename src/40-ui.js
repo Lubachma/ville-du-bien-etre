@@ -120,7 +120,12 @@ function renderAll() {
   if (currentTab === 'ville') City.draw();
 }
 // Au retour dans l'app et chaque minute : on redessine si la date a changé depuis.
-function refreshDay() { if (today() !== renderedDay) renderAll(); }
+function refreshDay() {
+  if (today() === renderedDay) return;
+  renderAll();
+  // Un nouveau jour peut ouvrir une nouvelle semaine ou un nouveau mois : son bilan, une fois.
+  if (typeof maybeOpenRitual === 'function') maybeOpenRitual();
+}
 function applyTheme() {
   const root = document.documentElement;
   const want = S.settings.theme === 'light' || S.settings.theme === 'dark' ? S.settings.theme : '';

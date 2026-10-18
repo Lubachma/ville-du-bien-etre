@@ -7,14 +7,21 @@ const CATS = ['esprit', 'corps', 'calme', 'foyer', 'crea'];
 const at = iso => Date.parse(iso);
 // Une activité par domaine, pour lancer des séances au choix.
 const activities = () => CATS.map(cat => ({ id: 'a-' + cat, name: 'Pratique ' + cat, cat, min: 5, mode: 'free' }));
-// La semaine du lundi 19 au dimanche 25 octobre 2026, où les défis de chaque famille sont relevés.
+// La semaine du lundi 19 au dimanche 25 octobre 2026, où les défis de chaque famille sont relevés. Les statistiques suivent
+// les séances, comme dans l'app.
 function filledWeek() {
   const entry = (day, cat, min, more = {}) => ({ id: 'h' + day + cat + min, name: 'Pratique ' + cat, cat, min, ok: true, reward: min * 1e6, at: at(day + 'T10:00:00Z'), day,
     source: 'direct', mode: 'focus', ...more });
-  return town({ esprit: 10, corps: 60, calme: 10, foyer: 10, crea: 10 }, [{ id: 'n', item: 'banc', x: 0, y: 0, at: at('2026-10-21T09:00:00Z'), paid: 2e6 }], {
-    createdAt: at('2026-05-04T09:00:00Z'),
-    history: [entry('2026-10-19', 'esprit', 10, { at: at('2026-10-19T06:00:00Z') }), entry('2026-10-20', 'corps', 60, { at: at('2026-10-20T19:30:00Z') }),
-      entry('2026-10-22', 'crea', 10), entry('2026-10-24', 'calme', 10, { source: 'wishes' }), entry('2026-10-24', 'foyer', 10)],
+  const history = [entry('2026-10-19', 'esprit', 10, { at: at('2026-10-19T06:00:00Z') }), entry('2026-10-20', 'corps', 60, { at: at('2026-10-20T19:30:00Z') }),
+    entry('2026-10-22', 'crea', 10), entry('2026-10-24', 'calme', 10, { source: 'wishes' }), entry('2026-10-24', 'foyer', 10)];
+  const byCat = {}, days = {}, dailyCats = {};
+  for (const e of history) {
+    byCat[e.cat] = (byCat[e.cat] || 0) + e.min;
+    days[e.day] = (days[e.day] || 0) + e.min;
+    dailyCats[e.day] = { ...dailyCats[e.day], [e.cat]: ((dailyCats[e.day] || {})[e.cat] || 0) + e.min };
+  }
+  return town(byCat, [{ id: 'n', item: 'banc', x: 0, y: 0, at: at('2026-10-21T09:00:00Z'), paid: 2e6 }], {
+    createdAt: at('2026-05-04T09:00:00Z'), history, stats: { ok: history.length, byCat, days, dailyCats },
     gifts: { 'visit:2026-10-20': at('2026-10-20T08:00:00Z'), 'visit:2026-10-23': at('2026-10-23T08:00:00Z') },
   });
 }
@@ -96,7 +103,48 @@ async function challengeOnResult(browser, baseURL) {
   return 'Défis : relevé sur l’écran de fin';
 }
 
-const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult];
+// Mesure, dans la fenêtre ouverte, que rien ne déborde.
+async function fitsSheet(page, label) {
+  const w = await page.evaluate(() => ({ body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth,
+    doc: document.documentElement.scrollWidth, inner: innerWidth }));
+  assert.ok(w.body <= w.client + 1 && w.doc <= w.inner, `${label} déborde : ${JSON.stringify(w)}`);
+}
+async function toEnglish(page) {
+  await page.locator('#settingsBtn').click();
+  await page.locator('#settingsLang').getByRole('radio', { name: 'English', exact: true }).click();
+  await page.locator('#sheetClose').click();
+}
+
+// Bilan de la semaine : il s'ouvre une seule fois au début de la semaine, puis reste dans le Journal ; à 320 px, il tient.
+async function weekReviewOnce(browser, baseURL) {
+  const seed = { ...filledWeek(), rituals: { week: '', month: '', year: '' } };
+  const { context, page, errors } = await cityAt(browser, baseURL, seed, '2026-10-27T09:00:00Z', { viewport: { width: 320, height: 640 } });
+  try {
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Ta semaine');
+    assert.match(await page.locator('#sheetBody').innerText(), /19 oct\.[\s\S]*25 oct\./);
+    await fitsSheet(page, 'le bilan (fr)');
+    await page.locator('#sheetBody').getByRole('button', { name: "C'est parti", exact: true }).click();
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    await page.waitForTimeout(400);
+    assert.equal(await page.locator('#sheet').isHidden(), true);
+    await page.locator('[data-tab="journal"]').click();
+    const card = page.locator('#ritualCards');
+    assert.match(await card.innerText(), /Ta semaine dernière/);
+    await card.getByRole('button', { name: 'Revoir', exact: true }).click();
+    await page.locator('#sheet').waitFor();
+    await page.locator('#sheetClose').click();
+    await toEnglish(page);
+    await page.locator('#ritualCards').getByRole('button', { name: 'See again', exact: true }).click();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Your week');
+    await fitsSheet(page, 'le bilan (en)');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Bilan de la semaine : une fois, puis dans le Journal';
+}
+
+const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

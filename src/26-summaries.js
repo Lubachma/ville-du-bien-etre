@@ -59,3 +59,23 @@ function recapSummary(kind, key) {
   const { from, to } = periodRange(kind, key), summary = periodSummary(from, to);
   return { ...summary, kind, key, sessions: kind === 'year' ? null : summary.sessions };
 }
+
+// Bilan ou récapitulatif dû à l'ouverture, une seule fois chacun : l'année passée en janvier, puis le mois passé, puis la
+// semaine passée. Jamais pour une période où la ville n'existait pas encore ; mois et année seulement s'ils ont eu de l'activité.
+// Un marqueur de semaine à moins de 7 jours compte encore (changer le début de semaine ne rouvre pas le bilan).
+function pendingRitual(day = today()) {
+  if (S.settings.rituals === false) return null;
+  const born = dayOf(S.createdAt), marks = S.rituals || {}, year = day.slice(0, 4), month = monthKey(day);
+  const lastYear = String(Number(year) - 1), lastMonth = monthKey(shiftDay(month + '-01', -1));
+  const active = (kind, key) => { const { from, to } = periodRange(kind, key); return periodSummary(from, to).minutes > 0; };
+  if (month.endsWith('-01') && (marks.year || '') < lastYear && born < year + '-01-01' && active('year', lastYear)) return { kind: 'year', key: lastYear };
+  if ((marks.month || '') < lastMonth && born < month + '-01' && active('month', lastMonth)) return { kind: 'month', key: lastMonth };
+  const week = weekStartOf(day), lastWeek = shiftDay(week, -7);
+  if (born < week && (!marks.week || marks.week < shiftDay(lastWeek, -6))) return { kind: 'week', key: lastWeek };
+  return null;
+}
+// Note qu'un bilan a été montré ; l'année montrée couvre aussi son mois de décembre.
+function markRitual(kind, key) {
+  S.rituals = { week: '', month: '', year: '', ...S.rituals, [kind]: key };
+  if (kind === 'year') S.rituals.month = key + '-12';
+}

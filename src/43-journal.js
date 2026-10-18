@@ -19,6 +19,7 @@ function renderJournal() {
     streakKpi(kpi, st, tm, day),
     kpi(t('journal.kpiEffort'), fmtEffort(totalEffortMinutes()), S.earned ? t('journal.kpiEffortSubEarned', { time: fmtMin(totalMinutes()), coins: fmt(S.earned) }) : t('journal.kpiEffortSub', { time: fmtMin(totalMinutes()) })),
     kpi(t('journal.kpiSessions'), String(S.stats.ok), t('journal.kpiInterrupted', { n: S.stats.ko })));
+  if (typeof renderRitualCards === 'function') renderRitualCards();
   renderGoals();
   if (typeof renderChallengesCard === 'function') renderChallengesCard();
   renderCarnetCard();

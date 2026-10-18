@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
   '25-challenges.js', '26-summaries.js', '46-features.js'];
-const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay'];
+const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay', 'pendingRitual', 'markRitual'];
 function app(now = '2026-10-27T12:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
   a.state.clock.tz = 'Europe/Zurich'; a.state.clock.maxSeen = 0; a.state.createdAt = Date.parse('2026-05-04T09:00:00Z');
@@ -54,4 +54,30 @@ test('récapitulatifs : bornes du mois et de l’année, chiffres du mois, pas d
   const m = plain(a.recapSummary('month', '2026-10'));
   assert.deepEqual([m.minutes, m.activeDays, m.sessions, m.favorite, m.bestDay], [120, 4, 5, 'corps', { day: '2026-10-21', minutes: 55 }]);
   assert.equal(a.recapSummary('year', '2026').sessions, null);
+});
+
+test('bilan dû : une fois par semaine, jamais pour une ville de la semaine, ni deux fois en changeant le début de semaine', () => {
+  const a = app('2026-10-27T12:00:00Z'); week(a);
+  assert.deepEqual(plain(a.pendingRitual('2026-10-27')), { kind: 'week', key: '2026-10-19' });
+  a.markRitual('week', '2026-10-19');
+  assert.equal(a.pendingRitual('2026-10-27'), null);
+  a.state.settings.weekStart = 'sun';
+  assert.equal(a.pendingRitual('2026-10-27'), null);
+  const b = app('2026-10-27T12:00:00Z'); b.state.createdAt = Date.parse('2026-10-26T08:00:00Z');
+  assert.equal(b.pendingRitual('2026-10-27'), null);
+  const c = app('2026-10-27T12:00:00Z'); week(c); c.state.settings.rituals = false;
+  assert.equal(c.pendingRitual('2026-10-27'), null);
+});
+
+test('bilan dû : le mois avant la semaine, l’année en janvier, rien pour un mois sans activité', () => {
+  const a = app('2026-11-02T12:00:00Z'); week(a);
+  assert.deepEqual(plain(a.pendingRitual('2026-11-02')), { kind: 'month', key: '2026-10' });
+  a.markRitual('month', '2026-10');
+  assert.deepEqual(plain(a.pendingRitual('2026-11-02')), { kind: 'week', key: '2026-10-26' });
+  const j = app('2027-01-04T12:00:00Z'); week(j);
+  assert.deepEqual(plain(j.pendingRitual('2027-01-04')), { kind: 'year', key: '2026' });
+  j.markRitual('year', '2026');
+  assert.equal(j.state.rituals.month, '2026-12');
+  const e = app('2026-12-01T12:00:00Z'); week(e); e.markRitual('week', '2026-11-23');
+  assert.equal(e.pendingRitual('2026-12-01'), null);
 });
