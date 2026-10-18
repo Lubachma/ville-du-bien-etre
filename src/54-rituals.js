@@ -9,10 +9,10 @@ function renderChallengesCard() {
   if (!$('#view-journal')) return;
   let card = $('#challengesCard');
   if (S.settings.challenges === false) { if (card) card.remove(); return; }
-  if (!card) {
-    card = h('section', { id: 'challengesCard', class: 'card feature-card', 'aria-label': t('chal.title') });
-    ($('#goalsCard') || $('#kpis')).after(card);
-  }
+  if (!card) card = h('section', { id: 'challengesCard', class: 'card feature-card', 'aria-label': t('chal.title') });
+  // Juste sous l'objectif de la semaine, même si la carte du carnet s'y glisse ensuite.
+  const anchor = $('#goalsCard') || $('#kpis');
+  if (card.previousElementSibling !== anchor) anchor.after(card);
   const week = challengeWeek(), swapped = S.challenges && S.challenges.week === week && S.challenges.swapped >= 0;
   const rows = weekChallenges(week).map((ch, i) => {
     const p = challengeProgress(ch, week), done = p.done || !!S.gifts[challengeKey(ch, week)], text = challengeText(ch);
@@ -257,7 +257,9 @@ const ritualCard = (title, sub, open, label) => h('section', { class: 'card ritu
 function renderRitualCards() {
   if (!$('#view-journal')) return;
   let box = $('#ritualCards');
-  if (!box) { box = h('div', { id: 'ritualCards', class: 'ritual-cards' }); $('#kpis').after(box); }
+  if (!box) box = h('div', { id: 'ritualCards', class: 'ritual-cards' });
+  // Toujours en haut, juste sous les chiffres : les cartes créées ensuite (objectif, carnet) se glissent aussi sous les chiffres.
+  if (box.previousElementSibling !== $('#kpis')) $('#kpis').after(box);
   const day = today(), born = dayOf(S.createdAt), week = weekStartOf(day), last = shiftDay(week, -7), month = monthKey(day), year = day.slice(0, 4);
   const lastMonth = monthKey(shiftDay(month + '-01', -1)), lastYear = String(Number(year) - 1), cards = [];
   if (born < week) cards.push(ritualCard(t('review.card'), t('review.range', { from: reviewDay(last), to: reviewDay(shiftDay(last, 6)) }), () => openWeekReview(last), t('review.again')));

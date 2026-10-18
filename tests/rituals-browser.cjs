@@ -70,6 +70,8 @@ async function challengesAtOpening(browser, baseURL) {
     assert.equal(await page.evaluate(() => __ville.state.coins), seed.coins + 15e6);
     await page.locator('[data-tab="journal"]').click();
     assert.equal(await page.locator('#challengesCard .chal-row.done').count(), 3);
+    // Juste sous l'objectif de la semaine.
+    assert.equal(await page.evaluate(() => document.querySelector('#goalsCard').nextElementSibling.id), 'challengesCard');
     assert.deepEqual(errors, []);
   } finally { await context.close(); }
   return 'Défis : relevés à l’ouverture, une seule fois';
@@ -150,6 +152,8 @@ async function weekReviewOnce(browser, baseURL) {
     await page.locator('[data-tab="journal"]').click();
     const card = page.locator('#ritualCards');
     assert.match(await card.innerText(), /Ta semaine dernière/);
+    // En haut du Journal, juste sous les chiffres du jour.
+    assert.equal(await page.evaluate(() => document.querySelector('#kpis').nextElementSibling.id), 'ritualCards');
     await card.getByRole('button', { name: 'Revoir', exact: true }).click();
     await page.locator('#sheet').waitFor();
     await page.locator('#sheetClose').click();
