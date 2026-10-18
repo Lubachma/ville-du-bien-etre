@@ -120,8 +120,12 @@ const City = (() => {
 
   // Ville en grand : zoom voulu (1 à 3) et zoom montré pendant la transition, décalage du glissement, doigts posés.
   const big = { open: false, zoom: 1, shown: 1, pan: [0, 0], base: null, anim: null, pointers: new Map(), moved: 0, lastTap: null };
+  // Visite : la ville d'un ami (ou la sienne, telle que les amis la voient), montrée en grand et en lecture seule. Seul le dessin
+  // la lit ; sa propre ville n'est jamais touchée.
+  let visit = null;
+  const town = () => (visit ? visit.city : S.city);
   function layout() {
-    N = S.city.size;
+    N = town().size;
     if (big.open) { layoutBig(); return; }
     const rect = canvas.getBoundingClientRect();
     W = Math.max(240, rect.width || canvas.parentElement.clientWidth || 360);
@@ -145,8 +149,11 @@ const City = (() => {
     dpr = Math.min(3, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
-    const room = H - 64 - 16, tw = Math.min((W - 28) / N, room / (N / 2 + 1.8));
-    big.base = { tw, ox: W / 2, oy: 64 + (room - tw * (N / 2 + 1.8)) / 2 + tw * 1.35 };
+    // En visite, l'île tient entre le nom de la ville et les boutons du bas.
+    const top = visit ? Math.max(64, $('#cityVisitHead').getBoundingClientRect().bottom - rect.top + 8) : 64;
+    const bottom = visit ? Math.max(16, rect.bottom - $('#cityVisitBar').getBoundingClientRect().top + 8) : 16;
+    const room = H - top - bottom, tw = Math.min((W - 28) / N, room / (N / 2 + 1.8));
+    big.base = { tw, ox: W / 2, oy: top + (room - tw * (N / 2 + 1.8)) / 2 + tw * 1.35 };
     big.pan = keepInView(big.pan, big.shown);
     applyView();
   }
@@ -209,11 +216,31 @@ const City = (() => {
     // La fiche du visiteur ouverte par-dessus se ferme avec la vue : le geste retour ferme tout.
     if (!$('#sheet').hidden) closeSheet();
     big.open = false; big.anim = null; big.pointers.clear();
+    if (visit) {
+      visit = null;
+      $('#cityVisitHead').hidden = $('#cityVisitBar').hidden = true;
+      $('#cityBigTitle').textContent = frTypo(t('city.bigTitle'));
+    }
     $('#cityBig').hidden = true;
     canvas = small; ctx = small.getContext('2d');
     updateInert();
     layout(); draw();
     $('#cityExpand').focus({ preventScroll: true });
+  }
+  // Visite : la ville d'un code s'ouvre en grand, avec son nom, son nombre d'éléments et la taille de son terrain. Si la vue
+  // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose.
+  function openVisit(snapshot, { own = false } = {}) {
+    if (Mode.state) return false;
+    visit = { city: snapshot, own };
+    const name = own ? cityName() : snapshot.name || t('visit.friendCity'), meta = t('visit.cityMeta', { n: snapshot.tiles.length, size: snapshot.size });
+    $('#cityVisitHead').replaceChildren(h('p', { class: 'visit-name' }, name), h('p', { class: 'visit-meta' }, meta), ...(own ? [h('p', { class: 'visit-meta' }, t('visit.ownCity'))] : []));
+    $('#cityVisitHead').hidden = $('#cityVisitBar').hidden = false;
+    $('#visitKeep').hidden = own;
+    $('#cityBigTitle').textContent = frTypo(own ? t('visit.ownCity') : name);
+    if (big.open) { big.zoom = big.shown = 1; big.pan = [0, 0]; big.anim = null; layout(); draw(); }
+    else openBig();
+    $('#cityBigCanvas').setAttribute('aria-label', frTypo(name + ' · ' + meta));
+    return true;
   }
   window.addEventListener('popstate', () => { if (big.open) closeBig(true); });
   window.addEventListener('resize', () => { if (big.open) { layout(); draw(); } });
@@ -338,6 +365,9 @@ const City = (() => {
   // Ambiance du moment, et couches de vie dessinées à part : une donnée ou un dessin illisible (visiteur inconnu…) est sauté,
   // la ville continue de se dessiner et de vivre.
   function ambientSafe() { try { return typeof ambientAt === 'function' ? ambientAt() : null; } catch (e) { return null; } }
+  // En visite, la ville amie est sous son propre ciel (heure, saison, météo d'ici), sans le visiteur du jour ni l'anniversaire
+  // de sa propre ville.
+  function visitAmbient(amb) { return amb && visit ? { ...amb, visitor: null, festivals: amb.festivals.filter(f => f.id !== 'anniversaire') } : amb; }
   function layer(fn) { ctx.save(); try { fn(); } catch (e) { /* couche ignorée */ } ctx.restore(); }
 
   function draw(options) {
@@ -356,7 +386,7 @@ const City = (() => {
       if (k >= 1) big.anim = null; else zooming = true;
     }
     // Ambiance du moment : saison toujours ; obscurité, ciel et teinte selon l'heure, sauf « ciel selon l'apparence ».
-    const pal = readPalette(), amb = ambientSafe(), byTime = !!amb && S.settings.sky !== 'theme';
+    const pal = readPalette(), amb = visitAmbient(ambientSafe()), byTime = !!amb && S.settings.sky !== 'theme', city = town();
     if (amb) { pal.season = amb.season; if (byTime) pal.dark = darkness(amb.moment); }
     pal.time = performance.now() / 1000;
     pal.anim = !clean && ambientRunning();
@@ -380,8 +410,8 @@ const City = (() => {
       for (let y = 0; y < N; y++) g.tile(x, y, 0, ground[(x + y) % 2], night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
     }
     // Ensembles formés : un pavage commun sous leurs éléments.
-    const paved = pavedTileIds();
-    for (const tl of S.city.tiles) if (paved.has(tl.id)) g.paving(tl.x, tl.y);
+    const paved = pavedTileIds(city);
+    for (const tl of city.tiles) if (paved.has(tl.id)) g.paving(tl.x, tl.y);
     if (!clean && Mode.state) {
       for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
         const occ = tileOf(x, y);
@@ -395,11 +425,11 @@ const City = (() => {
         g.tile(tg.x, tg.y, 0, ok ? hexA(pal.accent, .32) : hexA(pal.danger, .32));
       }
     }
-    if (!clean && Selection.id) {
+    if (!clean && Selection.id && !visit) {
       const sel = S.city.tiles.find(t => t.id === Selection.id);
       if (sel) g.tile(sel.x, sel.y, 0, hexA(pal.accent, .22), pal.accent, 2);
     }
-    const list = S.city.tiles.map(t => ({ t, ghost: false }));
+    const list = city.tiles.map(t => ({ t, ghost: false }));
     if (!clean && Mode.state && Mode.state.target) {
       const moving = Mode.state.type === 'move' ? S.city.tiles.find(t => t.id === Mode.state.tileId) || {} : null;
       const key = moving ? moving.item : Mode.state.item;
@@ -407,8 +437,8 @@ const City = (() => {
       if (key) list.push({ t: { id: '__ghost', item: key, x: Mode.state.target.x, y: Mode.state.target.y, stage: moving ? moving.stage : 1 }, ghost: true });
     }
     const hiddenId = !clean && Mode.state && Mode.state.type === 'move' && Mode.state.target ? Mode.state.tileId : null;
-    // Habitants, rangés en profondeur avec les éléments : promeneurs, puis ceux qui font comme toi.
-    if (amb) {
+    // Habitants, rangés en profondeur avec les éléments : promeneurs, puis ceux qui font comme toi. Personne en visite.
+    if (amb && !visit) {
       const cells = walkableTiles(), n = walkerCount(amb.moment), paths = n ? walkPaths(cells) : [], tt = g.anim ? pal.time : 0;
       const people = Array.from({ length: n }, (_, i) => ({ walker: i, pos: walkerPos(paths[i], i, tt) }));
       for (const d of cells.length ? doerCells(cells) : []) people.push({ doer: d.cat, cell: d.cell, pos: { x: d.cell.x + .5, y: d.cell.y + .5 } });
@@ -445,7 +475,7 @@ const City = (() => {
         if (ghost) ctx.globalAlpha = .62;
         if (fx) effectTransform(g, t, fx.kind, k);
         DRAW[t.item](g, t.x, t.y, t);
-        drawGrowth(g, t.item, t.x, t.y);
+        drawGrowth(g, t.item, t.x, t.y, visit ? t.level : buildingLevel(t.item));
       } catch (e) { /* un bâtiment illisible ne bloque pas le reste de la ville */ }
       ctx.restore();
       if (fx && k < 1) overlay('front');
@@ -456,7 +486,7 @@ const City = (() => {
     if (amb) {
       const t = g.anim ? pal.time : 0, smoky = amb.season === 'autumn' || amb.season === 'winter';
       layer(() => {
-        for (const tile of S.city.tiles) {
+        for (const tile of city.tiles) {
           if (CHIMNEYS[tile.item] && (smoky || (tile.item === 'boulangerie' && amb.minutes < 600))) drawSmoke(g, tile.x, tile.y, t, CHIMNEYS[tile.item]);
           if (tile.item === 'phare' && (tile.stage || 4) >= 4 && g.dark > .5) drawBeam(g, tile.x, tile.y, t);
         }
@@ -466,7 +496,7 @@ const City = (() => {
     // (hors celle du visiteur) reçoivent citrouilles ou lanternes, sauf pendant une pose où elles doivent rester lisibles.
     if (amb && amb.festivals.length) {
       const t = g.anim ? pal.time : 0, sp = amb.visitor && amb.visitor.spot;
-      const spots = !clean && Mode.state ? [] : freeCells().filter(c => (c.x === N - 1 || c.y === N - 1) && !(sp && sp.x === c.x && sp.y === c.y));
+      const spots = !clean && Mode.state ? [] : freeCells(city).filter(c => (c.x === N - 1 || c.y === N - 1) && !(sp && sp.x === c.x && sp.y === c.y));
       layer(() => drawBunting(g, N, [...new Set(amb.festivals.flatMap(f => FEST_COLORS[f.id]))], t));
       for (const fest of amb.festivals) layer(() => drawFestival(g, fest, amb, t, { w: W, h: H, ground: oy, size: N }, spots));
     }
@@ -476,7 +506,7 @@ const City = (() => {
     // Petites vies et météo, par-dessus tout ; pluie et neige s'estompent pendant une pose.
     if (amb) {
       const area = { w: W, h: H, ground: oy }, t = g.anim ? pal.time : 0;
-      layer(() => drawSeasonLife(g, amb, t, area, S.city.tiles));
+      layer(() => drawSeasonLife(g, amb, t, area, city.tiles));
       layer(() => drawWeather(g, { ...amb, rainbow: false }, t, area, !clean && Mode.state ? .25 : 1));
     }
     // Étincelles sur les cases d'un ensemble qu'on vient de découvrir.
@@ -484,7 +514,7 @@ const City = (() => {
     for (const s of clean ? [] : sparkles) {
       const q = (now - s.start) / FX_TIME.sparkle;
       animating = true;
-      for (const tl of S.city.tiles.filter(tile => s.ids.includes(tile.id))) {
+      for (const tl of city.tiles.filter(tile => s.ids.includes(tile.id))) {
         for (let i = 0; i < 3; i++) {
           const [px, py] = g.P(tl.x + .25 + rnd(i, tl.x) * .5, tl.y + .25 + rnd(tl.y, i) * .5, g.tw * (.25 + rnd(i * 5, 7) * .5));
           star(g, px, py, g.tw * .06 * Math.sin(Math.PI * clamp(q * 1.4 - i * .15, 0, 1)));
@@ -498,9 +528,8 @@ const City = (() => {
     schedule(animating || zooming);
   }
 
-  // Practice adds planters, then a golden pennant to buildings in that domain.
-  function drawGrowth(g, key, x, y) {
-    const level = buildingLevel(key);
+  // Practice adds planters, then a golden pennant to buildings in that domain. En visite, le niveau vient du lien.
+  function drawGrowth(g, key, x, y, level) {
     if (level < 2) return;
     for (const u of [.18, .75]) {
       g.box(x + u - .06, y + .82, x + u + .06, y + .94, 0, g.tw * .05, g.c('#bf7653'));
@@ -545,7 +574,7 @@ const City = (() => {
     const g = makePainter(c, tw, size / 2, size - 3 - tw / 2, pal), ground = () => g.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
     if (!opts.silhouette) {
       ground();
-      try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
+      try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0, buildingLevel(key)); } catch (e) { /* vignette vide */ }
       return;
     }
     // Silhouette : l'élément en ombre unie, puis sa case glissée dessous, sans autre canvas.
@@ -647,9 +676,9 @@ const City = (() => {
   });
 
   return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb,
-    focus: () => { keyboard = true; small.focus(); draw(); }, openBig, closeBig,
+    focus: () => { keyboard = true; small.focus(); draw(); }, openBig, closeBig, openVisit,
     // Pour les tests : état de la vue en grand (et la case sous le centre de l'écran), centre d'une case sur le canevas dessiné.
-    bigState: () => ({ open: big.open, zoom: big.zoom, focus: big.open ? cellUnder(W / 2, H / 2, big.shown, big.pan) : null }),
+    bigState: () => ({ open: big.open, zoom: big.zoom, visit: !!visit, focus: big.open && big.base ? cellUnder(W / 2, H / 2, big.shown, big.pan) : null }),
     cellPoint: (x, y) => [ox + (x - y) * TW / 2, oy + (x + y + 1) * TW / 4] };
 })();
 

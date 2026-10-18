@@ -344,6 +344,22 @@ main {
   top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px));
 }
 .city-big-tools .icon-btn[aria-disabled="true"] { opacity: .45; }
+/* Visite d'une ville amie : son nom sous les outils, sur une carte lisible de jour comme de nuit ; ses deux boutons en bas. */
+.city-visit-head {
+  position: absolute; z-index: 2; display: grid; gap: 2px; width: fit-content; max-width: calc(100% - 32px); padding: 8px 12px;
+  top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(16px + env(safe-area-inset-left, 0px));
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.city-visit-head p { margin: 0; overflow-wrap: anywhere; }
+.visit-name { font-family: var(--font-display); font-size: 20px; line-height: 1.2; }
+.visit-meta { color: var(--muted); font-size: 13px; }
+.city-visit-bar {
+  position: absolute; z-index: 2; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+.city-visit-bar .btn { box-shadow: var(--shadow); }
+.city-visit-bar .btn[aria-disabled="true"] { opacity: .7; }
+.city-visit-head[hidden], .city-visit-bar[hidden], .city-visit-bar .btn[hidden] { display: none; }
 .city-caption { color: var(--muted); font-size: 13px; text-align: center; margin-top: -6px; }
 .cta-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .next-card { display: flex; align-items: center; gap: 12px; }

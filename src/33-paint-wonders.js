@@ -20,8 +20,8 @@ Object.assign(DRAW, {
     const blobs = [[0, 0, 1, '#4a8540'], [-.55, .1, .72, '#579a49'], [.55, .05, .7, '#4f9044'], [-.2, -.5, .65, '#62a352'], [.3, -.42, .6, '#6cae5a'], [0, -.75, .45, '#78b862']];
     for (const [dx, dy, k, col] of blobs.slice(0, stage === 1 ? 2 : 6)) g.circle(sx + dx * r, sy + dy * r, r * k * .8, g.leaf(col));
     if (stage < 4) return;
-    // Fleurs aux couleurs des domaines pratiqués cette semaine
-    weekCats().forEach((cat, i) => {
+    // Fleurs aux couleurs des domaines pratiqués cette semaine (en visite, celles de la ville amie)
+    ((tile && tile.flowers) || weekCats()).forEach((cat, i) => {
       for (let k = 0; k < 3; k++) {
         const a = rnd(i * 7 + k, 11) * Math.PI * 2, d = .3 + rnd(k, i + 5) * .5;
         g.circle(sx + Math.cos(a) * d * r, sy - .25 * r + Math.sin(a) * d * r * .8, g.tw * .022, g.cat(cat));

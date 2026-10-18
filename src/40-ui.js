@@ -162,7 +162,8 @@ function renderCityCaption() {
   if (todayMinutes() > 0) parts.push(t('city.captionToday', { time: fmtMin(todayMinutes()) }));
   const text = frTypo(parts.join(' · '));
   $('#cityCaption').textContent = text;
-  if (!$('#cityBig').hidden) $('#cityBigCanvas').setAttribute('aria-label', text);
+  // En visite, la vue en grand décrit la ville amie.
+  if (!$('#cityBig').hidden && $('#cityVisitHead').hidden) $('#cityBigCanvas').setAttribute('aria-label', text);
 }
 function renderVille() {
   // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).

@@ -79,6 +79,8 @@ function checkActive() {
   clearInterval(elsewhereTimer);
   if (st === 'elsewhere') elsewhereTimer = setInterval(() => { checkActive(); renderAll(); }, 3000);
   if (currentTab === 'ville') renderVille();
+  // Séance finie dans un autre onglet : la ville amie reçue entre-temps s'ouvre.
+  if (typeof openPendingVisit === 'function') openPendingVisit();
 }
 
 /* Écran allumé : demandé au moment du tap, avant de lancer le chrono */
@@ -560,6 +562,8 @@ function closeSession() {
   renderAll();
   const tab = $('.tab[aria-current="page"]');
   if (tab) tab.focus({ preventScroll: true });
+  // Une ville amie reçue pendant la séance : elle s'ouvre maintenant, après ce que le bouton de l'écran de fin a lancé.
+  if (typeof openPendingVisit === 'function') setTimeout(openPendingVisit, 0);
 }
 function showResult(build) {
   const res = $('#sessResult');

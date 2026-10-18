@@ -328,7 +328,62 @@ async function recapImage(browser, baseURL) {
   return 'Image du récapitulatif : partagée, ou téléchargée';
 }
 
-const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage];
+// La ville de Léa : six éléments, dont un Grand Arbre en fleurs ; son code, lu dans un premier navigateur.
+const LEA_TILES = [['maison', 1, 1], ['arbre', 2, 1], ['grandarbre', 3, 3, 4], ['banc', 4, 2], ['fontaine', 5, 5], ['fleurs', 0, 6]]
+  .map(([item, x, y, stage], i) => ({ id: 'l' + i, item, x, y, at: at('2026-10-01T09:00:00Z'), paid: 1e6, ...(stage ? { stage } : {}) }));
+async function leaCode(browser, baseURL) {
+  const seed = town({ esprit: 300, calme: 40 }, LEA_TILES, { personal: { name: 'Léa' }, stats: { ok: 3, byCat: { esprit: 300, calme: 40 }, days: {}, dailyCats: { '2026-10-20': { calme: 10 } } } });
+  const { context, page } = await cityAt(browser, baseURL, seed, '2026-10-21T10:00:00Z');
+  try { return await page.evaluate(() => __ville.share.encode()); } finally { await context.close(); }
+}
+const visitHead = page => page.locator('#cityVisitHead');
+
+// Visite : un lien #ville= ouvre la ville de Léa en grand, sans toucher à la sienne ; on zoome, on ferme. Un lien abîmé
+// donne un message doux. Pendant une séance, la visite attend la fin de la séance.
+async function visitFriend(browser, baseURL) {
+  const code = await leaCode(browser, baseURL), origin = baseURL.replace(/#.*$/, '');
+  const { context, page, errors } = await sessionTown(browser);
+  try {
+    await page.addInitScript(() => { window.__VILLE_DEBUG__ = true; });
+    await page.goto(origin + '#ville=' + code);
+    await page.waitForFunction(() => !!window.__ville);
+    await page.locator('#cityBig').waitFor();
+    assert.match(await visitHead(page).innerText(), /Léa[\s\S]*6 éléments · terrain 7×7/);
+    assert.doesNotMatch(await visitHead(page).innerText(), /null|Ta ville, telle/);
+    assert.equal(await page.evaluate(() => location.hash), '');
+    const own = await page.evaluate(() => JSON.stringify(__ville.state.city));
+    assert.deepEqual(JSON.parse(own), { size: 7, tiles: [] });
+    assert.equal(await page.evaluate(() => __ville.City.bigState().visit), true);
+    await page.locator('#visitKeep').click();
+    await page.locator('#toast').getByText('Carte postale gardée dans ton carnet').waitFor();
+    assert.equal(await page.locator('#visitKeep').innerText(), 'Gardée');
+    assert.deepEqual(await page.evaluate(() => Object.values(__ville.state.postcards).map(c => [c.name, c.size, c.count])), [['Léa', 7, 6]]);
+    await page.locator('#cityBigIn').click();
+    await page.waitForFunction(() => __ville.City.bigState().zoom > 1);
+    await page.locator('#cityBigClose').click();
+    await page.waitForFunction(() => !__ville.City.bigState().open);
+    assert.equal(await page.evaluate(() => __ville.City.bigState().visit), false);
+    assert.equal(await page.evaluate(() => JSON.stringify(__ville.state.city)), own);
+    // Lien abîmé : un message, aucune vue.
+    await page.evaluate(() => { location.hash = '#ville=abc'; });
+    await page.locator('#toast').getByText("Ce lien de ville n'est pas lisible").waitFor();
+    assert.equal(await page.locator('#cityBig').isHidden(), true);
+    // Pendant une séance : la visite attend que la séance et son écran de fin soient fermés.
+    await startSession(page, 'Pratique calme', 5);
+    await page.evaluate(c => { location.hash = '#ville=' + c; }, code);
+    await page.locator('#toast').getByText("Ta séance d'abord : la ville amie s'ouvrira juste après").waitFor();
+    assert.equal(await page.locator('#cityBig').isHidden(), true);
+    await page.clock.fastForward(5 * 60000 + 1000);
+    await page.locator('#sessResult').waitFor();
+    await page.locator('#sessResult').getByRole('button', { name: 'Retour à la ville', exact: true }).click();
+    await page.locator('#cityBig').waitFor();
+    assert.match(await visitHead(page).innerText(), /Léa/);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return "Visite d'une ville amie";
+}
+
+const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage, visitFriend];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

@@ -96,8 +96,8 @@ function nextFestival(id, day) {
 // Visiteurs : où ils se placent dans la ville. Une place libre est une case sans élément, parcourue ligne par ligne.
 const VISITOR_TREES = ['arbre', 'cerisier', 'grandarbre'], VISITOR_NATURE = ['arbre', 'cerisier', 'haie', 'fleurs'];
 const nearAny = (cell, tiles) => tiles.some(t => Math.abs(t.x - cell.x) <= 1 && Math.abs(t.y - cell.y) <= 1);
-function freeCells() {
-  const N = S.city.size, taken = new Set(S.city.tiles.map(t => t.x + ',' + t.y)), out = [];
+function freeCells(city = S.city) {
+  const N = city.size, taken = new Set(city.tiles.map(t => t.x + ',' + t.y)), out = [];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!taken.has(x + ',' + y)) out.push({ x, y });
   return out;
 }

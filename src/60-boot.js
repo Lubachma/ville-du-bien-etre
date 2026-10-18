@@ -30,6 +30,7 @@ function bindEvents() {
   $('#placeConfirm').addEventListener('click', () => Mode.confirm());
   $('#backdrop').addEventListener('click', closeSheet);
   $('#sheetClose').addEventListener('click', closeSheet);
+  bindShare();
   document.addEventListener('keydown', e => { if (e.key === 'Tab' || e.key.startsWith('Arrow') || e.key === 'Enter') kbdMode = true; }, true);
   document.addEventListener('pointerdown', () => { kbdMode = false; }, true);
   document.addEventListener('keydown', e => {
@@ -124,6 +125,8 @@ function boot(hotData) {
   catchUpCarnet({ defer: true });
   renderAll();
   flushCarnetNote();
+  // Lien de ville amie (#ville=…) : sa visite, avant tout bilan (qui attend alors la prochaine ouverture).
+  handleVisitHash();
   // Début de semaine ou de mois : son bilan, une seule fois.
   maybeOpenRitual();
   const hotRun = hotData && hotData.run;
@@ -136,7 +139,8 @@ function boot(hotData) {
   } catch (e) { /* pas de rechargement à chaud ici */ }
   if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
     ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors },
-    rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() } };
+    rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
+    share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit } };
 }
 
 let booted = false;
