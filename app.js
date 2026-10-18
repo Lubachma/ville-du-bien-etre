@@ -1505,6 +1505,26 @@ DICT.fr = {
   'recap.cardMonth': 'Ton mois',
   'recap.cardYear': 'Ton année',
   'recap.open': 'Voir',
+  'wish.title': 'Souhait du jour',
+  'wish.line': "« J'aimerais {thing} juste à côté. »",
+  'wish.hint': 'À poser dans une case voisine, même en diagonale.',
+  'wish.place': 'Placer {thing} · {price}',
+  'wish.placeFree': 'Placer {thing} · offert',
+  'wish.skip': 'Pas maintenant',
+  'wish.thing.fleurs': 'des fleurs',
+  'wish.thing.haie': 'une haie',
+  'wish.thing.banc': 'un banc',
+  'wish.thing.potager': 'un carré potager',
+  'wish.thing.arbre': 'un arbre',
+  'wish.thing.livres': 'une boîte à livres',
+  'wish.thing.lanterne': 'une lanterne de pierre',
+  'wish.thing.fanions': 'un mât à fanions',
+  'wish.thing.cerisier': 'un cerisier',
+  'wish.thing.etang': 'un étang',
+  'wish.thing.pasjaponais': 'des pas japonais',
+  'wish.thing.lampadaire': 'un lampadaire',
+  'wish.thing.statue': 'une statue',
+  'settings.townWishes': 'Souhaits des habitants',
   'wish.granted': "Souhait exaucé · {building} : « Merci, c'est parfait ! » · +{coins}",
   'harmony.star': "Nouvelle étoile d'harmonie : {name} · +{coins}",
   'harmony.verdure': 'Verdure',
@@ -2615,6 +2635,26 @@ DICT.en = {
   'recap.cardMonth': 'Your month',
   'recap.cardYear': 'Your year',
   'recap.open': 'View',
+  'wish.title': 'Wish of the day',
+  'wish.line': "“I'd love {thing} right next to me.”",
+  'wish.hint': 'In a neighbouring square, diagonals included.',
+  'wish.place': 'Place {thing} · {price}',
+  'wish.placeFree': 'Place {thing} · free',
+  'wish.skip': 'Not now',
+  'wish.thing.fleurs': 'flowers',
+  'wish.thing.haie': 'a hedge',
+  'wish.thing.banc': 'a bench',
+  'wish.thing.potager': 'a vegetable patch',
+  'wish.thing.arbre': 'a tree',
+  'wish.thing.livres': 'a little library',
+  'wish.thing.lanterne': 'a stone lantern',
+  'wish.thing.fanions': 'a bunting pole',
+  'wish.thing.cerisier': 'a cherry tree',
+  'wish.thing.etang': 'a pond',
+  'wish.thing.pasjaponais': 'stepping stones',
+  'wish.thing.lampadaire': 'a street lamp',
+  'wish.thing.statue': 'a statue',
+  'settings.townWishes': "Residents' wishes",
   'wish.granted': "Wish granted · {building}: “Thank you, it's perfect!” · +{coins}",
   'harmony.star': 'New harmony star: {name} · +{coins}',
   'harmony.verdure': 'Greenery',
@@ -7263,6 +7303,7 @@ function renderVille() {
   // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).
   liveTick();
   renderCityCaption();
+  if (typeof renderTownWishCard === 'function') renderTownWishCard();
   const ew = $('#elsewhere');
   ew.replaceChildren();
   ew.hidden = activeState() !== 'elsewhere';
@@ -7972,6 +8013,7 @@ function openBuildingSheet(tile) {
           built ? h('span', { class: 'note' }, built) : null,
           isCat(it.group) ? h('span', { class: 'note' }, buildingLevelText(tile.item)) : null,
           h('span', { class: 'note' }, t('city.square', { x: tile.x + 1, y: tile.y + 1 })))),
+      ...[typeof townWishBlock === 'function' ? townWishBlock(tile) : null].filter(Boolean),
       h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); Mode.startMove(tile); } }, icon('move'), t('shop.move')),
       del,
       h('p', { class: 'note' }, t('shop.noRefund')));
@@ -8245,7 +8287,8 @@ function settingsRituals() {
   return settingsBlock('settingsRituals',
     h('div', { class: 'setting' }, h('span', { class: 'section-title' }, t('settings.ritualsTitle')), toggle('rituals', t('settings.rituals')), h('p', { class: 'note' }, t('settings.ritualsNote'))),
     toggle('challenges', t('settings.challenges')),
-    toggle('mood', t('settings.mood')));
+    toggle('mood', t('settings.mood')),
+    toggle('townWishes', t('settings.townWishes')));
 }
 // Semaine et rappel : début de semaine (série et objectif), rappel quotidien ajouté à l'agenda.
 function settingsWeek() {
@@ -10244,6 +10287,51 @@ function bindShare() {
     cheer(progress, t('visit.kept'));
   });
   $('#visitShare').addEventListener('click', openShareSheet);
+}
+
+
+/* ---- 56-harmony.js ---- */
+/* =========================================================================
+   Harmonie et souhaits (interface) : carte « Souhait du jour », rappel dans la fiche du bâtiment.
+   ========================================================================= */
+// Le décor d'un souhait, avec sa tournure (« un banc », « des fleurs »).
+const wishThing = item => t('wish.thing.' + item);
+// De quoi exaucer le souhait : « Placer un banc · 2 M », qui lance la pose. Sans assez de pièces, le bouton est désactivé et la
+// note dit ce qu'il faut encore, sans rien de plus.
+function wishPlaceButton(item) {
+  const price = priceOf(item), short = price > S.coins, thing = wishThing(item);
+  return [h('button', { class: 'btn btn-primary btn-sm', type: 'button', disabled: short ? true : null, onclick: () => { closeSheet(); Mode.startPlace(item); } },
+    price ? t('wish.place', { thing, price: fmt(price) }) : t('wish.placeFree', { thing })),
+  short ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(price - S.coins) })) : null].filter(Boolean);
+}
+// Carte « Souhait du jour », juste sous les outils de la ville : le bâtiment qui souhaite, sa phrase, et de quoi l'exaucer ou le
+// laisser de côté. Cachée sans souhait en cours.
+function renderTownWishCard() {
+  const tools = $('.city-tools');
+  if (!tools) return;
+  let card = $('#townWishCard');
+  if (!card) { card = h('section', { id: 'townWishCard', class: 'card wish-card', 'aria-labelledby': 'townWishTitle' }); tools.after(card); }
+  const tile = typeof townWishTile === 'function' ? townWishTile() : null;
+  card.hidden = !tile;
+  if (!tile) { card.replaceChildren(); return; }
+  const item = S.townWish.item, cv = h('canvas', { 'aria-hidden': 'true' });
+  City.thumb(cv, tile.item, 48);
+  card.replaceChildren(h('h3', { id: 'townWishTitle' }, t('wish.title')),
+    h('div', { class: 'wish-main' }, cv, h('div', { class: 'wish-text' },
+      h('strong', {}, itemName(tile.item)), h('p', {}, t('wish.line', { thing: wishThing(item) })), h('p', { class: 'note' }, t('wish.hint')))),
+    h('div', { class: 'wish-actions' }, ...wishPlaceButton(item),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+        if (!skipTownWish()) return;
+        commit();
+        $('#personalizeCity').focus({ preventScroll: true });   // la carte disparaît : le focus reste sous la ville
+      } }, t('wish.skip'))));
+}
+// Le même rappel dans la fiche du bâtiment qui souhaite ; rien pour les autres.
+function townWishBlock(tile) {
+  const wishing = typeof townWishTile === 'function' ? townWishTile() : null;
+  if (!wishing || wishing.id !== tile.id) return null;
+  return h('div', { class: 'wish-block' }, h('p', {}, t('wish.line', { thing: wishThing(S.townWish.item) })), h('p', { class: 'note' }, t('wish.hint')),
+    ...wishPlaceButton(S.townWish.item));
 }
 
 

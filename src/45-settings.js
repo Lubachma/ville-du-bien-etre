@@ -263,7 +263,8 @@ function settingsRituals() {
   return settingsBlock('settingsRituals',
     h('div', { class: 'setting' }, h('span', { class: 'section-title' }, t('settings.ritualsTitle')), toggle('rituals', t('settings.rituals')), h('p', { class: 'note' }, t('settings.ritualsNote'))),
     toggle('challenges', t('settings.challenges')),
-    toggle('mood', t('settings.mood')));
+    toggle('mood', t('settings.mood')),
+    toggle('townWishes', t('settings.townWishes')));
 }
 // Semaine et rappel : début de semaine (série et objectif), rappel quotidien ajouté à l'agenda.
 function settingsWeek() {

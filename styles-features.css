@@ -70,3 +70,13 @@
 /* Récapitulatifs : chaque partie (domaines, ville) sous un filet. */
 .recap-part { display: grid; gap: 8px; padding-top: 12px; margin-bottom: 12px; border-top: 1px solid var(--line); }
 .recap-part p, .recap-part .meters, .recap-part .review-moments { margin: 0; }
+/* Souhait du jour : le bâtiment qui souhaite, sa phrase, puis de quoi l'exaucer ou le laisser de côté. */
+.wish-card { display: grid; gap: 10px; }
+.wish-card[hidden] { display: none; }
+.wish-main { display: flex; align-items: center; gap: 12px; }
+.wish-main canvas { width: 48px; height: 48px; flex: none; }
+.wish-text { display: grid; gap: 2px; min-width: 0; }
+.wish-text p, .wish-block p { margin: 0; }
+.wish-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wish-actions .note { flex-basis: 100%; margin: 0; }
+.wish-block { display: grid; gap: 6px; justify-items: start; }

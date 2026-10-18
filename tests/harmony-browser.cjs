@@ -54,7 +54,67 @@ async function starsAtFirstOpen(browser, baseURL) {
   return 'Étoiles d’une ville déjà harmonieuse : un seul message, payées une fois';
 }
 
-const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen];
+// La page ne déborde pas, et la carte du souhait tient dans sa largeur.
+const fits = page => page.evaluate(() => {
+  const card = document.querySelector('#townWishCard');
+  return document.documentElement.scrollWidth <= innerWidth && (!card || card.scrollWidth <= card.clientWidth + 1);
+});
+async function toEnglish(page) {
+  await page.locator('#settingsBtn').click();
+  await page.locator('#settingsLang').getByRole('radio', { name: 'English', exact: true }).click();
+  await page.locator('#sheetClose').click();
+}
+// Ouvre la fiche de l'élément posé sur une case, en touchant la ville.
+async function tapCell(page, x, y) {
+  const [px, py] = await page.evaluate(([cx, cy]) => __ville.City.cellPoint(cx, cy), [x, y]);
+  await page.locator('#city').click({ position: { x: px, y: py - 6 } });
+}
+
+// Carte « Souhait du jour » : le bâtiment, sa phrase, « Placer … » ; le même rappel dans sa fiche ; « Pas maintenant » la range,
+// rechargement compris. À 320 px, en français puis en anglais.
+async function wishCard(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)]), NOW, { viewport: { width: 320, height: 640 } });
+  try {
+    const card = page.locator('#townWishCard');
+    assert.match(await card.innerText(), /Souhait du jour[\s\S]*Maison[\s\S]*J'aimerais (des fleurs|un banc) juste à côté\.[\s\S]*même en diagonale/);
+    assert.equal(await card.getByRole('button', { name: /^Placer (des fleurs|un banc) · \d\sM$/ }).isEnabled(), true);
+    assert.equal(await fits(page), true);
+    await tapCell(page, 3, 3);
+    await page.locator('#sheet').waitFor();
+    assert.match(await page.locator('#sheetBody').innerText(), /J'aimerais (des fleurs|un banc) juste à côté/);
+    await page.locator('#sheetClose').click();
+    await toEnglish(page);
+    assert.match(await card.innerText(), /Wish of the day[\s\S]*House[\s\S]*I'd love (flowers|a bench) right next to me/);
+    assert.equal(await fits(page), true);
+    await card.getByRole('button', { name: 'Not now', exact: true }).click();
+    assert.equal(await card.isHidden(), true);
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    assert.equal(await page.locator('#townWishCard').isHidden(), true);
+    assert.equal(await page.evaluate(() => __ville.state.townWish.skipped), true);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Souhait du jour : carte, fiche du bâtiment, « Pas maintenant »';
+}
+
+// Pas assez de pièces : « Placer » est désactivé et dit ce qu'il faut encore, sans autre message. Réglage coupé : plus de carte.
+async function wishCardPoorAndOff(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { coins: 0 }), NOW);
+  try {
+    const card = page.locator('#townWishCard');
+    assert.equal(await card.getByRole('button', { name: /^Placer/ }).isDisabled(), true);
+    assert.match(await card.innerText(), /Il te manque \d\sM/);
+    await page.locator('#settingsBtn').click();
+    await page.locator('#settingsRituals').getByRole('switch', { name: 'Souhaits des habitants', exact: true }).click();
+    await page.locator('#sheetClose').click();
+    assert.equal(await card.isHidden(), true);
+    assert.equal(await page.evaluate(() => __ville.state.settings.townWishes), false);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Souhait du jour : trop cher sans pression, ou coupé';
+}
+
+const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff];
 async function runHarmony(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

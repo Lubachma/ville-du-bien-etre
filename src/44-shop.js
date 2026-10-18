@@ -156,6 +156,7 @@ function openBuildingSheet(tile) {
           built ? h('span', { class: 'note' }, built) : null,
           isCat(it.group) ? h('span', { class: 'note' }, buildingLevelText(tile.item)) : null,
           h('span', { class: 'note' }, t('city.square', { x: tile.x + 1, y: tile.y + 1 })))),
+      ...[typeof townWishBlock === 'function' ? townWishBlock(tile) : null].filter(Boolean),
       h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); Mode.startMove(tile); } }, icon('move'), t('shop.move')),
       del,
       h('p', { class: 'note' }, t('shop.noRefund')));
