@@ -32,10 +32,12 @@ function icsFold(line) {
   }
   return out;
 }
-function buildReminderIcs(time, now) {
+// Un identifiant par appareil et une version qui monte : ajouté de nouveau, le rappel remplace l'ancien
+// dans les agendas qui le reconnaissent.
+function buildReminderIcs(time, now, device = 'appareil') {
   const start = nextReminder(time, now), summary = icsText(t('reminder.summary'));
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ville-du-bien-etre//rappel//' + LANG.toUpperCase(), 'CALSCALE:GREGORIAN',
-    'BEGIN:VEVENT', 'UID:rappel-' + now.getTime() + '@ville-du-bien-etre', 'DTSTAMP:' + icsUtc(now), 'DTSTART:' + icsLocal(start),
+    'BEGIN:VEVENT', 'UID:rappel-' + device + '@ville-du-bien-etre', 'SEQUENCE:' + Math.floor(now.getTime() / 60000), 'DTSTAMP:' + icsUtc(now), 'DTSTART:' + icsLocal(start),
     'DURATION:PT' + REMINDER_MINUTES + 'M', 'RRULE:FREQ=DAILY', 'SUMMARY:' + summary, 'DESCRIPTION:' + icsText(t('reminder.description')),
     'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + summary, 'TRIGGER:PT0M', 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR'].map(icsFold).join('\r\n') + '\r\n';

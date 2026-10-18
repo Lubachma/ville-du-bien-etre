@@ -460,7 +460,7 @@ function merge3(B, L, R) {
     M.active.checkpointAt = Math.max(la.checkpointAt || 0, ra.checkpointAt || 0);
     M.active.owner = ra.owner || la.owner;
   }
-  if (conflicts.length) Store.localWarning = t('storage.conflicts', { n: conflicts.length });
+  if (conflicts.length) Store.warningMsg = ['storage.conflicts', { n: conflicts.length }];
   M.createdAt = Math.min(L.createdAt, R.createdAt);
   return normalize(M);
 }
@@ -496,7 +496,10 @@ const Store = {
   mode: 'local',          // 'local' | 'connecting' | 'cloud'
   status: 'local',        // 'local' | 'connecting' | 'ok' | 'retrying' | 'error'
   error: '',
-  localError: '', localWarning: '', recoveryRaw: '', recoveryKey: '',
+  errorMsg: null, warningMsg: null, recoveryRaw: '', recoveryKey: '',
+  // Messages du bandeau gardés par clé : ils se lisent dans la langue affichée, même posés avant qu'elle soit connue.
+  get localError() { return this.errorMsg ? t(...this.errorMsg) : ''; },
+  get localWarning() { return this.warningMsg ? t(...this.warningMsg) : ''; },
   migrationPending: false, migrationReason: '', migrationSnapshot: null, lastReadFailed: false,
   ref: null, legacyRef: null, cloudMigrationPending: false,
   unsub: null,
@@ -530,8 +533,8 @@ const Store = {
     } catch (e) { this.base = null; }
     touchClock();
   },
-  reportLocal(message) {
-    this.localError = message;
+  reportLocal(key, params) {
+    this.errorMsg = key ? [key, params] : null;
     if (typeof renderStorageStatus === 'function') renderStorageStatus();
   },
   decodeLocal(raw) {
@@ -541,8 +544,8 @@ const Store = {
       return normalize(parsed);
     } catch (e) {
       this.recoveryRaw = raw;
-      this.localWarning = t('storage.legacyUnreadable');
-      this.reportLocal(t('storage.localUnreadable'));
+      this.warningMsg = ['storage.legacyUnreadable'];
+      this.reportLocal('storage.localUnreadable');
       return null;
     }
   },
@@ -557,9 +560,7 @@ const Store = {
     return Date.now() < a.startedAt + a.min * 60000 + 120000;
   },
   reportMigration() {
-    this.reportLocal(this.migrationReason === 'session'
-      ? t('storage.migrationWaitSession')
-      : t('storage.migrationNoSpace'));
+    this.reportLocal(this.migrationReason === 'session' ? 'storage.migrationWaitSession' : 'storage.migrationNoSpace');
   },
   migrateLegacy() {
     const raw = localStorage.getItem(LEGACY_LS_KEY);
@@ -568,7 +569,7 @@ const Store = {
     if (!legacy) {
       // Le document v1 reste à son emplacement exact, même si la v2 est réparée.
       this.recoveryKey = LEGACY_LS_KEY;
-      this.localWarning = t('storage.v1Unreadable');
+      this.warningMsg = ['storage.v1Unreadable'];
       return null;
     }
     this.migrationSnapshot = clone(legacy);
@@ -590,7 +591,7 @@ const Store = {
     this.migrationPending = false;
     this.migrationReason = '';
     this.migrationSnapshot = null;
-    this.localWarning = t('storage.migrated');
+    this.warningMsg = ['storage.migrated'];
     this.reportLocal('');
     return legacy;
   },
@@ -610,7 +611,7 @@ const Store = {
       this.lastReadFailed = true;
       this.migrationPending = true;
       this.migrationReason = 'storage';
-      this.reportLocal(t('storage.unreadable'));
+      this.reportLocal('storage.unreadable');
       return this.migrationSnapshot ? clone(this.migrationSnapshot) : null;
     }
   },
@@ -643,7 +644,7 @@ const Store = {
       this.recoveryKey = key;
       return true;
     } catch (e) {
-      this.reportLocal(t('storage.preserveFailed'));
+      this.reportLocal('storage.preserveFailed');
       return false;
     }
   },
@@ -673,7 +674,7 @@ const Store = {
       this.reportLocal('');
       return true;
     } catch (e) {
-      this.reportLocal(t('storage.cannotSave'));
+      this.reportLocal('storage.cannotSave');
       return false;
     }
   },
@@ -739,7 +740,7 @@ const Store = {
         const legacy = parseDoc(await this.legacyRef.get());
         if (legacy && this.legacySessionIsLive(legacy)) {
           this.cloudMigrationPending = true;
-          this.localWarning = t('storage.cloudSessionWait');
+          this.warningMsg = ['storage.cloudSessionWait'];
         } else { R = legacy; fromLegacy = !!legacy; }
       }
       this.mode = 'cloud';
@@ -789,7 +790,7 @@ const Store = {
           this.saveLocal();
         }
         this.status = 'ok';
-        this.localWarning = t('storage.cloudMigrated');
+        this.warningMsg = ['storage.cloudMigrated'];
         this.schedule(0);
         renderSyncStatus();
         if (typeof renderStorageStatus === 'function') renderStorageStatus();

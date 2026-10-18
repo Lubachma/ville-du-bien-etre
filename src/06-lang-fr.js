@@ -116,7 +116,7 @@ DICT.fr = {
   'header.balance': 'Ton solde',
   'header.coins': ' pièces',
   'unit.streakDays': '{n}\u00a0j',
-  'header.streakTitle': { one: "Série : {n}\u00a0jour d'affilée", other: "Série : {n}\u00a0jours d'affilée" },
+  'header.streakTitle': { one: 'Série : {n}\u00a0jour actif', other: 'Série : {n}\u00a0jours actifs' },
   'header.noStreak': 'Aucune série en cours',
   'nav.settings': 'Réglages',
   'nav.cityView': 'Ma ville',
@@ -484,7 +484,7 @@ DICT.fr = {
 
   // Stockage, migration et synchronisation
   'history.unnamed': 'Activité',
-  'storage.conflicts': 'Modifications simultanées sur {n} champ(s). Une valeur a été choisie de façon identique sur tous les écrans ; vérifie tes listes et réglages.',
+  'storage.conflicts': { one: 'Modifications simultanées sur {n} champ. Une valeur a été choisie de façon identique sur tous les écrans ; vérifie tes listes et réglages.', other: 'Modifications simultanées sur {n} champs. Une valeur a été choisie de façon identique sur tous les écrans ; vérifie tes listes et réglages.' },
   'storage.legacyUnreadable': 'Les anciennes données de ce navigateur sont illisibles. Leur contenu brut est conservé pour récupération.',
   'storage.localUnreadable': 'Données locales illisibles. Enregistre une copie de récupération ou réessaie la sauvegarde.',
   'storage.migrationWaitSession': 'Une session est encore en cours dans l’ancienne version. Termine-la sur cet écran, ferme l’ancienne version puis réessaie la migration.',
@@ -693,7 +693,7 @@ DICT.fr = {
   // Son de fin, volume et vibration
   'settings.soundType': 'Son de fin',
   'settings.soundChime': 'Carillon',
-  'settings.soundBowl': 'Bol',
+  'settings.soundBowl': 'Bol chantant',
   'settings.soundBells': 'Clochettes',
   'settings.volume': 'Volume',
   'settings.volumeSoft': 'Doux',
@@ -710,7 +710,7 @@ DICT.fr = {
   'reminder.time': 'Heure du rappel',
   'reminder.add': 'Ajouter à mon agenda',
   'reminder.google': 'Ajouter à Google Agenda',
-  'reminder.note': "L'app ne peut pas t'envoyer de notification : le rappel vit dans ton agenda.",
+  'reminder.note': "L'app ne peut pas t'envoyer de notification : le rappel vit dans ton agenda. Pour changer d'heure, ajoute-le de nouveau, puis supprime l'ancien s'il est resté.",
   'reminder.downloaded': "Fichier d'agenda téléchargé : ouvre-le pour ajouter le rappel.",
   'reminder.summary': 'Ville du bien-être : un moment pour toi',
   'reminder.description': "Ouvre la Ville du bien-être depuis l'icône de ton écran d'accueil.",

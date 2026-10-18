@@ -116,7 +116,7 @@ DICT.en = {
   'header.balance': 'Your balance',
   'header.coins': ' coins',
   'unit.streakDays': '{n}\u00a0d',
-  'header.streakTitle': { one: 'Streak: {n}\u00a0day in a row', other: 'Streak: {n}\u00a0days in a row' },
+  'header.streakTitle': { one: 'Streak: {n}\u00a0active day', other: 'Streak: {n}\u00a0active days' },
   'header.noStreak': 'No streak right now',
   'nav.settings': 'Settings',
   'nav.cityView': 'My town',
@@ -484,7 +484,7 @@ DICT.en = {
 
   // Storage, migration and sync
   'history.unnamed': 'Activity',
-  'storage.conflicts': 'Simultaneous changes on {n} field(s). One value was chosen the same way on every screen; check your lists and settings.',
+  'storage.conflicts': { one: 'Simultaneous changes on {n} field. One value was chosen the same way on every screen; check your lists and settings.', other: 'Simultaneous changes on {n} fields. One value was chosen the same way on every screen; check your lists and settings.' },
   'storage.legacyUnreadable': "This browser's old data is unreadable. Its raw content is kept for recovery.",
   'storage.localUnreadable': 'Local data unreadable. Save a recovery copy or try saving again.',
   'storage.migrationWaitSession': 'A session is still running in the old version. Finish it on this screen, close the old version, then retry the migration.',
@@ -693,7 +693,7 @@ DICT.en = {
   // End sound, volume and vibration
   'settings.soundType': 'End sound',
   'settings.soundChime': 'Chime',
-  'settings.soundBowl': 'Bowl',
+  'settings.soundBowl': 'Singing bowl',
   'settings.soundBells': 'Bells',
   'settings.volume': 'Volume',
   'settings.volumeSoft': 'Soft',
@@ -710,7 +710,7 @@ DICT.en = {
   'reminder.time': 'Reminder time',
   'reminder.add': 'Add to my calendar',
   'reminder.google': 'Add to Google Calendar',
-  'reminder.note': "The app can't send you notifications: the reminder lives in your calendar.",
+  'reminder.note': "The app can't send you notifications: the reminder lives in your calendar. To change the time, add it again, then delete the old one if it's still there.",
   'reminder.downloaded': 'Calendar file downloaded: open it to add the reminder.',
   'reminder.summary': 'Ville du bien-être: a moment for you',
   'reminder.description': 'Open Ville du bien-être from your home screen icon.',

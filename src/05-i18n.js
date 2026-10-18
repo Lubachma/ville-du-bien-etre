@@ -93,10 +93,11 @@ function catOf(c) { return t('cat.' + c + '.of'); }
 function catHint(c) { return t('cat.' + c + '.hint'); }
 function groupName(g) { return t('group.' + g); }
 
-// « Ma ville » était le nom par défaut avant la traduction : il reste traité comme tel.
+// Le nom par défaut, enregistré tel quel dans n'importe quelle langue (« Ma ville » d'avant la traduction compris),
+// reste un nom par défaut : il suit la langue affichée.
 function cityName() {
   const name = S.personal && S.personal.name;
-  return name && name !== DICT.fr['city.defaultName'] ? name : t('city.defaultName');
+  return name && !langs().some(lang => DICT[lang]['city.defaultName'] === name) ? name : t('city.defaultName');
 }
 
 if (typeof window !== 'undefined') window.VilleI18n = Object.freeze({ t: (key, params) => t(key, params), lang: () => LANG });

@@ -342,3 +342,12 @@ test("activité libre finie app fermée : l'historique garde l'heure réelle de 
   const entry = JSON.parse(disk.getItem('ville-bien-etre/v2')).history[0];
   assert.deepEqual([entry.ok, entry.at], [true, startedAt + 5 * 60000]);
 });
+
+test('un message de stockage se lit dans la langue affichée, même posé avant de la connaître', () => {
+  const disk = storage(); disk.setItem('ville-bien-etre/v2', '{broken');
+  const a = app(disk); a.init();
+  assert.match(a.Store.localError, /illisibles/);
+  a.context.setLang('en');
+  assert.match(a.Store.localError, /unreadable/);
+  assert.match(a.Store.localWarning, /unreadable/i);
+});

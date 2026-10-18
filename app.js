@@ -375,10 +375,11 @@ function catOf(c) { return t('cat.' + c + '.of'); }
 function catHint(c) { return t('cat.' + c + '.hint'); }
 function groupName(g) { return t('group.' + g); }
 
-// « Ma ville » était le nom par défaut avant la traduction : il reste traité comme tel.
+// Le nom par défaut, enregistré tel quel dans n'importe quelle langue (« Ma ville » d'avant la traduction compris),
+// reste un nom par défaut : il suit la langue affichée.
 function cityName() {
   const name = S.personal && S.personal.name;
-  return name && name !== DICT.fr['city.defaultName'] ? name : t('city.defaultName');
+  return name && !langs().some(lang => DICT[lang]['city.defaultName'] === name) ? name : t('city.defaultName');
 }
 
 if (typeof window !== 'undefined') window.VilleI18n = Object.freeze({ t: (key, params) => t(key, params), lang: () => LANG });
@@ -503,7 +504,7 @@ DICT.fr = {
   'header.balance': 'Ton solde',
   'header.coins': ' pièces',
   'unit.streakDays': '{n}\u00a0j',
-  'header.streakTitle': { one: "Série : {n}\u00a0jour d'affilée", other: "Série : {n}\u00a0jours d'affilée" },
+  'header.streakTitle': { one: 'Série : {n}\u00a0jour actif', other: 'Série : {n}\u00a0jours actifs' },
   'header.noStreak': 'Aucune série en cours',
   'nav.settings': 'Réglages',
   'nav.cityView': 'Ma ville',
@@ -871,7 +872,7 @@ DICT.fr = {
 
   // Stockage, migration et synchronisation
   'history.unnamed': 'Activité',
-  'storage.conflicts': 'Modifications simultanées sur {n} champ(s). Une valeur a été choisie de façon identique sur tous les écrans ; vérifie tes listes et réglages.',
+  'storage.conflicts': { one: 'Modifications simultanées sur {n} champ. Une valeur a été choisie de façon identique sur tous les écrans ; vérifie tes listes et réglages.', other: 'Modifications simultanées sur {n} champs. Une valeur a été choisie de façon identique sur tous les écrans ; vérifie tes listes et réglages.' },
   'storage.legacyUnreadable': 'Les anciennes données de ce navigateur sont illisibles. Leur contenu brut est conservé pour récupération.',
   'storage.localUnreadable': 'Données locales illisibles. Enregistre une copie de récupération ou réessaie la sauvegarde.',
   'storage.migrationWaitSession': 'Une session est encore en cours dans l’ancienne version. Termine-la sur cet écran, ferme l’ancienne version puis réessaie la migration.',
@@ -1080,7 +1081,7 @@ DICT.fr = {
   // Son de fin, volume et vibration
   'settings.soundType': 'Son de fin',
   'settings.soundChime': 'Carillon',
-  'settings.soundBowl': 'Bol',
+  'settings.soundBowl': 'Bol chantant',
   'settings.soundBells': 'Clochettes',
   'settings.volume': 'Volume',
   'settings.volumeSoft': 'Doux',
@@ -1097,7 +1098,7 @@ DICT.fr = {
   'reminder.time': 'Heure du rappel',
   'reminder.add': 'Ajouter à mon agenda',
   'reminder.google': 'Ajouter à Google Agenda',
-  'reminder.note': "L'app ne peut pas t'envoyer de notification : le rappel vit dans ton agenda.",
+  'reminder.note': "L'app ne peut pas t'envoyer de notification : le rappel vit dans ton agenda. Pour changer d'heure, ajoute-le de nouveau, puis supprime l'ancien s'il est resté.",
   'reminder.downloaded': "Fichier d'agenda téléchargé : ouvre-le pour ajouter le rappel.",
   'reminder.summary': 'Ville du bien-être : un moment pour toi',
   'reminder.description': "Ouvre la Ville du bien-être depuis l'icône de ton écran d'accueil.",
@@ -1365,7 +1366,7 @@ DICT.en = {
   'header.balance': 'Your balance',
   'header.coins': ' coins',
   'unit.streakDays': '{n}\u00a0d',
-  'header.streakTitle': { one: 'Streak: {n}\u00a0day in a row', other: 'Streak: {n}\u00a0days in a row' },
+  'header.streakTitle': { one: 'Streak: {n}\u00a0active day', other: 'Streak: {n}\u00a0active days' },
   'header.noStreak': 'No streak right now',
   'nav.settings': 'Settings',
   'nav.cityView': 'My town',
@@ -1733,7 +1734,7 @@ DICT.en = {
 
   // Storage, migration and sync
   'history.unnamed': 'Activity',
-  'storage.conflicts': 'Simultaneous changes on {n} field(s). One value was chosen the same way on every screen; check your lists and settings.',
+  'storage.conflicts': { one: 'Simultaneous changes on {n} field. One value was chosen the same way on every screen; check your lists and settings.', other: 'Simultaneous changes on {n} fields. One value was chosen the same way on every screen; check your lists and settings.' },
   'storage.legacyUnreadable': "This browser's old data is unreadable. Its raw content is kept for recovery.",
   'storage.localUnreadable': 'Local data unreadable. Save a recovery copy or try saving again.',
   'storage.migrationWaitSession': 'A session is still running in the old version. Finish it on this screen, close the old version, then retry the migration.',
@@ -1942,7 +1943,7 @@ DICT.en = {
   // End sound, volume and vibration
   'settings.soundType': 'End sound',
   'settings.soundChime': 'Chime',
-  'settings.soundBowl': 'Bowl',
+  'settings.soundBowl': 'Singing bowl',
   'settings.soundBells': 'Bells',
   'settings.volume': 'Volume',
   'settings.volumeSoft': 'Soft',
@@ -1959,7 +1960,7 @@ DICT.en = {
   'reminder.time': 'Reminder time',
   'reminder.add': 'Add to my calendar',
   'reminder.google': 'Add to Google Calendar',
-  'reminder.note': "The app can't send you notifications: the reminder lives in your calendar.",
+  'reminder.note': "The app can't send you notifications: the reminder lives in your calendar. To change the time, add it again, then delete the old one if it's still there.",
   'reminder.downloaded': 'Calendar file downloaded: open it to add the reminder.',
   'reminder.summary': 'Ville du bien-être: a moment for you',
   'reminder.description': 'Open Ville du bien-être from your home screen icon.',
@@ -2571,7 +2572,7 @@ function merge3(B, L, R) {
     M.active.checkpointAt = Math.max(la.checkpointAt || 0, ra.checkpointAt || 0);
     M.active.owner = ra.owner || la.owner;
   }
-  if (conflicts.length) Store.localWarning = t('storage.conflicts', { n: conflicts.length });
+  if (conflicts.length) Store.warningMsg = ['storage.conflicts', { n: conflicts.length }];
   M.createdAt = Math.min(L.createdAt, R.createdAt);
   return normalize(M);
 }
@@ -2607,7 +2608,10 @@ const Store = {
   mode: 'local',          // 'local' | 'connecting' | 'cloud'
   status: 'local',        // 'local' | 'connecting' | 'ok' | 'retrying' | 'error'
   error: '',
-  localError: '', localWarning: '', recoveryRaw: '', recoveryKey: '',
+  errorMsg: null, warningMsg: null, recoveryRaw: '', recoveryKey: '',
+  // Messages du bandeau gardés par clé : ils se lisent dans la langue affichée, même posés avant qu'elle soit connue.
+  get localError() { return this.errorMsg ? t(...this.errorMsg) : ''; },
+  get localWarning() { return this.warningMsg ? t(...this.warningMsg) : ''; },
   migrationPending: false, migrationReason: '', migrationSnapshot: null, lastReadFailed: false,
   ref: null, legacyRef: null, cloudMigrationPending: false,
   unsub: null,
@@ -2641,8 +2645,8 @@ const Store = {
     } catch (e) { this.base = null; }
     touchClock();
   },
-  reportLocal(message) {
-    this.localError = message;
+  reportLocal(key, params) {
+    this.errorMsg = key ? [key, params] : null;
     if (typeof renderStorageStatus === 'function') renderStorageStatus();
   },
   decodeLocal(raw) {
@@ -2652,8 +2656,8 @@ const Store = {
       return normalize(parsed);
     } catch (e) {
       this.recoveryRaw = raw;
-      this.localWarning = t('storage.legacyUnreadable');
-      this.reportLocal(t('storage.localUnreadable'));
+      this.warningMsg = ['storage.legacyUnreadable'];
+      this.reportLocal('storage.localUnreadable');
       return null;
     }
   },
@@ -2668,9 +2672,7 @@ const Store = {
     return Date.now() < a.startedAt + a.min * 60000 + 120000;
   },
   reportMigration() {
-    this.reportLocal(this.migrationReason === 'session'
-      ? t('storage.migrationWaitSession')
-      : t('storage.migrationNoSpace'));
+    this.reportLocal(this.migrationReason === 'session' ? 'storage.migrationWaitSession' : 'storage.migrationNoSpace');
   },
   migrateLegacy() {
     const raw = localStorage.getItem(LEGACY_LS_KEY);
@@ -2679,7 +2681,7 @@ const Store = {
     if (!legacy) {
       // Le document v1 reste à son emplacement exact, même si la v2 est réparée.
       this.recoveryKey = LEGACY_LS_KEY;
-      this.localWarning = t('storage.v1Unreadable');
+      this.warningMsg = ['storage.v1Unreadable'];
       return null;
     }
     this.migrationSnapshot = clone(legacy);
@@ -2701,7 +2703,7 @@ const Store = {
     this.migrationPending = false;
     this.migrationReason = '';
     this.migrationSnapshot = null;
-    this.localWarning = t('storage.migrated');
+    this.warningMsg = ['storage.migrated'];
     this.reportLocal('');
     return legacy;
   },
@@ -2721,7 +2723,7 @@ const Store = {
       this.lastReadFailed = true;
       this.migrationPending = true;
       this.migrationReason = 'storage';
-      this.reportLocal(t('storage.unreadable'));
+      this.reportLocal('storage.unreadable');
       return this.migrationSnapshot ? clone(this.migrationSnapshot) : null;
     }
   },
@@ -2754,7 +2756,7 @@ const Store = {
       this.recoveryKey = key;
       return true;
     } catch (e) {
-      this.reportLocal(t('storage.preserveFailed'));
+      this.reportLocal('storage.preserveFailed');
       return false;
     }
   },
@@ -2784,7 +2786,7 @@ const Store = {
       this.reportLocal('');
       return true;
     } catch (e) {
-      this.reportLocal(t('storage.cannotSave'));
+      this.reportLocal('storage.cannotSave');
       return false;
     }
   },
@@ -2850,7 +2852,7 @@ const Store = {
         const legacy = parseDoc(await this.legacyRef.get());
         if (legacy && this.legacySessionIsLive(legacy)) {
           this.cloudMigrationPending = true;
-          this.localWarning = t('storage.cloudSessionWait');
+          this.warningMsg = ['storage.cloudSessionWait'];
         } else { R = legacy; fromLegacy = !!legacy; }
       }
       this.mode = 'cloud';
@@ -2900,7 +2902,7 @@ const Store = {
           this.saveLocal();
         }
         this.status = 'ok';
-        this.localWarning = t('storage.cloudMigrated');
+        this.warningMsg = ['storage.cloudMigrated'];
         this.schedule(0);
         renderSyncStatus();
         if (typeof renderStorageStatus === 'function') renderStorageStatus();
@@ -5961,7 +5963,7 @@ function settingsWeek() {
   time.addEventListener('change', update);
   const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: async () => {
     update();
-    const result = await shareOrDownload(buildReminderIcs(reminderTime(), new Date()), 'ville-du-bien-etre-rappel.ics', 'text/calendar');
+    const result = await shareOrDownload(buildReminderIcs(reminderTime(), new Date(), Store.device), 'ville-du-bien-etre-rappel.ics', 'text/calendar');
     if (result === 'downloaded') toast(t('reminder.downloaded'));
   } }, icon('download'), t('reminder.add'));
   return settingsBlock('settingsWeek',
@@ -6038,9 +6040,9 @@ function settingsReset() {
   const reset = h('button', { class: 'btn btn-ghost', type: 'button' }, t('settings.reset'));
   twoStep(reset, t('settings.reset'), t('settings.resetConfirm'), () => {
     if (S.active || run) { toast(t('settings.resetFinishSession')); return; }
-    const clock = S.clock;
-    setLang('auto');   // une ville neuve suit la langue du téléphone, ses exemples aussi
+    const clock = S.clock, lang = S.settings.lang;
     S = defaultState();
+    S.settings.lang = lang;   // la langue choisie reste : une ville neuve doit rester lisible
     S.clock = { tz: clock.tz, maxSeen: clock.maxSeen, lastDay: clock.lastDay };
     closeSheet();
     Mode.state = null;
@@ -6525,10 +6527,12 @@ function icsFold(line) {
   }
   return out;
 }
-function buildReminderIcs(time, now) {
+// Un identifiant par appareil et une version qui monte : ajouté de nouveau, le rappel remplace l'ancien
+// dans les agendas qui le reconnaissent.
+function buildReminderIcs(time, now, device = 'appareil') {
   const start = nextReminder(time, now), summary = icsText(t('reminder.summary'));
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ville-du-bien-etre//rappel//' + LANG.toUpperCase(), 'CALSCALE:GREGORIAN',
-    'BEGIN:VEVENT', 'UID:rappel-' + now.getTime() + '@ville-du-bien-etre', 'DTSTAMP:' + icsUtc(now), 'DTSTART:' + icsLocal(start),
+    'BEGIN:VEVENT', 'UID:rappel-' + device + '@ville-du-bien-etre', 'SEQUENCE:' + Math.floor(now.getTime() / 60000), 'DTSTAMP:' + icsUtc(now), 'DTSTART:' + icsLocal(start),
     'DURATION:PT' + REMINDER_MINUTES + 'M', 'RRULE:FREQ=DAILY', 'SUMMARY:' + summary, 'DESCRIPTION:' + icsText(t('reminder.description')),
     'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + summary, 'TRIGGER:PT0M', 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR'].map(icsFold).join('\r\n') + '\r\n';
@@ -6586,7 +6590,7 @@ async function withSessionLock(action) {
     if (obj(JSON.parse(localStorage.getItem(SESSION_LOCK) || 'null')).token !== token) return false;
     return work();
   } catch (e) {
-    Store.reportLocal(t('storage.needLock'));
+    Store.reportLocal('storage.needLock');
     return false;
   } finally {
     try { if (obj(JSON.parse(localStorage.getItem(SESSION_LOCK) || 'null')).token === token) localStorage.removeItem(SESSION_LOCK); } catch (e) { /* erreur déjà signalée */ }
@@ -6675,8 +6679,7 @@ const Chime = {
   play() {
     try { if (S.settings.vibrate && typeof navigator.vibrate === 'function') navigator.vibrate([160, 90, 160]); } catch (e) { /* pas de vibreur */ }
     if (!S.settings.sound) return;
-    this.sound();
-    this.rest(3000);
+    this.rest(this.sound() + 500);    // la veille attend la fin du son : le bol s'éteint en 4 s
   },
   // Aperçu dans les Réglages, pendant le geste : le son choisi, sans vibration.
   preview() {
@@ -6686,7 +6689,7 @@ const Chime = {
   },
   sound() {
     const c = this.ctx, def = SOUNDS[S.settings.soundType] || SOUNDS.chime, gain = SOUND_GAIN[S.settings.soundVolume] || 1;
-    if (!c) return;
+    if (!c) return 0;
     try {
       if (c.state !== 'running') c.resume().catch(() => {});
       const t0 = c.currentTime + .05;
@@ -6704,6 +6707,8 @@ const Chime = {
         }
       }
     } catch (e) { /* pas de son ici */ }
+    // Durée du son, jusqu'à l'extinction de sa dernière note (ms).
+    return Math.round((.15 + Math.max(...def.notes.map(([dt]) => dt)) + def.decay) * 1000);
   },
   // Pose dans la ville : un « plop » doux, puis une note qui monte quand on enchaîne les poses (gamme pentatonique).
   placeStep: 0,

@@ -262,7 +262,7 @@ function settingsWeek() {
   time.addEventListener('change', update);
   const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: async () => {
     update();
-    const result = await shareOrDownload(buildReminderIcs(reminderTime(), new Date()), 'ville-du-bien-etre-rappel.ics', 'text/calendar');
+    const result = await shareOrDownload(buildReminderIcs(reminderTime(), new Date(), Store.device), 'ville-du-bien-etre-rappel.ics', 'text/calendar');
     if (result === 'downloaded') toast(t('reminder.downloaded'));
   } }, icon('download'), t('reminder.add'));
   return settingsBlock('settingsWeek',
@@ -339,9 +339,9 @@ function settingsReset() {
   const reset = h('button', { class: 'btn btn-ghost', type: 'button' }, t('settings.reset'));
   twoStep(reset, t('settings.reset'), t('settings.resetConfirm'), () => {
     if (S.active || run) { toast(t('settings.resetFinishSession')); return; }
-    const clock = S.clock;
-    setLang('auto');   // une ville neuve suit la langue du téléphone, ses exemples aussi
+    const clock = S.clock, lang = S.settings.lang;
     S = defaultState();
+    S.settings.lang = lang;   // la langue choisie reste : une ville neuve doit rester lisible
     S.clock = { tz: clock.tz, maxSeen: clock.maxSeen, lastDay: clock.lastDay };
     closeSheet();
     Mode.state = null;

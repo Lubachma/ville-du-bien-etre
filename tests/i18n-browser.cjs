@@ -65,10 +65,11 @@ async function runI18n(browser, baseURL) {
     await assertEnglish(page, 'le lancement d’une activité');
     await page.locator('#sheetClose').click();
 
-    // Les textes anglais tiennent dans l'écran, réglages et boutique ouverts.
+    // Les textes anglais tiennent dans l'écran : réglages, boutique et lancement d'une activité ouverts.
+    const launch = () => page.locator('[data-tab="activites"]').click().then(() => page.getByRole('button', { name: /^Reading/ }).click());
     for (const width of [320, 390, 768]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
-      for (const open of [() => openSettings(page), () => page.locator('[data-tab="ville"]').click().then(() => page.locator('#buildBtn').click())]) {
+      for (const open of [() => openSettings(page), () => page.locator('[data-tab="ville"]').click().then(() => page.locator('#buildBtn').click()), launch]) {
         await open();
         const widths = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, inner: innerWidth,
           body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth }));
@@ -109,6 +110,13 @@ async function runI18n(browser, baseURL) {
     await page.locator('#sheetClose').click();
     await page.locator('[data-tab="tirage"]').click();
     assert.ok(await page.getByText('Ce qui me convient maintenant', { exact: true }).isVisible());
+    // « Tout recommencer » garde la langue choisie : la ville est neuve, elle reste lisible.
+    await openSettings(page);
+    await page.getByRole('button', { name: 'Tout recommencer', exact: true }).click();
+    await page.getByRole('button', { name: /^Confirmer\s:\stout effacer/ }).click();
+    await page.waitForFunction(() => window.__ville.state.history.length === 0 && !document.querySelector('#sheet:not([hidden])'));
+    assert.equal(await page.evaluate(() => window.__ville.state.settings.lang), 'fr');
+    assert.equal(await page.evaluate(() => document.documentElement.lang), 'fr');
 
     // La langue choisie reste après un rechargement ; « Automatique » suit le navigateur.
     await chooseLang(page, 'English');

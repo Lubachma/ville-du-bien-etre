@@ -43,3 +43,13 @@ test('lien Google Agenda', () => {
   assert.ok(url.includes('recur=RRULE%3AFREQ%3DDAILY'));
   assert.ok(url.includes('&text=') && url.includes('&details='));
 });
+
+test('ajouter le rappel une deuxième fois le remplace : même identifiant, version plus récente', () => {
+  const { buildReminderIcs } = app();
+  const first = buildReminderIcs('18:00', new Date(2026, 9, 17, 9, 30), 'tel-1');
+  const second = buildReminderIcs('07:30', new Date(2026, 9, 18, 9, 30), 'tel-1');
+  const uid = ics => (ics.match(/\r\nUID:([^\r]+)\r\n/) || [])[1], seq = ics => Number((ics.match(/\r\nSEQUENCE:(\d+)\r\n/) || [])[1]);
+  assert.ok(uid(first) && uid(first) === uid(second), uid(first) + ' / ' + uid(second));
+  assert.ok(seq(second) > seq(first), seq(first) + ' / ' + seq(second));
+  assert.notEqual(uid(buildReminderIcs('18:00', new Date(2026, 9, 17, 9, 30), 'tel-2')), uid(first));
+});

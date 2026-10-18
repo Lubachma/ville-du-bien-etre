@@ -36,7 +36,7 @@ async function runSettings(browser, baseURL) {
     const { context, page, errors } = await newTown(browser, baseURL, false);
     try {
       const section = await openSessions(page);
-      for (const name of ['Bol', 'Clochettes', 'Carillon']) {
+      for (const name of ['Bol chantant', 'Clochettes', 'Carillon']) {
         const before = await page.evaluate(() => window.__audio.oscillators);
         await section.getByRole('radio', { name, exact: true }).click();
         assert.ok(await page.evaluate(() => window.__audio.oscillators) > before, 'aucun son pour ' + name);
@@ -96,7 +96,14 @@ async function runSettings(browser, baseURL) {
       assert.match(download.suggestedFilename(), /\.ics$/);
       const ics = await fs.readFile(await download.path(), 'utf8');
       assert.match(ics, /\r\nDTSTART:\d{8}T073000\r\n/);
-      assert.match(await section.getByRole('link', { name: 'Google Agenda' }).getAttribute('href'), /recur=RRULE/);
+      for (const line of ['RRULE:FREQ=DAILY', 'DURATION:PT10M', 'BEGIN:VALARM', 'TRIGGER:PT0M', 'SUMMARY:Ville du bien-être : un moment pour toi']) assert.ok(ics.includes('\r\n' + line + '\r\n'), line);
+      const device = await page.evaluate(() => __ville.Store.device);
+      assert.ok(ics.includes('\r\nUID:rappel-' + device + '@ville-du-bien-etre\r\n'), 'identifiant du rappel propre à l’appareil');
+      const google = await section.getByRole('link', { name: 'Google Agenda' }).getAttribute('href');
+      assert.match(google, /recur=RRULE/);
+      assert.match(google, /dates=\d{8}T073000%2F\d{8}T074000/);
+      // Changer d'heure : la fenêtre invite à retirer l'ancien rappel de l'agenda.
+      assert.match(await section.innerText(), /supprime l.ancien/);
       await section.getByRole('radio', { name: 'Dimanche', exact: true }).click();
       assert.equal(await page.evaluate(() => __ville.state.settings.weekStart), 'sun');
       await page.locator('#sheetClose').click();

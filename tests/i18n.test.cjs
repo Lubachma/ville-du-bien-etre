@@ -27,7 +27,7 @@ test('chaque clé utilisée existe dans les deux langues', () => {
   const { DICT } = app();
   const used = new Set();
   for (const file of fs.readdirSync(path.join(root, 'src')).filter(f => f.endsWith('.js') && !DICTIONARIES.includes(f))) {
-    for (const m of fs.readFileSync(path.join(root, 'src', file), 'utf8').matchAll(/\b(?:t|tParts)\(\s*'([^']+)'\s*[,)]/g)) used.add(m[1]);
+    for (const m of fs.readFileSync(path.join(root, 'src', file), 'utf8').matchAll(/\b(?:t|tParts|ex)\(\s*'([^']+)'\s*[,)]/g)) used.add(m[1]);
   }
   for (const m of fs.readFileSync(path.join(root, 'index.html'), 'utf8').matchAll(/data-i18n(?:-(?:aria-label|aria-roledescription|placeholder|title))?="([^"]+)"/g)) used.add(m[1]);
   const missing = [...used].filter(key => !(key in DICT.fr) || !(key in DICT.en));
@@ -297,4 +297,42 @@ test('anglais : « Green thumb » cite les cerisiers, une merveille finie est «
   const { DICT } = app();
   assert.match(DICT.en['ach.main-verte.desc'], /cherry trees/);
   assert.equal(DICT.en['shop.wonderDone'], 'Inaugurated');
+});
+
+test('le nom par défaut enregistré tel quel, dans une langue ou l’autre, suit encore la langue', () => {
+  const a = app();
+  a.state = a.defaultState();
+  a.state.personal.name = 'My town';
+  a.setLang('fr');
+  assert.equal(a.cityName(), 'Ma ville');
+  a.state.personal.name = 'Ma ville';
+  a.setLang('en');
+  assert.equal(a.cityName(), 'My town');
+  a.state.personal.name = 'Lumière';
+  assert.equal(a.cityName(), 'Lumière');
+});
+
+test('le son « bol » porte son nom entier', () => {
+  const { DICT } = app();
+  assert.deepEqual([DICT.fr['settings.soundBowl'], DICT.en['settings.soundBowl']], ['Bol chantant', 'Singing bowl']);
+});
+
+test('aucun pluriel entre parenthèses : chaque texte choisit le singulier ou le pluriel', () => {
+  const { DICT, t, setLang } = app();
+  for (const lang of Object.keys(DICT)) {
+    for (const [key, value] of Object.entries(DICT[lang])) {
+      for (const text of typeof value === 'object' ? Object.values(value) : [value]) assert.doesNotMatch(String(text), /\(s\)/, lang + ' ' + key);
+    }
+  }
+  setLang('fr');
+  assert.match(t('storage.conflicts', { n: 1 }), /1\s?champ\./);
+  assert.match(t('storage.conflicts', { n: 3 }), /3\s?champs\./);
+});
+
+test('la série compte des jours actifs : avec les jours de repos, ils ne se suivent pas forcément', () => {
+  const { t, setLang } = app();
+  setLang('fr');
+  assert.equal(t('header.streakTitle', { n: 4 }), 'Série : 4\u00a0jours actifs');
+  setLang('en');
+  assert.equal(t('header.streakTitle', { n: 1 }), 'Streak: 1\u00a0active day');
 });

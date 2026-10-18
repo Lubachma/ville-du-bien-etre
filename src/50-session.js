@@ -40,7 +40,7 @@ async function withSessionLock(action) {
     if (obj(JSON.parse(localStorage.getItem(SESSION_LOCK) || 'null')).token !== token) return false;
     return work();
   } catch (e) {
-    Store.reportLocal(t('storage.needLock'));
+    Store.reportLocal('storage.needLock');
     return false;
   } finally {
     try { if (obj(JSON.parse(localStorage.getItem(SESSION_LOCK) || 'null')).token === token) localStorage.removeItem(SESSION_LOCK); } catch (e) { /* erreur déjà signalée */ }
@@ -129,8 +129,7 @@ const Chime = {
   play() {
     try { if (S.settings.vibrate && typeof navigator.vibrate === 'function') navigator.vibrate([160, 90, 160]); } catch (e) { /* pas de vibreur */ }
     if (!S.settings.sound) return;
-    this.sound();
-    this.rest(3000);
+    this.rest(this.sound() + 500);    // la veille attend la fin du son : le bol s'éteint en 4 s
   },
   // Aperçu dans les Réglages, pendant le geste : le son choisi, sans vibration.
   preview() {
@@ -140,7 +139,7 @@ const Chime = {
   },
   sound() {
     const c = this.ctx, def = SOUNDS[S.settings.soundType] || SOUNDS.chime, gain = SOUND_GAIN[S.settings.soundVolume] || 1;
-    if (!c) return;
+    if (!c) return 0;
     try {
       if (c.state !== 'running') c.resume().catch(() => {});
       const t0 = c.currentTime + .05;
@@ -158,6 +157,8 @@ const Chime = {
         }
       }
     } catch (e) { /* pas de son ici */ }
+    // Durée du son, jusqu'à l'extinction de sa dernière note (ms).
+    return Math.round((.15 + Math.max(...def.notes.map(([dt]) => dt)) + def.decay) * 1000);
   },
   // Pose dans la ville : un « plop » doux, puis une note qui monte quand on enchaîne les poses (gamme pentatonique).
   placeStep: 0,
