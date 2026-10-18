@@ -201,6 +201,48 @@ async function ritualBoards(browser, baseURL) {
   await done(shot, 'journal-rituels.png');
 }
 
+// Harmonie et ambiance, à une date fixée : la Ville avec la bulle et la carte du souhait du jour, la fenêtre de l'harmonie,
+// l'Arche fleurie dans une ville, et l'écran d'une séance avec son ambiance.
+async function harmonyBoards(browser, baseURL) {
+  const { seed, tile, NOW } = require('./harmony-browser.cjs');
+  const { activities, startSession } = require('./rituals-browser.cjs');
+  const open = async (state, { height = 844, clock = false } = {}) => {
+    const page = await browser.newPage({ viewport: { width: 390, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich', serviceWorkers: 'block' });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    if (clock) await page.clock.install({ time: new Date(NOW) }); else await page.clock.setFixedTime(new Date(NOW));
+    await page.addInitScript(s => { window.__VILLE_DEBUG__ = true; if (!localStorage.getItem('ville-bien-etre/v2')) localStorage.setItem('ville-bien-etre/v2', JSON.stringify(s)); }, state);
+    await page.goto(baseURL + '#debug');
+    await page.waitForFunction(() => !!window.__ville);
+    await page.evaluate(() => { const toast = document.querySelector('#toast'); if (toast) toast.hidden = true; });
+    return { page, errors };
+  };
+  const done = async ({ page, errors }, name) => {
+    await page.close();
+    if (errors.length) throw new Error(name + ' : ' + errors.join(' | '));
+    console.log('planche :', path.relative(root, path.join(out, name)));
+  };
+  let shot = await open(seed([tile('maison', 3, 3), tile('bibliotheque', 1, 5), tile('arbre', 2, 2)]), { height: 1100 });
+  await shot.page.waitForTimeout(300);
+  const bottom = await shot.page.evaluate(() => document.querySelector('#townWishCard').getBoundingClientRect().bottom);
+  await shot.page.screenshot({ path: path.join(out, 'souhait.png'), clip: { x: 0, y: 0, width: 390, height: Math.ceil(bottom) + 12 } });
+  await done(shot, 'souhait.png');
+  shot = await open(seed([tile('maison', 0, 0), tile('bibliotheque', 6, 0), tile('kiosque', 0, 6), tile('arbre', 3, 3), tile('fleurs', 4, 4)]), { height: 1100 });
+  await shot.page.locator('#harmonyBtn').click();
+  await shot.page.locator('#sheet').screenshot({ path: path.join(out, 'harmonie.png') });
+  await done(shot, 'harmonie.png');
+  shot = await open(seed([tile('arche', 3, 3), tile('maison', 2, 2), tile('fleurs', 4, 3), tile('arbre', 3, 4), tile('cerisier', 2, 4), tile('banc', 4, 2)],
+    { achievements: { 'ville-harmonieuse': Date.parse('2026-10-20T10:00:00Z') }, settings: { lang: 'fr', townWishes: false } }));
+  await freeze(shot.page, DAY);
+  await shot.page.locator('#city').screenshot({ path: path.join(out, 'arche.png') });
+  await done(shot, 'arche.png');
+  shot = await open(seed([tile('maison', 3, 3)], { activities: activities(), settings: { lang: 'fr', sound: false, ambience: 'rain' } }), { clock: true });
+  await startSession(shot.page, 'Pratique calme', 5);
+  await shot.page.evaluate(() => { const toast = document.querySelector('#toast'); if (toast) toast.hidden = true; });
+  await shot.page.locator('#session').screenshot({ path: path.join(out, 'ambiance.png') });
+  await done(shot, 'ambiance.png');
+}
+
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const server = http.createServer(async (req, res) => {
@@ -227,6 +269,7 @@ async function ritualBoards(browser, baseURL) {
     await shoot(browser, baseURL, 'vignettes.png', town(7, []), { height: 2600, carnet: true });
     await lifeBoards(browser, baseURL);
     await ritualBoards(browser, baseURL);
+    await harmonyBoards(browser, baseURL);
     await measure(browser, baseURL);
   } finally {
     await browser.close();
