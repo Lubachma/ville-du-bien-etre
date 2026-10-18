@@ -80,7 +80,7 @@ function expandCity() {
   commit();
   City.relayout();
   bump();
-  if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('shop.expanded', { size: ns }));
+  if (fresh.sets.length || fresh.achievements.length || fresh.challenges.length) celebrate(fresh); else toast(t('shop.expanded', { size: ns }));
 }
 // Bouton d'une merveille dans la boutique : commencer le chantier, le continuer, ou rien une fois inaugurée.
 function wonderShopAction(key, sub) {

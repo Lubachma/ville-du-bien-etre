@@ -529,8 +529,47 @@ async function ritualSettings(browser, baseURL) {
   return 'Réglages des rituels';
 }
 
+// Défi relevé en posant un élément : « Un nouvel élément dans ta ville » se dit dans le message de la pose. Cette date de
+// création tire ce défi la semaine du 19 octobre 2026 ; « Première pierre » et « Premier défi » sont déjà gagnés, pour que
+// le défi s'annonce seul (un succès gagné en même temps l'emporterait dans son message).
+async function challengeOnBuild(browser, baseURL) {
+  const past = at('2026-05-05T09:00:00Z');
+  const seed = town({ esprit: 5 }, [], { createdAt: at('2026-05-04T09:01:00Z'), achievements: { 'premiere-pierre': past, 'premier-defi': past } });
+  const { context, page, errors } = await cityAt(browser, baseURL, seed, '2026-10-21T10:00:00Z');
+  try {
+    assert.ok((await page.evaluate(() => __ville.rituals.challenges().map(c => c.id))).includes('build'));
+    await page.locator('#buildBtn').click();
+    await page.getByRole('button', { name: /^Placer Banc pour/ }).click();
+    await page.locator('#city').press('Enter');
+    await page.locator('#placeConfirm').click();
+    await page.waitForFunction(() => /Défi relevé/.test(document.querySelector('#toast').textContent), null, { timeout: 3000 });
+    assert.match(await page.locator('#toast').innerText(), /Un nouvel élément dans ta ville/);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Défis : relevé en posant un élément, et dit';
+}
+
+// L'humeur dans un bilan : seulement s'il y a eu au moins une bonne humeur — jamais « Après 0 séance sur 5, tu te sentais bien ».
+async function moodLineOnlyWhenGood(browser, baseURL) {
+  const week = filledWeek();
+  for (const [moods, expected] of [[[2, 2, 1, 2, 2], null], [[5, 2, 1, 2, 2], /Après 1\sséance sur 5, tu te sentais bien/]]) {
+    const seed = { ...week, history: week.history.map((e, i) => ({ ...e, mood: moods[i] })), rituals: { week: '', month: '', year: '' } };
+    for (const [time, title] of [['2026-10-27T09:00:00Z', 'Ta semaine'], ['2026-11-02T09:00:00Z', 'Octobre 2026']]) {
+      const { context, page, errors } = await cityAt(browser, baseURL, seed, time);
+      try {
+        await page.locator('#sheet').waitFor();
+        assert.equal(await page.locator('#sheetTitle').innerText(), title);
+        const text = await page.locator('#sheetBody').innerText();
+        if (expected) assert.match(text, expected); else assert.doesNotMatch(text, /sentais bien/, title);
+        assert.deepEqual(errors, []);
+      } finally { await context.close(); }
+    }
+  }
+  return 'Humeur : dans un bilan, seulement après de bonnes séances';
+}
+
 const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage, visitFriend, shareCity,
-  postcardsInCarnet, ritualSettings];
+  postcardsInCarnet, ritualSettings, challengeOnBuild, moodLineOnlyWhenGood];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

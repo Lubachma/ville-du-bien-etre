@@ -6912,8 +6912,8 @@ const Mode = {
       Chime.place('build');
       commit();
       bump();
-      // Un ensemble ou un succès : le message de fête remplace celui de la pose.
-      if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.built', name));
+      // Un ensemble, un succès ou un défi relevé : le message de fête remplace celui de la pose.
+      if (fresh.sets.length || fresh.achievements.length || fresh.challenges.length) celebrate(fresh); else toast(t('city.built', name));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
@@ -6925,7 +6925,7 @@ const Mode = {
       City.effect(tile.id, 'move');
       Chime.place('move');
       commit();
-      if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.moved'));
+      if (fresh.sets.length || fresh.achievements.length || fresh.challenges.length) celebrate(fresh); else toast(t('city.moved'));
     }
   },
   cancel() { this.state = null; this.render(); City.draw(); },
@@ -7755,7 +7755,7 @@ function expandCity() {
   commit();
   City.relayout();
   bump();
-  if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('shop.expanded', { size: ns }));
+  if (fresh.sets.length || fresh.achievements.length || fresh.challenges.length) celebrate(fresh); else toast(t('shop.expanded', { size: ns }));
 }
 // Bouton d'une merveille dans la boutique : commencer le chantier, le continuer, ou rien une fois inaugurée.
 function wonderShopAction(key, sub) {
@@ -9854,7 +9854,7 @@ function reviewMoments(r) {
     r.visitors && t('review.visitors', { n: r.visitors }),
     r.festivals && t('review.festivals', { n: r.festivals }),
     r.challenges && t('review.challenges', { n: r.challenges }),
-    r.moods.total && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
+    r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),   // jamais « 0 séance »
   ].filter(Boolean);
 }
 // Fenêtre « Ta semaine » : la semaine passée en chiffres et beaux moments, puis les défis et l'objectif de la semaine qui commence.
@@ -9908,7 +9908,7 @@ function openRecap(kind, key) {
       r.longest && t('review.longest', { name: displayName(r.longest.name), min: r.longest.min }),
       r.challenges && t('review.challenges', { n: r.challenges }),
       r.achievements && t('recap.achievements', { n: r.achievements }),
-      month && r.moods.total && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
+      month && r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
     ])].filter(Boolean));
     const city = recapList([r.built && t('review.built', { n: r.built }), r.sets && t('recap.sets', { n: r.sets }),
       r.visitors && t('review.visitors', { n: r.visitors }), r.festivals && t('review.festivals', { n: r.festivals })]);

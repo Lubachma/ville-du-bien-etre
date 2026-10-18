@@ -752,8 +752,8 @@ const Mode = {
       Chime.place('build');
       commit();
       bump();
-      // Un ensemble ou un succès : le message de fête remplace celui de la pose.
-      if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.built', name));
+      // Un ensemble, un succès ou un défi relevé : le message de fête remplace celui de la pose.
+      if (fresh.sets.length || fresh.achievements.length || fresh.challenges.length) celebrate(fresh); else toast(t('city.built', name));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
@@ -765,7 +765,7 @@ const Mode = {
       City.effect(tile.id, 'move');
       Chime.place('move');
       commit();
-      if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.moved'));
+      if (fresh.sets.length || fresh.achievements.length || fresh.challenges.length) celebrate(fresh); else toast(t('city.moved'));
     }
   },
   cancel() { this.state = null; this.render(); City.draw(); },

@@ -114,7 +114,7 @@ function reviewMoments(r) {
     r.visitors && t('review.visitors', { n: r.visitors }),
     r.festivals && t('review.festivals', { n: r.festivals }),
     r.challenges && t('review.challenges', { n: r.challenges }),
-    r.moods.total && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
+    r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),   // jamais « 0 séance »
   ].filter(Boolean);
 }
 // Fenêtre « Ta semaine » : la semaine passée en chiffres et beaux moments, puis les défis et l'objectif de la semaine qui commence.
@@ -168,7 +168,7 @@ function openRecap(kind, key) {
       r.longest && t('review.longest', { name: displayName(r.longest.name), min: r.longest.min }),
       r.challenges && t('review.challenges', { n: r.challenges }),
       r.achievements && t('recap.achievements', { n: r.achievements }),
-      month && r.moods.total && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
+      month && r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
     ])].filter(Boolean));
     const city = recapList([r.built && t('review.built', { n: r.built }), r.sets && t('recap.sets', { n: r.sets }),
       r.visitors && t('review.visitors', { n: r.visitors }), r.festivals && t('review.festivals', { n: r.festivals })]);
