@@ -34,7 +34,8 @@ const CAT_ORDER = ['esprit', 'corps', 'calme', 'foyer', 'crea'];
 // Rubriques de la boutique, dans l'ordre ; noms dans les dictionnaires (cat.* et group.*).
 const GROUPS = ['decor', 'foyer', 'esprit', 'corps', 'calme', 'crea', 'prestige'];
 
-// Prix : au moins 1,5 M par minute exigée pour débloquer, pour que les pièces gardent leur valeur.
+// Prix des 22 éléments d'origine : au moins 1,5 M par minute exigée pour débloquer, pour que les pièces gardent leur valeur.
+// Ceux de l'étape 2 suivent la simulation de rythme (tests/pacing.test.cjs) : environ un an à 30 min par jour.
 // hf = hauteur approximative du dessin (en largeurs de case) pour les vignettes et la sélection.
 const ITEMS = {
   arbre:        { group: 'decor', price: 2e6, hf: .62 },
@@ -59,6 +60,37 @@ const ITEMS = {
   atelier:      { group: 'crea', price: 90e6, need: 60, hf: .55 },
   theatre:      { group: 'crea', price: 360e6, need: 240, hf: .72 },
   horloge:      { group: 'prestige', price: 1.5e9, needTotal: 1000, fem: true, hf: 1.5 },
+  // Étape 2 : trois bâtiments de plus par domaine (prix tirés de la simulation de rythme).
+  lavoir:      { group: 'foyer', price: 250e6, need: 500, hf: .5 },
+  moulin:      { group: 'foyer', price: 450e6, need: 1000, hf: 1 },
+  marche:      { group: 'foyer', price: 700e6, need: 1600, hf: .6 },
+  musee:       { group: 'esprit', price: 250e6, need: 500, hf: .6 },
+  universite:  { group: 'esprit', price: 450e6, need: 1000, fem: true, hf: .9 },
+  planetarium: { group: 'esprit', price: 700e6, need: 1600, hf: .7 },
+  skatepark:   { group: 'corps', price: 250e6, need: 500, hf: .2, ground: true },
+  escalade:    { group: 'corps', price: 450e6, need: 1000, hf: .85 },
+  gymnase:     { group: 'corps', price: 700e6, need: 1600, hf: .6 },
+  labyrinthe:  { group: 'calme', price: 250e6, need: 500, hf: .15, ground: true },
+  source:      { group: 'calme', price: 450e6, need: 1000, fem: true, hf: .5 },
+  pagode:      { group: 'calme', price: 700e6, need: 1600, fem: true, hf: 1.2 },
+  galerie:     { group: 'crea', price: 250e6, need: 500, fem: true, hf: .6 },
+  cinema:      { group: 'crea', price: 450e6, need: 1000, hf: .7 },
+  chapiteau:   { group: 'crea', price: 700e6, need: 1600, hf: .8 },
+  // Décors débloqués aux minutes totales, puis décors offerts par un succès (reward).
+  haie:        { group: 'decor', price: 1e6, needTotal: 30, fem: true, hf: .25 },
+  cerisier:    { group: 'decor', price: 3e6, needTotal: 90, hf: .65 },
+  livres:      { group: 'decor', price: 2e6, needTotal: 150, fem: true, hf: .45 },
+  lanterne:    { group: 'decor', price: 3e6, needTotal: 240, fem: true, hf: .4 },
+  potager:     { group: 'decor', price: 2e6, needTotal: 360, hf: .12, ground: true },
+  cadran:      { group: 'decor', price: 3e6, reward: 'leve-tot', hf: .3 },
+  pasjaponais: { group: 'decor', price: 2e6, reward: 'petit-a-petit', hf: .08, ground: true },
+  fanions:     { group: 'decor', price: 3e6, reward: 'semaine-equilibree', hf: .9 },
+  nichoir:     { group: 'decor', price: 2e6, reward: 'main-verte', hf: .6 },
+  statue:      { group: 'decor', price: 4e6, reward: 'cent-heures', fem: true, hf: .65 },
+  // Merveilles : 4 étapes [minutes totales, prix] ; price est le prix de la première étape.
+  grandarbre:  { group: 'prestige', price: 200e6, wonder: [[1500, 200e6], [1800, 250e6], [2100, 300e6], [2400, 350e6]], hf: 1.5 },
+  phare:       { group: 'prestige', price: 350e6, wonder: [[3000, 350e6], [3500, 400e6], [4000, 450e6], [4500, 500e6]], hf: 1.6 },
+  granderoue:  { group: 'prestige', price: 500e6, wonder: [[5500, 500e6], [6200, 600e6], [6900, 700e6], [7600, 800e6]], fem: true, hf: 1.5 },
 };
 
 /* =========================================================================

@@ -242,7 +242,7 @@ function renderRoutineResult(res, a) {
    pas de niveau ; les seuils n’ajoutent ni dépense ni obligation quotidienne. */
 function buildingLevelInfo(key, state = S) {
   const it = ITEMS[key];
-  if (!it || it.group === 'decor') return { level: 0, have: 0, thresholds: [] };
+  if (!it || it.group === 'decor' || it.wonder) return { level: 0, have: 0, thresholds: [] };
   const have = it.needTotal ? CAT_ORDER.reduce((sum, cat) => sum + (state.stats.byCat[cat] || 0), 0) : state.stats.byCat[it.group] || 0;
   const baseline = it.needTotal || (it.need > 1 ? it.need : 0);
   const thresholds = [baseline + 120, baseline + 360];

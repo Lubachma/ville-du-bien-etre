@@ -120,11 +120,21 @@ function rewardFor(min, drawPct, day) {
   return { base: min * RATE, drawPct: dp, streakPct: sp, streakDays: days, returnPct: rp, total: Math.round(min * RATE * (1 + (dp + sp + rp) / 100)) };
 }
 
+function isWonder(key) { return !!(ITEMS[key] && ITEMS[key].wonder); }
+// Somme payée pour une merveille arrivée à l'étape « stage » (0 : rien de construit).
+function wonderPaid(key, stage) { return ITEMS[key].wonder.slice(0, stage).reduce((sum, [, price]) => sum + price, 0); }
 function lockInfo(key) {
   const it = ITEMS[key];
-  if (it.needTotal) {
+  // Un décor offert attend son succès.
+  if (it.reward) {
+    if ((S.achievements || {})[it.reward]) return null;
+    return { have: 0, need: 1, cat: null, reward: it.reward, text: t('lock.reward', { name: t('ach.' + it.reward + '.name') }) };
+  }
+  // Minutes de toutes les activités : décors de l'étape 2, tour de l'horloge, première étape d'une merveille.
+  const needTotal = it.needTotal || (it.wonder && it.wonder[0][0]);
+  if (needTotal) {
     const have = totalMinutes();
-    return have >= it.needTotal ? null : { have, need: it.needTotal, cat: null, text: t('lock.total', { min: it.needTotal }) };
+    return have >= needTotal ? null : { have, need: needTotal, cat: null, text: t('lock.total', { min: needTotal }) };
   }
   if (!it.need) return null;
   const have = S.stats.byCat[it.group] || 0;
@@ -133,25 +143,45 @@ function lockInfo(key) {
   return { have, need: it.need, cat: it.group, text };
 }
 function unlockedSet() { return new Set(Object.keys(ITEMS).filter(k => !lockInfo(k))); }
+// Collection du carnet : les éléments débloqués (un décor offert l'est par son succès).
+function collectionCount() { return { have: unlockedSet().size, total: Object.keys(ITEMS).length }; }
+// Prochain objectif : l'élément le plus proche, jamais un décor offert (il ne dépend pas des minutes).
 function nextUnlock() {
   const chosen = S.goals && S.goals.building;
-  if (chosen && isItem(chosen)) {
+  if (chosen && isItem(chosen) && !ITEMS[chosen].reward) {
     const l = lockInfo(chosen);
     if (l) return { key: chosen, rem: l.need - l.have, l };
   }
   let best = null;
   for (const k of Object.keys(ITEMS)) {
-    const l = lockInfo(k);
+    const l = ITEMS[k].reward ? null : lockInfo(k);
     if (!l) continue;
     const rem = l.need - l.have;
     if (!best || rem < best.rem || (rem === best.rem && ITEMS[k].price < ITEMS[best.key].price)) best = { key: k, rem, l };
   }
   return best;
 }
+// Prochain élément à débloquer d'une rubrique : le moins de minutes restantes, puis le moins cher, puis l'ordre de la table.
+function nextInGroup(group) {
+  let best = null;
+  for (const k of Object.keys(ITEMS)) {
+    if (ITEMS[k].group !== group || ITEMS[k].reward) continue;
+    const l = lockInfo(k);
+    if (!l) continue;
+    const rem = l.need - l.have;
+    if (!best || rem < best.rem || (rem === best.rem && ITEMS[k].price < ITEMS[best.key].price)) best = { key: k, rem };
+  }
+  return best ? best.key : null;
+}
+// Un élément dévoilé se montre en couleur : débloqué, prochain de sa rubrique, ou objectif choisi.
+function isRevealed(key) { return !lockInfo(key) || nextInGroup(ITEMS[key].group) === key || (S.goals && S.goals.building) === key; }
 function ownedCount(key) { return S.city.tiles.filter(t => t.item === key).length; }
 // Chaque exemplaire supplémentaire d'un bâtiment coûte 50 % de plus (le décor garde son prix).
+// Un décor offert est gratuit tant qu'aucun n'est posé ; une merveille, unique, coûte le prix de sa première étape.
 function priceOf(key) {
   const it = ITEMS[key];
+  if (it.reward && !ownedCount(key)) return 0;
+  if (it.wonder) return it.wonder[0][1];
   if (it.group === 'decor') return it.price;
   return Math.round(it.price * (1 + DUP_STEP * ownedCount(key)) / 1e5) * 1e5;
 }

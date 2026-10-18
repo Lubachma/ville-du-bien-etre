@@ -39,7 +39,8 @@ const CAT_ORDER = ['esprit', 'corps', 'calme', 'foyer', 'crea'];
 // Rubriques de la boutique, dans l'ordre ; noms dans les dictionnaires (cat.* et group.*).
 const GROUPS = ['decor', 'foyer', 'esprit', 'corps', 'calme', 'crea', 'prestige'];
 
-// Prix : au moins 1,5 M par minute exigée pour débloquer, pour que les pièces gardent leur valeur.
+// Prix des 22 éléments d'origine : au moins 1,5 M par minute exigée pour débloquer, pour que les pièces gardent leur valeur.
+// Ceux de l'étape 2 suivent la simulation de rythme (tests/pacing.test.cjs) : environ un an à 30 min par jour.
 // hf = hauteur approximative du dessin (en largeurs de case) pour les vignettes et la sélection.
 const ITEMS = {
   arbre:        { group: 'decor', price: 2e6, hf: .62 },
@@ -64,6 +65,37 @@ const ITEMS = {
   atelier:      { group: 'crea', price: 90e6, need: 60, hf: .55 },
   theatre:      { group: 'crea', price: 360e6, need: 240, hf: .72 },
   horloge:      { group: 'prestige', price: 1.5e9, needTotal: 1000, fem: true, hf: 1.5 },
+  // Étape 2 : trois bâtiments de plus par domaine (prix tirés de la simulation de rythme).
+  lavoir:      { group: 'foyer', price: 250e6, need: 500, hf: .5 },
+  moulin:      { group: 'foyer', price: 450e6, need: 1000, hf: 1 },
+  marche:      { group: 'foyer', price: 700e6, need: 1600, hf: .6 },
+  musee:       { group: 'esprit', price: 250e6, need: 500, hf: .6 },
+  universite:  { group: 'esprit', price: 450e6, need: 1000, fem: true, hf: .9 },
+  planetarium: { group: 'esprit', price: 700e6, need: 1600, hf: .7 },
+  skatepark:   { group: 'corps', price: 250e6, need: 500, hf: .2, ground: true },
+  escalade:    { group: 'corps', price: 450e6, need: 1000, hf: .85 },
+  gymnase:     { group: 'corps', price: 700e6, need: 1600, hf: .6 },
+  labyrinthe:  { group: 'calme', price: 250e6, need: 500, hf: .15, ground: true },
+  source:      { group: 'calme', price: 450e6, need: 1000, fem: true, hf: .5 },
+  pagode:      { group: 'calme', price: 700e6, need: 1600, fem: true, hf: 1.2 },
+  galerie:     { group: 'crea', price: 250e6, need: 500, fem: true, hf: .6 },
+  cinema:      { group: 'crea', price: 450e6, need: 1000, hf: .7 },
+  chapiteau:   { group: 'crea', price: 700e6, need: 1600, hf: .8 },
+  // Décors débloqués aux minutes totales, puis décors offerts par un succès (reward).
+  haie:        { group: 'decor', price: 1e6, needTotal: 30, fem: true, hf: .25 },
+  cerisier:    { group: 'decor', price: 3e6, needTotal: 90, hf: .65 },
+  livres:      { group: 'decor', price: 2e6, needTotal: 150, fem: true, hf: .45 },
+  lanterne:    { group: 'decor', price: 3e6, needTotal: 240, fem: true, hf: .4 },
+  potager:     { group: 'decor', price: 2e6, needTotal: 360, hf: .12, ground: true },
+  cadran:      { group: 'decor', price: 3e6, reward: 'leve-tot', hf: .3 },
+  pasjaponais: { group: 'decor', price: 2e6, reward: 'petit-a-petit', hf: .08, ground: true },
+  fanions:     { group: 'decor', price: 3e6, reward: 'semaine-equilibree', hf: .9 },
+  nichoir:     { group: 'decor', price: 2e6, reward: 'main-verte', hf: .6 },
+  statue:      { group: 'decor', price: 4e6, reward: 'cent-heures', fem: true, hf: .65 },
+  // Merveilles : 4 étapes [minutes totales, prix] ; price est le prix de la première étape.
+  grandarbre:  { group: 'prestige', price: 200e6, wonder: [[1500, 200e6], [1800, 250e6], [2100, 300e6], [2400, 350e6]], hf: 1.5 },
+  phare:       { group: 'prestige', price: 350e6, wonder: [[3000, 350e6], [3500, 400e6], [4000, 450e6], [4500, 500e6]], hf: 1.6 },
+  granderoue:  { group: 'prestige', price: 500e6, wonder: [[5500, 500e6], [6200, 600e6], [6900, 700e6], [7600, 800e6]], fem: true, hf: 1.5 },
 };
 
 /* =========================================================================
@@ -378,6 +410,34 @@ DICT.fr = {
   'item.atelier': "Atelier d'artiste",
   'item.theatre': 'Théâtre',
   'item.horloge': "Tour de l'horloge",
+  'item.lavoir': 'Lavoir',
+  'item.moulin': 'Moulin',
+  'item.marche': 'Marché couvert',
+  'item.musee': 'Musée',
+  'item.universite': 'Université',
+  'item.planetarium': 'Planétarium',
+  'item.skatepark': 'Skatepark',
+  'item.escalade': "Mur d'escalade",
+  'item.gymnase': 'Gymnase',
+  'item.labyrinthe': 'Labyrinthe',
+  'item.source': 'Source chaude',
+  'item.pagode': 'Pagode',
+  'item.galerie': "Galerie d'art",
+  'item.cinema': 'Cinéma',
+  'item.chapiteau': 'Chapiteau',
+  'item.haie': 'Haie',
+  'item.cerisier': 'Cerisier',
+  'item.livres': 'Boîte à livres',
+  'item.lanterne': 'Lanterne de pierre',
+  'item.potager': 'Carré potager',
+  'item.cadran': 'Cadran solaire',
+  'item.pasjaponais': 'Pas japonais',
+  'item.fanions': 'Mât à fanions',
+  'item.nichoir': 'Nichoir',
+  'item.statue': 'Statue',
+  'item.grandarbre': 'Grand Arbre',
+  'item.phare': 'Phare',
+  'item.granderoue': 'Grande Roue',
 
   // Commun, en-tête et navigation
   'common.cancel': 'Annuler',
@@ -462,6 +522,7 @@ DICT.fr = {
   'lock.total': "{min}\u00a0min d'activités au total",
   'lock.first': 'Après ta première session {cat}',
   'lock.need': '{min}\u00a0min {of}',
+  'lock.reward': 'Récompense du succès « {name} »',
 
   // Textes fixes de la page : activités, tirage, journal, session
   'act.edit': 'Modifier',
@@ -1069,6 +1130,34 @@ DICT.en = {
   'item.atelier': "Artist's studio",
   'item.theatre': 'Theatre',
   'item.horloge': 'Clock tower',
+  'item.lavoir': 'Wash house',
+  'item.moulin': 'Windmill',
+  'item.marche': 'Covered market',
+  'item.musee': 'Museum',
+  'item.universite': 'University',
+  'item.planetarium': 'Planetarium',
+  'item.skatepark': 'Skate park',
+  'item.escalade': 'Climbing wall',
+  'item.gymnase': 'Sports hall',
+  'item.labyrinthe': 'Labyrinth',
+  'item.source': 'Hot spring',
+  'item.pagode': 'Pagoda',
+  'item.galerie': 'Art gallery',
+  'item.cinema': 'Cinema',
+  'item.chapiteau': 'Big top',
+  'item.haie': 'Hedge',
+  'item.cerisier': 'Cherry tree',
+  'item.livres': 'Little library',
+  'item.lanterne': 'Stone lantern',
+  'item.potager': 'Vegetable patch',
+  'item.cadran': 'Sundial',
+  'item.pasjaponais': 'Stepping stones',
+  'item.fanions': 'Bunting pole',
+  'item.nichoir': 'Birdhouse',
+  'item.statue': 'Statue',
+  'item.grandarbre': 'Great Tree',
+  'item.phare': 'Lighthouse',
+  'item.granderoue': 'Big Wheel',
 
   // Shared, header and navigation
   'common.cancel': 'Cancel',
@@ -1153,6 +1242,7 @@ DICT.en = {
   'lock.total': '{min}\u00a0min of activities in total',
   'lock.first': 'After your first {cat} session',
   'lock.need': '{min}\u00a0min {of}',
+  'lock.reward': 'Reward for the “{name}” achievement',
 
   // Fixed page texts: activities, draw, journal, session
   'act.edit': 'Edit',
@@ -2647,11 +2737,21 @@ function rewardFor(min, drawPct, day) {
   return { base: min * RATE, drawPct: dp, streakPct: sp, streakDays: days, returnPct: rp, total: Math.round(min * RATE * (1 + (dp + sp + rp) / 100)) };
 }
 
+function isWonder(key) { return !!(ITEMS[key] && ITEMS[key].wonder); }
+// Somme payée pour une merveille arrivée à l'étape « stage » (0 : rien de construit).
+function wonderPaid(key, stage) { return ITEMS[key].wonder.slice(0, stage).reduce((sum, [, price]) => sum + price, 0); }
 function lockInfo(key) {
   const it = ITEMS[key];
-  if (it.needTotal) {
+  // Un décor offert attend son succès.
+  if (it.reward) {
+    if ((S.achievements || {})[it.reward]) return null;
+    return { have: 0, need: 1, cat: null, reward: it.reward, text: t('lock.reward', { name: t('ach.' + it.reward + '.name') }) };
+  }
+  // Minutes de toutes les activités : décors de l'étape 2, tour de l'horloge, première étape d'une merveille.
+  const needTotal = it.needTotal || (it.wonder && it.wonder[0][0]);
+  if (needTotal) {
     const have = totalMinutes();
-    return have >= it.needTotal ? null : { have, need: it.needTotal, cat: null, text: t('lock.total', { min: it.needTotal }) };
+    return have >= needTotal ? null : { have, need: needTotal, cat: null, text: t('lock.total', { min: needTotal }) };
   }
   if (!it.need) return null;
   const have = S.stats.byCat[it.group] || 0;
@@ -2660,25 +2760,45 @@ function lockInfo(key) {
   return { have, need: it.need, cat: it.group, text };
 }
 function unlockedSet() { return new Set(Object.keys(ITEMS).filter(k => !lockInfo(k))); }
+// Collection du carnet : les éléments débloqués (un décor offert l'est par son succès).
+function collectionCount() { return { have: unlockedSet().size, total: Object.keys(ITEMS).length }; }
+// Prochain objectif : l'élément le plus proche, jamais un décor offert (il ne dépend pas des minutes).
 function nextUnlock() {
   const chosen = S.goals && S.goals.building;
-  if (chosen && isItem(chosen)) {
+  if (chosen && isItem(chosen) && !ITEMS[chosen].reward) {
     const l = lockInfo(chosen);
     if (l) return { key: chosen, rem: l.need - l.have, l };
   }
   let best = null;
   for (const k of Object.keys(ITEMS)) {
-    const l = lockInfo(k);
+    const l = ITEMS[k].reward ? null : lockInfo(k);
     if (!l) continue;
     const rem = l.need - l.have;
     if (!best || rem < best.rem || (rem === best.rem && ITEMS[k].price < ITEMS[best.key].price)) best = { key: k, rem, l };
   }
   return best;
 }
+// Prochain élément à débloquer d'une rubrique : le moins de minutes restantes, puis le moins cher, puis l'ordre de la table.
+function nextInGroup(group) {
+  let best = null;
+  for (const k of Object.keys(ITEMS)) {
+    if (ITEMS[k].group !== group || ITEMS[k].reward) continue;
+    const l = lockInfo(k);
+    if (!l) continue;
+    const rem = l.need - l.have;
+    if (!best || rem < best.rem || (rem === best.rem && ITEMS[k].price < ITEMS[best.key].price)) best = { key: k, rem };
+  }
+  return best ? best.key : null;
+}
+// Un élément dévoilé se montre en couleur : débloqué, prochain de sa rubrique, ou objectif choisi.
+function isRevealed(key) { return !lockInfo(key) || nextInGroup(ITEMS[key].group) === key || (S.goals && S.goals.building) === key; }
 function ownedCount(key) { return S.city.tiles.filter(t => t.item === key).length; }
 // Chaque exemplaire supplémentaire d'un bâtiment coûte 50 % de plus (le décor garde son prix).
+// Un décor offert est gratuit tant qu'aucun n'est posé ; une merveille, unique, coûte le prix de sa première étape.
 function priceOf(key) {
   const it = ITEMS[key];
+  if (it.reward && !ownedCount(key)) return 0;
+  if (it.wonder) return it.wonder[0][1];
   if (it.group === 'decor') return it.price;
   return Math.round(it.price * (1 + DUP_STEP * ownedCount(key)) / 1e5) * 1e5;
 }
@@ -4830,7 +4950,7 @@ function renderRoutineResult(res, a) {
    pas de niveau ; les seuils n’ajoutent ni dépense ni obligation quotidienne. */
 function buildingLevelInfo(key, state = S) {
   const it = ITEMS[key];
-  if (!it || it.group === 'decor') return { level: 0, have: 0, thresholds: [] };
+  if (!it || it.group === 'decor' || it.wonder) return { level: 0, have: 0, thresholds: [] };
   const have = it.needTotal ? CAT_ORDER.reduce((sum, cat) => sum + (state.stats.byCat[cat] || 0), 0) : state.stats.byCat[it.group] || 0;
   const baseline = it.needTotal || (it.need > 1 ? it.need : 0);
   const thresholds = [baseline + 120, baseline + 360];
