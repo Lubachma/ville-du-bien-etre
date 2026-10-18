@@ -100,11 +100,24 @@ function endPause() {
   else p.to = shiftDay(now, -1);
 }
 function streakBonus(n) { return clamp((n - 1) * 10, 0, 50); }
+/* Cadeau de bon retour : la première session réussie du jour, quand elle lance une nouvelle série
+   après au moins 2 jours sans session (les jours en pause ne comptent pas). Jamais pour une ville
+   neuve, et jamais en plus d'une série entretenue : les deux bonus sont des alternatives. */
+function returnBonusFor(day) {
+  if (S.stats.days[day] > 0) return 0;
+  const last = Object.keys(S.stats.days).filter(k => k < day && S.stats.days[k] > 0).sort().pop();
+  if (!last || streakIfDoneOn(day) !== 1) return 0;
+  let away = 0;
+  for (let d = shiftDay(last, 1); d < day; d = shiftDay(d, 1)) if (!isPaused(d) && ++away >= 2) return RETURN_BONUS;
+  return 0;
+}
 function rewardFor(min, drawPct, day) {
-  const days = streakIfDoneOn(day || effectiveDay());
+  const d = day || effectiveDay();
+  const days = streakIfDoneOn(d);
   const sp = streakBonus(days);
   const dp = drawPct || 0;
-  return { base: min * RATE, drawPct: dp, streakPct: sp, streakDays: days, total: Math.round(min * RATE * (1 + (dp + sp) / 100)) };
+  const rp = returnBonusFor(d);
+  return { base: min * RATE, drawPct: dp, streakPct: sp, streakDays: days, returnPct: rp, total: Math.round(min * RATE * (1 + (dp + sp + rp) / 100)) };
 }
 
 function lockInfo(key) {

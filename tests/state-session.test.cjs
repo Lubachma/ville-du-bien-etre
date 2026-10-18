@@ -313,3 +313,21 @@ test('an unreadable store cannot be replaced with defaults before its previous c
   assert.equal(a.api.state.coins, 42000000);
   assert.equal(JSON.parse(disk.getItem('ville-bien-etre/v2')).coins, 42000000);
 });
+
+test('le cadeau de bon retour est fixé au lancement et garde sa valeur après minuit', async () => {
+  const a = app(); a.init();
+  a.api.state.clock.tz = 'UTC';
+  a.api.state.stats.days = { '2026-10-10': 10 };
+  a.api.commit({ silent: true });
+  a.advance((11 * 60 + 58) * 60000);   // 23 h 58, heure UTC de la ville
+  await a.startSession({ name: 'Marche', cat: 'corps', min: 5, mode: 'free' });
+  assert.equal(a.api.state.active.returnPct, 20);
+  assert.equal(a.api.state.active.promised, 6e6);
+  a.advance(6 * 60000);
+  a.tick(); await settle(); await settle();
+  const e = a.api.state.history[0];
+  assert.equal(e.ok, true);
+  assert.equal(e.day, '2026-10-17');
+  assert.equal(e.returnPct, 20);
+  assert.equal(e.reward, 6e6);
+});

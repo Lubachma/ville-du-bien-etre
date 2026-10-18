@@ -13,7 +13,7 @@ function app(day = '2026-10-17', days = {}, settings = {}) {
   const source = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '46-features.js']
     .map(file => fs.readFileSync(path.join(__dirname, '../src', file), 'utf8')).join('\n');
   vm.runInContext(source + `\nthis.api = { normalize, defaultState, streak, streakIfDoneOn, streakDetail, restDaysLeft, isPaused, pauseActive,
-    startPause, endPause, weekStartOf, goalWeek, get state() { return S; }, set state(v) { S = v; } };`, context);
+    startPause, endPause, weekStartOf, goalWeek, returnBonusFor, rewardFor, get state() { return S; }, set state(v) { S = v; } };`, context);
   const a = context.api;
   a.state.clock.tz = 'UTC';
   a.state.clock.maxSeen = 0;
@@ -115,4 +115,21 @@ test('pauses invalides écartées, 20 au plus', () => {
   const pauses = a.normalize(JSON.parse(JSON.stringify(raw))).pauses;
   assert.equal(pauses.length, 20);
   assert.equal(pauses[19].from, '2026-01-25');
+});
+
+test('cadeau de bon retour', () => {
+  const day = '2026-10-17';
+  assert.equal(app(day, { '2026-10-14': 10 }).returnBonusFor(day), 0, 'les jours de repos couvrent l’absence');
+  const back = app(day, { '2026-10-10': 10 });
+  assert.equal(back.returnBonusFor(day), 20);
+  assert.equal(back.rewardFor(10, 0, day).returnPct, 20);
+  assert.equal(back.rewardFor(10, 0, day).total, 12e6);
+  const paused = app(day, { '2026-10-10': 10 });
+  paused.state.pauses = [{ from: '2026-10-11', to: '2026-10-16' }];
+  assert.equal(paused.returnBonusFor(day), 0, 'la pause n’est pas une absence');
+  assert.equal(app(day, {}).returnBonusFor(day), 0, 'pas de cadeau pour une ville neuve');
+  assert.equal(app(day, { '2026-10-10': 10, '2026-10-17': 5 }).returnBonusFor(day), 0, 'une seule fois par jour');
+  assert.equal(app(day, { '2026-10-15': 10 }, { restDays: 0 }).returnBonusFor(day), 0, 'un seul jour d’absence');
+  assert.equal(app(day, { '2026-10-14': 10 }, { restDays: 0 }).returnBonusFor(day), 20);
+  assert.equal(app(day, { '2026-10-16': 10 }).rewardFor(10, 0, day).returnPct, 0);
 });

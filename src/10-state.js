@@ -101,6 +101,7 @@ function cleanHistory(e) {
     mode: e.mode === 'free' ? 'free' : 'focus',
     elapsedSec: num(e.elapsedSec, 0, int(e.min, 1, 180, 1) * 60, e.ok === true ? int(e.min, 1, 180, 1) * 60 : null),
     routineRunId: str(e.routineRunId, 40), routineStep: int(e.routineStep, 0, 5, 0),
+    returnPct: int(e.returnPct, 0, 50, 0),
   };
   if (!out.ok) {
     out.reward = 0;
@@ -128,6 +129,7 @@ function cleanActive(a) {
     promised: Math.round(num(a.promised, 0, COINS_MAX, 0)),
     streakPct: int(a.streakPct, 0, 50, 0),
     streakDays: int(a.streakDays, 0, 1e5, 0),
+    returnPct: int(a.returnPct, 0, 50, 0),
     dev: typeof a.dev === 'string' ? a.dev.slice(0, 40) : '',
     draw: cleanDraw(a.draw),
     drawRerolls: int(a.drawRerolls, 0, 10, 0),

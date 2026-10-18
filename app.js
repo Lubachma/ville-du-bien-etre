@@ -21,6 +21,7 @@ const LIST_MAX = 60;
 const DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
 const DRAW_BONUS = { wishes: 20, chores: 50 };   // bonus en % quand on accepte le premier tirage
 const DRAW_MIN_POOL = 3;                          // idées minimum pour qu'un tirage donne un bonus
+const RETURN_BONUS = 20;                          // cadeau de bon retour en %, après au moins 2 jours d'absence
 const GRACE_CHOICES = [5, 10, 20];
 const THEMES = ['auto', 'light', 'dark'];
 const SIZES = [7, 9, 11];
@@ -909,6 +910,10 @@ DICT.fr = {
   // Réglage de la langue
   'settings.lang': 'Langue',
   'settings.langNote': 'Automatique : la langue de ton téléphone si elle est disponible, sinon l’anglais.',
+
+  // Cadeau de bon retour
+  'result.welcomeBack': 'Bon retour !',
+  'act.gainPreviewReturn': 'Gain à la fin : {coins} ({welcome} +{pct}\u00a0%).',
 };
 
 
@@ -1530,6 +1535,10 @@ DICT.en = {
   // Language setting
   'settings.lang': 'Language',
   'settings.langNote': "Automatic: your phone's language if it is available, otherwise English.",
+
+  // Welcome-back gift
+  'result.welcomeBack': 'Welcome back!',
+  'act.gainPreviewReturn': 'Reward at the end: {coins} ({welcome} +{pct}%).',
 };
 
 
@@ -1637,6 +1646,7 @@ function cleanHistory(e) {
     mode: e.mode === 'free' ? 'free' : 'focus',
     elapsedSec: num(e.elapsedSec, 0, int(e.min, 1, 180, 1) * 60, e.ok === true ? int(e.min, 1, 180, 1) * 60 : null),
     routineRunId: str(e.routineRunId, 40), routineStep: int(e.routineStep, 0, 5, 0),
+    returnPct: int(e.returnPct, 0, 50, 0),
   };
   if (!out.ok) {
     out.reward = 0;
@@ -1664,6 +1674,7 @@ function cleanActive(a) {
     promised: Math.round(num(a.promised, 0, COINS_MAX, 0)),
     streakPct: int(a.streakPct, 0, 50, 0),
     streakDays: int(a.streakDays, 0, 1e5, 0),
+    returnPct: int(a.returnPct, 0, 50, 0),
     dev: typeof a.dev === 'string' ? a.dev.slice(0, 40) : '',
     draw: cleanDraw(a.draw),
     drawRerolls: int(a.drawRerolls, 0, 10, 0),
@@ -2475,11 +2486,24 @@ function endPause() {
   else p.to = shiftDay(now, -1);
 }
 function streakBonus(n) { return clamp((n - 1) * 10, 0, 50); }
+/* Cadeau de bon retour : la première session réussie du jour, quand elle lance une nouvelle série
+   après au moins 2 jours sans session (les jours en pause ne comptent pas). Jamais pour une ville
+   neuve, et jamais en plus d'une série entretenue : les deux bonus sont des alternatives. */
+function returnBonusFor(day) {
+  if (S.stats.days[day] > 0) return 0;
+  const last = Object.keys(S.stats.days).filter(k => k < day && S.stats.days[k] > 0).sort().pop();
+  if (!last || streakIfDoneOn(day) !== 1) return 0;
+  let away = 0;
+  for (let d = shiftDay(last, 1); d < day; d = shiftDay(d, 1)) if (!isPaused(d) && ++away >= 2) return RETURN_BONUS;
+  return 0;
+}
 function rewardFor(min, drawPct, day) {
-  const days = streakIfDoneOn(day || effectiveDay());
+  const d = day || effectiveDay();
+  const days = streakIfDoneOn(d);
   const sp = streakBonus(days);
   const dp = drawPct || 0;
-  return { base: min * RATE, drawPct: dp, streakPct: sp, streakDays: days, total: Math.round(min * RATE * (1 + (dp + sp) / 100)) };
+  const rp = returnBonusFor(d);
+  return { base: min * RATE, drawPct: dp, streakPct: sp, streakDays: days, returnPct: rp, total: Math.round(min * RATE * (1 + (dp + sp + rp) / 100)) };
 }
 
 function lockInfo(key) {
@@ -3600,7 +3624,9 @@ function openStartSheet(act, options = {}) {
       $$('.chip', chips).forEach((c, i) => { c.setAttribute('aria-checked', String(durs[i] === min)); c.tabIndex = durs[i] === min ? 0 : -1; });
       $$('.chip', modes).forEach(c => { c.setAttribute('aria-checked', String(c.dataset.mode === mode)); c.tabIndex = c.dataset.mode === mode ? 0 : -1; });
       const r = rewardFor(min, options.drawPct || 0);
-      preview.textContent = frTypo(r.streakPct ? t('act.gainPreviewStreak', { coins: fmt(r.total), days: r.streakDays, pct: r.streakPct }) : t('act.gainPreview', { coins: fmt(r.total) }));
+      preview.textContent = frTypo(r.streakPct ? t('act.gainPreviewStreak', { coins: fmt(r.total), days: r.streakDays, pct: r.streakPct })
+        : r.returnPct ? t('act.gainPreviewReturn', { coins: fmt(r.total), welcome: t('result.welcomeBack'), pct: r.returnPct })
+        : t('act.gainPreview', { coins: fmt(r.total) }));
       modeNote.textContent = frTypo(activityModeNote(mode));
       startBtn.lastChild.textContent = t('act.startButton', { min });
     }
@@ -4953,7 +4979,7 @@ function startSessionLocked(o, resume) {
     S.active = cleanActive({
       id: uid(), name: o.name, cat: o.cat, min, source: o.source || 'direct', sourceId: o.sourceId || '', drawPct: o.drawPct || 0,
       mode: o.mode === 'free' ? 'free' : 'focus', owner: Store.tab, elapsedSec: 0, checkpointAt: now,
-      startedAt: now, day, promised: r.total, streakPct: r.streakPct, streakDays: r.streakDays,
+      startedAt: now, day, promised: r.total, streakPct: r.streakPct, streakDays: r.streakDays, returnPct: r.returnPct,
       dev: Store.device, draw: o.draw || null, drawRerolls: o.drawRerolls || 0,
       routineRunId: o.routineRunId || '', routineStep: o.routineStep || 0,
     });
@@ -5151,7 +5177,7 @@ function addEffort(a, elapsedSec, day) {
   cats[a.cat] = (cats[a.cat] || 0) + minutes;
 }
 function sessionHistory(a, ok, elapsedSec, extra = {}) {
-  return Object.assign({ id: a.id, name: a.name, cat: a.cat, min: a.min, mode: a.mode, elapsedSec, ok, reward: 0, at: Date.now(), source: a.source, day: maxDay(a.day || effectiveDay(), S.clock.lastDay), routineRunId: a.routineRunId || '', routineStep: a.routineStep || 0 }, extra);
+  return Object.assign({ id: a.id, name: a.name, cat: a.cat, min: a.min, mode: a.mode, elapsedSec, ok, reward: 0, at: Date.now(), source: a.source, day: maxDay(a.day || effectiveDay(), S.clock.lastDay), routineRunId: a.routineRunId || '', routineStep: a.routineStep || 0, returnPct: a.returnPct || 0 }, extra);
 }
 async function failSession(reason, awayMs) {
   if (!run || run.finishing) return;
@@ -5262,6 +5288,7 @@ function showSuccess(a, total, fresh) {
       h('li', {}, h('span', {}, t('result.baseLine', { min: a.min })), h('span', {}, fmt(a.min * RATE))),
       a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, '+' + a.drawPct + NB + '%')) : null,
       a.streakPct ? h('li', {}, h('span', {}, t('result.streak', { n: a.streakDays })), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
+      a.returnPct ? h('li', {}, h('span', {}, t('result.welcomeBack')), h('span', {}, '+' + a.returnPct + NB + '%')) : null,
       h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmt(S.coins))));
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });

@@ -214,7 +214,7 @@ function startSessionLocked(o, resume) {
     S.active = cleanActive({
       id: uid(), name: o.name, cat: o.cat, min, source: o.source || 'direct', sourceId: o.sourceId || '', drawPct: o.drawPct || 0,
       mode: o.mode === 'free' ? 'free' : 'focus', owner: Store.tab, elapsedSec: 0, checkpointAt: now,
-      startedAt: now, day, promised: r.total, streakPct: r.streakPct, streakDays: r.streakDays,
+      startedAt: now, day, promised: r.total, streakPct: r.streakPct, streakDays: r.streakDays, returnPct: r.returnPct,
       dev: Store.device, draw: o.draw || null, drawRerolls: o.drawRerolls || 0,
       routineRunId: o.routineRunId || '', routineStep: o.routineStep || 0,
     });
@@ -412,7 +412,7 @@ function addEffort(a, elapsedSec, day) {
   cats[a.cat] = (cats[a.cat] || 0) + minutes;
 }
 function sessionHistory(a, ok, elapsedSec, extra = {}) {
-  return Object.assign({ id: a.id, name: a.name, cat: a.cat, min: a.min, mode: a.mode, elapsedSec, ok, reward: 0, at: Date.now(), source: a.source, day: maxDay(a.day || effectiveDay(), S.clock.lastDay), routineRunId: a.routineRunId || '', routineStep: a.routineStep || 0 }, extra);
+  return Object.assign({ id: a.id, name: a.name, cat: a.cat, min: a.min, mode: a.mode, elapsedSec, ok, reward: 0, at: Date.now(), source: a.source, day: maxDay(a.day || effectiveDay(), S.clock.lastDay), routineRunId: a.routineRunId || '', routineStep: a.routineStep || 0, returnPct: a.returnPct || 0 }, extra);
 }
 async function failSession(reason, awayMs) {
   if (!run || run.finishing) return;
@@ -523,6 +523,7 @@ function showSuccess(a, total, fresh) {
       h('li', {}, h('span', {}, t('result.baseLine', { min: a.min })), h('span', {}, fmt(a.min * RATE))),
       a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, '+' + a.drawPct + NB + '%')) : null,
       a.streakPct ? h('li', {}, h('span', {}, t('result.streak', { n: a.streakDays })), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
+      a.returnPct ? h('li', {}, h('span', {}, t('result.welcomeBack')), h('span', {}, '+' + a.returnPct + NB + '%')) : null,
       h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmt(S.coins))));
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });

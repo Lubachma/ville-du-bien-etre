@@ -133,7 +133,9 @@ function openStartSheet(act, options = {}) {
       $$('.chip', chips).forEach((c, i) => { c.setAttribute('aria-checked', String(durs[i] === min)); c.tabIndex = durs[i] === min ? 0 : -1; });
       $$('.chip', modes).forEach(c => { c.setAttribute('aria-checked', String(c.dataset.mode === mode)); c.tabIndex = c.dataset.mode === mode ? 0 : -1; });
       const r = rewardFor(min, options.drawPct || 0);
-      preview.textContent = frTypo(r.streakPct ? t('act.gainPreviewStreak', { coins: fmt(r.total), days: r.streakDays, pct: r.streakPct }) : t('act.gainPreview', { coins: fmt(r.total) }));
+      preview.textContent = frTypo(r.streakPct ? t('act.gainPreviewStreak', { coins: fmt(r.total), days: r.streakDays, pct: r.streakPct })
+        : r.returnPct ? t('act.gainPreviewReturn', { coins: fmt(r.total), welcome: t('result.welcomeBack'), pct: r.returnPct })
+        : t('act.gainPreview', { coins: fmt(r.total) }));
       modeNote.textContent = frTypo(activityModeNote(mode));
       startBtn.lastChild.textContent = t('act.startButton', { min });
     }

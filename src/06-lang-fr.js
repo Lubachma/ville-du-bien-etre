@@ -615,4 +615,8 @@ DICT.fr = {
   // Réglage de la langue
   'settings.lang': 'Langue',
   'settings.langNote': 'Automatique : la langue de ton téléphone si elle est disponible, sinon l’anglais.',
+
+  // Cadeau de bon retour
+  'result.welcomeBack': 'Bon retour !',
+  'act.gainPreviewReturn': 'Gain à la fin : {coins} ({welcome} +{pct}\u00a0%).',
 };

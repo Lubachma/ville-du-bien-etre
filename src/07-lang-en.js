@@ -615,4 +615,8 @@ DICT.en = {
   // Language setting
   'settings.lang': 'Language',
   'settings.langNote': "Automatic: your phone's language if it is available, otherwise English.",
+
+  // Welcome-back gift
+  'result.welcomeBack': 'Welcome back!',
+  'act.gainPreviewReturn': 'Reward at the end: {coins} ({welcome} +{pct}%).',
 };

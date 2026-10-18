@@ -16,6 +16,7 @@ const LIST_MAX = 60;
 const DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
 const DRAW_BONUS = { wishes: 20, chores: 50 };   // bonus en % quand on accepte le premier tirage
 const DRAW_MIN_POOL = 3;                          // idées minimum pour qu'un tirage donne un bonus
+const RETURN_BONUS = 20;                          // cadeau de bon retour en %, après au moins 2 jours d'absence
 const GRACE_CHOICES = [5, 10, 20];
 const THEMES = ['auto', 'light', 'dark'];
 const SIZES = [7, 9, 11];
