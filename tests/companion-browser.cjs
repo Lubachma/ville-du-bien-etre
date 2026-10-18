@@ -154,7 +154,15 @@ async function townDayNight(browser, baseURL) {
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
   }
-  return 'Compagnon : il se promène le jour et dort la nuit';
+  // La nuit, avec une Cabane posée en (1, 1) : il dort juste à côté.
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3), tile('cabane', 1, 1)], { companion: pet() }), '2026-10-21T21:30:00Z');
+  try {
+    await page.waitForFunction(() => !!__ville.companion.spot());
+    const spot = await page.evaluate(() => __ville.companion.spot());
+    assert.ok(spot.pose === 'sleep' && Math.abs(spot.x - 1) <= 1 && Math.abs(spot.y - 1) <= 1, JSON.stringify(spot));
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Compagnon : il se promène le jour et dort la nuit, près de sa Cabane';
 }
 
 // Le bouton du compagnon, et le compagnon lui-même, ouvrent sa fiche, sur la petite carte comme dans la vue en grand.

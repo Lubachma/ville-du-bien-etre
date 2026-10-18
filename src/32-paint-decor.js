@@ -147,6 +147,18 @@ Object.assign(DRAW, {
       g.circle(p[0] + g.tw * .03, p[1], g.tw * .024, cols[(k + shift) % 5]);
     }
   },
+  // Cabane (offerte par « Inséparables ») : une petite cabane de bois au toit en pente, une porte ronde et un pot de fleurs ; le
+  // compagnon dort à côté, la nuit.
+  cabane(g, x, y) {
+    const h = g.tw * .24;
+    g.shadow(x + .5, y + .5, .34);
+    const b = g.box(x + .26, y + .26, x + .74, y + .74, 0, h, g.c('#b07a4a'));
+    g.faceDisc(b, 'L', .5, .38, .16, .34, g.door);
+    g.hipRoof(x + .2, y + .2, x + .8, y + .8, h, g.tw * .22, g.c('#8a5a35'));
+    g.box(x + .78, y + .6, x + .9, y + .72, 0, g.tw * .06, g.c('#c8693e'));
+    const [fx, fy] = g.P(x + .84, y + .66, g.tw * .08);
+    for (const [dx, dy, color] of [[-.025, 0, '#e87ba4'], [.02, -.01, '#f2c14e'], [0, -.03, '#7fb3e0']]) g.circle(fx + dx * g.tw, fy + dy * g.tw, g.tw * .022, g.bloom(color));
+  },
   statue(g, x, y) {
     const stone = g.c('#d9d2c4'), bronze = g.c('#9a7446');
     g.shadow(x + .5, y + .5, .26);

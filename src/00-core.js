@@ -91,6 +91,7 @@ const ITEMS = {
   nichoir:     { group: 'decor', price: 2e6, reward: 'main-verte', hf: .65 },
   statue:      { group: 'decor', price: 4e6, reward: 'cent-heures', fem: true, hf: .57 },
   arche:       { group: 'decor', price: 4e6, reward: 'ville-harmonieuse', fem: true, hf: .95 },
+  cabane:      { group: 'decor', price: 3e6, reward: 'inseparables', fem: true, hf: .5 },
   // Merveilles : 4 étapes [minutes totales, prix] ; price est le prix de la première étape.
   grandarbre:  { group: 'prestige', price: 200e6, wonder: [[1500, 200e6], [1800, 250e6], [2100, 300e6], [2400, 350e6]], hf: 1.19 },
   phare:       { group: 'prestige', price: 350e6, wonder: [[3000, 350e6], [3500, 400e6], [4000, 450e6], [4500, 500e6]], hf: 1.16 },
@@ -144,6 +145,9 @@ const ACHIEVEMENTS = [
   { id: 'premier-souhait', family: 'town', kind: 'townWishes', n: 1 },
   { id: 'habitants-combles', family: 'town', kind: 'townWishes', n: 10 },
   { id: 'ville-harmonieuse', family: 'town', kind: 'stars', n: 5, reward: 'arche' },
+  { id: 'premiere-rencontre', family: 'companion', kind: 'companion', n: 1 },
+  { id: 'complices', family: 'companion', kind: 'companionLevel', n: 5 },
+  { id: 'inseparables', family: 'companion', kind: 'companionLevel', n: 10, reward: 'cabane' },
 ];
 const NATURE_ITEMS = ['arbre', 'cerisier', 'haie', 'fleurs', 'potager'];
 // Ensembles : trois éléments dans un même carré de 3 × 3 cases.
@@ -209,7 +213,7 @@ const CHALLENGES = [
 const SHARE_ITEMS = Object.freeze(['arbre', 'fleurs', 'chemin', 'banc', 'lampadaire', 'etang', 'maison', 'boulangerie', 'serre', 'bibliotheque', 'ecole', 'observatoire',
   'terrain', 'piscine', 'stade', 'jardin', 'fontaine', 'pavillon', 'kiosque', 'atelier', 'theatre', 'horloge', 'lavoir', 'moulin', 'marche', 'musee', 'universite',
   'planetarium', 'skatepark', 'escalade', 'gymnase', 'labyrinthe', 'source', 'pagode', 'galerie', 'cinema', 'chapiteau', 'haie', 'cerisier', 'livres', 'lanterne',
-  'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'grandarbre', 'phare', 'granderoue', 'arche']);
+  'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'grandarbre', 'phare', 'granderoue', 'arche', 'cabane']);
 const POSTCARDS_MAX = 50;            // cartes postales des villes amies gardées dans le carnet
 // Harmonie : les cinq étoiles, une par critère (28-harmony.js).
 const HARMONY = ['verdure', 'variete', 'details', 'quartiers', 'lumieres'];

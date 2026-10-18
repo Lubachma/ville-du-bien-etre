@@ -1248,4 +1248,12 @@ DICT.fr = {
   'settings.companionTitle': 'Compagnon',
   'settings.companionAdopt': 'Accueillir un compagnon',
   'settings.companionShown': 'Afficher {name}',
+  // Étape 6 : trois succès du compagnon et la Cabane.
+  'item.cabane': 'Cabane',
+  'ach.premiere-rencontre.name': 'Première rencontre',
+  'ach.premiere-rencontre.desc': 'Accueille un compagnon dans ta ville.',
+  'ach.complices.name': 'Complices',
+  'ach.complices.desc': 'Atteins le niveau 5 de complicité avec ton compagnon.',
+  'ach.inseparables.name': 'Inséparables',
+  'ach.inseparables.desc': 'Atteins le niveau 10 de complicité avec ton compagnon.',
 };

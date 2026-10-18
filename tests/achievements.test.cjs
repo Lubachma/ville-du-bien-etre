@@ -2,7 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadApp, plain } = require('./helpers/app.cjs');
 
-const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '46-features.js'];
+const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '29-companion.js',
+  '46-features.js'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 function app(tz = 'Europe/Zurich') {
   const a = loadApp(FILES, { expose: ['ACHIEVEMENTS', 'SETS', 'achievementMet', 'achievementProgress', 'checkAchievements', 'lockInfo', 'keyToUTC'] });
@@ -64,6 +65,10 @@ const CASES = {
   'premier-souhait': (s, at) => { s.gifts = at ? { 'visit:2026-10-18': T0, 'wish:2026-10-18': T0 } : { 'visit:2026-10-18': T0 }; },
   'habitants-combles': (s, at) => { s.gifts = Object.fromEntries(Array.from({ length: at ? 10 : 9 }, (_, i) => ['wish:' + mondays(i), T0])); },
   'ville-harmonieuse': (s, at) => { s.gifts = Object.fromEntries(['verdure', 'variete', 'details', 'quartiers', 'lumieres'].slice(0, at ? 5 : 4).map(id => ['star:' + id, T0])); },
+  // Compagnon : accueilli, puis complicité niveau 5 (240 min ensemble) et niveau 10 (1 800 min).
+  'premiere-rencontre': (s, at) => { s.companion = at ? { species: 'lapin', name: '', since: T0, minutes: 0, wear: '' } : null; },
+  'complices': (s, at) => { s.companion = { species: 'lapin', name: '', since: T0, minutes: at ? 240 : 239, wear: '' }; },
+  'inseparables': (s, at) => { s.companion = { species: 'lapin', name: '', since: T0, minutes: at ? 1800 : 1799, wear: '' }; },
 };
 
 test('chaque succès est faux juste avant son seuil et vrai au seuil', () => {

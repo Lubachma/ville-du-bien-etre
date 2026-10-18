@@ -96,6 +96,7 @@ const ITEMS = {
   nichoir:     { group: 'decor', price: 2e6, reward: 'main-verte', hf: .65 },
   statue:      { group: 'decor', price: 4e6, reward: 'cent-heures', fem: true, hf: .57 },
   arche:       { group: 'decor', price: 4e6, reward: 'ville-harmonieuse', fem: true, hf: .95 },
+  cabane:      { group: 'decor', price: 3e6, reward: 'inseparables', fem: true, hf: .5 },
   // Merveilles : 4 étapes [minutes totales, prix] ; price est le prix de la première étape.
   grandarbre:  { group: 'prestige', price: 200e6, wonder: [[1500, 200e6], [1800, 250e6], [2100, 300e6], [2400, 350e6]], hf: 1.19 },
   phare:       { group: 'prestige', price: 350e6, wonder: [[3000, 350e6], [3500, 400e6], [4000, 450e6], [4500, 500e6]], hf: 1.16 },
@@ -149,6 +150,9 @@ const ACHIEVEMENTS = [
   { id: 'premier-souhait', family: 'town', kind: 'townWishes', n: 1 },
   { id: 'habitants-combles', family: 'town', kind: 'townWishes', n: 10 },
   { id: 'ville-harmonieuse', family: 'town', kind: 'stars', n: 5, reward: 'arche' },
+  { id: 'premiere-rencontre', family: 'companion', kind: 'companion', n: 1 },
+  { id: 'complices', family: 'companion', kind: 'companionLevel', n: 5 },
+  { id: 'inseparables', family: 'companion', kind: 'companionLevel', n: 10, reward: 'cabane' },
 ];
 const NATURE_ITEMS = ['arbre', 'cerisier', 'haie', 'fleurs', 'potager'];
 // Ensembles : trois éléments dans un même carré de 3 × 3 cases.
@@ -214,7 +218,7 @@ const CHALLENGES = [
 const SHARE_ITEMS = Object.freeze(['arbre', 'fleurs', 'chemin', 'banc', 'lampadaire', 'etang', 'maison', 'boulangerie', 'serre', 'bibliotheque', 'ecole', 'observatoire',
   'terrain', 'piscine', 'stade', 'jardin', 'fontaine', 'pavillon', 'kiosque', 'atelier', 'theatre', 'horloge', 'lavoir', 'moulin', 'marche', 'musee', 'universite',
   'planetarium', 'skatepark', 'escalade', 'gymnase', 'labyrinthe', 'source', 'pagode', 'galerie', 'cinema', 'chapiteau', 'haie', 'cerisier', 'livres', 'lanterne',
-  'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'grandarbre', 'phare', 'granderoue', 'arche']);
+  'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'grandarbre', 'phare', 'granderoue', 'arche', 'cabane']);
 const POSTCARDS_MAX = 50;            // cartes postales des villes amies gardées dans le carnet
 // Harmonie : les cinq étoiles, une par critère (28-harmony.js).
 const HARMONY = ['verdure', 'variete', 'details', 'quartiers', 'lumieres'];
@@ -1724,6 +1728,14 @@ DICT.fr = {
   'settings.companionTitle': 'Compagnon',
   'settings.companionAdopt': 'Accueillir un compagnon',
   'settings.companionShown': 'Afficher {name}',
+  // Étape 6 : trois succès du compagnon et la Cabane.
+  'item.cabane': 'Cabane',
+  'ach.premiere-rencontre.name': 'Première rencontre',
+  'ach.premiere-rencontre.desc': 'Accueille un compagnon dans ta ville.',
+  'ach.complices.name': 'Complices',
+  'ach.complices.desc': 'Atteins le niveau 5 de complicité avec ton compagnon.',
+  'ach.inseparables.name': 'Inséparables',
+  'ach.inseparables.desc': 'Atteins le niveau 10 de complicité avec ton compagnon.',
 };
 
 
@@ -2978,6 +2990,14 @@ DICT.en = {
   'settings.companionTitle': 'Companion',
   'settings.companionAdopt': 'Welcome a companion',
   'settings.companionShown': 'Show {name}',
+  // Step 6: the companion's three achievements and the hut.
+  'item.cabane': 'Hut',
+  'ach.premiere-rencontre.name': 'First meeting',
+  'ach.premiere-rencontre.desc': 'Welcome a companion into your town.',
+  'ach.complices.name': 'Close friends',
+  'ach.complices.desc': 'Reach friendship level 5 with your companion.',
+  'ach.inseparables.name': 'Inseparable',
+  'ach.inseparables.desc': 'Reach friendship level 10 with your companion.',
 };
 
 
@@ -6075,6 +6095,18 @@ Object.assign(DRAW, {
       g.circle(p[0] + g.tw * .03, p[1], g.tw * .024, cols[(k + shift) % 5]);
     }
   },
+  // Cabane (offerte par « Inséparables ») : une petite cabane de bois au toit en pente, une porte ronde et un pot de fleurs ; le
+  // compagnon dort à côté, la nuit.
+  cabane(g, x, y) {
+    const h = g.tw * .24;
+    g.shadow(x + .5, y + .5, .34);
+    const b = g.box(x + .26, y + .26, x + .74, y + .74, 0, h, g.c('#b07a4a'));
+    g.faceDisc(b, 'L', .5, .38, .16, .34, g.door);
+    g.hipRoof(x + .2, y + .2, x + .8, y + .8, h, g.tw * .22, g.c('#8a5a35'));
+    g.box(x + .78, y + .6, x + .9, y + .72, 0, g.tw * .06, g.c('#c8693e'));
+    const [fx, fy] = g.P(x + .84, y + .66, g.tw * .08);
+    for (const [dx, dy, color] of [[-.025, 0, '#e87ba4'], [.02, -.01, '#f2c14e'], [0, -.03, '#7fb3e0']]) g.circle(fx + dx * g.tw, fy + dy * g.tw, g.tw * .022, g.bloom(color));
+  },
   statue(g, x, y) {
     const stone = g.c('#d9d2c4'), bronze = g.c('#9a7446');
     g.shadow(x + .5, y + .5, .26);
@@ -6850,14 +6882,15 @@ const City = (() => {
     DRAW[item](mini, 0, 0, {});
     wishBox = { x: bx - r, y: cy - r, w: r * 2, h: Math.max(r * 2, ay - (cy - r)), tile: tile.id };
   }
-  // Compagnon : le jour, sur son chemin de promenade à demi-vitesse ; la nuit, endormi à côté de la première Cabane posée (une case
-  // voisine où marcher, sinon sa propre case), ou sans Cabane sur la case où marcher la plus proche du centre. Rien sans compagnon
-  // affiché ni case où marcher.
+  // Compagnon : le jour, sur son chemin de promenade à demi-vitesse ; la nuit, endormi à côté de la première Cabane posée (la case
+  // voisine où marcher la plus en avant, pour que la Cabane ne le cache pas ; sinon sa propre case), ou sans Cabane sur la case où
+  // marcher la plus proche du centre. Rien sans compagnon affiché ni case où marcher.
   function companionSpot(cells, night, t) {
     if (!S.companion || S.settings.companionShown === false || !cells.length) return null;
     if (!night) { const p = walkerPos(walkPaths(cells)[5], 5, t / 2); return { x: p.x, y: p.y, pose: 'walk' }; }
     const hut = S.city.tiles.find(tile => tile.item === 'cabane'), centre = (N - 1) / 2, far = cell => Math.abs(cell.x - centre) + Math.abs(cell.y - centre);
-    const cell = hut ? cells.find(other => Math.abs(other.x - hut.x) <= 1 && Math.abs(other.y - hut.y) <= 1) || hut : [...cells].sort((a, b) => far(a) - far(b))[0];
+    const near = hut ? cells.filter(other => Math.abs(other.x - hut.x) <= 1 && Math.abs(other.y - hut.y) <= 1).sort((a, b) => b.x + b.y - (a.x + a.y)) : [];
+    const cell = hut ? near[0] || hut : [...cells].sort((a, b) => far(a) - far(b))[0];
     return { x: cell.x + .5, y: cell.y + .5, pose: 'sleep' };
   }
   // Le compagnon, un peu plus grand que les habitants, et sa zone touchable (au moins 32 points de côté).

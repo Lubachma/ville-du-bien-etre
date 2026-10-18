@@ -7,7 +7,7 @@ const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10
   '29-companion.js', '46-features.js'];
 const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'companionLevelOf', 'setLang', 'achievementMet', 'achievementProgress',
   'companionLevel', 'companionNext', 'wearUnlocked', 'companionName', 'adoptCompanion', 'editCompanion', 'addCompanionMinutes', 'wearCompanion',
-  'companionInvite', 'companionPose', 'companionWord', 'chance', 'dayWeather', 'seasonOf', 'visitorOf', 'festivalsOn', 'shiftDay', 't', 'DICT'];
+  'companionInvite', 'companionPose', 'checkAchievements', 'lockInfo', 'ITEMS', 'NATURE_ITEMS', 'companionWord', 'chance', 'dayWeather', 'seasonOf', 'visitorOf', 'festivalsOn', 'shiftDay', 't', 'DICT'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 function app(now = '2026-10-21T10:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
@@ -211,4 +211,24 @@ test('mot du jour : jamais un reproche ni un accord', () => {
   assert.ok(texts('fr').length >= 26 && texts('en').length >= 26);
   for (const text of texts('fr')) assert.doesNotMatch(text, /triste|ennuie|manqu|attend|content|ravi|heureu|fier|fière|seul|perdu/i, text);
   for (const text of texts('en')) assert.doesNotMatch(text, /sad|bored|miss|waiting|lonely|\bhe\b|\bshe\b|lost/i, text);
+});
+
+test('compagnon : trois succès et la Cabane', () => {
+  const a = app();
+  assert.deepEqual(plain(a.ITEMS.cabane), { ...plain(a.ITEMS.cabane), group: 'decor', price: 3e6, reward: 'inseparables' });
+  assert.equal(a.NATURE_ITEMS.includes('cabane'), false);
+  const fresh = () => plain(a.checkAchievements()).filter(id => ['premiere-rencontre', 'complices', 'inseparables'].includes(id));
+  assert.deepEqual(fresh(), []);
+  a.adoptCompanion('lapin', '');
+  assert.deepEqual(fresh(), ['premiere-rencontre']);
+  assert.ok(a.lockInfo('cabane'));
+  a.addCompanionMinutes(239);
+  assert.deepEqual(fresh(), []);
+  a.addCompanionMinutes(1);
+  assert.deepEqual(fresh(), ['complices']);
+  a.addCompanionMinutes(1559);
+  assert.deepEqual(fresh(), []);
+  a.addCompanionMinutes(1);
+  assert.deepEqual(fresh(), ['inseparables']);
+  assert.equal(a.lockInfo('cabane'), null);
 });

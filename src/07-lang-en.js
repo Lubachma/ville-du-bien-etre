@@ -1248,4 +1248,12 @@ DICT.en = {
   'settings.companionTitle': 'Companion',
   'settings.companionAdopt': 'Welcome a companion',
   'settings.companionShown': 'Show {name}',
+  // Step 6: the companion's three achievements and the hut.
+  'item.cabane': 'Hut',
+  'ach.premiere-rencontre.name': 'First meeting',
+  'ach.premiere-rencontre.desc': 'Welcome a companion into your town.',
+  'ach.complices.name': 'Close friends',
+  'ach.complices.desc': 'Reach friendship level 5 with your companion.',
+  'ach.inseparables.name': 'Inseparable',
+  'ach.inseparables.desc': 'Reach friendship level 10 with your companion.',
 };

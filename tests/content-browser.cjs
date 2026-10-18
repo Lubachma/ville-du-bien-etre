@@ -126,7 +126,7 @@ async function runContent(browser, baseURL) {
       // Le rattrapage au démarrage ajoute « Bon voisinage » : la ville a déjà un ensemble.
       const have = await page.evaluate(() => Object.keys(__ville.state.achievements).length);
       assert.equal(have, 3);
-      assert.match(text, /3 sur 45/);
+      assert.match(text, /3 sur 48/);
       assert.match(text, /1 sur 12/);
       await card.getByRole('button', { name: 'Ouvrir le carnet', exact: true }).click();
       const body = page.locator('#sheetBody');
@@ -139,8 +139,8 @@ async function runContent(browser, baseURL) {
         document.createElement = (tag, ...rest) => { if (String(tag).toLowerCase() === 'canvas') window.__canvases++; return make(tag, ...rest); };
       });
       await body.getByRole('radio', { name: 'Collection', exact: true }).click();
-      assert.equal(await body.locator('.carnet-cell').count(), 51);
-      assert.equal(await page.evaluate(() => window.__canvases), 51);
+      assert.equal(await body.locator('.carnet-cell').count(), 52);
+      assert.equal(await page.evaluate(() => window.__canvases), 52);
       await body.getByRole('radio', { name: 'Ensembles', exact: true }).click();
       const sets = await body.locator('.carnet-row strong').allInnerTexts();
       assert.equal(sets[0], 'Cocon');
@@ -157,7 +157,7 @@ async function runContent(browser, baseURL) {
       await page.getByRole('button', { name: 'Tout recommencer', exact: true }).click();
       await page.getByRole('button', { name: /^Confirmer\s:\stout effacer/ }).click();
       await page.waitForFunction(() => !Object.keys(__ville.state.achievements).length && !Object.keys(__ville.state.sets).length);
-      assert.match(await card.innerText(), /0\ssur\s45/);
+      assert.match(await card.innerText(), /0\ssur\s48/);
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Carnet : compteurs, onglets et repère Nouveau');
@@ -272,7 +272,7 @@ async function runContent(browser, baseURL) {
       assert.equal(await page.evaluate(() => !!__ville.state.achievements['grand-calme']), true);
       // Restaurée depuis le Journal : la carte Carnet compte déjà les succès recalculés.
       const have = await page.evaluate(() => Object.keys(__ville.state.achievements).length);
-      assert.match(await page.locator('#carnetCard').innerText(), new RegExp(have + '\\ssur\\s45'));
+      assert.match(await page.locator('#carnetCard').innerText(), new RegExp(have + '\\ssur\\s48'));
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Restauration : succès recalculés');
@@ -289,7 +289,7 @@ async function runContent(browser, baseURL) {
       const decor = page.locator('#shop-decor');
       assert.equal(await decor.getByRole('button', { name: /^Placer .+ pour / }).count(), 6);
       assert.match(await decor.innerText(), /Haie/);
-      assert.equal(await decor.locator('.shop-item.hidden').count(), 10);
+      assert.equal(await decor.locator('.shop-item.hidden').count(), 11);
       assert.match(await decor.innerText(), /Récompense du succès «\sLève-tôt\s»/);
       await page.locator('#sheetClose').click();
       await page.evaluate(() => { __ville.state.achievements['leve-tot'] = Date.now(); });
