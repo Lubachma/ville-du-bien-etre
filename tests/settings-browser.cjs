@@ -42,9 +42,11 @@ async function runSettings(browser, baseURL) {
         assert.ok(await page.evaluate(() => window.__audio.oscillators) > before, 'aucun son pour ' + name);
       }
       const peaks = [];
+      // Le volume du son de fin (l'ambiance a aussi le sien, plus bas dans la section).
+      const volume = section.getByRole('radiogroup', { name: 'Volume', exact: true });
       for (const name of ['Doux', 'Normal', 'Fort']) {
         await page.evaluate(() => { window.__audio.ramps = []; });
-        await section.getByRole('radio', { name, exact: true }).click();
+        await volume.getByRole('radio', { name, exact: true }).click();
         peaks.push(await page.evaluate(() => Math.max(...window.__audio.ramps)));
       }
       assert.ok(peaks[0] < peaks[1] && peaks[1] < peaks[2], 'volumes : ' + peaks.join(' < '));
