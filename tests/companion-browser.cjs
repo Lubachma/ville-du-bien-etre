@@ -497,9 +497,57 @@ async function breathHidden(browser, baseURL) {
   return 'Respiration : sans compagnon visible, un disque respire';
 }
 
+const companionSection = page => page.locator('#settingsBtn').click().then(() => page.locator('#settingsCompanion'));
+
+// Après « Pas maintenant » : Réglages › Compagnon › « Accueillir un compagnon » ouvre le choix, et l'arrivée fonctionne.
+async function settingsLater(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([]), NOW);
+  try {
+    await page.locator('#companionInvite').getByRole('button', { name: 'Pas maintenant', exact: true }).click();
+    const section = await companionSection(page);
+    assert.match(await section.innerText(), /Compagnon/);
+    await section.getByRole('button', { name: 'Accueillir un compagnon', exact: true }).click();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Ton compagnon');
+    await page.locator('#sheetBody').getByRole('button', { name: 'Accueillir Pompon', exact: true }).click();
+    await toastMatches(page, /Bienvenue à Pompon/);
+    assert.equal(await page.evaluate(() => __ville.companion.state().species), 'lapin');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Réglages : accueillir un compagnon après « Pas maintenant »';
+}
+
+// « Afficher Pompon » le cache et le remontre ; « Modifier » change l'animal et garde la complicité ; la section tient à 320 px.
+async function settingsHide(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { companion: pet({ minutes: 70 }) }), NOW, { viewport: { width: 320, height: 640 } });
+  try {
+    const toggle = async () => {
+      await (await companionSection(page)).getByRole('switch', { name: 'Afficher Pompon', exact: true }).click();
+      await page.locator('#sheetClose').click();
+    };
+    await toggle();
+    assert.deepEqual([await page.locator('#companionBtn').isVisible(), await page.evaluate(() => __ville.companion.spot())], [false, null]);
+    await toggle();
+    assert.equal(await page.locator('#companionBtn').isVisible(), true);
+    await page.waitForFunction(() => !!__ville.companion.spot());
+    for (const lang of ['fr', 'en']) {
+      if (lang === 'en') await toEnglish(page);
+      await companionSection(page);
+      assert.equal(await fitsSheet(page), true, lang);
+      await page.locator('#sheetClose').click();
+    }
+    await (await companionSection(page)).getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.locator('#sheetBody').getByRole('radio', { name: 'Marmot', exact: true }).click();
+    await page.locator('#sheetBody').getByRole('button', { name: 'Save', exact: true }).click();
+    const c = await page.evaluate(() => __ville.companion.state());
+    assert.deepEqual([c.species, c.minutes, c.name], ['marmotte', 70, 'Pompon']);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Réglages : afficher, cacher et modifier le compagnon';
+}
+
 const SCENARIOS = [paintAll, inviteAfterFirstSession, adoptDefault, adoptLongName, suggestedNameFollowsLanguage, townDayNight, townTapAndButton,
   townHiddenAndVisit, sheetContent, wardrobe, sheetLongName, sessionPoses, successScreen, interruptedCounts, successLongName, breathOnlyCalm, breathCycle,
-  breathReducedMotion, breathRoutine, breathHidden];
+  breathReducedMotion, breathRoutine, breathHidden, settingsLater, settingsHide];
 async function runCompanion(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

@@ -1720,6 +1720,10 @@ DICT.fr = {
   'breath.out': 'Expire',
   'breath.help': '5 secondes pour inspirer, 5 pour expirer',
   'settings.breathing': 'Respiration guidée pendant les séances Calme',
+  // Étape 6 : la section Compagnon des réglages.
+  'settings.companionTitle': 'Compagnon',
+  'settings.companionAdopt': 'Accueillir un compagnon',
+  'settings.companionShown': 'Afficher {name}',
 };
 
 
@@ -2970,6 +2974,10 @@ DICT.en = {
   'breath.out': 'Breathe out',
   'breath.help': '5 seconds to breathe in, 5 to breathe out',
   'settings.breathing': 'Guided breathing in Calm sessions',
+  // Step 6: the Companion settings section.
+  'settings.companionTitle': 'Companion',
+  'settings.companionAdopt': 'Welcome a companion',
+  'settings.companionShown': 'Show {name}',
 };
 
 
@@ -8989,6 +8997,22 @@ function settingsRituals() {
     toggle('mood', t('settings.mood')),
     toggle('townWishes', t('settings.townWishes')));
 }
+// Compagnon (étape 6) : l'afficher ou non dans la ville et pendant les séances, le modifier ; sans compagnon, l'accueillir.
+function settingsCompanion() {
+  const c = S.companion, parts = [h('span', { class: 'section-title' }, t('settings.companionTitle'))];
+  if (!c) parts.push(h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => openCompanionChoice() }, t('settings.companionAdopt')));
+  else {
+    const label = t('settings.companionShown', { name: companionName() });
+    const sw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.companionShown !== false), 'aria-label': label, onclick: () => {
+      S.settings.companionShown = S.settings.companionShown === false;
+      sw.setAttribute('aria-checked', String(S.settings.companionShown));
+      commit();
+    } });
+    parts.push(h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, label), sw),
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => openCompanionChoice({ edit: true }) }, t('companion.edit')));
+  }
+  return settingsBlock('settingsCompanion', h('div', { class: 'setting' }, ...parts));
+}
 // Semaine et rappel : début de semaine (série et objectif), rappel quotidien ajouté à l'agenda.
 function settingsWeek() {
   const starts = ['mon', 'sun'], labels = { mon: t('settings.weekMon'), sun: t('settings.weekSun') };
@@ -9123,7 +9147,8 @@ function settingsReset() {
 }
 function openSettings() {
   openSheet(t('nav.settings'), body => {
-    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsWeek(), settingsRituals(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
+    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsWeek(), settingsRituals(),
+      typeof openCompanionChoice === 'function' ? settingsCompanion() : null, settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()].filter(Boolean);
     sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
   });
 }

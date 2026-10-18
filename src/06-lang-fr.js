@@ -1244,4 +1244,8 @@ DICT.fr = {
   'breath.out': 'Expire',
   'breath.help': '5 secondes pour inspirer, 5 pour expirer',
   'settings.breathing': 'Respiration guidée pendant les séances Calme',
+  // Étape 6 : la section Compagnon des réglages.
+  'settings.companionTitle': 'Compagnon',
+  'settings.companionAdopt': 'Accueillir un compagnon',
+  'settings.companionShown': 'Afficher {name}',
 };

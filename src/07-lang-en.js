@@ -1244,4 +1244,8 @@ DICT.en = {
   'breath.out': 'Breathe out',
   'breath.help': '5 seconds to breathe in, 5 to breathe out',
   'settings.breathing': 'Guided breathing in Calm sessions',
+  // Step 6: the Companion settings section.
+  'settings.companionTitle': 'Companion',
+  'settings.companionAdopt': 'Welcome a companion',
+  'settings.companionShown': 'Show {name}',
 };
