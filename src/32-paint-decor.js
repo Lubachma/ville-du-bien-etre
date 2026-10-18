@@ -3,7 +3,7 @@
    ========================================================================= */
 Object.assign(DRAW, {
   haie(g, x, y) {
-    const leaf = g.c('#4f8f45'), light = g.c('#68a856');
+    const leaf = g.leaf('#4f8f45'), light = g.leaf('#68a856');
     g.shadow(x + .5, y + .52, .4);
     g.box(x + .1, y + .38, x + .9, y + .62, 0, g.tw * .14, leaf, { top: light, right: shade(leaf, -.15) });
     // Feuillage en touches : dessus arrondi et face avant
@@ -22,15 +22,15 @@ Object.assign(DRAW, {
     // Pétales tombés
     for (let i = 0; i < 7; i++) {
       const [px, py] = g.P(x + .25 + rnd(i, x + 3) * .5, y + .25 + rnd(y + 5, i) * .5);
-      g.circle(px, py, g.tw * .012, g.c('#f6b3c8', .5));
+      g.circle(px, py, g.tw * .012, g.bloom('#f6b3c8', .5));
     }
     g.box(cx - .035, cy - .035, cx + .035, cy + .035, 0, trunkH, g.c('#7b4f36'));
     // Houppier rose en boules, quelques fleurs blanches
     const [sx, sy] = g.P(cx, cy, trunkH + g.tw * .14 * s), R = g.tw * .18 * s;
-    g.circle(sx, sy, R, g.c('#e98fae'));
-    g.circle(sx - R * .5, sy - R * .15, R * .75, g.c('#f3a9c2'));
-    g.circle(sx + R * .5, sy - R * .1, R * .7, g.c('#ee9cb8'));
-    g.circle(sx - R * .05, sy - R * .6, R * .6, g.c('#f8c3d5'));
+    g.circle(sx, sy, R, g.bloom('#e98fae'));
+    g.circle(sx - R * .5, sy - R * .15, R * .75, g.bloom('#f3a9c2'));
+    g.circle(sx + R * .5, sy - R * .1, R * .7, g.bloom('#ee9cb8'));
+    g.circle(sx - R * .05, sy - R * .6, R * .6, g.bloom('#f8c3d5'));
     for (const [dx, dy] of [[-.4, -.3], [.3, -.5], [.5, .1], [-.2, .3]]) g.circle(sx + dx * R, sy + dy * R, g.tw * .015, g.c('#ffffff', .3));
   },
   livres(g, x, y) {

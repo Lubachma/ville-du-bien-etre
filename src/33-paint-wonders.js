@@ -7,7 +7,7 @@ Object.assign(DRAW, {
     const stage = (tile && tile.stage) || 4, cx = x + .5, cy = y + .5, ctx = g.ctx;
     const [trunkH, trunkW, R] = [[.12, .015, .08], [.3, .03, .19], [.48, .05, .33], [.5, .055, .36]][stage - 1];
     g.shadow(cx, cy, Math.max(.12, R * .9));
-    if (stage === 4) { g.ell(cx, cy, .2, 0, g.c('#cfc6b4')); g.ell(cx, cy, .16, 2, g.c('#8fbf6a')); }
+    if (stage === 4) { g.ell(cx, cy, .2, 0, g.c('#cfc6b4')); g.ell(cx, cy, .16, 2, g.leaf('#8fbf6a')); }
     // Tuteurs en bois jusqu'à la troisième étape : ceux de derrière avant le tronc, les autres après
     const stakes = stage < 4 ? [[-.14, -.02], [.1, -.12], [.06, .14]] : [];
     const stakeH = g.tw * (stage === 3 ? .14 : trunkH * .9 + .04);
@@ -18,7 +18,7 @@ Object.assign(DRAW, {
     // Feuillage en boules
     const [sx, sy] = g.P(cx, cy, g.tw * (trunkH + R * .75)), r = g.tw * R;
     const blobs = [[0, 0, 1, '#4a8540'], [-.55, .1, .72, '#579a49'], [.55, .05, .7, '#4f9044'], [-.2, -.5, .65, '#62a352'], [.3, -.42, .6, '#6cae5a'], [0, -.75, .45, '#78b862']];
-    for (const [dx, dy, k, col] of blobs.slice(0, stage === 1 ? 2 : 6)) g.circle(sx + dx * r, sy + dy * r, r * k * .8, g.c(col));
+    for (const [dx, dy, k, col] of blobs.slice(0, stage === 1 ? 2 : 6)) g.circle(sx + dx * r, sy + dy * r, r * k * .8, g.leaf(col));
     if (stage < 4) return;
     // Fleurs aux couleurs des domaines pratiqués cette semaine
     weekCats().forEach((cat, i) => {

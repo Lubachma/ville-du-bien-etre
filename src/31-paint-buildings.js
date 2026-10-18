@@ -153,7 +153,7 @@ Object.assign(DRAW, {
     g.poly(cap, shade(wall, -.12));
   },
   labyrinthe(g, x, y) {
-    const ctx = g.ctx, [sx, sy] = g.P(x + .5, y + .5), hedge = g.c('#4b8a43'), leaf = g.c('#69a95a');
+    const ctx = g.ctx, [sx, sy] = g.P(x + .5, y + .5), hedge = g.leaf('#4b8a43'), leaf = g.leaf('#69a95a');
     g.tile(x, y, .04, g.c('#e5dcc3'));
     // Haies basses en anneaux, chacune ouverte d'un côté
     ctx.save();

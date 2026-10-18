@@ -111,11 +111,9 @@ const City = (() => {
     g.poly([B, R, [R[0], R[1] + slab], [B[0], B[1] + slab]], night ? '#3b2f22' : '#9f835d');
     g.poly([[L[0], L[1] + slab * .28], [B[0], B[1] + slab * .28], B, L], night ? '#2f4a36' : '#86b26c');
     g.poly([[B[0], B[1] + slab * .28], [R[0], R[1] + slab * .28], R, B], night ? '#283f2e' : '#78a35f');
+    const ground = groundColors('spring', night ? 1 : 0);
     for (let x = 0; x < N; x++) {
-      for (let y = 0; y < N; y++) {
-        const alt = (x + y) % 2 === 0;
-        g.tile(x, y, 0, night ? (alt ? '#2d4a3a' : '#2a4536') : (alt ? '#acd292' : '#a5cc8b'), night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
-      }
+      for (let y = 0; y < N; y++) g.tile(x, y, 0, ground[(x + y) % 2], night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
     }
     // Ensembles formés : un pavage commun sous leurs éléments.
     const paved = pavedTileIds();

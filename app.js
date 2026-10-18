@@ -52,19 +52,19 @@ const ITEMS = {
   lampadaire:   { group: 'decor', price: 3e6, hf: .78 },
   etang:        { group: 'decor', price: 6e6, hf: .1, ground: true },
   maison:       { group: 'foyer', price: 5e6, need: 0, fem: true, hf: .72 },
-  boulangerie:  { group: 'foyer', price: 15e6, need: 1, fem: true, hf: .55 },
+  boulangerie:  { group: 'foyer', price: 15e6, need: 1, fem: true, hf: .56 },
   serre:        { group: 'foyer', price: 180e6, need: 120, fem: true, hf: .5 },
   bibliotheque: { group: 'esprit', price: 10e6, need: 1, fem: true, hf: .58 },
   ecole:        { group: 'esprit', price: 90e6, need: 60, fem: true, hf: .78 },
   observatoire: { group: 'esprit', price: 450e6, need: 300, hf: .66 },
   terrain:      { group: 'corps', price: 10e6, need: 1, hf: .12, ground: true },
   piscine:      { group: 'corps', price: 140e6, need: 90, fem: true, hf: .38, ground: true },
-  stade:        { group: 'corps', price: 600e6, need: 400, hf: .62 },
+  stade:        { group: 'corps', price: 600e6, need: 400, hf: .76 },
   jardin:       { group: 'calme', price: 8e6, need: 1, hf: .3, ground: true },
-  fontaine:     { group: 'calme', price: 70e6, need: 45, fem: true, hf: .45 },
+  fontaine:     { group: 'calme', price: 70e6, need: 45, fem: true, hf: .46 },
   pavillon:     { group: 'calme', price: 230e6, need: 150, hf: .62 },
   kiosque:      { group: 'crea', price: 10e6, need: 1, hf: .62 },
-  atelier:      { group: 'crea', price: 90e6, need: 60, hf: .55 },
+  atelier:      { group: 'crea', price: 90e6, need: 60, hf: .65 },
   theatre:      { group: 'crea', price: 360e6, need: 240, hf: .72 },
   horloge:      { group: 'prestige', price: 1.5e9, needTotal: 1000, fem: true, hf: 1.5 },
   // Étape 2 : trois bâtiments de plus par domaine (prix tirés de la simulation de rythme).
@@ -3636,13 +3636,45 @@ function readPalette() {
 // et une merveille a déjà le sien, dessiné à chaque étape.
 function scaffoldOnBuild(key) { return isBuilding(key); }
 
+// Feuillage et fleurs selon la saison : l'été garde les couleurs d'origine.
+const AUTUMN_LEAVES = ['#d98a2b', '#c4572f', '#e2b33c'];
+function seasonLeaf(hex, season) {
+  if (season === 'spring') return mix(hex, '#b9e27a', .3);
+  if (season === 'autumn') return mix(hex, AUTUMN_LEAVES[parseInt(hex.slice(1), 16) % 3], .75);
+  if (season === 'winter') return mix(hex, '#eef3f6', .62);
+  return hex;
+}
+function seasonBloom(hex, season) {
+  if (season === 'autumn') return mix(hex, '#d0703a', .7);
+  if (season === 'winter') return mix(hex, '#eef3f6', .62);
+  return hex;
+}
+// Damier de la ville : teintes de jour et de nuit de chaque saison, mêlées selon l'obscurité.
+const GROUND = {
+  spring: [['#acd292', '#a5cc8b'], ['#2d4a3a', '#2a4536']],
+  summer: [['#a6cf84', '#9fc97d'], ['#2c4a37', '#294433']],
+  autumn: [['#c3c98a', '#bcc283'], ['#3d4834', '#394330']],
+  winter: [['#e8eff2', '#e1e9ed'], ['#46566a', '#425165']],
+};
+function groundColors(season, dark) {
+  const [day, night] = GROUND[season] || GROUND.spring;
+  return day.map((color, i) => (dark <= 0 ? color : dark >= 1 ? night[i] : mix(color, night[i], dark)));
+}
+
+// pal : couleurs des domaines, et l'ambiance (obscurité 0 à 1 ou nuit, saison, temps d'animation, heure de l'horloge).
 function makePainter(ctx, tw, ox, oy, pal) {
   const hw = tw / 2, hh = tw / 4;
-  const night = pal.night;
+  const dark = clamp(pal.dark != null ? pal.dark : pal.night ? 1 : 0, 0, 1), night = dark >= .5;
+  const season = SEASONS.includes(pal.season) ? pal.season : 'summer';
   const P = (x, y, z = 0) => [ox + (x - y) * hw, oy + (x + y) * hh - z];
-  const g = { ctx, tw, hw, hh, P, night, pal };
-  g.c = (hex, k = .42) => (night ? mix(hex, NIGHT_TINT, k) : hex);
-  g.cat = (c) => (night ? mix(pal[c], NIGHT_TINT, .18) : pal[c]);
+  const g = { ctx, tw, hw, hh, P, night, pal, dark, season, snow: season === 'winter' ? 1 : 0,
+    time: pal.time || 0, anim: !!pal.anim, clock: pal.clock != null ? pal.clock : 610 };
+  g.c = (hex, k = .42) => (dark ? mix(hex, NIGHT_TINT, k * dark) : hex);
+  g.cat = (c) => (dark ? mix(pal[c], NIGHT_TINT, .18 * dark) : pal[c]);
+  g.leaf = (hex, k) => g.c(seasonLeaf(hex, season), k);
+  g.bloom = (hex, k) => g.c(seasonBloom(hex, season), k);
+  // Neige sur les toits et le dessus des volumes, en hiver.
+  g.roof = color => (g.snow ? mix(color, g.c('#f3f6f9'), .72) : color);
   g.win = night ? '#ffd47a' : '#cfe3ec';
   g.winR = night ? '#f0bf5c' : '#b7cfda';
   g.door = night ? '#3b2c22' : '#7a5a43';
@@ -3660,7 +3692,7 @@ function makePainter(ctx, tw, ox, oy, pal) {
     g.poly([P(x + i, y + i), P(x + 1 - i, y + i), P(x + 1 - i, y + 1 - i), P(x + i, y + 1 - i)], fill, stroke, lw);
   };
   g.box = (x0, y0, x1, y1, z0, h, color, o = {}) => {
-    const left = o.left || color, right = o.right || shade(color, -.17), top = o.top || shade(color, .14);
+    const left = o.left || color, right = o.right || shade(color, -.17), top = g.roof(o.top || shade(color, .14));
     const a = P(x0, y1, z0), b = P(x1, y1, z0), c = P(x1, y0, z0);
     const a2 = P(x0, y1, z0 + h), b2 = P(x1, y1, z0 + h), c2 = P(x1, y0, z0 + h), d2 = P(x0, y0, z0 + h);
     g.poly([a, b, b2, a2], left);
@@ -3688,6 +3720,7 @@ function makePainter(ctx, tw, ox, oy, pal) {
     g.poly(pts, fill);
   };
   g.hipRoof = (x0, y0, x1, y1, z, rh, color) => {
+    color = g.roof(color);
     const apex = P((x0 + x1) / 2, (y0 + y1) / 2, z + rh);
     const A = P(x0, y1, z), B = P(x1, y1, z), C = P(x1, y0, z), D = P(x0, y0, z);
     g.poly([D, A, apex], shade(color, .12));
@@ -3696,22 +3729,25 @@ function makePainter(ctx, tw, ox, oy, pal) {
     g.poly([B, C, apex], shade(color, -.2));
   };
   g.gableX = (x0, y0, x1, y1, z, rh, color, endColor) => {
+    endColor = endColor || shade(color, -.2); color = g.roof(color);
     const ym = (y0 + y1) / 2;
     const R0 = P(x0, ym, z + rh), R1 = P(x1, ym, z + rh);
     const A = P(x0, y1, z), B = P(x1, y1, z), C = P(x1, y0, z), D = P(x0, y0, z);
     g.poly([D, C, R1, R0], shade(color, .12));
     g.poly([A, B, R1, R0], color);
-    g.poly([B, C, R1], endColor || shade(color, -.2));
+    g.poly([B, C, R1], endColor);
   };
   g.gableY = (x0, y0, x1, y1, z, rh, color, endColor) => {
+    endColor = endColor || color; color = g.roof(color);
     const xm = (x0 + x1) / 2;
     const R0 = P(xm, y0, z + rh), R1 = P(xm, y1, z + rh);
     const A = P(x0, y1, z), B = P(x1, y1, z), C = P(x1, y0, z), D = P(x0, y0, z);
     g.poly([D, A, R1, R0], shade(color, .12));
     g.poly([C, B, R1, R0], shade(color, -.18));
-    g.poly([A, B, R1], endColor || color);
+    g.poly([A, B, R1], endColor);
   };
   g.shed = (x0, y0, x1, y1, z, rh, color, sideColor) => {
+    color = g.roof(color);
     const A = P(x0, y1, z), B = P(x1, y1, z), C = P(x1, y0, z), C2 = P(x1, y0, z + rh), D2 = P(x0, y0, z + rh);
     g.poly([B, C, C2], sideColor);
     g.poly([A, B, C2, D2], color);
@@ -3743,6 +3779,7 @@ function makePainter(ctx, tw, ox, oy, pal) {
     ctx.fill();
   };
   g.cone = (cx, cy, r, z, h, color) => {
+    color = g.roof(color);
     const [sx, sy] = P(cx, cy, z);
     const rx = r * Math.SQRT2 * hw, ry = r * Math.SQRT2 * hh;
     const grad = ctx.createLinearGradient(sx - rx, 0, sx + rx, 0);
@@ -3759,6 +3796,7 @@ function makePainter(ctx, tw, ox, oy, pal) {
     ctx.fill();
   };
   g.dome = (cx, cy, r, z, color) => {
+    color = g.roof(color);
     const [sx, sy] = P(cx, cy, z);
     const rx = r * Math.SQRT2 * hw, ry = r * Math.SQRT2 * hh;
     const grad = ctx.createRadialGradient(sx - rx * .35, sy - rx * .55, rx * .1, sx, sy - rx * .2, rx * 1.1);
@@ -3818,25 +3856,25 @@ const DRAW = {
       const w = g.tw * .2 * s;
       for (let i = 0; i < 3; i++) {
         const yy = sy - i * g.tw * .14 * s, ww = w * (1 - i * .22);
-        g.poly([[sx - ww, yy], [sx, yy - g.tw * .26 * s], [sx + ww, yy]], g.c(i % 2 ? '#3f7f4a' : '#4a8c52'));
-        g.poly([[sx, yy], [sx, yy - g.tw * .26 * s], [sx + ww, yy]], g.c('#356b3e'));
+        g.poly([[sx - ww, yy], [sx, yy - g.tw * .26 * s], [sx + ww, yy]], g.leaf(i % 2 ? '#3f7f4a' : '#4a8c52'));
+        g.poly([[sx, yy], [sx, yy - g.tw * .26 * s], [sx + ww, yy]], g.leaf('#356b3e'));
       }
       return;
     }
     const [sx, sy] = g.P(cx, cy, trunkH + g.tw * .16 * s);
     const R = g.tw * .19 * s;
-    g.circle(sx + R * .1, sy + R * .1, R, g.c('#4a8540'));
-    g.circle(sx - R * .3, sy - R * .25, R * .7, g.c('#62a352'));
-    g.circle(sx + R * .38, sy - R * .05, R * .6, g.c('#579a49'));
-    g.circle(sx - R * .1, sy - R * .55, R * .45, g.c('#78b862'));
+    g.circle(sx + R * .1, sy + R * .1, R, g.leaf('#4a8540'));
+    g.circle(sx - R * .3, sy - R * .25, R * .7, g.leaf('#62a352'));
+    g.circle(sx + R * .38, sy - R * .05, R * .6, g.leaf('#579a49'));
+    g.circle(sx - R * .1, sy - R * .55, R * .45, g.leaf('#78b862'));
   },
   fleurs(g, x, y) {
-    g.tile(x, y, .14, g.c('#8cbd70'));
+    g.tile(x, y, .14, g.leaf('#8cbd70'));
     const cols = ['#f28db2', '#ffd35c', '#ffffff', '#b48df0', '#ff8a5c'];
     for (let i = 0; i < 16; i++) {
       const u = .22 + rnd(x * 7 + i, y * 3 + i) * .56, v = .22 + rnd(y * 5 + i, x * 11 - i) * .56;
       const [sx, sy] = g.P(x + u, y + v, 2);
-      g.circle(sx, sy + 1.5, g.tw * .02, g.c('#4f8a3f'));
+      g.circle(sx, sy + 1.5, g.tw * .02, g.leaf('#4f8a3f'));
       g.circle(sx, sy, g.tw * .03, g.c(cols[i % cols.length], .5));
     }
   },
@@ -3873,7 +3911,7 @@ const DRAW = {
     g.ell(x + .5, y + .5, .34, 0, g.c('#5fb9d8', .5));
     g.ell(x + .44, y + .44, .2, 0, g.c('#7fcbe4', .5));
     const pads = [[.36, .58], [.6, .62], [.58, .38]];
-    for (const [u, v] of pads) g.ell(x + u, y + v, .05, 0, g.c('#5c9d4a'));
+    for (const [u, v] of pads) g.ell(x + u, y + v, .05, 0, g.leaf('#5c9d4a'));
     if (g.night) g.ell(x + .5, y + .45, .05, 0, 'rgba(255,248,220,.7)');
   },
   maison(g, x, y) {
@@ -3992,7 +4030,7 @@ const DRAW = {
     }
     g.cyl(x + .5, y + .5, .46, 0, g.tw * .2, C, shade(C, .22));
     g.ell(x + .5, y + .5, .4, g.tw * .2, null, shade(C, -.12), 1.5);
-    g.ell(x + .5, y + .5, .33, g.tw * .2, g.c('#5fae55'));
+    g.ell(x + .5, y + .5, .33, g.tw * .2, g.leaf('#5fae55'));
     g.ell(x + .5, y + .5, .2, g.tw * .2, null, 'rgba(255,255,255,.75)', 1.2);
   },
   jardin(g, x, y) {
@@ -4005,7 +4043,7 @@ const DRAW = {
     g.box(x + .64, y + .26, x + .72, y + .34, 0, g.tw * .16, C);
     g.hipRoof(x + .62, y + .24, x + .74, y + .36, g.tw * .16, g.tw * .06, shade(C, -.1));
     const [bx, by] = g.P(x + .74, y + .76, g.tw * .06);
-    g.circle(bx, by, g.tw * .07, g.c('#5a9a4a'));
+    g.circle(bx, by, g.tw * .07, g.leaf('#5a9a4a'));
   },
   fontaine(g, x, y) {
     const C = g.cat('calme'), stone = g.c('#d8d1c2');
@@ -4248,7 +4286,7 @@ Object.assign(DRAW, {
     g.poly(cap, shade(wall, -.12));
   },
   labyrinthe(g, x, y) {
-    const ctx = g.ctx, [sx, sy] = g.P(x + .5, y + .5), hedge = g.c('#4b8a43'), leaf = g.c('#69a95a');
+    const ctx = g.ctx, [sx, sy] = g.P(x + .5, y + .5), hedge = g.leaf('#4b8a43'), leaf = g.leaf('#69a95a');
     g.tile(x, y, .04, g.c('#e5dcc3'));
     // Haies basses en anneaux, chacune ouverte d'un côté
     ctx.save();
@@ -4390,7 +4428,7 @@ Object.assign(DRAW, {
    ========================================================================= */
 Object.assign(DRAW, {
   haie(g, x, y) {
-    const leaf = g.c('#4f8f45'), light = g.c('#68a856');
+    const leaf = g.leaf('#4f8f45'), light = g.leaf('#68a856');
     g.shadow(x + .5, y + .52, .4);
     g.box(x + .1, y + .38, x + .9, y + .62, 0, g.tw * .14, leaf, { top: light, right: shade(leaf, -.15) });
     // Feuillage en touches : dessus arrondi et face avant
@@ -4409,15 +4447,15 @@ Object.assign(DRAW, {
     // Pétales tombés
     for (let i = 0; i < 7; i++) {
       const [px, py] = g.P(x + .25 + rnd(i, x + 3) * .5, y + .25 + rnd(y + 5, i) * .5);
-      g.circle(px, py, g.tw * .012, g.c('#f6b3c8', .5));
+      g.circle(px, py, g.tw * .012, g.bloom('#f6b3c8', .5));
     }
     g.box(cx - .035, cy - .035, cx + .035, cy + .035, 0, trunkH, g.c('#7b4f36'));
     // Houppier rose en boules, quelques fleurs blanches
     const [sx, sy] = g.P(cx, cy, trunkH + g.tw * .14 * s), R = g.tw * .18 * s;
-    g.circle(sx, sy, R, g.c('#e98fae'));
-    g.circle(sx - R * .5, sy - R * .15, R * .75, g.c('#f3a9c2'));
-    g.circle(sx + R * .5, sy - R * .1, R * .7, g.c('#ee9cb8'));
-    g.circle(sx - R * .05, sy - R * .6, R * .6, g.c('#f8c3d5'));
+    g.circle(sx, sy, R, g.bloom('#e98fae'));
+    g.circle(sx - R * .5, sy - R * .15, R * .75, g.bloom('#f3a9c2'));
+    g.circle(sx + R * .5, sy - R * .1, R * .7, g.bloom('#ee9cb8'));
+    g.circle(sx - R * .05, sy - R * .6, R * .6, g.bloom('#f8c3d5'));
     for (const [dx, dy] of [[-.4, -.3], [.3, -.5], [.5, .1], [-.2, .3]]) g.circle(sx + dx * R, sy + dy * R, g.tw * .015, g.c('#ffffff', .3));
   },
   livres(g, x, y) {
@@ -4536,7 +4574,7 @@ Object.assign(DRAW, {
     const stage = (tile && tile.stage) || 4, cx = x + .5, cy = y + .5, ctx = g.ctx;
     const [trunkH, trunkW, R] = [[.12, .015, .08], [.3, .03, .19], [.48, .05, .33], [.5, .055, .36]][stage - 1];
     g.shadow(cx, cy, Math.max(.12, R * .9));
-    if (stage === 4) { g.ell(cx, cy, .2, 0, g.c('#cfc6b4')); g.ell(cx, cy, .16, 2, g.c('#8fbf6a')); }
+    if (stage === 4) { g.ell(cx, cy, .2, 0, g.c('#cfc6b4')); g.ell(cx, cy, .16, 2, g.leaf('#8fbf6a')); }
     // Tuteurs en bois jusqu'à la troisième étape : ceux de derrière avant le tronc, les autres après
     const stakes = stage < 4 ? [[-.14, -.02], [.1, -.12], [.06, .14]] : [];
     const stakeH = g.tw * (stage === 3 ? .14 : trunkH * .9 + .04);
@@ -4547,7 +4585,7 @@ Object.assign(DRAW, {
     // Feuillage en boules
     const [sx, sy] = g.P(cx, cy, g.tw * (trunkH + R * .75)), r = g.tw * R;
     const blobs = [[0, 0, 1, '#4a8540'], [-.55, .1, .72, '#579a49'], [.55, .05, .7, '#4f9044'], [-.2, -.5, .65, '#62a352'], [.3, -.42, .6, '#6cae5a'], [0, -.75, .45, '#78b862']];
-    for (const [dx, dy, k, col] of blobs.slice(0, stage === 1 ? 2 : 6)) g.circle(sx + dx * r, sy + dy * r, r * k * .8, g.c(col));
+    for (const [dx, dy, k, col] of blobs.slice(0, stage === 1 ? 2 : 6)) g.circle(sx + dx * r, sy + dy * r, r * k * .8, g.leaf(col));
     if (stage < 4) return;
     // Fleurs aux couleurs des domaines pratiqués cette semaine
     weekCats().forEach((cat, i) => {
@@ -4770,11 +4808,9 @@ const City = (() => {
     g.poly([B, R, [R[0], R[1] + slab], [B[0], B[1] + slab]], night ? '#3b2f22' : '#9f835d');
     g.poly([[L[0], L[1] + slab * .28], [B[0], B[1] + slab * .28], B, L], night ? '#2f4a36' : '#86b26c');
     g.poly([[B[0], B[1] + slab * .28], [R[0], R[1] + slab * .28], R, B], night ? '#283f2e' : '#78a35f');
+    const ground = groundColors('spring', night ? 1 : 0);
     for (let x = 0; x < N; x++) {
-      for (let y = 0; y < N; y++) {
-        const alt = (x + y) % 2 === 0;
-        g.tile(x, y, 0, night ? (alt ? '#2d4a3a' : '#2a4536') : (alt ? '#acd292' : '#a5cc8b'), night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
-      }
+      for (let y = 0; y < N; y++) g.tile(x, y, 0, ground[(x + y) % 2], night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
     }
     // Ensembles formés : un pavage commun sous leurs éléments.
     const paved = pavedTileIds();
