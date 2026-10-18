@@ -130,3 +130,23 @@
 .res-companion-text { display: grid; gap: 6px; justify-items: start; min-width: 0; overflow-wrap: anywhere; }
 .res-companion-text p { margin: 0; }
 .res-companion-time { font-weight: 700; }
+/* Respiration guidée : à l'inspiration, le compagnon (ou un disque léger, sans compagnon visible) grandit en 5 s, puis rétrécit ;
+   « Inspire » et « Expire » apparaissent en fondu. Avec les mouvements réduits, rien ne grandit. */
+.breath-disc {
+  position: absolute; left: 50%; top: 50%; width: 46%; aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+  background: color-mix(in oklab, var(--c, var(--accent)) 16%, transparent);
+  transform: translate(-50%, -50%) scale(.8); opacity: 0; transition: transform 5s ease-in-out, opacity .6s ease;
+}
+.ring-wrap.breathing .breath-disc { opacity: 1; }
+.ring-wrap.breathing.inhale .breath-disc { transform: translate(-50%, -50%) scale(1.15); }
+#sessCompanion { transition: transform 5s ease-in-out; }
+.ring-wrap.breathing.inhale #sessCompanion { transform: scale(1.12); }
+.breath-word { font-size: 16px; font-weight: 700; color: var(--ink-2); }
+#breathBtn[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); }
+.breath-word.fresh { animation: breath-word .8s ease; }
+@keyframes breath-word { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .breath-disc, #sessCompanion { transition: none; }
+  .ring-wrap.breathing.inhale .breath-disc { transform: translate(-50%, -50%) scale(.8); }
+  .ring-wrap.breathing.inhale #sessCompanion { transform: none; }
+}

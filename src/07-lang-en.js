@@ -1237,4 +1237,11 @@ DICT.en = {
   'companion.levelUp': 'Friendship level {level}: {name} gets {thing}',
   'companion.wearIt': 'Put it on',
   'companion.wornDone': 'Done',
+  // Step 6: breathing together.
+  'breath.with': 'Breathe with {name}',
+  'breath.guided': 'Guided breathing',
+  'breath.in': 'Breathe in',
+  'breath.out': 'Breathe out',
+  'breath.help': '5 seconds to breathe in, 5 to breathe out',
+  'settings.breathing': 'Guided breathing in Calm sessions',
 };

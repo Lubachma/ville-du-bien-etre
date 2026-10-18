@@ -391,8 +391,115 @@ async function successLongName(browser, baseURL) {
   return 'Compagnon : l’écran de fin tient à 320 px, même avec un nom long';
 }
 
+// Respiration : le bouton seulement en Calme, avec le nom du compagnon, éteint d'abord, décrit une fois pour les lecteurs d'écran.
+async function breathOnlyCalm(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet() });
+  try {
+    await startSession(page, 'Pratique esprit', 5);
+    assert.equal(await page.locator('#breathBtn').isVisible(), false);
+    await abandonSession(page);
+    await backToCity(page);
+    await startSession(page, 'Pratique calme', 5);
+    const btn = page.locator('#breathBtn');
+    assert.equal(await btn.isVisible(), true);
+    assert.equal((await btn.innerText()).trim(), 'Respirer avec Pompon');
+    assert.equal(await btn.getAttribute('aria-pressed'), 'false');
+    assert.equal(await page.evaluate(() => document.getElementById(document.querySelector('#breathBtn').getAttribute('aria-describedby')).textContent),
+      '5 secondes pour inspirer, 5 pour expirer');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Respiration : seulement dans les séances Calme';
+}
+
+// Respiration allumée : « Inspire », puis « Expire » 5 s plus tard ; le choix revient à la séance Calme suivante ; les réglages l'éteignent.
+async function breathCycle(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet() });
+  try {
+    await startSession(page, 'Pratique calme', 5);
+    await page.locator('#breathBtn').click();
+    const state = () => page.evaluate(() => ({ word: document.querySelector('#breathWord').hidden ? '' : document.querySelector('#breathWord').textContent,
+      wrap: ['breathing', 'inhale', 'exhale'].filter(c => document.querySelector('.ring-wrap').classList.contains(c)).join(' '),
+      sub: document.querySelector('#timerSub').hidden, pressed: document.querySelector('#breathBtn').getAttribute('aria-pressed') }));
+    assert.deepEqual(await state(), { word: 'Inspire', wrap: 'breathing inhale', sub: true, pressed: 'true' });
+    await page.clock.fastForward(5000);
+    assert.deepEqual(await state(), { word: 'Expire', wrap: 'breathing exhale', sub: true, pressed: 'true' });
+    await page.clock.fastForward(5000);
+    assert.equal((await state()).word, 'Inspire');
+    assert.equal(await page.evaluate(() => __ville.state.settings.breathing), true);
+    await abandonSession(page);
+    assert.equal((await state()).wrap, '');
+    await backToCity(page);
+    await startSession(page, 'Pratique calme', 5);
+    assert.deepEqual(await state(), { word: 'Inspire', wrap: 'breathing inhale', sub: true, pressed: 'true' });
+    await abandonSession(page);
+    await backToCity(page);
+    await page.locator('#settingsBtn').click();
+    await page.locator('#settingsSessions').getByRole('switch', { name: 'Respiration guidée pendant les séances Calme', exact: true }).click();
+    await page.locator('#sheetClose').click();
+    assert.equal(await page.evaluate(() => __ville.state.settings.breathing), false);
+    await startSession(page, 'Pratique calme', 5);
+    assert.deepEqual(await state(), { word: '', wrap: '', sub: false, pressed: 'false' });
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Respiration : 5 s pour inspirer, 5 s pour expirer, et le choix retenu';
+}
+
+// Mouvements réduits : rien ne grandit, seul le mot change.
+async function breathReducedMotion(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet(), settings: { breathing: true } });
+  try {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await startSession(page, 'Pratique calme', 5);
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#sessCompanion')).transform), 'none');
+    assert.equal(await page.locator('#breathWord').innerText(), 'Inspire');
+    await page.clock.fastForward(5000);
+    assert.equal(await page.locator('#breathWord').innerText(), 'Expire');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Respiration : avec les mouvements réduits, seul le mot change';
+}
+
+// Routine Calme puis Corps : le guide s'arrête et le bouton disparaît à l'étape Corps.
+async function breathRoutine(browser, baseURL) {
+  const routines = [{ id: 'r1', name: 'Calme puis corps', activityIds: ['a-calme', 'a-corps'] }];
+  const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet(), routines, settings: { breathing: true } });
+  try {
+    await page.locator('[data-tab="activites"]').click();
+    await page.locator('#routinesCard').getByRole('button', { name: 'Lancer', exact: true }).click();
+    await page.locator('#sessRun').waitFor({ state: 'visible' });
+    assert.equal(await page.evaluate(() => document.querySelector('.ring-wrap').classList.contains('breathing')), true);
+    await page.clock.fastForward(5 * 60000 + 1000);
+    await page.getByRole('button', { name: 'Étape suivante', exact: true }).click();
+    await page.locator('#sessRun').waitFor({ state: 'visible' });
+    assert.match(await page.locator('#sessName').innerText(), /corps/);
+    assert.deepEqual(await page.evaluate(() => [document.querySelector('.ring-wrap').className.includes('breathing'), document.querySelector('#breathBtn').hidden,
+      document.querySelector('#timerSub').hidden]), [false, true, false]);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Respiration : elle s’arrête à l’étape suivante d’une routine qui n’est pas Calme';
+}
+
+// Compagnon masqué : « Respiration guidée », et le disque respire à sa place.
+async function breathHidden(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet(), settings: { companionShown: false } });
+  try {
+    await startSession(page, 'Pratique calme', 5);
+    assert.equal((await page.locator('#breathBtn').innerText()).trim(), 'Respiration guidée');
+    await page.locator('#breathBtn').click();
+    const scale = await page.evaluate(() => {
+      const disc = document.querySelector('#breathDisc');
+      disc.style.transition = 'none';   // la valeur visée, sans attendre les 5 s de la transition
+      return disc.hidden ? null : new DOMMatrix(getComputedStyle(disc).transform).a;
+    });
+    assert.ok(scale > 1.05, String(scale));
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Respiration : sans compagnon visible, un disque respire';
+}
+
 const SCENARIOS = [paintAll, inviteAfterFirstSession, adoptDefault, adoptLongName, suggestedNameFollowsLanguage, townDayNight, townTapAndButton,
-  townHiddenAndVisit, sheetContent, wardrobe, sheetLongName, sessionPoses, successScreen, interruptedCounts, successLongName];
+  townHiddenAndVisit, sheetContent, wardrobe, sheetLongName, sessionPoses, successScreen, interruptedCounts, successLongName, breathOnlyCalm, breathCycle,
+  breathReducedMotion, breathRoutine, breathHidden];
 async function runCompanion(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

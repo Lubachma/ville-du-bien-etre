@@ -219,6 +219,12 @@ function settingsSessions() {
     $$('button', ambienceVolume).forEach((b, i) => b.setAttribute('aria-checked', String(volumes[i] === v)));
     hear();
   } }, t({ soft: 'settings.volumeSoft', normal: 'settings.volumeNormal', loud: 'settings.volumeLoud' }[v])));
+  // Respiration guidée des séances Calme (étape 6), éteinte par défaut.
+  const breathSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.breathing === true), 'aria-label': t('settings.breathing'), onclick: () => {
+    S.settings.breathing = S.settings.breathing !== true;
+    breathSw.setAttribute('aria-checked', String(S.settings.breathing));
+    commit();
+  } });
   return settingsBlock('settingsSessions',
     h('div', { class: 'setting' },
       h('span', { class: 'section-title' }, t('settings.grace')),
@@ -234,6 +240,7 @@ function settingsSessions() {
       h('span', { class: 'setting-label' }, t('settings.ambience')), ambienceChips,
       h('span', { class: 'setting-label' }, t('settings.ambienceVolume')), ambienceVolume,
       h('p', { class: 'note' }, t('settings.ambienceNote'))),
+    h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.breathing')), breathSw),
     vibrateSw ? h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.vibrate')), vibrateSw) : null);
 }
 // Série : repos par semaine, pause, masquage. Un changement ne redessine que cette section.

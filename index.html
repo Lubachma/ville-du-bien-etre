@@ -201,8 +201,8 @@
       <span class="pill bonus" id="sessBonus" hidden></span>
     </div>
     <div class="ring-wrap">
-      <svg class="ring" viewBox="0 0 240 240" aria-hidden="true"><circle class="ring-track" cx="120" cy="120" r="108"/><circle class="ring-fill" id="ringFill" cx="120" cy="120" r="108"/></svg>
-      <div class="ring-center"><div class="timer" id="timer" role="timer" aria-live="off">10:00</div><div class="timer-sub" id="timerSub"></div><canvas id="sessCompanion" aria-hidden="true" hidden></canvas></div>
+      <div class="breath-disc" id="breathDisc" aria-hidden="true" hidden></div><svg class="ring" viewBox="0 0 240 240" aria-hidden="true"><circle class="ring-track" cx="120" cy="120" r="108"/><circle class="ring-fill" id="ringFill" cx="120" cy="120" r="108"/></svg>
+      <div class="ring-center"><div class="timer" id="timer" role="timer" aria-live="off">10:00</div><div class="timer-sub" id="timerSub"></div><span class="breath-word" id="breathWord" aria-hidden="true" hidden></span><canvas id="sessCompanion" aria-hidden="true" hidden></canvas></div>
     </div>
     <div class="sess-alert" id="sessAlert" role="alert" hidden></div>
     <ul class="sess-rules">
@@ -210,6 +210,8 @@
       <li id="graceRule"></li>
     </ul>
     <div class="sess-foot">
+      <button class="btn btn-ghost" id="breathBtn" type="button" aria-pressed="false" aria-describedby="breathHelp" hidden><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg><span></span></button>
+      <p class="visually-hidden" id="breathHelp" data-i18n="breath.help">5 secondes pour inspirer, 5 pour expirer</p>
       <button class="btn btn-ghost" id="ambienceBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-sound"/></svg><span data-i18n="ambience.title">Ambiance</span></button>
       <button class="btn btn-ghost" id="strictBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span data-i18n="session.strictButton">Mode strict&nbsp;: bloquer le téléphone sur l'app</span></button>
       <button class="btn btn-ghost" id="abandonBtn" type="button" data-i18n="session.abandon">Abandonner</button>

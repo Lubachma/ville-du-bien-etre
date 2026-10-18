@@ -1237,4 +1237,11 @@ DICT.fr = {
   'companion.levelUp': 'Complicité niveau {level} : {name} reçoit {thing}',
   'companion.wearIt': 'Lui mettre',
   'companion.wornDone': "C'est fait",
+  // Étape 6 : respirer ensemble.
+  'breath.with': 'Respirer avec {name}',
+  'breath.guided': 'Respiration guidée',
+  'breath.in': 'Inspire',
+  'breath.out': 'Expire',
+  'breath.help': '5 secondes pour inspirer, 5 pour expirer',
+  'settings.breathing': 'Respiration guidée pendant les séances Calme',
 };

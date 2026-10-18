@@ -339,7 +339,7 @@ function showRun(a) {
   $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? t('session.ruleFree') : t('session.ruleFocus', { grace: S.settings.grace })));
   $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
   if (typeof renderAmbienceButton === 'function') renderAmbienceButton();
-  if (typeof renderSessionCompanion === 'function') renderSessionCompanion(a);
+  if (typeof renderSessionCompanion === 'function') { renderSessionCompanion(a); renderBreathing(a); }
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
   $('#sessRun').hidden = false;
@@ -460,7 +460,7 @@ function endRun() {
   releaseWake();
   // Fin, abandon, interruption ou séance finie ailleurs : l'ambiance s'arrête aussitôt (déjà éteinte si la séance est allée au bout).
   if (typeof Ambience !== 'undefined') Ambience.stop();
-  if (typeof stopSessionCompanion === 'function') stopSessionCompanion();
+  if (typeof stopSessionCompanion === 'function') { stopSessionCompanion(); stopBreathing(); }
   Chime.rest(3000);
   run = null;
   return r;

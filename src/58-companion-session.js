@@ -50,3 +50,51 @@ function companionFail() {
   paintCompanion(cv, { species: c.species, wear: c.wear, pose: 'idle' }, 96);
   return cv;
 }
+
+// Respiration guidée, seulement dans les séances Calme : « Respirer avec Pompon » (ou « Respiration guidée » sans compagnon visible).
+// Allumée, elle alterne toutes les 5 s « Inspire » et « Expire » sous le minuteur ; le compagnon (ou un disque léger) grandit à
+// l'inspiration. Le choix revient aux séances Calme suivantes.
+let breath = { timer: 0, phase: '' };
+function renderBreathing(a) {
+  stopBreathing();
+  const btn = $('#breathBtn');
+  if (!btn) return;
+  btn.hidden = a.cat !== 'calme';
+  if (btn.hidden) return;
+  const pet = !!S.companion && S.settings.companionShown !== false;
+  btn.lastChild.textContent = frTypo(pet ? t('breath.with', { name: companionName() }) : t('breath.guided'));
+  btn.setAttribute('aria-pressed', String(S.settings.breathing === true));
+  btn.onclick = () => setBreathing(S.settings.breathing !== true);
+  $('#breathDisc').hidden = pet;
+  if (S.settings.breathing === true) startBreathing();
+}
+function setBreathing(on) {
+  S.settings.breathing = on;
+  commit({ silent: true });
+  $('#breathBtn').setAttribute('aria-pressed', String(on));
+  if (on) startBreathing(); else stopBreathing();
+}
+function startBreathing() {
+  stopBreathing();
+  const wrap = $('.ring-wrap'), word = $('#breathWord');
+  const step = phase => {
+    breath.phase = phase;
+    wrap.classList.toggle('inhale', phase === 'in');
+    wrap.classList.toggle('exhale', phase === 'out');
+    word.textContent = frTypo(t(phase === 'in' ? 'breath.in' : 'breath.out'));
+    word.classList.remove('fresh'); void word.offsetWidth; word.classList.add('fresh');   // le mot apparaît en fondu
+  };
+  wrap.classList.add('breathing');
+  word.hidden = false;
+  $('#timerSub').hidden = true;
+  step('in');
+  breath.timer = setInterval(() => step(breath.phase === 'in' ? 'out' : 'in'), BREATH_MS);
+}
+function stopBreathing() {
+  clearInterval(breath.timer);
+  breath = { timer: 0, phase: '' };
+  const wrap = $('.ring-wrap'), word = $('#breathWord'), sub = $('#timerSub');
+  if (wrap) wrap.classList.remove('breathing', 'inhale', 'exhale');
+  if (word) word.hidden = true;
+  if (sub) sub.hidden = false;
+}
