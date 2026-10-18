@@ -83,6 +83,9 @@ function achievementMet(def) {
     case 'postcards': return postcardsKept() >= def.n;
     case 'townWishes': return wishesGranted() >= def.n;
     case 'stars': return starsGained() >= def.n;
+    // Compagnon : accueilli, puis niveau de complicité.
+    case 'companion': return !!S.companion;
+    case 'companionLevel': return typeof companionLevel === 'function' && companionLevel() >= def.n;
     default: return false;
   }
 }
@@ -94,7 +97,7 @@ function achievementProgress(def) {
     activeDays: () => activeDays().length, tiles: () => S.city.tiles.length, nature: natureCount,
     sets: () => Object.keys(S.sets || {}).length, wonders: wondersDone,
     visitors: visitorsMet, festivals: festivalsLived, seasons: seasonsSeen, challenges: challengesDone, postcards: postcardsKept,
-    townWishes: wishesGranted, stars: starsGained,
+    townWishes: wishesGranted, stars: starsGained, companionLevel: () => (typeof companionLevel === 'function' ? companionLevel() : 0),
   }[def.kind];
   if (!have) return null;
   return { have: Math.min(have(), def.n), need: def.n, unit: def.kind === 'catMinutes' || def.kind === 'totalMinutes' ? 'min' : 'n' };

@@ -4,8 +4,10 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 // Étape 6 : le compagnon (données, règles, mot du jour).
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
-  '46-features.js'];
-const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'companionLevelOf'];
+  '29-companion.js', '46-features.js'];
+const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'companionLevelOf', 'setLang', 'achievementMet', 'achievementProgress',
+  'companionLevel', 'companionNext', 'wearUnlocked', 'companionName', 'adoptCompanion', 'editCompanion', 'addCompanionMinutes', 'wearCompanion',
+  'companionInvite', 'companionPose'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 function app(now = '2026-10-21T10:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
@@ -65,4 +67,68 @@ test('compagnon : fusion de deux onglets', () => {
   assert.equal(a.merge3(B, L, R).companion.minutes, 50);
   L.companionLater = T0; R.companionLater = T0 + 5;
   assert.equal(a.merge3(B, L, R).companionLater, T0 + 5);
+});
+
+test('compagnon : arrivée, nom nettoyé, nom suggéré selon la langue', () => {
+  const a = app(), c = plain(a.adoptCompanion('lapin', '  Pompon  '));
+  assert.deepEqual([c.species, c.name, c.minutes, c.wear, a.companionLevel()], ['lapin', 'Pompon', 0, '', 1]);
+  assert.ok(c.since > 0);
+  assert.equal(a.adoptCompanion('chat', 'Minou'), null);
+  // Jamais renommé : le nom suggéré par l'animal, dans la langue affichée.
+  a.adoptCompanion('ourson', '');
+  a.setLang('fr');
+  assert.equal(a.companionName(), 'Caramel');
+  a.setLang('en');
+  assert.equal(a.companionName(), 'Toffee');
+  a.setLang('fr');
+  a.state.companion.minutes = 75;
+  const since = a.state.companion.since;
+  a.editCompanion('marmotte', 'Mélèze');
+  assert.deepEqual(plain(a.state.companion), { species: 'marmotte', name: 'Mélèze', since, minutes: 75, wear: '' });
+});
+
+test('compagnon : minutes, niveaux et accessoires', () => {
+  const a = app();
+  assert.deepEqual([a.addCompanionMinutes(30), a.companionLevel(), a.companionNext()], [null, 0, null]);
+  a.adoptCompanion('lapin', 'Pompon');
+  assert.equal(a.addCompanionMinutes(0), null);
+  assert.deepEqual(plain(a.addCompanionMinutes(25)), { gained: 25, before: 1, after: 2 });
+  assert.deepEqual(plain([a.wearUnlocked(1), a.wearUnlocked(2), a.wearUnlocked(10)]),
+    [[], ['echarpe'], ['echarpe', 'bonnet', 'lunettes', 'couronne', 'noeud', 'paille', 'sac', 'casque', 'cape']]);
+  assert.deepEqual(plain(a.companionNext()), { level: 3, left: 35, wear: 'bonnet' });
+  assert.deepEqual([a.wearCompanion('bonnet'), a.state.companion.wear], [false, '']);
+  assert.deepEqual([a.wearCompanion('echarpe'), a.state.companion.wear], [true, 'echarpe']);
+  assert.deepEqual([a.wearCompanion('licorne'), a.state.companion.wear], [false, 'echarpe']);
+  assert.deepEqual([a.wearCompanion(''), a.state.companion.wear], [true, '']);
+  a.state.companion.minutes = 1800;
+  assert.deepEqual([a.companionLevel(), a.companionNext()], [10, null]);
+});
+
+test('compagnon : invitation après une séance réussie, jamais après « Pas maintenant »', () => {
+  const a = app();
+  a.state.stats.ok = 0;
+  assert.equal(a.companionInvite(), false);
+  a.state.stats.ok = 1;
+  assert.equal(a.companionInvite(), true);
+  a.state.companionLater = T0;
+  assert.equal(a.companionInvite(), false);
+  a.state.companionLater = 0;
+  a.adoptCompanion('lapin', '');
+  assert.equal(a.companionInvite(), false);
+});
+
+test('compagnon : un geste par domaine', () => {
+  const a = app();
+  assert.deepEqual(['esprit', 'corps', 'calme', 'foyer', 'crea'].map(cat => a.companionPose(cat)), ['read', 'stretch', 'meditate', 'water', 'paint']);
+});
+
+test('compagnon : succès d’arrivée et de niveau', () => {
+  const a = app(), met = { kind: 'companion', n: 1 }, level = { kind: 'companionLevel', n: 5 };
+  assert.deepEqual([a.achievementMet(met), a.achievementMet(level)], [false, false]);
+  a.adoptCompanion('lapin', '');
+  a.addCompanionMinutes(25);
+  assert.deepEqual([a.achievementMet(met), a.achievementMet(level)], [true, false]);
+  assert.deepEqual(plain(a.achievementProgress(level)), { have: 2, need: 5, unit: 'n' });
+  a.addCompanionMinutes(215);
+  assert.equal(a.achievementMet(level), true);
 });

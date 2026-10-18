@@ -1633,6 +1633,31 @@ DICT.fr = {
   'life.weather.fog': 'Brouillard',
   'life.rainbow': 'Arc-en-ciel',
   'visit.here': { one: '{name} est de passage', other: '{name} sont de passage' },
+  // Étape 6 : le compagnon (animaux, noms suggérés, accessoires).
+  'companion.species.lapin': 'Lapin',
+  'companion.species.marmotte': 'Marmotte',
+  'companion.species.ourson': 'Ourson',
+  'companion.suggest.lapin': 'Pompon',
+  'companion.suggest.marmotte': 'Noisette',
+  'companion.suggest.ourson': 'Caramel',
+  'companion.wear.echarpe': 'Écharpe',
+  'companion.wear.bonnet': 'Bonnet',
+  'companion.wear.lunettes': 'Lunettes rondes',
+  'companion.wear.couronne': 'Couronne de fleurs',
+  'companion.wear.noeud': 'Nœud papillon',
+  'companion.wear.paille': 'Chapeau de paille',
+  'companion.wear.sac': 'Sac à dos',
+  'companion.wear.casque': 'Casque audio',
+  'companion.wear.cape': 'Cape étoilée',
+  'companion.wearThing.echarpe': 'une écharpe',
+  'companion.wearThing.bonnet': 'un bonnet',
+  'companion.wearThing.lunettes': 'des lunettes rondes',
+  'companion.wearThing.couronne': 'une couronne de fleurs',
+  'companion.wearThing.noeud': 'un nœud papillon',
+  'companion.wearThing.paille': 'un chapeau de paille',
+  'companion.wearThing.sac': 'un sac à dos',
+  'companion.wearThing.casque': 'un casque audio',
+  'companion.wearThing.cape': 'une cape étoilée',
 };
 
 
@@ -2796,6 +2821,31 @@ DICT.en = {
   'life.weather.fog': 'Fog',
   'life.rainbow': 'Rainbow',
   'visit.here': { one: '{name} is passing through', other: '{name} are passing through' },
+  // Step 6: the companion (animals, suggested names, accessories).
+  'companion.species.lapin': 'Rabbit',
+  'companion.species.marmotte': 'Marmot',
+  'companion.species.ourson': 'Bear cub',
+  'companion.suggest.lapin': 'Pompom',
+  'companion.suggest.marmotte': 'Hazel',
+  'companion.suggest.ourson': 'Toffee',
+  'companion.wear.echarpe': 'Scarf',
+  'companion.wear.bonnet': 'Beanie',
+  'companion.wear.lunettes': 'Round glasses',
+  'companion.wear.couronne': 'Flower crown',
+  'companion.wear.noeud': 'Bow tie',
+  'companion.wear.paille': 'Straw hat',
+  'companion.wear.sac': 'Backpack',
+  'companion.wear.casque': 'Headphones',
+  'companion.wear.cape': 'Starry cape',
+  'companion.wearThing.echarpe': 'a scarf',
+  'companion.wearThing.bonnet': 'a beanie',
+  'companion.wearThing.lunettes': 'round glasses',
+  'companion.wearThing.couronne': 'a flower crown',
+  'companion.wearThing.noeud': 'a bow tie',
+  'companion.wearThing.paille': 'a straw hat',
+  'companion.wearThing.sac': 'a backpack',
+  'companion.wearThing.casque': 'headphones',
+  'companion.wearThing.cape': 'a starry cape',
 };
 
 
@@ -4183,6 +4233,9 @@ function achievementMet(def) {
     case 'postcards': return postcardsKept() >= def.n;
     case 'townWishes': return wishesGranted() >= def.n;
     case 'stars': return starsGained() >= def.n;
+    // Compagnon : accueilli, puis niveau de complicité.
+    case 'companion': return !!S.companion;
+    case 'companionLevel': return typeof companionLevel === 'function' && companionLevel() >= def.n;
     default: return false;
   }
 }
@@ -4194,7 +4247,7 @@ function achievementProgress(def) {
     activeDays: () => activeDays().length, tiles: () => S.city.tiles.length, nature: natureCount,
     sets: () => Object.keys(S.sets || {}).length, wonders: wondersDone,
     visitors: visitorsMet, festivals: festivalsLived, seasons: seasonsSeen, challenges: challengesDone, postcards: postcardsKept,
-    townWishes: wishesGranted, stars: starsGained,
+    townWishes: wishesGranted, stars: starsGained, companionLevel: () => (typeof companionLevel === 'function' ? companionLevel() : 0),
   }[def.kind];
   if (!have) return null;
   return { have: Math.min(have(), def.n), need: def.n, unit: def.kind === 'catMinutes' || def.kind === 'totalMinutes' ? 'min' : 'n' };
@@ -4863,6 +4916,53 @@ function skipTownWish() {
   S.townWish.skipped = true;
   return true;
 }
+
+
+/* ---- 29-companion.js ---- */
+/* =========================================================================
+   Compagnon (règles) : arrivée, complicité et accessoires, invitation, geste de chaque domaine. Sans DOM.
+   ========================================================================= */
+// Niveau de complicité du compagnon (1 à 10) ; 0 sans compagnon.
+function companionLevel(c = S.companion) { return c ? companionLevelOf(c.minutes) : 0; }
+// Le prochain niveau, les minutes qui restent et l'accessoire qu'il offre ; rien au niveau 10 ni sans compagnon.
+function companionNext(c = S.companion) {
+  const level = companionLevel(c);
+  if (!level || level >= COMPANION_LEVELS.length) return null;
+  return { level: level + 1, left: COMPANION_LEVELS[level] - c.minutes, wear: COMPANION_WEAR[level - 1] };
+}
+// Les accessoires gagnés à ce niveau, dans l'ordre de la garde-robe.
+function wearUnlocked(level) { return COMPANION_WEAR.filter((id, i) => i + 2 <= level); }
+// Le nom du compagnon, ou celui que suggère son animal dans la langue affichée.
+function companionName(c = S.companion) { return c ? c.name || t('companion.suggest.' + c.species) : ''; }
+// Accueillir un compagnon : il arrive maintenant, sans complicité ni accessoire. N'enregistre pas.
+function adoptCompanion(species, name) {
+  if (!COMPANION_SPECIES.includes(species)) return null;
+  S.companion = { species, name: cleanCompanionName(name), since: nowTs(), minutes: 0, wear: '' };
+  return S.companion;
+}
+// Changer d'animal ou de nom : la complicité et l'accessoire restent. N'enregistre pas.
+function editCompanion(species, name) {
+  if (!S.companion || !COMPANION_SPECIES.includes(species)) return;
+  Object.assign(S.companion, { species, name: cleanCompanionName(name) });
+}
+// Le temps d'une séance faite ensemble, réussie ou interrompue : les niveaux avant et après. N'enregistre pas.
+function addCompanionMinutes(min) {
+  if (!S.companion || !(min > 0)) return null;
+  const before = companionLevel();
+  S.companion.minutes = Math.min(1e7, S.companion.minutes + min);
+  return { gained: min, before, after: companionLevel() };
+}
+// Porter un accessoire déjà gagné, ou aucun ('') ; un autre est refusé sans rien changer. N'enregistre pas.
+function wearCompanion(id) {
+  if (!S.companion || (id !== '' && !wearUnlocked(companionLevel()).includes(id))) return false;
+  S.companion.wear = id;
+  return true;
+}
+// L'invitation : après une première séance réussie, tant qu'aucun compagnon n'est arrivé et qu'elle n'a pas été laissée de côté.
+function companionInvite() { return S.stats.ok >= 1 && !S.companion && !S.companionLater; }
+// Ce que fait le compagnon pendant une séance de ce domaine.
+const COMPANION_POSES = { esprit: 'read', corps: 'stretch', calme: 'meditate', foyer: 'water', crea: 'paint' };
+function companionPose(cat) { return COMPANION_POSES[cat] || 'idle'; }
 
 
 /* ---- 30-paint.js ---- */
