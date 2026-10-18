@@ -233,6 +233,28 @@ async function runContent(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Ville existante : un seul message de rattrapage');
   }
+  // Long message avec bouton : « Ouvrir le carnet » garde son nom sur une ligne (sous le message s'il le faut), et le message
+  // reste dans l'écran ; à 320 et 390 px, en français et en anglais.
+  {
+    const lecture = [['bibliotheque', 2, 2], ['banc', 3, 2], ['arbre', 2, 3]].map(([item, x, y], i) => ({ id: 'l' + i, item, x, y, at: 1.75e12, paid: 2e6 }));
+    for (const lang of ['fr', 'en']) for (const width of [320, 390]) {
+      const seed = { v: 2, coins: 5e7, settings: { lang }, stats: { ok: 3, byCat: { esprit: 70 }, days: { '2026-10-01': 30, '2026-10-02': 40 } },
+        city: { size: 7, tiles: lecture }, clock: { tz: 'Europe/Zurich', maxSeen: 0, lastDay: '2026-10-02' } };
+      const { context, page, errors } = await newTown(browser, baseURL, seed, { viewport: { width, height: 700 } });
+      try {
+        await page.locator('#toast .toast-btn').waitFor();
+        const m = await page.evaluate(() => {
+          const toast = document.querySelector('#toast'), button = toast.querySelector('.toast-btn'), box = toast.getBoundingClientRect(), range = document.createRange();
+          range.selectNodeContents(button);
+          return { label: button.textContent, lines: new Set([...range.getClientRects()].map(r => Math.round(r.top))).size, over: button.scrollWidth > button.clientWidth + 1,
+            left: box.left, right: box.right };
+        });
+        assert.ok(m.lines === 1 && !m.over && m.left >= 0 && m.right <= width, lang + ' ' + width + ' ' + JSON.stringify(m));
+        assert.deepEqual(errors, []);
+      } finally { await context.close(); }
+    }
+    scenarios.push('Long message : son bouton sur une ligne, même à 320 px');
+  }
   // Restauration d'une sauvegarde d'avant la mise à jour : ses succès sont recalculés.
   {
     const old = { v: 2, coins: 4e7, settings: { lang: 'fr' }, stats: { ok: 2, byCat: { calme: 80 }, days: { '2026-10-05': 40, '2026-10-06': 40 } },

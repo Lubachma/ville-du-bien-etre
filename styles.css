@@ -669,6 +669,8 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
 }
 
 /* ---------- Toast ---------- */
+/* Un message court et son bouton sur une rangée (une pilule) ; un long message passe au-dessus du bouton, qui garde son nom
+   sur une ligne. */
 .toast {
   position: fixed; z-index: 40;
   left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px));
@@ -676,14 +678,15 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
   width: max-content; /* sinon « left: 50% » limite la largeur à la moitié de l'écran */
   max-width: min(92vw, 420px);
   padding: 10px 16px;
-  border-radius: 999px;
+  border-radius: 32px;
   background: var(--ink); color: var(--surface);
   font-weight: 600; font-size: 14px; text-align: center;
   box-shadow: var(--shadow);
-  display: flex; align-items: center; gap: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px;
 }
 .toast.show { animation: toast-in .2s ease; }
 .toast-btn {
+  flex: none; white-space: nowrap;
   min-height: 44px; padding: 0 14px; border-radius: 999px; border: 0;
   background: var(--surface); color: var(--ink); font-weight: 800; font-size: 14px;
 }
