@@ -227,6 +227,9 @@ async function startFocus(page, name, minutes) {
   await page.getByRole('radio', { name: minutes + ' min', exact: true }).click();
   await page.getByRole('radio', { name: 'Concentration', exact: true }).click();
   await page.getByRole('button', { name: /^Commencer/ }).click();
+  // La mise en garde « écran allumé » suit la demande au navigateur, parfois un peu plus tard (Chromium de la CI) : on attend
+  // la séance ou la mise en garde.
+  await page.waitForFunction(() => window.__ville.activeState() === 'mine' || !!document.querySelector('#wakeAck'));
   const warning = page.getByRole('button', { name: "C'est réglé, commencer", exact: true });
   if (await warning.isVisible()) await warning.click();
   await page.waitForFunction(() => window.__ville.activeState() === 'mine');
