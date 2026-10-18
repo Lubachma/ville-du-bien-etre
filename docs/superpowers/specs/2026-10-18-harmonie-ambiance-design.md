@@ -203,8 +203,8 @@ La collection du carnet compte donc **51 éléments**.
 ## Données et compatibilité
 
 **Nouveaux champs, tous facultatifs** :
-- **réglages** : `ambience` (`none` par défaut, ou `rain`, `waves`, `fire`, `wind`, `brown`), `ambienceVolume` (`soft`, `normal` ou `loud` ; `normal` par défaut), `wishes` (oui/non, activé par défaut) ;
-- **`wish`** : le souhait en cours, `{ day, tile, item }`, avec `done` (date) une fois exaucé ou `skipped: true` s'il a été laissé de côté ; `null` sans souhait ;
+- **réglages** : `ambience` (`none` par défaut, ou `rain`, `waves`, `fire`, `wind`, `brown`), `ambienceVolume` (`soft`, `normal` ou `loud` ; `normal` par défaut), `townWishes` (oui/non, activé par défaut) ;
+- **`townWish`** : le souhait en cours, `{ day, tile, item }`, avec `done` (date) une fois exaucé ou `skipped: true` s'il a été laissé de côté ; `null` sans souhait. *Choix de Claude : `wishes` désigne déjà la liste « Mes envies » du tirage, d'où le préfixe `town`.* ;
 - **`gifts`** : il accepte les clés `wish:<jour>` (3 M) et `star:<critère>` (10 M). **Les étoiles gagnées sont ces clés** : leur date est celle de l'étoile, et rien d'autre ne les enregistre.
 
 **Fusion de deux onglets** :
