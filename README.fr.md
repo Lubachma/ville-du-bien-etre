@@ -4,7 +4,7 @@
 
 # 🏙️ Ville du bien-être
 
-**Fais grandir une ville en prenant soin de toi.** Chaque activité réelle se fait avec un chrono et rapporte des pièces, qui construisent une ville isométrique dont les fenêtres s’allument la nuit.
+**Fais grandir une ville en prenant soin de toi.** Chaque activité réelle se fait avec un chrono et rapporte des pièces, qui construisent une ville isométrique vivante : elle suit l’heure et les saisons, ses habitants s’y promènent et des visiteurs y passent.
 
 **[▶ Ouvrir l’app](https://lubachma.github.io/ville-du-bien-etre/)** — rien à installer, pas de compte. En français ou en anglais.
 
@@ -35,8 +35,11 @@
 | 🌳 **Merveilles** | Grand Arbre, Phare et Grande Roue : uniques, bâtis en quatre étapes que débloque le total de minutes (de 1 500 à 7 600 min). Le Grand Arbre fleurit aux couleurs des domaines pratiqués dans la semaine |
 | 🧩 **Ensembles de voisinage** | 12 trios à découvrir en posant trois éléments dans un même carré de 3×3 cases (un banc et un arbre près de la bibliothèque, par exemple) ; un pavage commun les relie |
 | 🔨 **Construction animée** | Échafaudage, poussière et petit rebond à chaque pose ; une note qui monte quand on enchaîne les poses, des confettis à l’inauguration d’une merveille. Aucune animation si le téléphone demande de les réduire |
+| 🌤️ **Ville vivante** | La ville suit l’heure de son fuseau : aube, journée, fin d’après-midi, crépuscule et nuit étoilée. Quatre saisons (hémisphère deviné ou choisi), une météo du jour (soleil, nuages, pluie, neige, brouillard, arc-en-ciel après la pluie), de la fumée aux cheminées et des lucioles l’été. Des habitants s’y promènent, et l’un d’eux fait la même activité que toi aujourd’hui. Rien ne se dégrade quand tu ne viens pas |
+| 🦔 **Visiteurs** | 12 visiteurs de passage, environ 5 jours sur 7, selon la saison, la météo et ce que ta ville leur offre (un banc, un étang, un kiosque…). On les touche pour les rencontrer et recevoir un petit cadeau (2 M) ; le carnet garde ceux qu’on a rencontrés et donne un indice pour les autres |
+| 🎉 **Fêtes** | Six fêtes par an, dont l’anniversaire de ta ville : des fanions, un décor propre à chaque fête et, à la première ouverture, un cadeau (5 M, 10 M pour l’anniversaire). Aucun objet à durée limitée : les fêtes reviennent chaque année |
 | 📒 **Journal** | Aujourd’hui, série, temps effectué, graphique des 7 derniers jours, progression par domaine, dernières sessions |
-| 🏆 **Collection et succès** | Un carnet dans le Journal : 33 succès (premiers pas, domaines, moments de la journée, régularité, temps, ville), dont 5 qui offrent un décor ; la collection des 50 éléments et les ensembles découverts. Une ville existante reçoit d’un coup les succès déjà mérités |
+| 🏆 **Collection et succès** | Un carnet dans le Journal : 38 succès (premiers pas, domaines, moments de la journée, régularité, temps, ville, ville vivante), dont 5 qui offrent un décor ; la collection des 50 éléments, les ensembles découverts, les visiteurs rencontrés et les fêtes vécues. Une ville existante reçoit d’un coup les succès déjà mérités |
 | 🌱 **Série bienveillante** | 0 à 2 jours de repos par semaine, un mode pause, un cadeau de bon retour (+20 %) après une coupure, et jamais de message culpabilisant. La série peut être masquée ; son bonus continue de s’appliquer |
 | 🌍 **Langues** | Français et anglais, selon le téléphone ou au choix dans les réglages. Le changement est immédiat, sans recharger ; les exemples d’activités jamais renommés suivent la langue |
 | 💾 **Sauvegardes** | Export en fichier (sur iPhone : « Enregistrer dans Fichiers ») ou en texte, restauration sur un autre appareil ; rappel au bout de 14 jours |
@@ -55,7 +58,8 @@
 - **Sessions** : tolérance de sortie (5, 10 ou 20 s), écran allumé, son de fin (carillon, bol ou clochettes ; doux, normal ou fort), vibration.
 - **Série** : jours de repos par semaine, pause, série masquée.
 - **Semaine et rappel** : la semaine commence le lundi ou le dimanche ; un rappel quotidien ajouté à ton agenda (fichier `.ics` ou Google Agenda), car l’app elle-même n’envoie pas de notification.
-- **Apparence** (auto, jour, nuit), **mode strict** (Accès guidé ou épinglage d’application), **sauvegarde** et **tout recommencer**.
+- **Apparence** : thème (auto, jour, nuit), **ciel de la ville** (selon l’heure ou selon l’apparence), **saisons** (automatiques, hémisphère nord ou sud) et **ville animée** (la couper arrête les mouvements continus pour économiser la batterie).
+- **Mode strict** (Accès guidé ou épinglage d’application), **sauvegarde** et **tout recommencer**.
 
 ## 📱 Installer sur téléphone
 
@@ -94,9 +98,9 @@ Le build est un petit script Node : il assemble `src/` en `app.js` et donne au s
 |----------|------|
 | `npm run build` | Génère `app.js` et `sw.js` depuis `src/` |
 | `npm run check` | Syntaxe JavaScript et manifeste |
-| `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda, succès, ensembles, merveilles, dessins |
-| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son, rappel, carnet, merveilles, boutique et pose |
-| `npm run board` | Planche des dessins dans `test-results/planche/` : ville de jour et de nuit, merveilles par étape, écran de 320 px, vignettes du carnet |
+| `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda, succès, ensembles, merveilles, ville vivante (heure, saisons, météo, visiteurs, fêtes), dessins |
+| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son, rappel, carnet, merveilles, boutique et pose, ville vivante (ciel, animation sobre, habitants, visiteur, fête, réglages) |
+| `npm run board` | Planche des dessins dans `test-results/planche/` : ville de jour et de nuit, merveilles par étape, écran de 320 px, vignettes du carnet, moments, saisons, météo, visiteurs et fêtes ; temps de dessin d’une image, processeur ralenti 4 fois |
 | `npm run serve` | Serveur local sur le port 8766 |
 | `npm run package` | Prépare le dossier publiable `dist/` |
 
@@ -122,11 +126,13 @@ src/
 ├── 20-rules.js         # jours, série (jours de repos, pause), gains, déblocages, prix, étapes des merveilles
 ├── 22-sets.js          # ensembles de voisinage : repérage, pavage, découverte
 ├── 23-achievements.js  # succès : conditions, progression, dates
+├── 24-ambient.js       # ville vivante : heure de la ville, saisons, météo, fêtes, visiteur du jour, habitants
 ├── 30-paint.js         # pinceau isométrique et dessins des 22 premiers éléments
 ├── 31-paint-buildings.js # dessins des 15 nouveaux bâtiments
 ├── 32-paint-decor.js   # dessins des 10 nouveaux décors
 ├── 33-paint-wonders.js # dessins des merveilles, étape par étape
-├── 35-city.js          # canvas de la ville : disposition, tactile et clavier, niveaux, effets de pose, capture
+├── 34-paint-life.js    # dessins de la vie : fumée, faisceau, météo, petites vies, habitants, visiteurs, fêtes
+├── 35-city.js          # canvas de la ville : ciel et lumière du moment, animation sobre, tactile et clavier, effets de pose, capture
 ├── 40-ui.js            # navigation, fenêtres, annonces, vue Ville
 ├── 41-activities.js    # activités, modes, fréquences, fenêtres de lancement et d’édition
 ├── 42-draw.js          # tirage au sort selon le contexte
@@ -138,7 +144,8 @@ src/
 ├── 48-status.js        # bandeaux de stockage et de mise à jour, aide
 ├── 49-reminder.js      # rappel quotidien : fichier .ics et lien Google Agenda
 ├── 50-session.js       # chrono, modes Concentration et Activité libre, anti-triche, sons de fin et de pose
-├── 52-carnet.js        # carnet (succès, collection, ensembles), célébrations, rattrapage
+├── 52-carnet.js        # carnet (succès, collection, ensembles, visites), célébrations, rattrapage
+├── 53-visits.js        # visiteur du jour, fêtes, saisons vues, légende de la ville
 ├── 60-boot.js          # événements et démarrage
 └── 70-install.js       # installation, cache hors connexion, mises à jour
 scripts/                # build, vérification, packaging, serveur, modèle du service worker

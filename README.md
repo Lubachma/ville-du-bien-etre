@@ -4,7 +4,7 @@
 
 # 🏙️ Ville du bien-être
 
-**Grow a city by taking care of yourself.** Real-life activities with a timer earn coins, and coins build an isometric town that lights up at night.
+**Grow a city by taking care of yourself.** Real-life activities with a timer earn coins, and coins build a living isometric town: it follows the time of day and the seasons, its residents stroll around and visitors drop by.
 
 **[▶ Try it live](https://lubachma.github.io/ville-du-bien-etre/)** — nothing to install, no account. In English or French.
 
@@ -35,8 +35,11 @@
 | 🌳 **Wonders** | Great Tree, Lighthouse and Big Wheel: one of each, built in four stages unlocked by total minutes (from 1,500 to 7,600 min). The Great Tree blossoms in the colours of the domains practised this week |
 | 🧩 **Neighbourhood sets** | 12 trios to discover by placing three items within the same 3×3 square (a bench and a tree near the library, for instance); a shared paving ties them together |
 | 🔨 **Lively building** | Scaffolding, dust and a small bounce on every placement; a note that rises as you place things in a row, confetti when a wonder is inaugurated. No animation when the phone asks for reduced motion |
+| 🌤️ **Living town** | The town follows its own time zone: dawn, daytime, golden hour, dusk and a starry night. Four seasons (hemisphere guessed or chosen), a weather of the day (sun, clouds, rain, snow, fog, a rainbow after the rain), chimney smoke and summer fireflies. Residents stroll around, and one of them does the same activity as you today. Nothing decays when you stay away |
+| 🦔 **Visitors** | 12 visitors drop by about 5 days out of 7, depending on the season, the weather and what your town offers them (a bench, a pond, a bandstand…). Tap them to meet them and receive a small gift (2 M); the notebook keeps the ones you met and gives a hint for the others |
+| 🎉 **Festivals** | Six festivals a year, including your town's birthday: bunting, a decor for each festival and, on the first visit, a gift (5 M, 10 M for the birthday). Nothing is time-limited: festivals come back every year |
 | 📒 **Journal** | Today, streak, time done, 7-day chart, progress per domain, latest sessions |
-| 🏆 **Collection and achievements** | A notebook in the Journal: 33 achievements (first steps, domains, times of day, regularity, time, city), 5 of which give a decoration; the collection of all 50 items and the sets discovered. An existing city receives the achievements it already earned in one go |
+| 🏆 **Collection and achievements** | A notebook in the Journal: 38 achievements (first steps, domains, times of day, regularity, time, city, living town), 5 of which give a decoration; the collection of all 50 items, the sets discovered, the visitors met and the festivals celebrated. An existing city receives the achievements it already earned in one go |
 | 🌱 **Kind streak** | 0 to 2 rest days per week, a pause mode, a +20 % welcome-back gift after a break, and never a guilt message. The streak can be hidden; its bonus still applies |
 | 🌍 **Languages** | English and French, following the phone or chosen in the settings. Switching is instant, without a reload; example activities you haven't renamed follow the language |
 | 💾 **Backups** | Export to a file (on iPhone: “Save to Files”) or a text, restore on another device; a reminder appears after 14 days |
@@ -55,7 +58,8 @@
 - **Sessions**: grace period (5, 10 or 20 s), keep the screen on, end sound (chime, bowl or bells; soft, normal or loud), vibration.
 - **Streak**: rest days per week, pause, hide the streak.
 - **Week and reminder**: the week starts on Monday or Sunday; a daily reminder added to your calendar (`.ics` file or Google Calendar) — the app itself sends no notifications.
-- **Appearance** (auto, day, night), **strict mode** (Guided Access or app pinning), **backup** and **start over**.
+- **Appearance**: theme (auto, day, night), **town sky** (time of day or match appearance), **seasons** (automatic, northern or southern hemisphere) and **living town** (turning it off stops continuous motion to save battery).
+- **Strict mode** (Guided Access or app pinning), **backup** and **start over**.
 
 ## 📱 Install on a phone
 
@@ -94,9 +98,9 @@ The build is a small Node script: it concatenates `src/` into `app.js` and stamp
 |---------|------|
 | `npm run build` | Generates `app.js` and `sw.js` from `src/` |
 | `npm run check` | JavaScript syntax and manifest validation |
-| `npm test` | Unit tests (node:test): rules, streak, translations, storage, merges, sessions, backups, calendar reminder, achievements, sets, wonders, drawings |
-| `npm run test:browser` | Playwright scenarios: mobile layouts, offline under the Pages subpath, sessions, migration, updates, languages, streak, sound, reminder, notebook, wonders, shop and placement |
-| `npm run board` | Drawing board in `test-results/planche/`: city by day and by night, wonders by stage, a 320 px screen, notebook thumbnails |
+| `npm test` | Unit tests (node:test): rules, streak, translations, storage, merges, sessions, backups, calendar reminder, achievements, sets, wonders, living town (time, seasons, weather, visitors, festivals), drawings |
+| `npm run test:browser` | Playwright scenarios: mobile layouts, offline under the Pages subpath, sessions, migration, updates, languages, streak, sound, reminder, notebook, wonders, shop and placement, living town (sky, light animation loop, residents, visitor, festival, settings) |
+| `npm run board` | Drawing board in `test-results/planche/`: city by day and by night, wonders by stage, a 320 px screen, notebook thumbnails, times of day, seasons, weather, visitors and festivals; drawing time of one frame with a 4× slower processor |
 | `npm run serve` | Local server on port 8766 |
 | `npm run package` | Prepares the deployable `dist/` folder |
 
@@ -122,11 +126,13 @@ src/
 ├── 20-rules.js         # days, streak (rest days, pause), rewards, unlocks, prices, wonder stages
 ├── 22-sets.js          # neighbourhood sets: detection, paving, discovery
 ├── 23-achievements.js  # achievements: conditions, progress, dates
+├── 24-ambient.js       # living town: town time, seasons, weather, festivals, visitor of the day, residents
 ├── 30-paint.js         # isometric painter and the drawings of the first 22 items
 ├── 31-paint-buildings.js # drawings of the 15 new buildings
 ├── 32-paint-decor.js   # drawings of the 10 new decorations
 ├── 33-paint-wonders.js # wonder drawings, stage by stage
-├── 35-city.js          # city canvas: layout, touch and keyboard, levels, placement effects, snapshot
+├── 34-paint-life.js    # drawings of town life: smoke, beam, weather, small lives, residents, visitors, festivals
+├── 35-city.js          # city canvas: sky and light of the moment, light animation loop, touch and keyboard, placement effects, snapshot
 ├── 40-ui.js            # navigation, sheets, toasts, city view
 ├── 41-activities.js    # activities, modes, frequencies, start and edit sheets
 ├── 42-draw.js          # contextual random draw
@@ -138,7 +144,8 @@ src/
 ├── 48-status.js        # storage and update banners, help
 ├── 49-reminder.js      # daily reminder: .ics file and Google Calendar link
 ├── 50-session.js       # timer, focus and free modes, anti-cheat, end and placement sounds
-├── 52-carnet.js        # notebook (achievements, collection, sets), celebrations, catch-up
+├── 52-carnet.js        # notebook (achievements, collection, sets, visits), celebrations, catch-up
+├── 53-visits.js        # visitor of the day, festivals, seasons seen, town caption
 ├── 60-boot.js          # events and startup
 └── 70-install.js       # install prompt, offline cache, updates
 scripts/                # build, check, package, serve, service worker template
