@@ -73,11 +73,28 @@ test('lien de ville : un nom avec des balises reste du texte, sans caractères d
   const a = app();
   town(a, 7, [], '<b>Ville</b>');
   assert.equal(a.decodeCity(a.encodeCity()).name, '<b>Ville</b>');
-  town(a, 7, [], 'A\u0007B‮C' + 'x'.repeat(50));
+  town(a, 7, [], 'A\u0007B\u202eC' + 'x'.repeat(50));
   assert.equal(a.decodeCity(a.encodeCity()).name, 'ABC' + 'x'.repeat(37));
   // À l'envoi, le nom tient en 60 octets, coupé sur un caractère entier.
   town(a, 7, [], 'é'.repeat(40));
   assert.equal(a.decodeCity(a.encodeCity()).name, 'é'.repeat(30));
+});
+
+test('lien de ville : un nom fait de caractères invisibles compte comme vide ; les émojis composés restent entiers', () => {
+  const a = app();
+  town(a, 7, [], '\u200b\u200d\ufeff\u2060 ');
+  assert.equal(a.decodeCity(a.encodeCity()).name, '');
+  town(a, 7, [], '\u200eVille\u200f');
+  assert.equal(a.decodeCity(a.encodeCity()).name, 'Ville');
+  town(a, 7, [], 'Atelier \u{1F469}\u200d\u{1F4BB}');
+  assert.equal(a.decodeCity(a.encodeCity()).name, 'Atelier \u{1F469}\u200d\u{1F4BB}');
+});
+
+test('sources : aucun caractère invisible ou de direction écrit tel quel (ils s’écrivent \\u…)', () => {
+  const fs = require('node:fs'), path = require('node:path'), dir = path.join(__dirname, '..', 'src');
+  const hidden = /[\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/;
+  const found = fs.readdirSync(dir).filter(name => hidden.test(fs.readFileSync(path.join(dir, name), 'utf8')));
+  assert.deepEqual(found, []);
 });
 
 test('lien collé : le code se retrouve dans un message ou seul ; un mot n’est pas un code', () => {

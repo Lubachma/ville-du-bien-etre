@@ -56,3 +56,14 @@ test('rituels : fusion de deux onglets', () => {
   assert.deepEqual(plain(M.rituals), { week: '2026-10-12', month: '2026-10', year: '2025' });
   assert.equal(M.coins, 10e6 + 5e6);
 });
+
+test('rituels : deux onglets qui gardent chacun 30 cartes postales en gardent 50, les plus récentes', () => {
+  const a = app();
+  const B = a.normalize(a.defaultState()), L = a.clone(B), R = a.clone(B);
+  const card = i => ({ code: 'AQcAAA', name: 'Ville ' + i, size: 7, count: 1, at: T0 + i * 1000 });
+  for (let i = 0; i < 30; i++) L.postcards[i.toString(16).padStart(12, '0')] = card(i);
+  for (let i = 30; i < 60; i++) R.postcards[i.toString(16).padStart(12, '0')] = card(i);
+  const M = a.merge3(B, L, R), kept = Object.values(M.postcards).map(c => c.at).sort((x, y) => x - y);
+  assert.equal(kept.length, 50);
+  assert.equal(kept[0], T0 + 10 * 1000);
+});

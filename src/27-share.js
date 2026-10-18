@@ -46,7 +46,7 @@ function encodeCity(state = S) {
   return toBase64url(bytes);
 }
 // Ville lue dans un code, ou null s'il n'est pas lisible (jamais d'erreur). Les éléments inconnus, hors du terrain ou en
-// double à la même place sont écartés sans refuser le reste. Le nom perd ses caractères de contrôle et tient en 40 caractères.
+// double à la même place sont écartés sans refuser le reste. Le nom perd ses caractères de contrôle, de direction et invisibles, et tient en 40 caractères.
 function decodeCity(code) {
   try {
     if (typeof code !== 'string' || !code || code.length > SHARE_CODE_MAX || !/^[A-Za-z0-9_-]+$/.test(code)) return null;
@@ -57,8 +57,9 @@ function decodeCity(code) {
     if (next() !== SHARE_VERSION) return null;
     const size = next();
     if (!SIZES.includes(size)) return null;
-    const raw = new TextDecoder().decode(take(next())).replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/g, '');
-    const name = [...raw].slice(0, SHARE_NAME_CHARS).join('').trim();
+    // Les liants des émojis composés (U+200C, U+200D) restent ; un nom sans rien de visible compte comme vide.
+    const raw = new TextDecoder().decode(take(next())).replace(/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g, '');
+    const kept = [...raw].slice(0, SHARE_NAME_CHARS).join('').trim(), name = /[^\s\u200c\u200d]/.test(kept) ? kept : '';
     const id = [...take(6)].map(b => b.toString(16).padStart(2, '0')).join('');
     const count = next(), tiles = [], used = new Set();
     for (let k = 0; k < count; k++) {

@@ -75,15 +75,17 @@ function challengeProgress(ch, week = challengeWeek()) {
 function challengeKey(ch, week) { return 'chal:' + week + ':' + ch.id; }
 
 // Défis relevés pas encore payés : 5 M chacun, une seule fois, pour la semaine du jour seulement (rien pour une semaine passée).
-// Changer le début de semaine ne fait pas payer deux fois : ni le même défi, ni plus de trois, à moins de 7 jours d'une semaine payée.
+// Changer le début de semaine ne fait pas payer deux fois : ni le même défi à moins de 7 jours d'une semaine payée, ni plus de
+// trois pour deux semaines qui se recouvrent presque entièrement (un lundi et le dimanche d'avant). Une semaine qui ne partage
+// qu'un jour avec une semaine payée garde ses trois défis.
 function claimChallenges(day = today()) {
   if (S.settings.challenges === false) return [];
-  const week = challengeWeek(day), near = Object.keys(S.gifts || {}).filter(key => key.startsWith('chal:'))
-    .map(key => ({ week: key.slice(5, 15), id: key.slice(16) })).filter(g => Math.abs(keyToUTC(g.week) - keyToUTC(week)) <= 6 * 86400000);
+  const week = challengeWeek(day), gap = g => Math.abs(keyToUTC(g.week) - keyToUTC(week)) / 86400000;
+  const near = Object.keys(S.gifts || {}).filter(key => key.startsWith('chal:')).map(key => ({ week: key.slice(5, 15), id: key.slice(16) })).filter(g => gap(g) <= 6);
   const paid = [];
   for (const ch of weekChallenges(week)) {
     const key = challengeKey(ch, week);
-    if (S.gifts[key] || near.length >= 3 || near.some(g => g.id === ch.id) || !challengeProgress(ch, week).done) continue;
+    if (S.gifts[key] || near.filter(g => gap(g) <= 3).length >= 3 || near.some(g => g.id === ch.id) || !challengeProgress(ch, week).done) continue;
     S.gifts[key] = nowTs();
     S.coins = clamp(S.coins + GIFTS.challenge, 0, COINS_MAX);
     near.push({ week, id: ch.id });

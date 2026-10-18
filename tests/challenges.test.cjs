@@ -88,6 +88,27 @@ test('défis : 5 M par défi relevé, une seule fois, et rien de plus en changea
   assert.equal(a.state.coins, coins + 15e6);
 });
 
+// La même semaine pleine que fill(), commencée un dimanche.
+function fillFromSunday(a, sunday) {
+  const s = a.state, d = n => a.shiftDay(sunday, n);
+  s.history.push(entry(d(0), { at: Date.parse(d(0) + 'T06:00:00Z') }), entry(d(1), { cat: 'corps', min: 60, at: Date.parse(d(1) + 'T19:30:00Z') }),
+    entry(d(5), { cat: 'calme', source: 'wishes', mode: 'free' }), entry(d(5), { cat: 'foyer' }), entry(d(6), { cat: 'crea' }));
+  s.routines = [{ id: 'r', name: 'R', steps: [] }];
+  s.routineRun = { id: 'run', status: 'done', finishedAt: Date.parse(d(3) + 'T10:00:00Z') };
+  s.gifts['visit:' + d(1)] = Date.parse(d(1) + 'T08:00:00Z'); s.gifts['visit:' + d(4)] = Date.parse(d(4) + 'T08:00:00Z');
+  s.city.tiles.push({ id: 'n', item: 'banc', x: 0, y: 0, at: Date.parse(d(2) + 'T09:00:00Z'), paid: 2e6 });
+}
+
+test('défis : passer au dimanche ne bloque pas la semaine qui ne partage qu’un jour avec la semaine payée', () => {
+  const a = app('2026-10-31T12:00:00Z'), s = a.state;
+  for (const ch of a.weekChallenges('2026-10-19')) s.gifts[a.challengeKey(ch, '2026-10-19')] = Date.parse('2026-10-24T10:00:00Z');
+  s.settings.weekStart = 'sun';
+  fillFromSunday(a, '2026-10-25');
+  const coins = s.coins, got = plain(a.claimChallenges('2026-10-31'));
+  assert.ok(got.length > 0 && got.every(c => c.key.startsWith('chal:2026-10-25:')), JSON.stringify(got));
+  assert.equal(s.coins, coins + got.length * 5e6);
+});
+
 test('défis : coupés dans les réglages, ni défi ni pièce', () => {
   const a = app(); fill(a); a.state.settings.challenges = false;
   assert.deepEqual(plain(a.claimChallenges('2026-10-21')), []);

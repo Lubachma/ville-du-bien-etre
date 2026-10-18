@@ -71,7 +71,8 @@ function bindEvents() {
   document.addEventListener('visibilitychange', () => {
     updatePresence();
     if (document.visibilityState === 'hidden') Store.flush();
-    else { Store.pull(); checkActive(); refreshDay(); City.wake(); }
+    // Un onglet ouvert en arrière-plan : le bilan dû s'ouvre quand il devient visible.
+    else { Store.pull(); checkActive(); refreshDay(); City.wake(); maybeOpenRitual(); }
   });
   // Chaque minute : la date, la légende (moment et météo) et la lumière et l'horloge d'une ville immobile.
   setInterval(() => {

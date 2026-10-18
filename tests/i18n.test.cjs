@@ -228,6 +228,13 @@ test('applyStaticText remplit textes et attributs marqués', () => {
   assert.match(canvas.attrs['aria-label'], /^Your town\. /);
 });
 
+test('anglais : les cinq domaines s’appellent toujours « domain », et les défis sont « sized to you »', () => {
+  const { DICT } = app();
+  const found = Object.entries(DICT.en).flatMap(([key, value]) => (typeof value === 'object' ? Object.values(value) : [value]).filter(text => /\bareas?\b/i.test(text)).map(text => key + ': ' + text));
+  assert.deepEqual(found, []);
+  assert.doesNotMatch(DICT.en['chal.note'], /your size/);
+});
+
 test('aucun mot de perte dans les textes', () => {
   const { DICT } = app();
   // Un mot entier, accent final compris (« raté » suivi d'une espace).

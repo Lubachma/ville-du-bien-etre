@@ -117,13 +117,20 @@ function reviewMoments(r) {
     r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),   // jamais « 0 séance »
   ].filter(Boolean);
 }
+// Le chemin fait vers l'objectif de la semaine, sur ce qui n'est pas encore atteint : les minutes, puis les jours actifs.
+function goalPath(goal) {
+  const parts = [];
+  if (goal.minutes < goal.targetMinutes) parts.push(t('review.goalMinutes', { minutes: fmtMin(goal.minutes), target: fmtMin(goal.targetMinutes) }));
+  if (goal.activeDays < goal.targetDays) parts.push(t('review.goalDays', { n: goal.activeDays, days: goal.activeDays, target: goal.targetDays }));
+  return t('review.goalSoFar', { path: parts.join(' · ') });
+}
 // Fenêtre « Ta semaine » : la semaine passée en chiffres et beaux moments, puis les défis et l'objectif de la semaine qui commence.
 function openWeekReview(week) {
   const r = weekReview(week);
   openSheet(t('review.title'), body => {
     body.append(h('p', { class: 'sub' }, t('review.range', { from: reviewDay(r.from), to: reviewDay(r.to) })), h('p', { class: 'review-headline' }, t('review.' + r.headline)));
     if (r.minutes > 0) {
-      const moments = [...reviewMoments(r), r.goal.done ? t('review.goalDone') : t('review.goalSoFar', { minutes: fmtMin(r.goal.minutes), target: fmtMin(r.goal.targetMinutes) }),
+      const moments = [...reviewMoments(r), r.goal.done ? t('review.goalDone') : goalPath(r.goal),
         r.gain > 0 && t('review.gain', { time: fmtMin(r.gain) })].filter(Boolean);
       body.append(h('div', { class: 'review-figures' }, reviewFigure(t('review.minutes'), fmtEffort(r.minutes)), reviewFigure(t('review.days'), String(r.activeDays)),
         reviewFigure(t('review.sessions'), String(r.sessions))), reviewCats(r.cats), h('ul', { class: 'review-moments' }, ...moments.map(text => h('li', {}, text))));

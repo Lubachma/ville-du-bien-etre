@@ -1462,7 +1462,9 @@ DICT.fr = {
   'review.challenges': { one: '{n} défi relevé', other: '{n} défis relevés' },
   'review.mood': { one: 'Après {good} séance sur {total}, tu te sentais bien', other: 'Après {good} séances sur {total}, tu te sentais bien' },
   'review.goalDone': 'Objectif de la semaine atteint',
-  'review.goalSoFar': 'Objectif de la semaine : {minutes} sur {target}',
+  'review.goalSoFar': 'Objectif de la semaine : {path}',
+  'review.goalMinutes': '{minutes} sur {target}',
+  'review.goalDays': { one: '{days} jour actif sur {target}', other: '{days} jours actifs sur {target}' },
   'review.gain': "+{time} par rapport à la semaine d'avant",
   'review.next': 'Cette semaine',
   'review.goal': 'Choisir mon objectif',
@@ -2314,7 +2316,7 @@ DICT.en = {
   'ach.mains-creatives.name': 'Creative hands',
   'ach.mains-creatives.desc': 'Spend an hour on Creativity, in one go or several.',
   'ach.semaine-equilibree.name': 'Balanced week',
-  'ach.semaine-equilibree.desc': 'Practise all five areas within the same week.',
+  'ach.semaine-equilibree.desc': 'Practise all five domains within the same week.',
   'ach.leve-tot.name': 'Early bird',
   'ach.leve-tot.desc': 'Finish a session between 5 and 8 in the morning.',
   'ach.douce-soiree.name': 'Quiet evening',
@@ -2326,7 +2328,7 @@ DICT.en = {
   'ach.belle-journee.name': 'A good day',
   'ach.belle-journee.desc': 'Add up an hour of activities in a single day.',
   'ach.journee-variee.name': 'Varied day',
-  'ach.journee-variee.desc': 'Practise three areas in a single day.',
+  'ach.journee-variee.desc': 'Practise three domains in a single day.',
   'ach.sept-jours.name': 'Seven days for you',
   'ach.sept-jours.desc': 'Have sessions on 7 different days, at your own pace.',
   'ach.trente-jours.name': 'Thirty days for you',
@@ -2352,7 +2354,7 @@ DICT.en = {
   'ach.main-verte.name': 'Green thumb',
   'ach.main-verte.desc': 'Plant 10 trees, cherry trees, hedges, flower beds or vegetable patches.',
   'ach.ca-rayonne.name': 'Shining',
-  'ach.ca-rayonne.desc': 'Raise a building to level 3 by practising its area.',
+  'ach.ca-rayonne.desc': 'Raise a building to level 3 by practising its domain.',
   'ach.bon-voisinage.name': 'Good neighbours',
   'ach.bon-voisinage.desc': 'Discover your first neighbourhood set.',
   'ach.urbaniste.name': 'Town planner',
@@ -2527,11 +2529,11 @@ DICT.en = {
   'visit.new': 'New visitor: {name}!',
   'visit.newDay': 'A new day begins in your town.',
   'chal.title': 'Weekly challenges',
-  'chal.note': 'Three challenges your size, new every week.',
-  'chal.domains': { one: 'Practice {n} area', other: 'Practice {n} different areas' },
+  'chal.note': 'Three challenges sized to you, new every week.',
+  'chal.domains': { one: 'Practise {n} domain', other: 'Practise {n} different domains' },
   'chal.comeback': 'Get back to {cat}',
   'chal.long': 'One session of at least {m}\u00a0min',
-  'chal.twoAreas': 'Two areas on the same day',
+  'chal.twoAreas': 'Two domains on the same day',
   'chal.morning': 'A session before 9\u00a0am',
   'chal.evening': 'A session after 8\u00a0pm',
   'chal.weekend': 'A weekend session',
@@ -2556,14 +2558,16 @@ DICT.en = {
   'review.days': 'Active days',
   'review.sessions': 'Sessions completed',
   'review.longest': 'Your longest session: {name}, {min}\u00a0min',
-  'review.favorite': 'Your favourite area: {cat}',
+  'review.favorite': 'Your favourite domain: {cat}',
   'review.built': { one: '{n} new item in your town', other: '{n} new items in your town' },
   'review.visitors': { one: '{n} new visitor met', other: '{n} new visitors met' },
   'review.festivals': { one: '{n} festival celebrated', other: '{n} festivals celebrated' },
   'review.challenges': { one: '{n} challenge done', other: '{n} challenges done' },
   'review.mood': { one: 'After {good} of {total} sessions, you felt good', other: 'After {good} of {total} sessions, you felt good' },
   'review.goalDone': 'Weekly goal reached',
-  'review.goalSoFar': 'Weekly goal: {minutes} of {target}',
+  'review.goalSoFar': 'Weekly goal: {path}',
+  'review.goalMinutes': '{minutes} of {target}',
+  'review.goalDays': { one: '{days} active day of {target}', other: '{days} active days of {target}' },
   'review.gain': '+{time} compared with the week before',
   'review.next': 'This week',
   'review.goal': 'Choose my goal',
@@ -2586,7 +2590,7 @@ DICT.en = {
   'recap.leadMonth': 'Your month at a glance',
   'recap.leadYear': 'Your year at a glance',
   'recap.bestDay': 'Your best day: {day}, {time}',
-  'recap.cats': 'Your areas',
+  'recap.cats': 'Your domains',
   'recap.city': 'Your town',
   'recap.sets': { one: '{n} set discovered', other: '{n} sets discovered' },
   'recap.achievements': { one: '{n} achievement earned', other: '{n} achievements earned' },
@@ -2619,7 +2623,7 @@ DICT.en = {
   'recap.imageMinutes': 'Practice time',
   'recap.imageDays': 'Active days',
   'recap.imageBuilt': 'Items placed',
-  'recap.imageFavorite': 'Favourite area: {cat}',
+  'recap.imageFavorite': 'Favourite domain: {cat}',
   'recap.imageFooter': 'Ville du bien-être',
   'recap.imageSaved': 'Picture downloaded.',
   'recap.imageFailed': 'Could not create the picture right now. Try again a little later.',
@@ -4320,15 +4324,17 @@ function challengeProgress(ch, week = challengeWeek()) {
 function challengeKey(ch, week) { return 'chal:' + week + ':' + ch.id; }
 
 // Défis relevés pas encore payés : 5 M chacun, une seule fois, pour la semaine du jour seulement (rien pour une semaine passée).
-// Changer le début de semaine ne fait pas payer deux fois : ni le même défi, ni plus de trois, à moins de 7 jours d'une semaine payée.
+// Changer le début de semaine ne fait pas payer deux fois : ni le même défi à moins de 7 jours d'une semaine payée, ni plus de
+// trois pour deux semaines qui se recouvrent presque entièrement (un lundi et le dimanche d'avant). Une semaine qui ne partage
+// qu'un jour avec une semaine payée garde ses trois défis.
 function claimChallenges(day = today()) {
   if (S.settings.challenges === false) return [];
-  const week = challengeWeek(day), near = Object.keys(S.gifts || {}).filter(key => key.startsWith('chal:'))
-    .map(key => ({ week: key.slice(5, 15), id: key.slice(16) })).filter(g => Math.abs(keyToUTC(g.week) - keyToUTC(week)) <= 6 * 86400000);
+  const week = challengeWeek(day), gap = g => Math.abs(keyToUTC(g.week) - keyToUTC(week)) / 86400000;
+  const near = Object.keys(S.gifts || {}).filter(key => key.startsWith('chal:')).map(key => ({ week: key.slice(5, 15), id: key.slice(16) })).filter(g => gap(g) <= 6);
   const paid = [];
   for (const ch of weekChallenges(week)) {
     const key = challengeKey(ch, week);
-    if (S.gifts[key] || near.length >= 3 || near.some(g => g.id === ch.id) || !challengeProgress(ch, week).done) continue;
+    if (S.gifts[key] || near.filter(g => gap(g) <= 3).length >= 3 || near.some(g => g.id === ch.id) || !challengeProgress(ch, week).done) continue;
     S.gifts[key] = nowTs();
     S.coins = clamp(S.coins + GIFTS.challenge, 0, COINS_MAX);
     near.push({ week, id: ch.id });
@@ -4508,7 +4514,7 @@ function encodeCity(state = S) {
   return toBase64url(bytes);
 }
 // Ville lue dans un code, ou null s'il n'est pas lisible (jamais d'erreur). Les éléments inconnus, hors du terrain ou en
-// double à la même place sont écartés sans refuser le reste. Le nom perd ses caractères de contrôle et tient en 40 caractères.
+// double à la même place sont écartés sans refuser le reste. Le nom perd ses caractères de contrôle, de direction et invisibles, et tient en 40 caractères.
 function decodeCity(code) {
   try {
     if (typeof code !== 'string' || !code || code.length > SHARE_CODE_MAX || !/^[A-Za-z0-9_-]+$/.test(code)) return null;
@@ -4519,8 +4525,9 @@ function decodeCity(code) {
     if (next() !== SHARE_VERSION) return null;
     const size = next();
     if (!SIZES.includes(size)) return null;
-    const raw = new TextDecoder().decode(take(next())).replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/g, '');
-    const name = [...raw].slice(0, SHARE_NAME_CHARS).join('').trim();
+    // Les liants des émojis composés (U+200C, U+200D) restent ; un nom sans rien de visible compte comme vide.
+    const raw = new TextDecoder().decode(take(next())).replace(/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g, '');
+    const kept = [...raw].slice(0, SHARE_NAME_CHARS).join('').trim(), name = /[^\s\u200c\u200d]/.test(kept) ? kept : '';
     const id = [...take(6)].map(b => b.toString(16).padStart(2, '0')).join('');
     const count = next(), tiles = [], used = new Set();
     for (let k = 0; k < count; k++) {
@@ -9857,13 +9864,20 @@ function reviewMoments(r) {
     r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),   // jamais « 0 séance »
   ].filter(Boolean);
 }
+// Le chemin fait vers l'objectif de la semaine, sur ce qui n'est pas encore atteint : les minutes, puis les jours actifs.
+function goalPath(goal) {
+  const parts = [];
+  if (goal.minutes < goal.targetMinutes) parts.push(t('review.goalMinutes', { minutes: fmtMin(goal.minutes), target: fmtMin(goal.targetMinutes) }));
+  if (goal.activeDays < goal.targetDays) parts.push(t('review.goalDays', { n: goal.activeDays, days: goal.activeDays, target: goal.targetDays }));
+  return t('review.goalSoFar', { path: parts.join(' · ') });
+}
 // Fenêtre « Ta semaine » : la semaine passée en chiffres et beaux moments, puis les défis et l'objectif de la semaine qui commence.
 function openWeekReview(week) {
   const r = weekReview(week);
   openSheet(t('review.title'), body => {
     body.append(h('p', { class: 'sub' }, t('review.range', { from: reviewDay(r.from), to: reviewDay(r.to) })), h('p', { class: 'review-headline' }, t('review.' + r.headline)));
     if (r.minutes > 0) {
-      const moments = [...reviewMoments(r), r.goal.done ? t('review.goalDone') : t('review.goalSoFar', { minutes: fmtMin(r.goal.minutes), target: fmtMin(r.goal.targetMinutes) }),
+      const moments = [...reviewMoments(r), r.goal.done ? t('review.goalDone') : goalPath(r.goal),
         r.gain > 0 && t('review.gain', { time: fmtMin(r.gain) })].filter(Boolean);
       body.append(h('div', { class: 'review-figures' }, reviewFigure(t('review.minutes'), fmtEffort(r.minutes)), reviewFigure(t('review.days'), String(r.activeDays)),
         reviewFigure(t('review.sessions'), String(r.sessions))), reviewCats(r.cats), h('ul', { class: 'review-moments' }, ...moments.map(text => h('li', {}, text))));
@@ -10164,7 +10178,8 @@ function bindEvents() {
   document.addEventListener('visibilitychange', () => {
     updatePresence();
     if (document.visibilityState === 'hidden') Store.flush();
-    else { Store.pull(); checkActive(); refreshDay(); City.wake(); }
+    // Un onglet ouvert en arrière-plan : le bilan dû s'ouvre quand il devient visible.
+    else { Store.pull(); checkActive(); refreshDay(); City.wake(); maybeOpenRitual(); }
   });
   // Chaque minute : la date, la légende (moment et météo) et la lumière et l'horloge d'une ville immobile.
   setInterval(() => {

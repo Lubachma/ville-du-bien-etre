@@ -568,8 +568,46 @@ async function moodLineOnlyWhenGood(browser, baseURL) {
   return 'Humeur : dans un bilan, seulement après de bonnes séances';
 }
 
+// Un onglet ouvert en arrière-plan (ordinateur) : le bilan dû attend que l'onglet soit visible, puis s'ouvre aussitôt.
+async function ritualWhenVisible(browser, baseURL) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'fr-FR', timezoneId: 'Europe/Zurich' });
+  const page = await context.newPage(), errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  try {
+    await page.clock.setFixedTime(new Date('2026-10-27T09:00:00Z'));
+    await page.addInitScript(state => {
+      localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state));
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    }, { ...filledWeek(), rituals: { week: '', month: '', year: '' } });
+    await page.goto(baseURL);
+    await page.waitForFunction(() => !!window.__ville);
+    await page.waitForTimeout(300);
+    assert.equal(await page.locator('#sheet').isHidden(), true);
+    await setVisibility(page, 'visible');
+    await page.locator('#sheet').waitFor({ timeout: 3000 });
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Ta semaine');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Bilan dû : il attend que l’onglet soit visible';
+}
+
+// Objectif pas tout à fait atteint : le bilan dit le chemin fait sur ce qui manque encore. Ici, 1 h 40 pour 1 h visée, mais 4 jours
+// actifs sur 5 : « 4 jours actifs sur 5 », pas « 1 h 40 sur 1 h ».
+async function goalPathInReview(browser, baseURL) {
+  const seed = { ...filledWeek(), goals: { minutes: 60, days: 5, cat: 'all', building: '' }, rituals: { week: '', month: '', year: '' } };
+  const { context, page, errors } = await cityAt(browser, baseURL, seed, '2026-10-27T09:00:00Z');
+  try {
+    await page.locator('#sheet').waitFor();
+    const text = await page.locator('#sheetBody').innerText();
+    assert.match(text, /Objectif de la semaine\s:\s4 jours actifs sur 5/);
+    assert.doesNotMatch(text, /1\sh\s40 sur 1\sh/);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Bilan : le chemin fait vers l’objectif, sur ce qui manque encore';
+}
+
 const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage, visitFriend, shareCity,
-  postcardsInCarnet, ritualSettings, challengeOnBuild, moodLineOnlyWhenGood];
+  postcardsInCarnet, ritualSettings, challengeOnBuild, moodLineOnlyWhenGood, ritualWhenVisible, goalPathInReview];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
