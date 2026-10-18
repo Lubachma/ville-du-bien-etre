@@ -5116,14 +5116,15 @@ function companionInvite() { return S.stats.ok >= 1 && !S.companion && !S.compan
 const COMPANION_POSES = { esprit: 'read', corps: 'stretch', calme: 'meditate', foyer: 'water', crea: 'paint' };
 function companionPose(cat) { return COMPANION_POSES[cat] || 'idle'; }
 
-// Mot du jour : « Quelle joie de te revoir ! » après au moins 2 jours sans séance ; sinon une des 14 places, tirée pour la journée
-// (comme les visiteurs) : le domaine de la dernière séance d'hier, la météo, la saison, le visiteur, le souhait et une fête du jour,
+// Mot du jour : « Quelle joie de te revoir ! » après au moins 2 jours sans séance faite ensemble (comptés depuis l'arrivée du
+// compagnon : jamais le jour où il arrive) ; sinon une des 14 places, tirée pour la journée (comme les visiteurs) : le domaine de la
+// dernière séance d'hier, la météo, la saison, le visiteur, le souhait en cours (sa bulle est dans la ville) et une fête du jour,
 // puis huit petites choses. Une place sans son contexte prend une petite chose. '' sans compagnon.
 function companionWord(day = today()) {
   if (!S.companion) return '';
-  const done = (S.history || []).filter(e => e.day < day && (e.ok || e.elapsedSec > 0))
+  const since = dayOf(S.companion.since), done = (S.history || []).filter(e => e.day < day && e.day >= since && (e.ok || e.elapsedSec > 0))
     .sort((p, q) => (q.day > p.day ? 1 : q.day < p.day ? -1 : q.at - p.at));
-  if (done.length && (keyToUTC(day) - keyToUTC(done[0].day)) / 86400000 >= 3) return t('companion.word.back');
+  if (day > since && (keyToUTC(day) - keyToUTC(done.length ? done[0].day : since)) / 86400000 >= 3) return t('companion.word.back');
   const yesterday = done.find(e => e.day === shiftDay(day, -1)), visitor = visitorOf(day), fest = festivalsOn(day)[0];
   const small = k => t('companion.word.small' + (1 + k % 8)), plural = visitor && (VISITORS.find(v => v.id === visitor.id) || {}).plural;
   const slots = [
@@ -5131,7 +5132,7 @@ function companionWord(day = today()) {
     t('companion.word.weather.' + dayWeather(day)),
     t('companion.word.season.' + seasonOf(day)),
     visitor ? t('companion.word.visitor', { visitor: t('visitor.' + visitor.id + '.name'), n: plural ? 2 : 1 }) : small(3),
-    S.townWish && S.townWish.day === day ? t('companion.word.wish') : small(4),
+    typeof townWishTile === 'function' && townWishTile() ? t('companion.word.wish') : small(4),
     fest ? t('companion.word.festival', { name: t('fest.' + fest.id + '.name') }) : small(5),
     ...[0, 1, 2, 3, 4, 5, 6, 7].map(small),
   ];
@@ -10052,13 +10053,15 @@ function showRun(a) {
   $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? t('session.ruleFree') : t('session.ruleFocus', { grace: S.settings.grace })));
   $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
   if (typeof renderAmbienceButton === 'function') renderAmbienceButton();
-  if (typeof renderSessionCompanion === 'function') { renderSessionCompanion(a); renderBreathing(a); }
+  if (typeof renderSessionCompanion === 'function') renderSessionCompanion(a);
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
   $('#sessRun').hidden = false;
   $('#sessResult').hidden = true;
   ses.hidden = false;
   updateInert();
+  // La respiration guidée une fois l'écran affiché : sa première inspiration grandit aussi.
+  if (typeof renderBreathing === 'function') renderBreathing(a);
   ses.scrollTop = 0;
   renderTimer(true);
   setTimeout(() => $('#sessName').focus({ preventScroll: true }), 30);
@@ -11555,6 +11558,7 @@ function startBreathing() {
   wrap.classList.add('breathing');
   word.hidden = false;
   $('#timerSub').hidden = true;
+  void wrap.offsetWidth;   // la taille de départ d'abord : l'inspiration grandit en douceur
   step('in');
   breath.timer = setInterval(() => step(breath.phase === 'in' ? 'out' : 'in'), BREATH_MS);
 }

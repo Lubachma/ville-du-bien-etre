@@ -143,6 +143,11 @@
 .ring-wrap.breathing.inhale #sessCompanion { transform: scale(1.12); }
 .breath-word { font-size: 16px; font-weight: 700; color: var(--ink-2); }
 #breathBtn[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); }
+/* Un nom long passe à la ligne : le bouton de respiration (et ceux de la colonne du pied de séance) reste dans l'écran. */
+#breathBtn { white-space: normal; overflow-wrap: anywhere; }
+.sess-foot .btn { min-width: 0; }
+/* Réglages : une étiquette longue (« Afficher » et le nom du compagnon) passe à la ligne, l'interrupteur reste à côté. */
+.setting-row .setting-label { min-width: 0; overflow-wrap: anywhere; }
 .breath-word.fresh { animation: breath-word .8s ease; }
 @keyframes breath-word { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {

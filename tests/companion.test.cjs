@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 // Étape 6 : le compagnon (données, règles, mot du jour).
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
-  '29-companion.js', '46-features.js'];
+  '28-harmony.js', '29-companion.js', '46-features.js'];
 const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'companionLevelOf', 'setLang', 'achievementMet', 'achievementProgress',
   'companionLevel', 'companionNext', 'wearUnlocked', 'companionName', 'adoptCompanion', 'editCompanion', 'addCompanionMinutes', 'wearCompanion',
   'companionInvite', 'companionPose', 'checkAchievements', 'lockInfo', 'ITEMS', 'NATURE_ITEMS', 'companionWord', 'chance', 'dayWeather', 'seasonOf', 'visitorOf', 'festivalsOn', 'shiftDay', 't', 'DICT'];
@@ -159,50 +159,60 @@ test('mot du jour : le même toute la journée, un autre jour peut changer', () 
 });
 
 test('mot du jour : le retour passe en premier', () => {
+  // Arrivée le 21 octobre (l'horloge de l'app) ; les séances d'avant ne comptent pas.
   const a = app();
   a.adoptCompanion('lapin', '');
-  a.state.history = [entry('2026-10-16', 'esprit')];
-  assert.equal(a.companionWord('2026-10-19'), a.t('companion.word.back'));
-  a.state.history = [entry('2026-10-17', 'esprit'), entry('2026-10-12', 'corps')];
-  assert.notEqual(a.companionWord('2026-10-19'), a.t('companion.word.back'));
+  a.state.history = [entry('2026-10-22', 'esprit')];
+  assert.equal(a.companionWord('2026-10-25'), a.t('companion.word.back'));
+  a.state.history = [entry('2026-10-23', 'esprit'), entry('2026-10-18', 'corps')];
+  assert.notEqual(a.companionWord('2026-10-25'), a.t('companion.word.back'));
   // Une séance interrompue sans rien de fait ne compte pas ; avec du temps fait, si.
-  a.state.history = [entry('2026-10-18', 'calme', { ok: false, elapsedSec: 0 }), entry('2026-10-15', 'corps')];
-  assert.equal(a.companionWord('2026-10-19'), a.t('companion.word.back'));
-  a.state.history = [entry('2026-10-18', 'calme', { ok: false, elapsedSec: 240 })];
-  assert.notEqual(a.companionWord('2026-10-19'), a.t('companion.word.back'));
+  a.state.history = [entry('2026-10-24', 'calme', { ok: false, elapsedSec: 0 }), entry('2026-10-21', 'corps')];
+  assert.equal(a.companionWord('2026-10-25'), a.t('companion.word.back'));
+  a.state.history = [entry('2026-10-24', 'calme', { ok: false, elapsedSec: 240 })];
+  assert.notEqual(a.companionWord('2026-10-25'), a.t('companion.word.back'));
 });
 
 test('mot du jour : chaque contexte a sa phrase', () => {
   const a = app();
   a.adoptCompanion('lapin', '');
-  // Place 0 : le domaine de la dernière séance d'hier ; sans séance hier, une petite phrase.
-  let day = dayFor(a, 0);
+  // Place 0 : le domaine de la dernière séance d'hier (faite avec le compagnon, arrivé le 21 octobre) ; sans séance hier, une petite
+  // phrase.
+  let day = dayFor(a, 0, () => true, '2026-10-22');
   a.state.history = [entry(a.shiftDay(day, -1), 'calme'), entry(a.shiftDay(day, -1), 'corps', { at: Date.parse(a.shiftDay(day, -1) + 'T06:00:00Z') })];
   assert.equal(a.companionWord(day), a.t('companion.word.cat.calme'));
   a.state.history = [entry(a.shiftDay(day, -2), 'calme')];
   assert.equal(a.companionWord(day), a.t('companion.word.small1'));
-  a.state.history = [];
+  // Les autres places : une séance la veille (sur le domaine Corps), pour qu'un jour d'après l'arrivée ne soit pas un retour.
+  const word = d => { a.state.history = [entry(a.shiftDay(d, -1), 'corps')]; return a.companionWord(d); };
   // Places 1 et 2 : la météo et la saison du jour.
   day = dayFor(a, 1);
-  assert.equal(a.companionWord(day), a.t('companion.word.weather.' + a.dayWeather(day)));
+  assert.equal(word(day), a.t('companion.word.weather.' + a.dayWeather(day)));
   day = dayFor(a, 2);
-  assert.equal(a.companionWord(day), a.t('companion.word.season.' + a.seasonOf(day)));
+  assert.equal(word(day), a.t('companion.word.season.' + a.seasonOf(day)));
   // Place 3 : le visiteur du jour (au pluriel pour les canards).
   day = dayFor(a, 3, d => !!a.visitorOf(d));
   const v = a.visitorOf(day);
-  assert.equal(a.companionWord(day), a.t('companion.word.visitor', { visitor: a.t('visitor.' + v.id + '.name'), n: v.id === 'canards' ? 2 : 1 }));
-  // Place 4 : le souhait du jour, seulement s'il est de ce jour.
+  assert.equal(word(day), a.t('companion.word.visitor', { visitor: a.t('visitor.' + v.id + '.name'), n: v.id === 'canards' ? 2 : 1 }));
+  // Place 4 : le souhait en cours, dont la bulle est dans la ville ; exaucé, laissé de côté ou réglage coupé, une petite phrase.
   day = dayFor(a, 4);
+  a.state.city.tiles.push({ id: 't1', item: 'maison', x: 5, y: 5, at: T0, paid: 0 });
   a.state.townWish = { day, tile: 't1', item: 'banc' };
-  assert.equal(a.companionWord(day), a.t('companion.word.wish'));
-  a.state.townWish = { day: a.shiftDay(day, -1), tile: 't1', item: 'banc' };
-  assert.equal(a.companionWord(day), a.t('companion.word.small5'));
+  assert.equal(word(day), a.t('companion.word.wish'));
+  for (const [wish, setting] of [[{ done: T0 }, true], [{ skipped: true }, true], [{}, false]]) {
+    a.state.townWish = { day, tile: 't1', item: 'banc', ...wish };
+    a.state.settings.townWishes = setting;
+    assert.equal(word(day), a.t('companion.word.small5'), JSON.stringify([wish, setting]));
+  }
+  a.state.settings.townWishes = true;
+  a.state.townWish = { day, tile: 'disparu', item: 'banc' };
+  assert.equal(word(day), a.t('companion.word.small5'));
   a.state.townWish = null;
   // Place 5 : une fête du jour.
   day = dayFor(a, 5, d => a.festivalsOn(d).length > 0);
-  assert.equal(a.companionWord(day), a.t('companion.word.festival', { name: a.t('fest.' + a.festivalsOn(day)[0].id + '.name') }));
+  assert.equal(word(day), a.t('companion.word.festival', { name: a.t('fest.' + a.festivalsOn(day)[0].id + '.name') }));
   // Places 6 à 13 : les huit petites phrases.
-  for (let k = 6; k < 14; k++) assert.equal(a.companionWord(dayFor(a, k)), a.t('companion.word.small' + (k - 5)));
+  for (let k = 6; k < 14; k++) assert.equal(word(dayFor(a, k)), a.t('companion.word.small' + (k - 5)));
 });
 
 test('mot du jour : jamais un reproche ni un accord', () => {
@@ -231,4 +241,19 @@ test('compagnon : trois succès et la Cabane', () => {
   a.addCompanionMinutes(1);
   assert.deepEqual(fresh(), ['inseparables']);
   assert.equal(a.lockInfo('cabane'), null);
+});
+
+test('mot du jour : pas de « Quelle joie de te revoir ! » le jour de l’arrivée, ni pour les séances d’avant', () => {
+  // Arrivée le 21 octobre (l'horloge de l'app), dernière séance le 10 : rien ne compte avant l'arrivée.
+  const a = app(), back = () => a.t('companion.word.back');
+  a.state.history = [entry('2026-10-10', 'esprit')];
+  a.adoptCompanion('lapin', '');
+  assert.notEqual(a.companionWord('2026-10-21'), back());
+  assert.notEqual(a.companionWord('2026-10-23'), back());
+  // Trois jours après l'arrivée, sans séance depuis : le retour.
+  assert.equal(a.companionWord('2026-10-24'), back());
+  // Une séance le 22 : le 24, ce n'est pas encore un retour ; le 25, si.
+  a.state.history.unshift(entry('2026-10-22', 'corps'));
+  assert.notEqual(a.companionWord('2026-10-24'), back());
+  assert.equal(a.companionWord('2026-10-25'), back());
 });

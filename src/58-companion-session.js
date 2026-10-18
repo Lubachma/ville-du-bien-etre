@@ -87,6 +87,7 @@ function startBreathing() {
   wrap.classList.add('breathing');
   word.hidden = false;
   $('#timerSub').hidden = true;
+  void wrap.offsetWidth;   // la taille de départ d'abord : l'inspiration grandit en douceur
   step('in');
   breath.timer = setInterval(() => step(breath.phase === 'in' ? 'out' : 'in'), BREATH_MS);
 }

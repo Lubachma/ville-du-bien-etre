@@ -41,13 +41,14 @@ async function toEnglish(page) {
   await page.locator('#settingsLang').getByRole('radio', { name: 'English', exact: true }).click();
   await page.locator('#sheetClose').click();
 }
-// Mesure que rien ne déborde : dans la fenêtre ouverte, ou dans une partie de la page (sans ses décors cachés aux lecteurs d'écran,
-// comme les étincelles de l'écran de fin).
+// Mesure que rien ne déborde : dans la fenêtre ouverte, ou dans une partie de la page. Ne comptent pas : les décors cachés aux
+// lecteurs d'écran (étincelles de l'écran de fin), les textes réservés aux lecteurs d'écran (1 px de large par construction) et
+// l'intérieur des interrupteurs (leur bouton dépasse de 4 px, partout dans les réglages) ; leur bord reste vérifié.
 const fitsSheet = page => page.evaluate(() => document.querySelector('#sheetBody').scrollWidth <= document.querySelector('#sheetBody').clientWidth + 1
   && document.documentElement.scrollWidth <= innerWidth);
 const fitsIn = (page, sel) => page.evaluate(s => document.documentElement.scrollWidth <= innerWidth
-  && [...document.querySelectorAll(s + ', ' + s + ' *')].filter(el => !el.closest('[aria-hidden="true"]'))
-    .every(el => el.scrollWidth <= el.clientWidth + 1 && el.getBoundingClientRect().right <= innerWidth + 1), sel);
+  && [...document.querySelectorAll(s + ', ' + s + ' *')].filter(el => !el.closest('[aria-hidden="true"], .visually-hidden'))
+    .every(el => (el.closest('.switch') || el.querySelector('.switch') || el.scrollWidth <= el.clientWidth + 1) && el.getBoundingClientRect().right <= innerWidth + 1), sel);
 const toastMatches = (page, re) => page.waitForFunction(source => new RegExp(source).test(document.querySelector('#toast').textContent), re.source, { timeout: 5000 });
 const meet = page => page.locator('#companionInvite').getByRole('button').first().click();
 
@@ -553,9 +554,69 @@ async function settingsHide(browser, baseURL) {
   return 'Réglages : afficher, cacher et modifier le compagnon';
 }
 
+// Lance une séance libre en français ou en anglais (l'activité garde son nom).
+async function startIn(page, name, minutes, en) {
+  await page.locator('[data-tab="activites"]').click();
+  await page.getByRole('button', { name: new RegExp('^' + name) }).first().click();
+  await page.getByRole('radio', { name: minutes + ' min', exact: true }).click();
+  await page.getByRole('radio', { name: en ? 'Free activity' : 'Activité libre', exact: true }).click();
+  await page.getByRole('button', { name: en ? /^Start/ : /^Commencer/ }).click();
+  await page.waitForFunction(() => window.__ville.activeState() === 'mine');
+}
+
+// Un nom de 20 caractères à 320 px : le bouton de respiration passe à la ligne, et le pied de l'écran de séance (« Ambiance »,
+// « Abandonner » compris) reste dans l'écran, en français puis en anglais.
+async function breathLongName(browser, baseURL) {
+  for (const lang of ['fr', 'en']) {
+    const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet({ name: 'W'.repeat(20) }), settings: { lang } }, { width: 320, height: 640 });
+    try {
+      await startIn(page, 'Pratique calme', 5, lang === 'en');
+      assert.equal(await page.locator('#breathBtn').isVisible(), true);
+      assert.equal(await fitsIn(page, '#sessRun .sess-foot'), true, lang);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Respiration : un nom long tient à 320 px, en français et en anglais';
+}
+
+// Un nom de 20 caractères à 320 px : la section Compagnon des réglages tient, en français puis en anglais.
+async function settingsLongName(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { companion: pet({ name: 'W'.repeat(20) }) }), NOW,
+    { viewport: { width: 320, height: 640 } });
+  try {
+    for (const lang of ['fr', 'en']) {
+      if (lang === 'en') await toEnglish(page);
+      await companionSection(page);
+      assert.equal(await fitsSheet(page), true, lang);
+      assert.equal(await fitsIn(page, '#settingsCompanion'), true, lang);
+      await page.locator('#sheetClose').click();
+    }
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Réglages : un nom long tient à 320 px';
+}
+
+// Respiration allumée d'avance : à l'ouverture de la séance, le compagnon part de sa taille et grandit pendant la première
+// inspiration (au lieu d'être déjà grand).
+async function breathFirstInhale(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { companion: pet(), settings: { breathing: true } });
+  try {
+    await startSession(page, 'Pratique calme', 5);
+    const scale = () => page.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector('#sessCompanion')).transform).a);
+    const start = await scale();
+    assert.ok(start < 1.05, 'au départ : ' + start);
+    assert.equal(await page.evaluate(() => document.querySelector('.ring-wrap').classList.contains('inhale')), true);
+    await page.waitForTimeout(2500);
+    const later = await scale();
+    assert.ok(later > 1.01, 'pendant l’inspiration : ' + later);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Respiration : la première inspiration grandit aussi';
+}
+
 const SCENARIOS = [paintAll, inviteAfterFirstSession, adoptDefault, adoptLongName, suggestedNameFollowsLanguage, townDayNight, townTapAndButton,
   townHiddenAndVisit, sheetContent, wardrobe, sheetLongName, sessionPoses, successScreen, interruptedCounts, successLongName, breathOnlyCalm, breathCycle,
-  breathReducedMotion, breathRoutine, breathHidden, settingsLater, settingsHide];
+  breathReducedMotion, breathRoutine, breathHidden, settingsLater, settingsHide, breathLongName, settingsLongName, breathFirstInhale];
 async function runCompanion(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

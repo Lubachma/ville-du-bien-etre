@@ -339,13 +339,15 @@ function showRun(a) {
   $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? t('session.ruleFree') : t('session.ruleFocus', { grace: S.settings.grace })));
   $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
   if (typeof renderAmbienceButton === 'function') renderAmbienceButton();
-  if (typeof renderSessionCompanion === 'function') { renderSessionCompanion(a); renderBreathing(a); }
+  if (typeof renderSessionCompanion === 'function') renderSessionCompanion(a);
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
   $('#sessRun').hidden = false;
   $('#sessResult').hidden = true;
   ses.hidden = false;
   updateInert();
+  // La respiration guidée une fois l'écran affiché : sa première inspiration grandit aussi.
+  if (typeof renderBreathing === 'function') renderBreathing(a);
   ses.scrollTop = 0;
   renderTimer(true);
   setTimeout(() => $('#sessName').focus({ preventScroll: true }), 30);
