@@ -126,6 +126,27 @@ Object.assign(DRAW, {
     g.circle(bx + g.tw * .025, by - g.tw * .025, g.tw * .018, g.c('#e07a4f'));
     g.poly([[bx + g.tw * .04, by - g.tw * .03], [bx + g.tw * .06, by - g.tw * .022], [bx + g.tw * .04, by - g.tw * .016]], g.c('#f2c14e'));
   },
+  // Arche fleurie (offerte par « Ville harmonieuse ») : deux montants de bois et un arc de feuillage couvert de fleurs aux couleurs
+  // des cinq domaines.
+  arche(g, x, y) {
+    // Face à nous : les deux montants sur la diagonale qui court de gauche à droite de l'écran, l'arc bien rond entre eux.
+    const ctx = g.ctx, wood = g.c('#a77b4f'), cols = CAT_ORDER.map(c => g.cat(c)), h = g.tw * .52;
+    g.shadow(x + .5, y + .5, .32);
+    g.box(x + .16, y + .76, x + .24, y + .84, 0, h, wood);
+    g.box(x + .76, y + .16, x + .84, y + .24, 0, h, wood);
+    const a = g.P(x + .2, y + .8, h), b = g.P(x + .8, y + .2, h), top = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - g.tw * .34];
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(top[0], top[1], b[0], b[1]);
+    ctx.strokeStyle = g.leaf('#5f9a4c'); ctx.lineWidth = Math.max(2, g.tw * .08); ctx.lineCap = 'round'; ctx.stroke();
+    // Fleurs le long de l'arc, puis sur les montants
+    for (let i = 0; i < 11; i++) {
+      const t = (i + .5) / 11, q = 1 - t;
+      g.circle(q * q * a[0] + 2 * q * t * top[0] + t * t * b[0], q * q * a[1] + 2 * q * t * top[1] + t * t * b[1] - g.tw * .01, g.tw * .034, cols[i % 5]);
+    }
+    for (const [ux, uy, shift] of [[.2, .8, 0], [.8, .2, 2]]) for (let k = 1; k <= 2; k++) {
+      const p = g.P(x + ux, y + uy, h * k / 3);
+      g.circle(p[0] + g.tw * .03, p[1], g.tw * .024, cols[(k + shift) % 5]);
+    }
+  },
   statue(g, x, y) {
     const stone = g.c('#d9d2c4'), bronze = g.c('#9a7446');
     g.shadow(x + .5, y + .5, .26);

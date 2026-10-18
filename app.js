@@ -95,6 +95,7 @@ const ITEMS = {
   fanions:     { group: 'decor', price: 3e6, reward: 'semaine-equilibree', hf: .82 },
   nichoir:     { group: 'decor', price: 2e6, reward: 'main-verte', hf: .65 },
   statue:      { group: 'decor', price: 4e6, reward: 'cent-heures', fem: true, hf: .57 },
+  arche:       { group: 'decor', price: 4e6, reward: 'ville-harmonieuse', fem: true, hf: .95 },
   // Merveilles : 4 étapes [minutes totales, prix] ; price est le prix de la première étape.
   grandarbre:  { group: 'prestige', price: 200e6, wonder: [[1500, 200e6], [1800, 250e6], [2100, 300e6], [2400, 350e6]], hf: 1.19 },
   phare:       { group: 'prestige', price: 350e6, wonder: [[3000, 350e6], [3500, 400e6], [4000, 450e6], [4500, 500e6]], hf: 1.16 },
@@ -145,6 +146,9 @@ const ACHIEVEMENTS = [
   { id: 'defis-en-serie', family: 'rituals', kind: 'challenges', n: 12 },
   { id: 'semaine-complete', family: 'rituals', kind: 'fullWeek', n: 3 },
   { id: 'carte-postale', family: 'rituals', kind: 'postcards', n: 1 },
+  { id: 'premier-souhait', family: 'town', kind: 'townWishes', n: 1 },
+  { id: 'habitants-combles', family: 'town', kind: 'townWishes', n: 10 },
+  { id: 'ville-harmonieuse', family: 'town', kind: 'stars', n: 5, reward: 'arche' },
 ];
 const NATURE_ITEMS = ['arbre', 'cerisier', 'haie', 'fleurs', 'potager'];
 // Ensembles : trois éléments dans un même carré de 3 × 3 cases.
@@ -210,7 +214,7 @@ const CHALLENGES = [
 const SHARE_ITEMS = Object.freeze(['arbre', 'fleurs', 'chemin', 'banc', 'lampadaire', 'etang', 'maison', 'boulangerie', 'serre', 'bibliotheque', 'ecole', 'observatoire',
   'terrain', 'piscine', 'stade', 'jardin', 'fontaine', 'pavillon', 'kiosque', 'atelier', 'theatre', 'horloge', 'lavoir', 'moulin', 'marche', 'musee', 'universite',
   'planetarium', 'skatepark', 'escalade', 'gymnase', 'labyrinthe', 'source', 'pagode', 'galerie', 'cinema', 'chapiteau', 'haie', 'cerisier', 'livres', 'lanterne',
-  'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'grandarbre', 'phare', 'granderoue']);
+  'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'grandarbre', 'phare', 'granderoue', 'arche']);
 const POSTCARDS_MAX = 50;            // cartes postales des villes amies gardées dans le carnet
 // Harmonie : les cinq étoiles, une par critère (28-harmony.js).
 const HARMONY = ['verdure', 'variete', 'details', 'quartiers', 'lumieres'];
@@ -564,6 +568,7 @@ DICT.fr = {
   'item.fanions': 'Mât à fanions',
   'item.nichoir': 'Nichoir',
   'item.statue': 'Statue',
+  'item.arche': 'Arche fleurie',
   'item.grandarbre': 'Grand Arbre',
   'item.phare': 'Phare',
   'item.granderoue': 'Grande Roue',
@@ -1288,6 +1293,12 @@ DICT.fr = {
   'ach.semaine-complete.desc': "Relève les trois défis d'une même semaine.",
   'ach.carte-postale.name': 'Carte postale',
   'ach.carte-postale.desc': "Garde la carte postale d'une ville amie.",
+  'ach.premier-souhait.name': 'Premier souhait',
+  'ach.premier-souhait.desc': "Exauce le souhait d'un habitant.",
+  'ach.habitants-combles.name': 'Habitants comblés',
+  'ach.habitants-combles.desc': "Exauce 10 souhaits d'habitants.",
+  'ach.ville-harmonieuse.name': 'Ville harmonieuse',
+  'ach.ville-harmonieuse.desc': "Gagne les cinq étoiles d'harmonie.",
   'ach.sur-ta-lancee.descHidden': 'Cumule 7 jours actifs rapprochés ; les jours de repos font le pont.',
   // Ensembles de voisinage
   'set.coin-lecture.name': 'Coin lecture',
@@ -1719,6 +1730,7 @@ DICT.en = {
   'item.fanions': 'Bunting pole',
   'item.nichoir': 'Birdhouse',
   'item.statue': 'Statue',
+  'item.arche': 'Flower arch',
   'item.grandarbre': 'Great Tree',
   'item.phare': 'Lighthouse',
   'item.granderoue': 'Big Wheel',
@@ -2443,6 +2455,12 @@ DICT.en = {
   'ach.semaine-complete.desc': 'Complete all three challenges of the same week.',
   'ach.carte-postale.name': 'Postcard',
   'ach.carte-postale.desc': "Keep the postcard of a friend's town.",
+  'ach.premier-souhait.name': 'First wish',
+  'ach.premier-souhait.desc': "Grant a resident's wish.",
+  'ach.habitants-combles.name': 'Happy residents',
+  'ach.habitants-combles.desc': "Grant 10 residents' wishes.",
+  'ach.ville-harmonieuse.name': 'Harmonious town',
+  'ach.ville-harmonieuse.desc': 'Earn all five harmony stars.',
   'ach.sur-ta-lancee.descHidden': 'Reach 7 active days close together; rest days bridge the gaps.',
   // Neighbourhood sets
   'set.coin-lecture.name': 'Reading nook',
@@ -4073,6 +4091,9 @@ function fullWeekDone(n) {
   return Object.values(perWeek).some(count => count >= n);
 }
 const postcardsKept = () => Object.keys(S.postcards || {}).length;
+// Souhaits exaucés et étoiles d'harmonie gagnées : leurs cadeaux (wish:<jour>, star:<critère>).
+const giftsCount = prefix => Object.keys(S.gifts || {}).filter(key => key.startsWith(prefix)).length;
+const wishesGranted = () => giftsCount('wish:'), starsGained = () => giftsCount('star:');
 // Premier jour (dans l'ordre) où la série atteint n ; null sinon.
 function streakDay(n) { return activeDays().find(d => streakDetail(d).days >= n) || null; }
 // Premier jour où, semaine par semaine, n domaines ont été pratiqués ; null sinon.
@@ -4112,6 +4133,8 @@ function achievementMet(def) {
     case 'challenges': return challengesDone() >= def.n;
     case 'fullWeek': return fullWeekDone(def.n);
     case 'postcards': return postcardsKept() >= def.n;
+    case 'townWishes': return wishesGranted() >= def.n;
+    case 'stars': return starsGained() >= def.n;
     default: return false;
   }
 }
@@ -4123,6 +4146,7 @@ function achievementProgress(def) {
     activeDays: () => activeDays().length, tiles: () => S.city.tiles.length, nature: natureCount,
     sets: () => Object.keys(S.sets || {}).length, wonders: wondersDone,
     visitors: visitorsMet, festivals: festivalsLived, seasons: seasonsSeen, challenges: challengesDone, postcards: postcardsKept,
+    townWishes: wishesGranted, stars: starsGained,
   }[def.kind];
   if (!have) return null;
   return { have: Math.min(have(), def.n), need: def.n, unit: def.kind === 'catMinutes' || def.kind === 'totalMinutes' ? 'min' : 'n' };
@@ -5720,6 +5744,27 @@ Object.assign(DRAW, {
     g.circle(bx, by, g.tw * .03, g.c('#e07a4f'));
     g.circle(bx + g.tw * .025, by - g.tw * .025, g.tw * .018, g.c('#e07a4f'));
     g.poly([[bx + g.tw * .04, by - g.tw * .03], [bx + g.tw * .06, by - g.tw * .022], [bx + g.tw * .04, by - g.tw * .016]], g.c('#f2c14e'));
+  },
+  // Arche fleurie (offerte par « Ville harmonieuse ») : deux montants de bois et un arc de feuillage couvert de fleurs aux couleurs
+  // des cinq domaines.
+  arche(g, x, y) {
+    // Face à nous : les deux montants sur la diagonale qui court de gauche à droite de l'écran, l'arc bien rond entre eux.
+    const ctx = g.ctx, wood = g.c('#a77b4f'), cols = CAT_ORDER.map(c => g.cat(c)), h = g.tw * .52;
+    g.shadow(x + .5, y + .5, .32);
+    g.box(x + .16, y + .76, x + .24, y + .84, 0, h, wood);
+    g.box(x + .76, y + .16, x + .84, y + .24, 0, h, wood);
+    const a = g.P(x + .2, y + .8, h), b = g.P(x + .8, y + .2, h), top = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - g.tw * .34];
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(top[0], top[1], b[0], b[1]);
+    ctx.strokeStyle = g.leaf('#5f9a4c'); ctx.lineWidth = Math.max(2, g.tw * .08); ctx.lineCap = 'round'; ctx.stroke();
+    // Fleurs le long de l'arc, puis sur les montants
+    for (let i = 0; i < 11; i++) {
+      const t = (i + .5) / 11, q = 1 - t;
+      g.circle(q * q * a[0] + 2 * q * t * top[0] + t * t * b[0], q * q * a[1] + 2 * q * t * top[1] + t * t * b[1] - g.tw * .01, g.tw * .034, cols[i % 5]);
+    }
+    for (const [ux, uy, shift] of [[.2, .8, 0], [.8, .2, 2]]) for (let k = 1; k <= 2; k++) {
+      const p = g.P(x + ux, y + uy, h * k / 3);
+      g.circle(p[0] + g.tw * .03, p[1], g.tw * .024, cols[(k + shift) % 5]);
+    }
   },
   statue(g, x, y) {
     const stone = g.c('#d9d2c4'), bronze = g.c('#9a7446');

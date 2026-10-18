@@ -26,7 +26,7 @@ test('15 bâtiments : 500, 1 000 et 1 600 min du domaine, pour 250, 450 et 700 M
     assert.deepEqual([ITEMS[key].group, ITEMS[key].need, ITEMS[key].price], [cat, [500, 1000, 1600][i], [250e6, 450e6, 700e6][i]], key);
   });
   for (const key of ['skatepark', 'labyrinthe', 'potager', 'pasjaponais']) assert.equal(ITEMS[key].ground, true, key);
-  assert.equal(Object.keys(ITEMS).length, 50);
+  assert.equal(Object.keys(ITEMS).length, 51);
 });
 
 test('décors : minutes totales, ou succès pour les décors offerts', () => {
@@ -78,11 +78,11 @@ test('merveilles : débloquées aux minutes totales de leur première étape, sa
   assert.equal(a.buildingLevelInfo('grandarbre').level, 0);
 });
 
-test('collection : les éléments débloqués, sur 50', () => {
+test('collection : les éléments débloqués, sur 51', () => {
   const a = app();
-  assert.deepEqual(plain(a.collectionCount()), { have: 7, total: 50 });
+  assert.deepEqual(plain(a.collectionCount()), { have: 7, total: 51 });
   a.state.achievements = { 'leve-tot': Date.now() };
-  assert.deepEqual(plain(a.collectionCount()), { have: 8, total: 50 });
+  assert.deepEqual(plain(a.collectionCount()), { have: 8, total: 51 });
 });
 
 test('élément dévoilé : débloqué, prochain de sa rubrique ou objectif choisi', () => {
@@ -104,7 +104,7 @@ test('noms en français et en anglais', () => {
 test('boutique : débloqués, puis dévoilés, puis silhouettes', () => {
   const a = app();
   assert.deepEqual(plain(a.groupView('decor')), { open: ['arbre', 'fleurs', 'chemin', 'banc', 'lampadaire', 'etang'], revealed: ['haie'],
-    hidden: ['cerisier', 'livres', 'lanterne', 'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue'] });
+    hidden: ['cerisier', 'livres', 'lanterne', 'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'arche'] });
   a.state.achievements = { 'leve-tot': Date.now() };
   assert.ok(a.groupView('decor').open.includes('cadran'));
   a.state.goals.building = 'stade';

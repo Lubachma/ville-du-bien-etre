@@ -61,6 +61,9 @@ const CASES = {
   'defis-en-serie': (s, at) => { s.gifts = Object.fromEntries(Array.from({ length: at ? 12 : 11 }, (_, i) => ['chal:' + mondays(i) + ':long', T0])); },
   'semaine-complete': (s, at) => { s.gifts = Object.fromEntries(['domains', 'morning', 'draw'].slice(0, at ? 3 : 2).map(id => ['chal:2026-10-12:' + id, T0])); },
   'carte-postale': (s, at) => { s.postcards = at ? { '0123456789ab': { code: 'AQcA', name: 'Léa', size: 7, count: 1, at: T0 } } : {}; },
+  'premier-souhait': (s, at) => { s.gifts = at ? { 'visit:2026-10-18': T0, 'wish:2026-10-18': T0 } : { 'visit:2026-10-18': T0 }; },
+  'habitants-combles': (s, at) => { s.gifts = Object.fromEntries(Array.from({ length: at ? 10 : 9 }, (_, i) => ['wish:' + mondays(i), T0])); },
+  'ville-harmonieuse': (s, at) => { s.gifts = Object.fromEntries(['verdure', 'variete', 'details', 'quartiers', 'lumieres'].slice(0, at ? 5 : 4).map(id => ['star:' + id, T0])); },
 };
 
 test('chaque succès est faux juste avant son seuil et vrai au seuil', () => {
@@ -132,4 +135,7 @@ test('progression montrée dans le carnet', () => {
   a.state.gifts = { 'visit:2026-10-18': T0, 'chal:2026-10-12:long': T0, 'chal:2026-10-12:draw': T0 };
   assert.deepEqual(plain(a.achievementProgress(a.def('defis-en-serie'))), { have: 2, need: 12, unit: 'n' });
   assert.deepEqual(plain(a.achievementProgress(a.def('carte-postale'))), { have: 0, need: 1, unit: 'n' });
+  a.state.gifts = { 'wish:2026-10-12': T0, 'wish:2026-10-13': T0, 'wish:2026-10-14': T0, 'star:verdure': T0, 'star:quartiers': T0 };
+  assert.deepEqual(plain(a.achievementProgress(a.def('habitants-combles'))), { have: 3, need: 10, unit: 'n' });
+  assert.deepEqual(plain(a.achievementProgress(a.def('ville-harmonieuse'))), { have: 2, need: 5, unit: 'n' });
 });

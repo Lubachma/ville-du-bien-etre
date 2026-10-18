@@ -39,6 +39,9 @@ function fullWeekDone(n) {
   return Object.values(perWeek).some(count => count >= n);
 }
 const postcardsKept = () => Object.keys(S.postcards || {}).length;
+// Souhaits exaucés et étoiles d'harmonie gagnées : leurs cadeaux (wish:<jour>, star:<critère>).
+const giftsCount = prefix => Object.keys(S.gifts || {}).filter(key => key.startsWith(prefix)).length;
+const wishesGranted = () => giftsCount('wish:'), starsGained = () => giftsCount('star:');
 // Premier jour (dans l'ordre) où la série atteint n ; null sinon.
 function streakDay(n) { return activeDays().find(d => streakDetail(d).days >= n) || null; }
 // Premier jour où, semaine par semaine, n domaines ont été pratiqués ; null sinon.
@@ -78,6 +81,8 @@ function achievementMet(def) {
     case 'challenges': return challengesDone() >= def.n;
     case 'fullWeek': return fullWeekDone(def.n);
     case 'postcards': return postcardsKept() >= def.n;
+    case 'townWishes': return wishesGranted() >= def.n;
+    case 'stars': return starsGained() >= def.n;
     default: return false;
   }
 }
@@ -89,6 +94,7 @@ function achievementProgress(def) {
     activeDays: () => activeDays().length, tiles: () => S.city.tiles.length, nature: natureCount,
     sets: () => Object.keys(S.sets || {}).length, wonders: wondersDone,
     visitors: visitorsMet, festivals: festivalsLived, seasons: seasonsSeen, challenges: challengesDone, postcards: postcardsKept,
+    townWishes: wishesGranted, stars: starsGained,
   }[def.kind];
   if (!have) return null;
   return { have: Math.min(have(), def.n), need: def.n, unit: def.kind === 'catMinutes' || def.kind === 'totalMinutes' ? 'min' : 'n' };

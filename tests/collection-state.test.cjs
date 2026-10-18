@@ -11,9 +11,9 @@ function towns(a, tiles, coins = 2e9) {
   return [B, a.clone(B), a.clone(B)];
 }
 
-test('42 succès, 12 ensembles, et leurs textes dans chaque langue', () => {
+test('45 succès, 12 ensembles, et leurs textes dans chaque langue', () => {
   const a = app();
-  assert.equal(new Set(a.ACHIEVEMENTS.map(x => x.id)).size, 42);
+  assert.equal(new Set(a.ACHIEVEMENTS.map(x => x.id)).size, 45);
   assert.equal(a.SETS.length, 12);
   for (const lang of Object.keys(a.DICT)) {
     for (const x of a.ACHIEVEMENTS) for (const k of ['name', 'desc']) assert.ok(a.DICT[lang]['ach.' + x.id + '.' + k], lang + ' ' + x.id + ' ' + k);
