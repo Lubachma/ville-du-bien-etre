@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js'];
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf', 'chance', 'dayWeather', 'weatherOf', 'rainbowOn', 'shiftDay', 'WEATHER_ODDS'];
+const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf', 'chance', 'dayWeather', 'weatherOf', 'rainbowOn', 'shiftDay', 'WEATHER_ODDS', 'festivalsOn', 'giftAmount', 'nextFestival'];
 function app(tz = 'Europe/Zurich', createdAt = Date.parse('2026-01-15T09:00:00Z')) {
   const a = loadApp(FILES, { expose: EXPOSE });
   a.state.clock.tz = tz; a.state.createdAt = createdAt; a.state.clock.maxSeen = 0;
@@ -99,4 +99,33 @@ test("arc-en-ciel : le matin ensoleillé qui suit un jour de pluie, environ une 
   }
   assert.ok(eligible > 50, String(eligible));
   assert.ok(Math.abs(shown / eligible - 1 / 3) < .12, String(shown / eligible));
+});
+
+test('fêtes aux dates des deux hémisphères', () => {
+  const a = app(), ids = day => plain(a.festivalsOn(day).map(f => f.id));
+  assert.deepEqual(['2026-03-21', '2026-06-20', '2026-09-24', '2026-12-22', '2026-12-31', '2027-01-01', '2026-03-23'].map(ids),
+    [['printemps'], ['ete'], ['recoltes'], ['lumieres'], ['nouvel-an'], ['nouvel-an'], []]);
+  a.state.clock.tz = 'Australia/Sydney';
+  assert.deepEqual(['2026-03-21', '2026-09-23', '2026-12-21', '2026-06-21'].map(ids), [['recoltes'], ['printemps'], ['ete'], ['lumieres']]);
+});
+
+test("une fête, un cadeau par an : le Nouvel An porte l'année qui commence", () => {
+  const a = app();
+  assert.deepEqual([a.festivalsOn('2026-12-31')[0].key, a.festivalsOn('2027-01-01')[0].key], ['fest:nouvel-an:2027', 'fest:nouvel-an:2027']);
+  assert.equal(a.festivalsOn('2027-03-20')[0].key, 'fest:printemps:2027');
+  assert.deepEqual(['visit:2026-10-18', 'fest:printemps:2027', 'fest:anniversaire:2027', 'autre'].map(a.giftAmount), [2e6, 5e6, 10e6, 0]);
+});
+
+test('anniversaire de la ville : dès la première année, avec son âge', () => {
+  const a = app('Europe/Zurich', Date.parse('2026-01-15T09:00:00Z'));
+  assert.deepEqual(plain(a.festivalsOn('2026-01-15')), []);
+  assert.deepEqual(plain(a.festivalsOn('2028-01-15')), [{ id: 'anniversaire', key: 'fest:anniversaire:2028', age: 2 }]);
+  const leap = app('Europe/Zurich', Date.parse('2028-02-29T12:00:00Z'));
+  assert.deepEqual(plain(leap.festivalsOn('2029-02-28').map(f => f.age)), [1]);
+});
+
+test("prochaine date d'une fête, pour le carnet", () => {
+  const a = app();
+  assert.deepEqual([a.nextFestival('printemps', '2026-10-18'), a.nextFestival('nouvel-an', '2026-10-18'), a.nextFestival('ete', '2026-06-21'), a.nextFestival('anniversaire', '2026-10-18')],
+    ['2027-03-20', '2026-12-31', '2026-06-21', '2027-01-15']);
 });

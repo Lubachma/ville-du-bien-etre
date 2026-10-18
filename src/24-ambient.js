@@ -59,3 +59,30 @@ function weatherOf(day, minutes) {
 function rainbowOn(day, minutes) {
   return minutes < 720 && dayWeather(day) === 'sun' && dayWeather(shiftDay(day, -1)) === 'rain' && chance(day + ':rainbow') < 1 / 3;
 }
+
+const leapYear = year => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+// Fêtes du jour, chacune avec sa clé de cadeau (une par an) ; le 31 décembre du Nouvel An porte l'année qui commence.
+// L'anniversaire tombe à la date de création de la ville, dès l'année suivante ; un 29 février se fête le 28 hors années bissextiles.
+function festivalsOn(day) {
+  const year = Number(day.slice(0, 4)), md = day.slice(5), side = southern() ? 'south' : 'north', out = [];
+  for (const fest of FESTIVALS) {
+    if (fest.id === 'anniversaire') {
+      const born = dayOf(S.createdAt), bornYear = Number(born.slice(0, 4)), bornMd = born.slice(5);
+      const date = bornMd === '02-29' && !leapYear(year) ? '02-28' : bornMd;
+      if (year > bornYear && md === date) out.push({ id: fest.id, key: 'fest:anniversaire:' + year, age: year - bornYear });
+    } else if (fest[side].includes(md)) {
+      out.push({ id: fest.id, key: 'fest:' + fest.id + ':' + (fest.id === 'nouvel-an' && md === '12-31' ? year + 1 : year) });
+    }
+  }
+  return out;
+}
+// Montant d'un cadeau d'après sa clé.
+function giftAmount(key) {
+  const k = String(key);
+  return k.startsWith('visit:') ? GIFTS.visit : k.startsWith('fest:anniversaire:') ? GIFTS.birthday : k.startsWith('fest:') ? GIFTS.fest : 0;
+}
+// Premier jour de la fête, ce jour-là ou après.
+function nextFestival(id, day) {
+  for (let i = 0; i < 400; i++) { const d = shiftDay(day, i); if (festivalsOn(d).some(f => f.id === id)) return d; }
+  return '';
+}

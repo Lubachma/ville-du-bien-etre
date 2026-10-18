@@ -154,6 +154,17 @@ const MOMENTS = ['night', 'dawn', 'day', 'golden', 'dusk'];
 // Météo du jour : probabilités (sur 100) par saison, dans l'ordre de WEATHERS.
 const WEATHERS = ['sun', 'clouds', 'rain', 'snow', 'fog'];
 const WEATHER_ODDS = { spring: [45, 30, 25, 0, 0], summer: [60, 25, 15, 0, 0], autumn: [35, 30, 25, 0, 10], winter: [30, 30, 10, 20, 10] };
+// Fêtes de l'année : leurs jours (MM-JJ) au nord et au sud ; l'anniversaire de la ville se calcule.
+const FESTIVALS = [
+  { id: 'nouvel-an', north: ['12-31', '01-01'], south: ['12-31', '01-01'] },
+  { id: 'printemps', north: ['03-20', '03-21', '03-22'], south: ['09-22', '09-23', '09-24'] },
+  { id: 'ete', north: ['06-20', '06-21', '06-22'], south: ['12-20', '12-21', '12-22'] },
+  { id: 'recoltes', north: ['09-22', '09-23', '09-24'], south: ['03-20', '03-21', '03-22'] },
+  { id: 'lumieres', north: ['12-20', '12-21', '12-22'], south: ['06-20', '06-21', '06-22'] },
+  { id: 'anniversaire' },
+];
+// Cadeaux de la ville vivante, en pièces : visiteur du jour, fête, anniversaire de la ville.
+const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6 };
 const SOUTH_TZ = ['Australia/', 'Antarctica/', 'America/Argentina/', 'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu',
   'Pacific/Noumea', 'Pacific/Port_Moresby', 'America/Santiago', 'America/Punta_Arenas', 'America/Sao_Paulo', 'America/Montevideo', 'America/Asuncion',
   'America/La_Paz', 'America/Lima', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Windhoek', 'Africa/Gaborone',
