@@ -53,8 +53,9 @@ async function runI18n(browser, baseURL) {
       ids: [...document.querySelectorAll('#sheetBody > .settings-section')].map(s => s.id),
       titles: [...document.querySelectorAll('#sheetBody .section-title')].map(s => s.textContent),
     }));
-    const ORDER = ['settingsStart', 'settingsLang', 'settingsSessions', 'settingsStreak', 'settingsWeek', 'settingsRituals', 'settingsTheme', 'settingsStrict', 'settingsBackup', 'settingsReset'];
-    assert.deepEqual(await sections(), { ids: ORDER, titles: ['Language', 'Grace period', 'Streak', 'Week and reminder', 'Rituals', 'Appearance', 'Strict mode', 'Backup'] });
+    const ORDER = ['settingsStart', 'settingsLang', 'settingsSessions', 'settingsStreak', 'settingsWeek', 'settingsRituals', 'settingsCompanion', 'settingsTheme',
+      'settingsStrict', 'settingsBackup', 'settingsReset'];
+    assert.deepEqual(await sections(), { ids: ORDER, titles: ['Language', 'Grace period', 'Streak', 'Week and reminder', 'Rituals', 'Companion', 'Appearance', 'Strict mode', 'Backup'] });
     await page.locator('#sheetClose').click();
     await page.locator('[data-tab="ville"]').click();
     await page.locator('#buildBtn').click();
@@ -103,7 +104,7 @@ async function runI18n(browser, baseURL) {
     assert.equal(await page.locator('#installTitle').innerText(), 'Your town on your phone');
     await chooseLang(page, 'Français');
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'fr');
-    assert.deepEqual(await sections(), { ids: ORDER, titles: ['Langue', 'Tolérance de sortie', 'Série', 'Semaine et rappel', 'Rituels', 'Apparence', 'Mode strict', 'Sauvegarde'] });
+    assert.deepEqual(await sections(), { ids: ORDER, titles: ['Langue', 'Tolérance de sortie', 'Série', 'Semaine et rappel', 'Rituels', 'Compagnon', 'Apparence', 'Mode strict', 'Sauvegarde'] });
     assert.ok(await page.getByRole('button', { name: 'Lancer une activité', exact: true }).isVisible());
     assert.equal(await page.locator('#installTitle').innerText(), 'Ta ville sur ton téléphone');
     assert.equal(await page.locator('#addActForm .activity-options summary').textContent(), 'Mode, fréquence et contexte');
