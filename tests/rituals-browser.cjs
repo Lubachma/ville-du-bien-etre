@@ -284,7 +284,51 @@ async function recapsOnce(browser, baseURL) {
   return 'Récapitulatifs du mois et de l’année';
 }
 
-const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce];
+// Image du récapitulatif : 1080 × 1350, partagée en un seul fichier PNG quand le téléphone accepte les fichiers, sinon
+// téléchargée. Le temps de pratique y est, l'humeur jamais (une humeur est notée en octobre).
+async function recapImage(browser, baseURL) {
+  const seed = { ...filledWeek(), rituals: { week: '', month: '', year: '' } };
+  seed.history = seed.history.map((e, i) => (i ? e : { ...e, mood: 5 }));
+  for (const canShare of [true, false]) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich' });
+    const page = await context.newPage(), errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    try {
+      await page.clock.setFixedTime(new Date('2026-11-02T09:00:00Z'));
+      await page.addInitScript(([state, share]) => {
+        localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state));
+        window.__texts = [];
+        const fill = CanvasRenderingContext2D.prototype.fillText;
+        CanvasRenderingContext2D.prototype.fillText = function (text, ...rest) { window.__texts.push(String(text)); return fill.call(this, text, ...rest); };
+        navigator.canShare = () => share;
+        navigator.share = async data => { window.__shared = data; };
+      }, [seed, canShare]);
+      await page.goto(baseURL);
+      await page.locator('#sheet').waitFor();
+      assert.match(await page.locator('#sheetBody').innerText(), /tu te sentais bien/);
+      const button = page.locator('#sheetBody').getByRole('button', { name: "Partager l'image", exact: true });
+      if (canShare) {
+        await button.click();
+        await page.waitForFunction(() => !!window.__shared);
+        const shared = await page.evaluate(async () => {
+          const files = window.__shared.files, bitmap = await createImageBitmap(files[0]);
+          return { count: files.length, type: files[0].type, name: files[0].name, width: bitmap.width, height: bitmap.height };
+        });
+        assert.deepEqual(shared, { count: 1, type: 'image/png', name: 'mon-mois-2026-10.png', width: 1080, height: 1350 });
+        const texts = await page.evaluate(() => window.__texts);
+        assert.ok(texts.includes('Octobre 2026') && texts.some(text => /^1\sh\s40$/.test(text)), texts.join(' | '));
+        assert.ok(!texts.some(text => /sentais/.test(text)), texts.join(' | '));
+      } else {
+        const [download] = await Promise.all([page.waitForEvent('download'), button.click()]);
+        assert.equal(download.suggestedFilename(), 'mon-mois-2026-10.png');
+      }
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Image du récapitulatif : partagée, ou téléchargée';
+}
+
+const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
