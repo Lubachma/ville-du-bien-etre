@@ -9221,7 +9221,8 @@ async function beginSession(o) {
   const st = settledState();
   if (st === 'elsewhere' || st === 'resume') { toast(t('session.alreadyRunning')); checkActive(); return; }
   beginning = true;
-  Chime.unlock();   // encore dans le geste : plus tard, le son serait refusé
+  // Encore dans le geste : plus tard, le son serait refusé. Une ambiance choisie ouvre le son même si le son de fin est coupé.
+  Chime.unlock(S.settings.ambience !== 'none');
   try {
     const wake = o.mode === 'free' ? 'free' : await acquireWake();
     if (wake !== 'on' && wake !== 'free' && !wakeAcked()) { openWakeWarning(o, wake); return; }
@@ -9323,6 +9324,7 @@ function startSessionLocked(o, resume) {
   run.interval = setInterval(tick, 250);
   writeBeat();
   tick();
+  if (typeof Ambience !== 'undefined' && run) Ambience.start();
   return true;
 }
 function persistRun(force = false) {
@@ -9384,6 +9386,7 @@ function tick() {
   if (run.active.mode === 'free') {
     run.elapsed = clamp(Date.now() - run.active.startedAt, 0, run.totalMs);
     writeBeat();
+    fadeAmbienceNearEnd();
     if (run.elapsed >= run.totalMs) { completeSession(); return; }
     persistRun();
     renderTimer();
@@ -9405,8 +9408,15 @@ function tick() {
   writeBeat();
   persistRun();
   if (!run) return;
+  fadeAmbienceNearEnd();
   if (run.elapsed >= run.totalMs) { completeSession(); return; }
   renderTimer();
+}
+// À 1,5 s de la fin, l'ambiance s'éteint en douceur : le son de fin arrive ensuite, seul.
+function fadeAmbienceNearEnd() {
+  if (run.ambienceFaded || run.totalMs - run.elapsed > 1500 || typeof Ambience === 'undefined') return;
+  run.ambienceFaded = true;
+  Ambience.fadeOut(Math.max(.1, (run.totalMs - run.elapsed) / 1000));
 }
 function awayDuration() { return Math.max(performance.now() - run.awayAt, Date.now() - run.awayWall); }
 function onLeave() {
@@ -9456,6 +9466,8 @@ function endRun() {
   clearTimeout(r.graceTimer);
   if (r.io) r.io.disconnect();
   releaseWake();
+  // Fin, abandon, interruption ou séance finie ailleurs : l'ambiance s'arrête aussitôt (déjà éteinte si la séance est allée au bout).
+  if (typeof Ambience !== 'undefined') Ambience.stop();
   Chime.rest(3000);
   run = null;
   return r;
@@ -9741,11 +9753,32 @@ function buildAmbience(ctx, kind, gain = 1) {
 }
 // L'ambiance qui joue : un graphe, son fondu, et son nom.
 const Ambience = {
-  kind: 'none', graph: null, fade: null,
-  // Démarre l'ambiance choisie, en fondu d'entrée de 3 s ; rien pour « Aucune » ou sans contexte audio ouvert.
+  kind: 'none', graph: null, fade: null, waiting: false,
+  // Démarre l'ambiance choisie, en fondu d'entrée de 3 s ; rien pour « Aucune ». Sans son ouvert (après un rechargement, le
+  // navigateur attend un geste), elle démarre au premier toucher.
   start(kind = S.settings.ambience) {
     this.stop();
-    this.play(kind, 3);
+    if (kind === 'none' || this.play(kind, 3)) return;
+    const c = Chime.ctx;
+    if (c && c.state === 'suspended') c.resume().then(() => { if (c.state === 'running' && this.wanted()) this.play(S.settings.ambience, 3); }, () => {});
+    this.waitForGesture();
+  },
+  // Une séance tourne ici, avec une ambiance choisie, et rien ne joue encore.
+  wanted() { return typeof run !== 'undefined' && !!run && !this.graph && S.settings.ambience !== 'none'; },
+  waitForGesture() {
+    if (this.waiting) return;
+    this.waiting = true;
+    const resume = () => {
+      document.removeEventListener('pointerdown', resume, true);
+      document.removeEventListener('keydown', resume, true);
+      this.waiting = false;
+      if (!this.wanted()) return;
+      Chime.unlock(true);
+      const c = Chime.ctx, go = () => { if (this.wanted()) this.play(S.settings.ambience, 1); };
+      if (c && c.state === 'running') go(); else if (c) c.resume().then(go, () => {});
+    };
+    document.addEventListener('pointerdown', resume, true);
+    document.addEventListener('keydown', resume, true);
   },
   play(kind, fadeIn) {
     const c = Chime.ctx;

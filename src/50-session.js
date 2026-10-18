@@ -211,7 +211,8 @@ async function beginSession(o) {
   const st = settledState();
   if (st === 'elsewhere' || st === 'resume') { toast(t('session.alreadyRunning')); checkActive(); return; }
   beginning = true;
-  Chime.unlock();   // encore dans le geste : plus tard, le son serait refusé
+  // Encore dans le geste : plus tard, le son serait refusé. Une ambiance choisie ouvre le son même si le son de fin est coupé.
+  Chime.unlock(S.settings.ambience !== 'none');
   try {
     const wake = o.mode === 'free' ? 'free' : await acquireWake();
     if (wake !== 'on' && wake !== 'free' && !wakeAcked()) { openWakeWarning(o, wake); return; }
@@ -313,6 +314,7 @@ function startSessionLocked(o, resume) {
   run.interval = setInterval(tick, 250);
   writeBeat();
   tick();
+  if (typeof Ambience !== 'undefined' && run) Ambience.start();
   return true;
 }
 function persistRun(force = false) {
@@ -374,6 +376,7 @@ function tick() {
   if (run.active.mode === 'free') {
     run.elapsed = clamp(Date.now() - run.active.startedAt, 0, run.totalMs);
     writeBeat();
+    fadeAmbienceNearEnd();
     if (run.elapsed >= run.totalMs) { completeSession(); return; }
     persistRun();
     renderTimer();
@@ -395,8 +398,15 @@ function tick() {
   writeBeat();
   persistRun();
   if (!run) return;
+  fadeAmbienceNearEnd();
   if (run.elapsed >= run.totalMs) { completeSession(); return; }
   renderTimer();
+}
+// À 1,5 s de la fin, l'ambiance s'éteint en douceur : le son de fin arrive ensuite, seul.
+function fadeAmbienceNearEnd() {
+  if (run.ambienceFaded || run.totalMs - run.elapsed > 1500 || typeof Ambience === 'undefined') return;
+  run.ambienceFaded = true;
+  Ambience.fadeOut(Math.max(.1, (run.totalMs - run.elapsed) / 1000));
 }
 function awayDuration() { return Math.max(performance.now() - run.awayAt, Date.now() - run.awayWall); }
 function onLeave() {
@@ -446,6 +456,8 @@ function endRun() {
   clearTimeout(r.graceTimer);
   if (r.io) r.io.disconnect();
   releaseWake();
+  // Fin, abandon, interruption ou séance finie ailleurs : l'ambiance s'arrête aussitôt (déjà éteinte si la séance est allée au bout).
+  if (typeof Ambience !== 'undefined') Ambience.stop();
   Chime.rest(3000);
   run = null;
   return r;

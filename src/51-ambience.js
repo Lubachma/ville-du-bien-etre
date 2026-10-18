@@ -72,11 +72,32 @@ function buildAmbience(ctx, kind, gain = 1) {
 }
 // L'ambiance qui joue : un graphe, son fondu, et son nom.
 const Ambience = {
-  kind: 'none', graph: null, fade: null,
-  // Démarre l'ambiance choisie, en fondu d'entrée de 3 s ; rien pour « Aucune » ou sans contexte audio ouvert.
+  kind: 'none', graph: null, fade: null, waiting: false,
+  // Démarre l'ambiance choisie, en fondu d'entrée de 3 s ; rien pour « Aucune ». Sans son ouvert (après un rechargement, le
+  // navigateur attend un geste), elle démarre au premier toucher.
   start(kind = S.settings.ambience) {
     this.stop();
-    this.play(kind, 3);
+    if (kind === 'none' || this.play(kind, 3)) return;
+    const c = Chime.ctx;
+    if (c && c.state === 'suspended') c.resume().then(() => { if (c.state === 'running' && this.wanted()) this.play(S.settings.ambience, 3); }, () => {});
+    this.waitForGesture();
+  },
+  // Une séance tourne ici, avec une ambiance choisie, et rien ne joue encore.
+  wanted() { return typeof run !== 'undefined' && !!run && !this.graph && S.settings.ambience !== 'none'; },
+  waitForGesture() {
+    if (this.waiting) return;
+    this.waiting = true;
+    const resume = () => {
+      document.removeEventListener('pointerdown', resume, true);
+      document.removeEventListener('keydown', resume, true);
+      this.waiting = false;
+      if (!this.wanted()) return;
+      Chime.unlock(true);
+      const c = Chime.ctx, go = () => { if (this.wanted()) this.play(S.settings.ambience, 1); };
+      if (c && c.state === 'running') go(); else if (c) c.resume().then(go, () => {});
+    };
+    document.addEventListener('pointerdown', resume, true);
+    document.addEventListener('keydown', resume, true);
   },
   play(kind, fadeIn) {
     const c = Chime.ctx;

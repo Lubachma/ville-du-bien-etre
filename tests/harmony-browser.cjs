@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { town } = require('./content-browser.cjs');
 const { cityAt } = require('./ambient-browser.cjs');
+const { activities, startSession } = require('./rituals-browser.cjs');
 
 // Étape 5, harmonie et ambiance : chaque scénario est une fonction à part, qu'on peut lancer seule.
 const at = iso => Date.parse(iso);
@@ -200,7 +201,91 @@ async function ambienceLevels(browser, baseURL) {
   return 'Ambiances : des niveaux doux, jamais saturés';
 }
 
-const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble, harmonySheet, ambienceLevels];
+// Une ville avec une activité par domaine, l'horloge simulée, le son de fin coupé, et des espions qui comptent les sources
+// sonores de plus d'une seconde (les ambiances, pas l'échantillon muet qui ouvre le son).
+async function sessionPage(browser, baseURL, settings) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich' });
+  const page = await context.newPage(), errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.clock.install({ time: new Date(NOW) });
+  await page.addInitScript(state => {
+    window.__VILLE_DEBUG__ = true;
+    if (!localStorage.getItem('ville-bien-etre/v2')) localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state));
+    window.__sources = { started: 0, stopped: 0 };
+    const proto = AudioBufferSourceNode.prototype, start = proto.start, stop = proto.stop;
+    proto.start = function (...args) { if (this.buffer && this.buffer.duration > 1) window.__sources.started++; return start.apply(this, args); };
+    proto.stop = function (...args) { if (this.buffer && this.buffer.duration > 1) window.__sources.stopped++; return stop.apply(this, args); };
+  }, seed([tile('maison', 3, 3)], { activities: activities(), settings: { lang: 'fr', sound: false, ...settings } }));
+  await page.goto(baseURL.replace(/#.*$/, ''));
+  await page.waitForFunction(() => !!window.__ville);
+  return { context, page, errors };
+}
+const sources = page => page.evaluate(() => window.__sources);
+async function startFocus(page, name, minutes) {
+  await page.locator('[data-tab="activites"]').click();
+  await page.getByRole('button', { name: new RegExp('^' + name) }).first().click();
+  await page.getByRole('radio', { name: minutes + ' min', exact: true }).click();
+  await page.getByRole('radio', { name: 'Concentration', exact: true }).click();
+  await page.getByRole('button', { name: /^Commencer/ }).click();
+  const warning = page.getByRole('button', { name: "C'est réglé, commencer", exact: true });
+  if (await warning.isVisible()) await warning.click();
+  await page.waitForFunction(() => window.__ville.activeState() === 'mine');
+}
+
+// Ambiance pendant la séance, son de fin coupé : elle démarre avec la séance et s'arrête à la fin ; « Aucune » ne fait aucun son.
+async function ambienceWithSession(browser, baseURL) {
+  for (const kind of ['rain', 'none']) {
+    const { context, page, errors } = await sessionPage(browser, baseURL, { ambience: kind });
+    try {
+      await startSession(page, 'Pratique calme', 5);
+      const during = await sources(page);
+      if (kind === 'none') assert.equal(during.started, 0);
+      else assert.ok(during.started > 0 && during.stopped === 0, JSON.stringify(during));
+      await page.clock.fastForward(5 * 60000 + 1000);
+      await page.locator('#sessResult').waitFor();
+      const after = await sources(page);
+      assert.equal(after.stopped, after.started, JSON.stringify(after));
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Ambiance : avec la séance, du début à la fin ; aucune si « Aucune »';
+}
+
+// Abandon d'une séance Concentration : l'ambiance s'arrête aussitôt.
+async function ambienceStopsOnAbandon(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { ambience: 'waves' });
+  try {
+    await startFocus(page, 'Pratique calme', 5);
+    assert.ok((await sources(page)).started > 0);
+    await page.locator('#abandonBtn').click();
+    await page.locator('#abandonBtn').click();
+    await page.locator('#sessResult').waitFor();
+    const after = await sources(page);
+    assert.equal(after.stopped, after.started, JSON.stringify(after));
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Ambiance : arrêtée à l’abandon';
+}
+
+// Rechargement pendant une séance : aucune erreur, aucun son avant un toucher ; au premier toucher, l'ambiance reprend.
+async function ambienceAfterReload(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { ambience: 'fire' });
+  try {
+    await startSession(page, 'Pratique calme', 5);
+    assert.ok((await sources(page)).started > 0);
+    await page.reload();
+    await page.waitForFunction(() => window.__ville && window.__ville.activeState() === 'mine');
+    await page.locator('#sessRun').waitFor();
+    assert.equal((await sources(page)).started, 0);
+    await page.locator('#sessRun').click({ position: { x: 20, y: 200 } });
+    await page.waitForFunction(() => window.__sources.started > 0, null, { timeout: 3000 });
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Ambiance : après un rechargement, elle reprend au premier toucher';
+}
+
+const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble, harmonySheet, ambienceLevels, ambienceWithSession,
+  ambienceStopsOnAbandon, ambienceAfterReload];
 async function runHarmony(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
