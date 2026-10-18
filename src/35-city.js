@@ -23,20 +23,21 @@ function skyColors(amb) {
 function lightTint(amb) {
   return { dawn: 'rgba(255,170,150,.14)', golden: 'rgba(255,190,110,.14)', dusk: 'rgba(130,100,190,.16)' }[amb.moment.name] || null;
 }
-// Ciel « selon l'heure » posé sur la carte de la ville ; « selon l'apparence », celui du thème.
+// Ciel « selon l'heure » posé sur la carte de la ville et sur la vue en grand ; « selon l'apparence », celui du thème.
 function applySky(amb, byTime) {
-  const sky = $('#sky');
-  if (!sky) return;
-  if (!byTime) { for (const name of ['--sky-top', '--sky-bottom', '--star-opacity']) sky.style.removeProperty(name); return; }
-  const c = skyColors(amb);
-  sky.style.setProperty('--sky-top', c.top);
-  sky.style.setProperty('--sky-bottom', c.bottom);
-  sky.style.setProperty('--star-opacity', c.stars.toFixed(2));
+  const skies = [$('#sky'), $('#cityBig')].filter(Boolean), c = byTime ? skyColors(amb) : null;
+  for (const sky of skies) {
+    if (!c) { for (const name of ['--sky-top', '--sky-bottom', '--star-opacity']) sky.style.removeProperty(name); continue; }
+    sky.style.setProperty('--sky-top', c.top);
+    sky.style.setProperty('--sky-bottom', c.bottom);
+    sky.style.setProperty('--star-opacity', c.stars.toFixed(2));
+  }
 }
 
 const City = (() => {
-  const canvas = $('#city');
-  const ctx = canvas.getContext('2d');
+  // Un seul canevas dessiné à la fois : la carte de la ville, ou la vue en grand tant qu'elle est ouverte.
+  const small = $('#city'), bigCanvas = $('#cityBigCanvas');
+  let canvas = small, ctx = small.getContext('2d');
   let W = 0, H = 0, dpr = 1, TW = 40, ox = 0, oy = 0, N = 7;
   let hover = null;
   let raf = 0;
@@ -50,8 +51,8 @@ const City = (() => {
   const AMBIENT_MS = 83;
   let ambientTimer = 0, frames = 0, onScreen = true;
   function ambientRunning() {
-    return S.settings.ambient !== false && !reducedMotion() && currentTab === 'ville' && document.visibilityState === 'visible'
-      && $('#sheet').hidden && $('#session').hidden && onScreen;
+    return S.settings.ambient !== false && !reducedMotion() && document.visibilityState === 'visible'
+      && $('#sheet').hidden && $('#session').hidden && (big.open || (currentTab === 'ville' && onScreen));
   }
   // Prochaine image : pleine vitesse pendant un effet de pose, cadence douce pour l'ambiance, sinon rien.
   function schedule(effects) {
@@ -114,13 +115,16 @@ const City = (() => {
     }).filter(Boolean);
   }
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(entries => { onScreen = entries[entries.length - 1].isIntersecting; if (onScreen) wake(); }).observe(canvas);
+    new IntersectionObserver(entries => { onScreen = entries[entries.length - 1].isIntersecting; if (onScreen) wake(); }).observe(small);
   }
 
+  // Ville en grand : zoom voulu (1 à 3) et zoom montré pendant la transition, décalage du glissement, doigts posés.
+  const big = { open: false, zoom: 1, shown: 1, pan: [0, 0], base: null, anim: null, pointers: new Map(), moved: 0, lastTap: null };
   function layout() {
+    N = S.city.size;
+    if (big.open) { layoutBig(); return; }
     const rect = canvas.getBoundingClientRect();
     W = Math.max(240, rect.width || canvas.parentElement.clientWidth || 360);
-    N = S.city.size;
     TW = Math.min(76, (W - 28) / N);
     const top = TW * 1.35 + 8;
     H = Math.round(top + N * TW / 2 + TW * .45 + 14);
@@ -133,6 +137,123 @@ const City = (() => {
     cursor.x = clamp(cursor.x, 0, N - 1);
     cursor.y = clamp(cursor.y, 0, N - 1);
   }
+  // Vue en grand : au zoom 1, l'île entière tient sous la barre de boutons ; le zoom l'agrandit autour du centre de l'écran.
+  function layoutBig() {
+    const rect = canvas.getBoundingClientRect();
+    W = Math.max(240, rect.width || innerWidth);
+    H = Math.max(240, rect.height || innerHeight);
+    dpr = Math.min(3, window.devicePixelRatio || 1);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    const room = H - 64 - 16, tw = Math.min((W - 28) / N, room / (N / 2 + 1.8));
+    big.base = { tw, ox: W / 2, oy: 64 + (room - tw * (N / 2 + 1.8)) / 2 + tw * 1.35 };
+    big.pan = keepInView(big.pan, big.shown);
+    applyView();
+  }
+  function applyView() {
+    const b = big.base, z = big.shown;
+    TW = b.tw * z;
+    ox = W / 2 + (b.ox - W / 2) * z + big.pan[0];
+    oy = H / 2 + (b.oy - H / 2) * z + big.pan[1];
+  }
+  // Point de la ville (en cases, non arrondi) sous un point de l'écran, pour un zoom et un décalage donnés.
+  function cellUnder(px, py, z, pan) {
+    const b = big.base, tw = b.tw * z, x0 = W / 2 + (b.ox - W / 2) * z + pan[0], y0 = H / 2 + (b.oy - H / 2) * z + pan[1];
+    const a = (px - x0) / (tw / 2), c = (py - y0) / (tw / 4);
+    return [(a + c) / 2, (c - a) / 2];
+  }
+  // Le centre de l'écran reste sur l'île : on ne perd jamais la ville de vue.
+  function keepInView(pan, z) {
+    const [x, y] = cellUnder(W / 2, H / 2, z, pan), cx = clamp(x, 0, N), cy = clamp(y, 0, N), tw = big.base.tw * z;
+    return [pan[0] - ((cx - cy) - (x - y)) * tw / 2, pan[1] - ((cx + cy) - (x + y)) * tw / 4];
+  }
+  // Zoom vers z autour d'un point de l'écran, qui reste sous le doigt ; en douceur avec les boutons, sauf animations réduites.
+  function zoomAt(z, px, py, smooth) {
+    const to = clamp(z, 1, 3), k = to / big.shown;
+    const pan = keepInView([px - W / 2 - (px - W / 2 - big.pan[0]) * k, py - H / 2 - (py - H / 2 - big.pan[1]) * k], to);
+    big.zoom = to;
+    $('#cityBigIn').disabled = to >= 3;
+    $('#cityBigOut').disabled = to <= 1;
+    if (smooth && !reducedMotion()) big.anim = { start: performance.now(), from: { z: big.shown, pan: big.pan }, to: { z: to, pan } };
+    else { big.anim = null; big.shown = to; big.pan = pan; applyView(); }
+    draw();
+  }
+  function panBy(dx, dy) {
+    big.pan = keepInView([big.pan[0] + dx, big.pan[1] + dy], big.shown);
+    applyView();
+    if (!raf) { clearTimeout(ambientTimer); ambientTimer = 0; raf = requestAnimationFrame(draw); }
+  }
+  function openBig() {
+    if (big.open || Mode.state) return;
+    big.open = true;
+    big.zoom = big.shown = 1; big.pan = [0, 0]; big.anim = null; big.pointers.clear();
+    $('#cityBig').hidden = false;
+    bigCanvas.setAttribute('aria-label', $('#cityCaption').textContent);
+    canvas = bigCanvas; ctx = canvas.getContext('2d');
+    layout();
+    $('#cityBigIn').disabled = false;
+    $('#cityBigOut').disabled = true;
+    updateInert();
+    // Le geste retour du téléphone ferme la vue sans quitter l'app.
+    try { history.pushState({ cityBig: true }, ''); } catch (e) { /* historique indisponible */ }
+    draw();
+    $('#cityBigClose').focus({ preventScroll: true });
+  }
+  // Fermer revient en arrière dans l'historique ; popstate referme alors la vue pour de bon.
+  function closeBig(fromHistory) {
+    if (!big.open) return;
+    if (!fromHistory && history.state && history.state.cityBig) { history.back(); return; }
+    big.open = false; big.anim = null; big.pointers.clear();
+    $('#cityBig').hidden = true;
+    canvas = small; ctx = small.getContext('2d');
+    updateInert();
+    layout(); draw();
+    $('#cityExpand').focus({ preventScroll: true });
+  }
+  window.addEventListener('popstate', () => { if (big.open) closeBig(true); });
+  window.addEventListener('resize', () => { if (big.open) { layout(); draw(); } });
+  $('#cityExpand').addEventListener('click', openBig);
+  $('#cityBigClose').addEventListener('click', () => closeBig());
+  $('#cityBigIn').addEventListener('click', () => zoomAt(big.zoom * 1.5, W / 2, H / 2, true));
+  $('#cityBigOut').addEventListener('click', () => zoomAt(big.zoom / 1.5, W / 2, H / 2, true));
+  bigCanvas.addEventListener('wheel', e => { e.preventDefault(); zoomAt(big.zoom * Math.exp(-e.deltaY * .0015), ...point(e), false); }, { passive: false });
+  // Un doigt glisse, deux doigts pincent ; un toucher bref ouvre le visiteur, deux touchers rapprochés zooment sur ce point.
+  bigCanvas.addEventListener('pointerdown', e => {
+    bigCanvas.setPointerCapture(e.pointerId);
+    big.pointers.set(e.pointerId, point(e));
+    if (big.pointers.size === 1) big.moved = 0;
+  });
+  bigCanvas.addEventListener('pointermove', e => {
+    const last = big.pointers.get(e.pointerId);
+    if (!last) return;
+    const now = point(e);
+    if (big.pointers.size === 1) { big.moved += Math.hypot(now[0] - last[0], now[1] - last[1]); panBy(now[0] - last[0], now[1] - last[1]); }
+    else {
+      // Deux doigts : l'écart zoome autour de leur milieu, le milieu qui bouge fait glisser la vue.
+      const other = [...big.pointers].find(([id]) => id !== e.pointerId)[1];
+      const before = Math.hypot(last[0] - other[0], last[1] - other[1]), after = Math.hypot(now[0] - other[0], now[1] - other[1]);
+      const mid = [(now[0] + other[0]) / 2, (now[1] + other[1]) / 2];
+      big.moved = Infinity;
+      if (before > 4) zoomAt(big.zoom * after / before, ...mid, false);
+      panBy(mid[0] - (last[0] + other[0]) / 2, mid[1] - (last[1] + other[1]) / 2);
+    }
+    big.pointers.set(e.pointerId, now);
+  });
+  const lift = e => {
+    const at = big.pointers.get(e.pointerId);
+    big.pointers.delete(e.pointerId);
+    if (!at || e.type === 'pointercancel' || big.pointers.size || big.moved > 8) return;
+    const vb = visitorBox;
+    if (vb && at[0] >= vb.x && at[0] <= vb.x + vb.w && at[1] >= vb.y && at[1] <= vb.y + vb.h) { big.lastTap = null; openVisitor(); return; }
+    const prev = big.lastTap, time = performance.now();
+    big.lastTap = { at, time };
+    if (prev && time - prev.time < 320 && Math.hypot(at[0] - prev.at[0], at[1] - prev.at[1]) < 30) {
+      big.lastTap = null;
+      zoomAt(big.zoom >= 3 ? 1 : big.zoom * 1.5, ...at, true);
+    }
+  };
+  bigCanvas.addEventListener('pointerup', lift);
+  bigCanvas.addEventListener('pointercancel', lift);
   function tileAt(px, py) {
     const a = (px - ox) / (TW / 2), b = (py - oy) / (TW / 4);
     const x = Math.floor((a + b) / 2), y = Math.floor((b - a) / 2);
@@ -203,6 +324,15 @@ const City = (() => {
     clearTimeout(ambientTimer);
     raf = 0; ambientTimer = 0;
     if (!W) layout();
+    // Vue en grand : la transition du zoom avance d'une image.
+    let zooming = false;
+    if (big.open && big.anim) {
+      const a = big.anim, k = clamp((performance.now() - a.start) / 200, 0, 1), e = k * k * (3 - 2 * k);
+      big.shown = a.from.z + (a.to.z - a.from.z) * e;
+      big.pan = [a.from.pan[0] + (a.to.pan[0] - a.from.pan[0]) * e, a.from.pan[1] + (a.to.pan[1] - a.from.pan[1]) * e];
+      applyView();
+      if (k >= 1) big.anim = null; else zooming = true;
+    }
     // Ambiance du moment : saison toujours ; obscurité, ciel et teinte selon l'heure, sauf « ciel selon l'apparence ».
     const pal = readPalette(), amb = typeof ambientAt === 'function' ? ambientAt() : null, byTime = !!amb && S.settings.sky !== 'theme';
     if (amb) { pal.season = amb.season; if (byTime) pal.dark = darkness(amb.moment); }
@@ -339,7 +469,7 @@ const City = (() => {
       g.tile(cursor.x, cursor.y, 0, null, night ? '#ffffff' : '#1d2721', 2.5);
     }
     frames++;
-    schedule(animating);
+    schedule(animating || zooming);
   }
 
   // Practice adds planters, then a golden pennant to buildings in that domain.
@@ -437,25 +567,25 @@ const City = (() => {
     return tile ? t('city.descBuilding', params) : t('city.descFree', params);
   }
 
-  canvas.addEventListener('pointermove', e => {
+  small.addEventListener('pointermove', e => {
     if (!Mode.state || e.pointerType === 'touch') return;
     const t = tileAt(...point(e));
     if ((t && hover && t.x === hover.x && t.y === hover.y) || (!t && !hover)) return;
     hover = t; draw();
   });
-  canvas.addEventListener('pointerleave', () => { if (hover) { hover = null; draw(); } });
-  canvas.addEventListener('pointerdown', () => { keyboard = false; });
-  canvas.addEventListener('click', e => {
+  small.addEventListener('pointerleave', () => { if (hover) { hover = null; draw(); } });
+  small.addEventListener('pointerdown', () => { keyboard = false; });
+  small.addEventListener('click', e => {
     const [px, py] = point(e);
     if (Mode.state) { Mode.pickTile(tileAt(px, py)); return; }
     const vb = visitorBox;
     if (vb && px >= vb.x && px <= vb.x + vb.w && py >= vb.y && py <= vb.y + vb.h) { openVisitor(); return; }
     const b = pickBuilding(px, py);
-    if (b) openBuildingSheet(b);
+    if (b) openBuildingSheet(b); else openBig();
   });
-  canvas.addEventListener('focus', () => { if (keyboard) draw(); });
-  canvas.addEventListener('blur', () => draw());
-  canvas.addEventListener('keydown', e => {
+  small.addEventListener('focus', () => { if (keyboard) draw(); });
+  small.addEventListener('blur', () => draw());
+  small.addEventListener('keydown', e => {
     const moves = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
     if (moves[e.key]) {
       e.preventDefault();
@@ -482,7 +612,11 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb, focus: () => { keyboard = true; canvas.focus(); draw(); } };
+  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb,
+    focus: () => { keyboard = true; small.focus(); draw(); }, openBig, closeBig,
+    // Pour les tests : état de la vue en grand (et la case sous le centre de l'écran), centre d'une case sur le canevas dessiné.
+    bigState: () => ({ open: big.open, zoom: big.zoom, focus: big.open ? cellUnder(W / 2, H / 2, big.shown, big.pan) : null }),
+    cellPoint: (x, y) => [ox + (x - y) * TW / 2, oy + (x + y + 1) * TW / 4] };
 })();
 
 /* Placement / déplacement de bâtiments */
@@ -558,6 +692,7 @@ const Mode = {
     const bar = $('#placebar'), txt = $('#placeText'), ok = $('#placeConfirm');
     const st = this.state;
     bar.hidden = !st;
+    $('#cityExpand').hidden = !!st;
     if (!st) return;
     if (st.type === 'place') {
       txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : t('city.tapToPlace', { item: itemName(st.item), price: fmt(priceOf(st.item)) }));

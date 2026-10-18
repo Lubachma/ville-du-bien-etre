@@ -20,8 +20,10 @@ function go(tab, focusDestination = false) {
 function updateInert() {
   const sheetOpen = !$('#sheet').hidden;
   const sessOpen = !$('#session').hidden;
-  $('#app').inert = sheetOpen || sessOpen;
+  const bigOpen = !$('#cityBig').hidden;
+  $('#app').inert = sheetOpen || sessOpen || bigOpen;
   $('#session').inert = sheetOpen;
+  $('#cityBig').inert = sheetOpen || sessOpen;
 }
 let sheetOnClose = null, sheetOpener = null, sheetKeepOnSync = false;
 function openSheet(title, build, opts = {}) {

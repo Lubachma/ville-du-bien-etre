@@ -205,6 +205,72 @@ async function runAmbient(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Réglages de la ville vivante');
   }
+  // Ville en grand : un toucher hors bâtiment l'ouvre, zoom de 1 à 3, glissement borné, Échap et retour la ferment ;
+  // un bâtiment ouvre toujours sa fiche, le visiteur se touche aussi en grand, et tout tient à 320 px.
+  {
+    const tiles = [{ id: 'm', item: 'maison', x: 3, y: 3, at: 1.79e12, paid: 5e6 }, { id: 'b', item: 'banc', x: 1, y: 5, at: 1.79e12, paid: 2e6 }];
+    const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }, tiles), null);
+    try {
+      await page.evaluate(() => __ville.ambient.force({ visitor: null, festivals: [] }));
+      const big = page.locator('#cityBig'), state = () => page.evaluate(() => __ville.City.bigState());
+      const focused = () => page.evaluate(() => document.activeElement && document.activeElement.id);
+      const city = await page.locator('#city').boundingBox();
+      const [ex, ey] = await page.evaluate(() => __ville.City.cellPoint(0, 6));
+      await page.mouse.click(city.x + ex, city.y + ey);
+      await big.waitFor();
+      assert.equal(await focused(), 'cityBigClose');
+      assert.deepEqual([(await state()).open, (await state()).zoom], [true, 1]);
+      await page.locator('#cityBigIn').click();
+      assert.equal((await state()).zoom, 1.5);
+      const box = await page.locator('#cityBigCanvas').boundingBox(), mid = [box.x + box.width / 2, box.y + box.height / 2];
+      await page.mouse.move(...mid);
+      await page.mouse.wheel(0, -200);
+      await page.waitForFunction(() => __ville.City.bigState().zoom > 1.5);
+      for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -400);
+      await page.waitForFunction(() => __ville.City.bigState().zoom === 3);
+      assert.equal(await page.locator('#cityBigIn').isDisabled(), true);
+      // Un glissement très long : le centre de l'écran reste sur l'île.
+      await page.mouse.move(...mid); await page.mouse.down();
+      await page.mouse.move(mid[0] + 3000, mid[1] + 3000, { steps: 6 }); await page.mouse.up();
+      const [fx, fy] = (await state()).focus, size = await page.evaluate(() => __ville.state.city.size);
+      assert.ok(fx >= -.01 && fx <= size + .01 && fy >= -.01 && fy <= size + .01, `ville perdue de vue : ${fx}, ${fy}`);
+      await page.keyboard.press('Escape');
+      await big.waitFor({ state: 'hidden' });
+      assert.equal(await focused(), 'cityExpand');
+      // Le geste retour ferme la vue sans quitter l'app.
+      await page.locator('#cityExpand').click();
+      await big.waitFor();
+      assert.equal((await state()).zoom, 1);
+      await page.goBack();
+      await big.waitFor({ state: 'hidden' });
+      assert.equal(await page.locator('#city').isVisible(), true);
+      // Un bâtiment ouvre toujours sa fiche.
+      const [hx, hy] = await page.evaluate(() => __ville.City.cellPoint(3, 3));
+      await page.mouse.click(city.x + hx, city.y + hy);
+      await page.locator('#sheet').waitFor();
+      assert.equal(await big.isHidden(), true);
+      await page.locator('#sheetClose').click();
+      // Le visiteur se touche aussi en grand ; sa fiche fermée, la vue reste ouverte.
+      await page.evaluate(() => __ville.ambient.force({ visitor: { id: 'chat', spot: { x: 1, y: 5, on: 'banc' } } }));
+      await page.locator('#cityExpand').click();
+      await big.waitFor();
+      const vb = await page.evaluate(() => __ville.City.visitorBox());
+      await page.mouse.click(box.x + vb.x + vb.w / 2, box.y + vb.y + vb.h / 2);
+      await page.locator('#sheet').waitFor();
+      assert.equal(await page.locator('#sheetTitle').innerText(), 'Le chat voyageur');
+      await page.locator('#sheetClose').click();
+      assert.equal(await big.isVisible(), true);
+      // À 320 px, rien ne déborde et les trois boutons restent à l'écran.
+      await page.setViewportSize({ width: 320, height: 568 });
+      for (const id of ['#cityBigOut', '#cityBigIn', '#cityBigClose']) {
+        const b = await page.locator(id).boundingBox();
+        assert.ok(b && b.x >= 0 && b.x + b.width <= 320 && b.y >= 0 && b.y + b.height <= 568, id + ' hors de l’écran');
+      }
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'la page déborde à 320 px');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Ville en grand');
+  }
   return { scenarios };
 }
 

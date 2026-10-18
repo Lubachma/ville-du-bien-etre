@@ -320,7 +320,7 @@ main {
 }
 .sky::after {
   content: "";
-  position: absolute; top: 14px; right: 18px;
+  position: absolute; top: 14px; right: 66px;
   width: 26px; height: 26px; border-radius: 50%;
   opacity: var(--star-opacity);
   box-shadow: inset -7px -3px 0 0 #f4ecd2;
@@ -332,6 +332,18 @@ main {
   position: absolute; z-index: 2; left: 12px; top: 12px;
   box-shadow: var(--shadow);
 }
+.city-expand, .city-big-tools .icon-btn { background: var(--surface); border-color: var(--line); color: var(--ink); box-shadow: var(--shadow); }
+.city-expand { position: absolute; z-index: 2; right: 10px; top: 10px; }
+/* Ville en grand : tout l'écran, avec le ciel ; sous la session et les fenêtres, qui peuvent s'ouvrir par-dessus. */
+.city-big { position: fixed; inset: 0; z-index: 29; border: 0; border-radius: 0; }
+.city-big::after { top: calc(70px + env(safe-area-inset-top, 0px)); right: 24px; }
+#cityBigCanvas { display: block; width: 100%; height: 100%; position: relative; z-index: 1; touch-action: none; cursor: grab; }
+#cityBigCanvas:active { cursor: grabbing; }
+.city-big-tools {
+  position: absolute; z-index: 2; display: flex; gap: 8px;
+  top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px));
+}
+.city-big-tools .icon-btn:disabled { opacity: .45; }
 .city-caption { color: var(--muted); font-size: 13px; text-align: center; margin-top: -6px; }
 .cta-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .next-card { display: flex; align-items: center; gap: 12px; }

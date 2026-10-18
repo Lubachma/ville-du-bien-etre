@@ -35,6 +35,7 @@ function bindEvents() {
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     if (!$('#sheet').hidden) closeSheet();
+    else if (City.bigState().open) City.closeBig();
     else if (Mode.state) Mode.cancel();
   });
   $('#editActs').addEventListener('click', () => { editingActs = !editingActs; renderActivities(); });

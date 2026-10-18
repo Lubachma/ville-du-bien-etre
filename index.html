@@ -36,6 +36,7 @@
     <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 21c-3.9 0-6.5-2.6-6.5-6.1 0-3.4 2.6-5.3 3.7-8.4.9 1.8 2.3 2.7 2.3 2.7S12 6 13.6 3c1.3 3 4.9 5.6 4.9 10.6 0 4.8-2.6 7.4-6.5 7.4z"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></symbol>
     <symbol id="i-build" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6v9H4z"/><path d="M12 11v6M9 14h6"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></symbol>
@@ -81,6 +82,7 @@
       <div class="sky" id="sky">
         <canvas id="city" tabindex="0" role="application" aria-roledescription="ville" data-i18n-aria-roledescription="city.roleDescription" aria-label="Ta ville. Flèches pour choisir une case, Entrée pour ouvrir un bâtiment ou choisir une case." data-i18n-aria-label="city.canvasLabel" aria-describedby="cityCaption"></canvas>
         <button class="btn btn-secondary btn-sm build-fab" id="buildBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-build"/></svg><span data-i18n="city.build">Construire</span></button>
+        <button class="icon-btn city-expand" id="cityExpand" type="button" aria-label="Voir ma ville en grand" data-i18n-aria-label="city.expand"><svg class="ic" aria-hidden="true"><use href="#i-expand"/></svg></button>
       </div>
       <p class="city-caption" id="cityCaption"></p>
       <div class="city-tools"><button class="btn btn-ghost btn-sm" id="personalizeCity" type="button"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg><span data-i18n="city.personalize">Personnaliser ma ville</span></button></div>
@@ -200,6 +202,16 @@
     </div>
   </div>
   <div class="sess-result" id="sessResult" hidden></div>
+</div>
+
+<div class="sky city-big" id="cityBig" role="dialog" aria-modal="true" aria-labelledby="cityBigTitle" hidden>
+  <h2 class="visually-hidden" id="cityBigTitle" data-i18n="city.bigTitle">Ta ville en grand</h2>
+  <canvas id="cityBigCanvas" role="img"></canvas>
+  <div class="city-big-tools">
+    <button class="icon-btn" id="cityBigOut" type="button" aria-label="Dézoomer" data-i18n-aria-label="city.zoomOut"><svg class="ic" aria-hidden="true"><use href="#i-minus"/></svg></button>
+    <button class="icon-btn" id="cityBigIn" type="button" aria-label="Zoomer" data-i18n-aria-label="city.zoomIn"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+    <button class="icon-btn" id="cityBigClose" type="button" aria-label="Fermer la vue en grand" data-i18n-aria-label="city.bigClose"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+  </div>
 </div>
 
 <div class="toast" id="toast" hidden></div>
