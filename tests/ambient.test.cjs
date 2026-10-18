@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js'];
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf', 'chance', 'dayWeather', 'weatherOf', 'rainbowOn', 'shiftDay', 'WEATHER_ODDS', 'festivalsOn', 'giftAmount', 'nextFestival', 'visitorSpot', 'visitorOf', 'VISITORS', 'keyToUTC', 'ambientAt', 'darkness'];
+const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf', 'chance', 'dayWeather', 'weatherOf', 'rainbowOn', 'shiftDay', 'WEATHER_ODDS', 'festivalsOn', 'giftAmount', 'nextFestival', 'visitorSpot', 'visitorOf', 'VISITORS', 'keyToUTC', 'ambientAt', 'darkness', 'walkableTiles', 'walkerCount', 'todayDomains', 'today'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 const place = (a, tiles, size = 7) => { a.state.city = { size, tiles: tiles.map(([item, x, y], i) => ({ id: 't' + i, item, x, y, at: T0, paid: 0 })) }; };
 const visitor = (a, id) => a.VISITORS.find(v => v.id === id);
@@ -206,4 +206,24 @@ test('obscurité : nuit 1, journée 0, aube et crépuscule progressifs', () => {
   assert.deepEqual([a.darkness({ name: 'night', t: 0 }), a.darkness({ name: 'day', t: .5 })], [1, 0]);
   assert.ok(a.darkness({ name: 'dusk', t: .2 }) < a.darkness({ name: 'dusk', t: .8 }));
   assert.ok(a.darkness({ name: 'dawn', t: .2 }) > a.darkness({ name: 'dawn', t: .8 }));
+});
+
+test('habitants : un pour trois éléments, six au plus, moitié moins la nuit, aucun sans case où marcher', () => {
+  const a = app();
+  place(a, []);
+  assert.equal(a.walkerCount({ name: 'day' }), 0);
+  place(a, Array.from({ length: 9 }, (_, i) => ['maison', i % 7, Math.floor(i / 7)]));
+  assert.deepEqual([a.walkerCount({ name: 'day' }), a.walkerCount({ name: 'night' })], [3, 1]);
+  place(a, Array.from({ length: 30 }, (_, i) => ['maison', i % 7, Math.floor(i / 7)]));
+  assert.equal(a.walkerCount({ name: 'day' }), 6);
+  place(a, Array.from({ length: 49 }, (_, i) => [i === 3 ? 'chemin' : 'maison', i % 7, Math.floor(i / 7)]));
+  assert.deepEqual(plain(a.walkableTiles()), [{ x: 3, y: 0 }]);
+  place(a, Array.from({ length: 49 }, (_, i) => ['maison', i % 7, Math.floor(i / 7)]));
+  assert.equal(a.walkerCount({ name: 'day' }), 0);
+});
+
+test("les habitants font comme toi : les domaines pratiqués aujourd'hui", () => {
+  const a = app();
+  a.state.stats.dailyCats[a.today()] = { calme: 10, esprit: 5, corps: 0 };
+  assert.deepEqual(plain(a.todayDomains()), ['esprit', 'calme']);
 });

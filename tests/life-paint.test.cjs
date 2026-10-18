@@ -7,7 +7,7 @@ const PAINT = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10
   '30-paint.js', '31-paint-buildings.js', '32-paint-decor.js', '33-paint-wonders.js', '34-paint-life.js'];
 const PALETTE = { night: false, esprit: '#3f78c4', corps: '#d9573b', calme: '#3a9a7a', foyer: '#e3a12f', crea: '#d0628f', prestige: '#b8862b', decor: '#7a8b6e', accent: '#2e6f4e', danger: '#b4452e' };
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['makePainter', 'drawSmoke', 'drawBeam', 'drawWeather', 'drawSeasonLife'];
+const EXPOSE = ['makePainter', 'drawSmoke', 'drawBeam', 'drawWeather', 'drawSeasonLife', 'drawWalker', 'drawDoer'];
 const app = () => loadApp(PAINT, { expose: EXPOSE });
 // Une case de 100 px dont le sommet est en (200, 200) : centre en (200, 225), bas en 250.
 function draw(a, fn, look = {}) {
@@ -46,6 +46,17 @@ test("petites vies : lucioles les nuits d'été près de l'étang, rien la nuit 
   const a = app(), night = { name: 'night', t: 0 }, tiles = [{ item: 'etang', x: 0, y: 0 }];
   assert.ok(draw(a, g => a.drawSeasonLife(g, { season: 'summer', moment: night, weather: 'sun' }, 1, AREA, tiles), { dark: 1 }).length > 0, 'lucioles');
   assert.equal(draw(a, g => a.drawSeasonLife(g, { season: 'winter', moment: night, weather: 'sun' }, 1, AREA, tiles), { dark: 1 }).length, 0, 'hiver la nuit');
+});
+
+test('habitants : chacun dessiné près de son point, promeneurs et habitants qui font comme toi', () => {
+  const a = app();
+  const near = (points, x0, y0, label) => {
+    assert.ok(points.length > 0, label + ' : rien');
+    for (const [x, y] of points) assert.ok(Math.abs(x - x0) <= 30 && Math.abs(y - y0) <= 30, `${label} trop loin : ${x.toFixed(1)}, ${y.toFixed(1)}`);
+  };
+  for (const look of [{}, { lantern: true }, { umbrella: true }, { hat: true }]) near(draw(a, g => a.drawWalker(g, 200, 220, { color: '#d9573b', ...look })), 200, 220, 'promeneur ' + JSON.stringify(look));
+  const [cx, cy] = [200, 225];
+  for (const cat of ['esprit', 'corps', 'calme', 'foyer', 'crea']) for (const t of [0, 2]) near(draw(a, g => a.drawDoer(g, 0, 0, cat, t)), cx, cy, `${cat} à ${t} s`);
 });
 
 module.exports = { app, draw, PALETTE };

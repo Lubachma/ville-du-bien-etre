@@ -60,6 +60,43 @@ const City = (() => {
   }
   // Relance la ville (retour sur l'onglet, fenêtre fermée, réglage changé…) : une image, puis la bonne cadence.
   function wake() { if (!raf && !ambientTimer) draw(); }
+  // Promeneurs : chacun suit, aller et retour, un petit chemin de 12 pas sur les cases où l'on marche, tiré une fois
+  // pour toutes de son indice ; un pas toutes les 4 s (2,5 s de marche, puis une pause).
+  const WALK_STEPS = 12, STEP_S = 4, MOVE_S = 2.5, WALKER_COLORS = ['#d9573b', '#3f78c4', '#e3a12f', '#3a9a7a', '#d0628f', '#7a8b6e'];
+  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] };
+  function walkPaths(cells) {
+    const key = cells.map(c => c.x + ',' + c.y).join(';');
+    if (walkCache.key === key) return walkCache.paths;
+    const open = new Set(cells.map(c => c.x + ',' + c.y)), paths = [];
+    for (let i = 0; i < 6; i++) {
+      let cur = cells[Math.floor(rnd(i, 1) * cells.length)], prev = null;
+      const path = [cur];
+      for (let s = 1; s <= WALK_STEPS; s++) {
+        const next = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => ({ x: cur.x + dx, y: cur.y + dy }))
+          .filter(c => open.has(c.x + ',' + c.y) && !(prev && c.x === prev.x && c.y === prev.y));
+        const step = next.length ? next[Math.floor(rnd(i * 31 + s, 7) * next.length)] : prev || cur;
+        prev = cur; cur = step; path.push(cur);
+      }
+      paths.push(path);
+    }
+    walkCache = { key, paths };
+    return paths;
+  }
+  // Position (en cases) du promeneur i au temps t : aller puis retour sur son chemin, pas à pas.
+  function walkerPos(path, i, t) {
+    const L = path.length - 1, time = t + rnd(i, 3) * STEP_S, k = Math.floor(time / STEP_S) % (2 * L);
+    const [from, to] = k < L ? [path[k], path[k + 1]] : [path[2 * L - k], path[2 * L - k - 1]];
+    const u = Math.min(1, (time % STEP_S) / MOVE_S), e = u * u * (3 - 2 * u);
+    return { x: from.x + (to.x - from.x) * e + .5 + (rnd(i, 5) - .5) * .3, y: from.y + (to.y - from.y) * e + .5 + (rnd(i, 6) - .5) * .3 };
+  }
+  // Habitant d'un domaine pratiqué aujourd'hui : une case libre voisine d'un bâtiment de ce domaine, sinon une case où marcher.
+  function doerCells(cells) {
+    return todayDomains().map((cat, i) => {
+      const near = cells.filter(c => S.city.tiles.some(t => ITEMS[t.item].group === cat && Math.abs(t.x - c.x) <= 1 && Math.abs(t.y - c.y) <= 1));
+      const pool = near.length ? near : cells;
+      return pool.length ? { cat, cell: pool[Math.floor(rnd(i, 13) * pool.length)] } : null;
+    }).filter(Boolean);
+  }
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(entries => { onScreen = entries[entries.length - 1].isIntersecting; if (onScreen) wake(); }).observe(canvas);
   }
@@ -202,10 +239,26 @@ const City = (() => {
       if (key) list.push({ t: { id: '__ghost', item: key, x: Mode.state.target.x, y: Mode.state.target.y, stage: moving ? moving.stage : 1 }, ghost: true });
     }
     const hiddenId = !clean && Mode.state && Mode.state.type === 'move' && Mode.state.target ? Mode.state.tileId : null;
+    // Habitants, rangés en profondeur avec les éléments : promeneurs, puis ceux qui font comme toi.
+    if (amb) {
+      const cells = walkableTiles(), n = walkerCount(amb.moment), paths = n ? walkPaths(cells) : [], tt = g.anim ? pal.time : 0;
+      const people = Array.from({ length: n }, (_, i) => ({ walker: i, pos: walkerPos(paths[i], i, tt) }));
+      for (const d of cells.length ? doerCells(cells) : []) people.push({ doer: d.cat, cell: d.cell, pos: { x: d.cell.x + .5, y: d.cell.y + .5 } });
+      lastPeople = { walkers: n, doers: people.filter(p => p.doer).map(p => p.doer) };
+      for (const p of people) list.push({ t: { id: '__person', x: Math.floor(p.pos.x) + .25, y: Math.floor(p.pos.y) + .25 }, person: p });
+    }
     list.sort((p, q) => (p.t.x + p.t.y) - (q.t.x + q.t.y) || p.t.x - q.t.x);
     const now = performance.now();
     let animating = false;
-    for (const { t, ghost } of list) {
+    for (const { t, ghost, person } of list) {
+      if (person) {
+        if (person.doer) drawDoer(g, person.cell.x, person.cell.y, person.doer, g.anim ? pal.time : 0);
+        else {
+          const [sx, sy] = g.P(person.pos.x, person.pos.y);
+          drawWalker(g, sx, sy, { color: WALKER_COLORS[person.walker % WALKER_COLORS.length], lantern: g.night, umbrella: amb.weather === 'rain', hat: amb.season === 'winter' });
+        }
+        continue;
+      }
       if (t.id === hiddenId || !isItem(t.item)) continue;
       const fx = clean ? null : effects.get(t.id);
       const k = fx ? clamp((now - fx.start) / FX_TIME[fx.kind], 0, 1) : 1;
@@ -376,7 +429,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, focus: () => { keyboard = true; canvas.focus(); draw(); } };
+  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, focus: () => { keyboard = true; canvas.focus(); draw(); } };
 })();
 
 /* Placement / déplacement de bâtiments */

@@ -3640,6 +3640,23 @@ function darkness(moment) {
   }
 }
 
+// Habitants : cases où l'on marche (libres, chemins, pas japonais), ligne par ligne.
+function walkableTiles() {
+  const paths = S.city.tiles.filter(t => t.item === 'chemin' || t.item === 'pasjaponais').map(t => ({ x: t.x, y: t.y }));
+  return [...freeCells(), ...paths].sort((a, b) => a.y - b.y || a.x - b.x);
+}
+// Un promeneur pour trois éléments, six au plus ; la nuit, la moitié rentre ; aucun sans case où marcher.
+function walkerCount(moment) {
+  if (!walkableTiles().length) return 0;
+  const n = Math.min(6, Math.floor(S.city.tiles.length / 3));
+  return moment.name === 'night' ? Math.floor(n / 2) : n;
+}
+// Domaines pratiqués aujourd'hui : un habitant de la ville fait la même activité.
+function todayDomains() {
+  const cats = S.stats.dailyCats[today()] || {};
+  return CAT_ORDER.filter(cat => cats[cat] > 0);
+}
+
 
 /* ---- 30-paint.js ---- */
 /* =========================================================================
@@ -4850,6 +4867,59 @@ function drawSeasonLife(g, amb, t, area, tiles) {
   }
 }
 
+/* Habitants. Un personnage mesure environ 0,18 largeur de case ; (sx, sy) est le point sous ses pieds. */
+function drawPerson(g, sx, sy, color, pose = 'stand') {
+  const s = g.tw * .18, head = g.c('#f1c9a5'), body = color;
+  if (pose === 'sit') {
+    g.poly([[sx - s * .3, sy], [sx + s * .3, sy], [sx + s * .2, sy - s * .45], [sx - s * .2, sy - s * .45]], body);
+    g.circle(sx, sy - s * .6, s * .17, head);
+    return [sx, sy - s * .45];
+  }
+  g.poly([[sx - s * .18, sy], [sx + s * .18, sy], [sx + s * .14, sy - s * .62], [sx - s * .14, sy - s * .62]], body);
+  g.circle(sx, sy - s * .78, s * .17, head);
+  return [sx, sy - s * .62];
+}
+// Promeneur : lanterne la nuit, parapluie sous la pluie, bonnet en hiver.
+function drawWalker(g, sx, sy, look = {}) {
+  const s = g.tw * .18, [hx, hy] = drawPerson(g, sx, sy, g.c(look.color || '#7a8b6e'));
+  if (look.hat) g.circle(sx, hy - s * .28, s * .14, g.c('#c4572f'));
+  if (look.umbrella) {
+    g.ctx.beginPath(); g.ctx.ellipse(sx, hy - s * .5, s * .45, s * .25, 0, Math.PI, Math.PI * 2);
+    g.ctx.fillStyle = g.c('#3f78c4'); g.ctx.fill();
+  }
+  if (look.lantern) {
+    g.glow(hx + s * .3, hy + s * .15, s * .5, .45);
+    g.circle(hx + s * .3, hy + s * .15, s * .08, '#ffd47a');
+  }
+}
+// Habitant qui fait comme toi : lecture, course, méditation, arrosage ou peinture, au centre de sa case.
+function drawDoer(g, x, y, cat, t) {
+  const s = g.tw * .18, ctx = g.ctx;
+  if (cat === 'corps') {
+    const a = t * 2, [sx, sy] = g.P(x + .5 + Math.cos(a) * .2, y + .5 + Math.sin(a) * .2);
+    drawPerson(g, sx, sy, g.cat('corps'));
+    return;
+  }
+  const [sx, sy] = g.P(x + .5, y + .5), color = g.cat(cat);
+  if (cat === 'esprit') {
+    const [bx, by] = drawPerson(g, sx, sy, color, 'sit');
+    g.poly([[bx - s * .22, by + s * .05], [bx, by + s * .12], [bx + s * .22, by + s * .05], [bx, by - s * .02]], g.c('#ffffff'));
+  } else if (cat === 'calme') {
+    drawPerson(g, sx, sy, color, 'sit');
+    g.ell(x + .5, y + .5, .12, 0, null, 'rgba(255,255,255,.55)', 1);
+  } else if (cat === 'foyer') {
+    drawPerson(g, sx - s * .2, sy, color);
+    g.poly([[sx + s * .05, sy - s * .3], [sx + s * .35, sy - s * .3], [sx + s * .3, sy - s * .05], [sx + s * .1, sy - s * .05]], g.c('#8a8f96'));
+    for (let i = 0; i < 3; i++) g.circle(sx + s * (.45 + .08 * i), sy - s * (.2 - .12 * ((t * 2 + i / 3) % 1)), s * .04, g.c('#5fc0e0'));
+  } else {
+    drawPerson(g, sx - s * .25, sy, color);
+    ctx.strokeStyle = g.c('#8a6a4a'); ctx.lineWidth = Math.max(1, g.tw * .012);
+    ctx.beginPath(); ctx.moveTo(sx + s * .1, sy); ctx.lineTo(sx + s * .3, sy - s * .7); ctx.lineTo(sx + s * .5, sy); ctx.stroke();
+    g.poly([[sx + s * .12, sy - s * .75], [sx + s * .48, sy - s * .75], [sx + s * .48, sy - s * .38], [sx + s * .12, sy - s * .38]], g.c('#fbf8ef'));
+    g.circle(sx + s * .3, sy - s * .56, s * .07, g.c(t % 2 < 1 ? '#e87ba4' : '#2a78d6'));
+  }
+}
+
 
 /* ---- 35-city.js ---- */
 /* =========================================================================
@@ -4914,6 +4984,43 @@ const City = (() => {
   }
   // Relance la ville (retour sur l'onglet, fenêtre fermée, réglage changé…) : une image, puis la bonne cadence.
   function wake() { if (!raf && !ambientTimer) draw(); }
+  // Promeneurs : chacun suit, aller et retour, un petit chemin de 12 pas sur les cases où l'on marche, tiré une fois
+  // pour toutes de son indice ; un pas toutes les 4 s (2,5 s de marche, puis une pause).
+  const WALK_STEPS = 12, STEP_S = 4, MOVE_S = 2.5, WALKER_COLORS = ['#d9573b', '#3f78c4', '#e3a12f', '#3a9a7a', '#d0628f', '#7a8b6e'];
+  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] };
+  function walkPaths(cells) {
+    const key = cells.map(c => c.x + ',' + c.y).join(';');
+    if (walkCache.key === key) return walkCache.paths;
+    const open = new Set(cells.map(c => c.x + ',' + c.y)), paths = [];
+    for (let i = 0; i < 6; i++) {
+      let cur = cells[Math.floor(rnd(i, 1) * cells.length)], prev = null;
+      const path = [cur];
+      for (let s = 1; s <= WALK_STEPS; s++) {
+        const next = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => ({ x: cur.x + dx, y: cur.y + dy }))
+          .filter(c => open.has(c.x + ',' + c.y) && !(prev && c.x === prev.x && c.y === prev.y));
+        const step = next.length ? next[Math.floor(rnd(i * 31 + s, 7) * next.length)] : prev || cur;
+        prev = cur; cur = step; path.push(cur);
+      }
+      paths.push(path);
+    }
+    walkCache = { key, paths };
+    return paths;
+  }
+  // Position (en cases) du promeneur i au temps t : aller puis retour sur son chemin, pas à pas.
+  function walkerPos(path, i, t) {
+    const L = path.length - 1, time = t + rnd(i, 3) * STEP_S, k = Math.floor(time / STEP_S) % (2 * L);
+    const [from, to] = k < L ? [path[k], path[k + 1]] : [path[2 * L - k], path[2 * L - k - 1]];
+    const u = Math.min(1, (time % STEP_S) / MOVE_S), e = u * u * (3 - 2 * u);
+    return { x: from.x + (to.x - from.x) * e + .5 + (rnd(i, 5) - .5) * .3, y: from.y + (to.y - from.y) * e + .5 + (rnd(i, 6) - .5) * .3 };
+  }
+  // Habitant d'un domaine pratiqué aujourd'hui : une case libre voisine d'un bâtiment de ce domaine, sinon une case où marcher.
+  function doerCells(cells) {
+    return todayDomains().map((cat, i) => {
+      const near = cells.filter(c => S.city.tiles.some(t => ITEMS[t.item].group === cat && Math.abs(t.x - c.x) <= 1 && Math.abs(t.y - c.y) <= 1));
+      const pool = near.length ? near : cells;
+      return pool.length ? { cat, cell: pool[Math.floor(rnd(i, 13) * pool.length)] } : null;
+    }).filter(Boolean);
+  }
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(entries => { onScreen = entries[entries.length - 1].isIntersecting; if (onScreen) wake(); }).observe(canvas);
   }
@@ -5056,10 +5163,26 @@ const City = (() => {
       if (key) list.push({ t: { id: '__ghost', item: key, x: Mode.state.target.x, y: Mode.state.target.y, stage: moving ? moving.stage : 1 }, ghost: true });
     }
     const hiddenId = !clean && Mode.state && Mode.state.type === 'move' && Mode.state.target ? Mode.state.tileId : null;
+    // Habitants, rangés en profondeur avec les éléments : promeneurs, puis ceux qui font comme toi.
+    if (amb) {
+      const cells = walkableTiles(), n = walkerCount(amb.moment), paths = n ? walkPaths(cells) : [], tt = g.anim ? pal.time : 0;
+      const people = Array.from({ length: n }, (_, i) => ({ walker: i, pos: walkerPos(paths[i], i, tt) }));
+      for (const d of cells.length ? doerCells(cells) : []) people.push({ doer: d.cat, cell: d.cell, pos: { x: d.cell.x + .5, y: d.cell.y + .5 } });
+      lastPeople = { walkers: n, doers: people.filter(p => p.doer).map(p => p.doer) };
+      for (const p of people) list.push({ t: { id: '__person', x: Math.floor(p.pos.x) + .25, y: Math.floor(p.pos.y) + .25 }, person: p });
+    }
     list.sort((p, q) => (p.t.x + p.t.y) - (q.t.x + q.t.y) || p.t.x - q.t.x);
     const now = performance.now();
     let animating = false;
-    for (const { t, ghost } of list) {
+    for (const { t, ghost, person } of list) {
+      if (person) {
+        if (person.doer) drawDoer(g, person.cell.x, person.cell.y, person.doer, g.anim ? pal.time : 0);
+        else {
+          const [sx, sy] = g.P(person.pos.x, person.pos.y);
+          drawWalker(g, sx, sy, { color: WALKER_COLORS[person.walker % WALKER_COLORS.length], lantern: g.night, umbrella: amb.weather === 'rain', hat: amb.season === 'winter' });
+        }
+        continue;
+      }
       if (t.id === hiddenId || !isItem(t.item)) continue;
       const fx = clean ? null : effects.get(t.id);
       const k = fx ? clamp((now - fx.start) / FX_TIME[fx.kind], 0, 1) : 1;
@@ -5230,7 +5353,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, focus: () => { keyboard = true; canvas.focus(); draw(); } };
+  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, focus: () => { keyboard = true; canvas.focus(); draw(); } };
 })();
 
 /* Placement / déplacement de bâtiments */

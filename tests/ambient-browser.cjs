@@ -87,6 +87,17 @@ async function runAmbient(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Boucle sobre');
   }
+  // Habitants : trois promeneurs pour neuf éléments à midi, et un lecteur parce qu'on a pratiqué l'Esprit aujourd'hui.
+  {
+    const tiles = Array.from({ length: 9 }, (_, i) => ({ id: 'b' + i, item: 'maison', x: i % 7, y: Math.floor(i / 7), at: 1.79e12, paid: 5e6 }));
+    const seed = town({ esprit: 15 }, tiles, { stats: { ok: 1, byCat: { esprit: 15 }, days: { '2026-11-02': 15 }, dailyCats: { '2026-11-02': { esprit: 15 } } } });
+    const { context, page, errors } = await cityAt(browser, baseURL, seed, '2026-11-02T11:00:00Z');
+    try {
+      assert.deepEqual(await page.evaluate(() => __ville.City.walkers()), { walkers: 3, doers: ['esprit'] });
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Habitants');
+  }
   return { scenarios };
 }
 

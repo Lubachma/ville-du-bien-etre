@@ -154,3 +154,20 @@ function darkness(moment) {
     default: return 0;
   }
 }
+
+// Habitants : cases où l'on marche (libres, chemins, pas japonais), ligne par ligne.
+function walkableTiles() {
+  const paths = S.city.tiles.filter(t => t.item === 'chemin' || t.item === 'pasjaponais').map(t => ({ x: t.x, y: t.y }));
+  return [...freeCells(), ...paths].sort((a, b) => a.y - b.y || a.x - b.x);
+}
+// Un promeneur pour trois éléments, six au plus ; la nuit, la moitié rentre ; aucun sans case où marcher.
+function walkerCount(moment) {
+  if (!walkableTiles().length) return 0;
+  const n = Math.min(6, Math.floor(S.city.tiles.length / 3));
+  return moment.name === 'night' ? Math.floor(n / 2) : n;
+}
+// Domaines pratiqués aujourd'hui : un habitant de la ville fait la même activité.
+function todayDomains() {
+  const cats = S.stats.dailyCats[today()] || {};
+  return CAT_ORDER.filter(cat => cats[cat] > 0);
+}

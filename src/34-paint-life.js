@@ -124,3 +124,56 @@ function drawSeasonLife(g, amb, t, area, tiles) {
     }
   }
 }
+
+/* Habitants. Un personnage mesure environ 0,18 largeur de case ; (sx, sy) est le point sous ses pieds. */
+function drawPerson(g, sx, sy, color, pose = 'stand') {
+  const s = g.tw * .18, head = g.c('#f1c9a5'), body = color;
+  if (pose === 'sit') {
+    g.poly([[sx - s * .3, sy], [sx + s * .3, sy], [sx + s * .2, sy - s * .45], [sx - s * .2, sy - s * .45]], body);
+    g.circle(sx, sy - s * .6, s * .17, head);
+    return [sx, sy - s * .45];
+  }
+  g.poly([[sx - s * .18, sy], [sx + s * .18, sy], [sx + s * .14, sy - s * .62], [sx - s * .14, sy - s * .62]], body);
+  g.circle(sx, sy - s * .78, s * .17, head);
+  return [sx, sy - s * .62];
+}
+// Promeneur : lanterne la nuit, parapluie sous la pluie, bonnet en hiver.
+function drawWalker(g, sx, sy, look = {}) {
+  const s = g.tw * .18, [hx, hy] = drawPerson(g, sx, sy, g.c(look.color || '#7a8b6e'));
+  if (look.hat) g.circle(sx, hy - s * .28, s * .14, g.c('#c4572f'));
+  if (look.umbrella) {
+    g.ctx.beginPath(); g.ctx.ellipse(sx, hy - s * .5, s * .45, s * .25, 0, Math.PI, Math.PI * 2);
+    g.ctx.fillStyle = g.c('#3f78c4'); g.ctx.fill();
+  }
+  if (look.lantern) {
+    g.glow(hx + s * .3, hy + s * .15, s * .5, .45);
+    g.circle(hx + s * .3, hy + s * .15, s * .08, '#ffd47a');
+  }
+}
+// Habitant qui fait comme toi : lecture, course, méditation, arrosage ou peinture, au centre de sa case.
+function drawDoer(g, x, y, cat, t) {
+  const s = g.tw * .18, ctx = g.ctx;
+  if (cat === 'corps') {
+    const a = t * 2, [sx, sy] = g.P(x + .5 + Math.cos(a) * .2, y + .5 + Math.sin(a) * .2);
+    drawPerson(g, sx, sy, g.cat('corps'));
+    return;
+  }
+  const [sx, sy] = g.P(x + .5, y + .5), color = g.cat(cat);
+  if (cat === 'esprit') {
+    const [bx, by] = drawPerson(g, sx, sy, color, 'sit');
+    g.poly([[bx - s * .22, by + s * .05], [bx, by + s * .12], [bx + s * .22, by + s * .05], [bx, by - s * .02]], g.c('#ffffff'));
+  } else if (cat === 'calme') {
+    drawPerson(g, sx, sy, color, 'sit');
+    g.ell(x + .5, y + .5, .12, 0, null, 'rgba(255,255,255,.55)', 1);
+  } else if (cat === 'foyer') {
+    drawPerson(g, sx - s * .2, sy, color);
+    g.poly([[sx + s * .05, sy - s * .3], [sx + s * .35, sy - s * .3], [sx + s * .3, sy - s * .05], [sx + s * .1, sy - s * .05]], g.c('#8a8f96'));
+    for (let i = 0; i < 3; i++) g.circle(sx + s * (.45 + .08 * i), sy - s * (.2 - .12 * ((t * 2 + i / 3) % 1)), s * .04, g.c('#5fc0e0'));
+  } else {
+    drawPerson(g, sx - s * .25, sy, color);
+    ctx.strokeStyle = g.c('#8a6a4a'); ctx.lineWidth = Math.max(1, g.tw * .012);
+    ctx.beginPath(); ctx.moveTo(sx + s * .1, sy); ctx.lineTo(sx + s * .3, sy - s * .7); ctx.lineTo(sx + s * .5, sy); ctx.stroke();
+    g.poly([[sx + s * .12, sy - s * .75], [sx + s * .48, sy - s * .75], [sx + s * .48, sy - s * .38], [sx + s * .12, sy - s * .38]], g.c('#fbf8ef'));
+    g.circle(sx + s * .3, sy - s * .56, s * .07, g.c(t % 2 < 1 ? '#e87ba4' : '#2a78d6'));
+  }
+}
