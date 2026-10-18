@@ -11,7 +11,7 @@ function readPalette() {
 
 // Chantier de pose : un échafaudage pour les bâtiments seulement. Le décor et ce qui reste au sol sortent sans,
 // et une merveille a déjà le sien, dessiné à chaque étape.
-function scaffoldOnBuild(key) { const it = ITEMS[key]; return !!it && it.group !== 'decor' && !it.ground && !it.wonder; }
+function scaffoldOnBuild(key) { return isBuilding(key); }
 
 function makePainter(ctx, tw, ox, oy, pal) {
   const hw = tw / 2, hh = tw / 4;

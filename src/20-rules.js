@@ -121,6 +121,8 @@ function rewardFor(min, drawPct, day) {
 }
 
 function isWonder(key) { return !!(ITEMS[key] && ITEMS[key].wonder); }
+// Un bâtiment : ni décor, ni élément au sol, ni merveille.
+function isBuilding(key) { const it = ITEMS[key]; return !!it && it.group !== 'decor' && !it.ground && !it.wonder; }
 // Somme payée pour une merveille arrivée à l'étape « stage » (0 : rien de construit).
 function wonderPaid(key, stage) { return ITEMS[key].wonder.slice(0, stage).reduce((sum, [, price]) => sum + price, 0); }
 function lockInfo(key) {

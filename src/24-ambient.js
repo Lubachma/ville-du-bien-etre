@@ -86,3 +86,50 @@ function nextFestival(id, day) {
   for (let i = 0; i < 400; i++) { const d = shiftDay(day, i); if (festivalsOn(d).some(f => f.id === id)) return d; }
   return '';
 }
+
+// Visiteurs : où ils se placent dans la ville. Une place libre est une case sans élément, parcourue ligne par ligne.
+const VISITOR_TREES = ['arbre', 'cerisier', 'grandarbre'], VISITOR_NATURE = ['arbre', 'cerisier', 'haie', 'fleurs'];
+const nearAny = (cell, tiles) => tiles.some(t => Math.abs(t.x - cell.x) <= 1 && Math.abs(t.y - cell.y) <= 1);
+function freeCells() {
+  const N = S.city.size, taken = new Set(S.city.tiles.map(t => t.x + ',' + t.y)), out = [];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!taken.has(x + ',' + y)) out.push({ x, y });
+  return out;
+}
+// Place du visiteur ce jour-là : { x, y, on } sur un élément, { x, y } sur une case libre, { sky: true }, ou null s'il n'a pas de place.
+function visitorSpot(visitor, day) {
+  const N = S.city.size, free = freeCells(), tiles = [...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x);
+  const on = keep => tiles.filter(t => keep(t.item)).map(t => ({ x: t.x, y: t.y, on: t.item }));
+  const pick = list => (list.length ? list[Math.floor(chance(day + ':' + visitor.id + ':spot') * list.length)] : null);
+  const near = items => free.filter(c => nearAny(c, tiles.filter(t => items.includes(t.item))));
+  switch (visitor.spot) {
+    case 'sky': return { sky: true };
+    case 'bench': return pick(on(item => item === 'banc')) || pick(free);
+    case 'nature': return pick(near(VISITOR_NATURE));
+    case 'tree': return pick(on(item => VISITOR_TREES.includes(item)));
+    case 'roof': return pick(on(isBuilding));
+    case 'pond': return pick(on(item => item === 'etang'));
+    case 'edge': return pick(free.filter(c => c.x === 0 || c.y === 0 || c.x === N - 1 || c.y === N - 1));
+    case 'path': return pick(on(item => item === 'chemin' || item === 'pasjaponais')) || pick(free);
+    case 'kiosk': return pick(near(['kiosque'])) || pick(free);
+    default: return pick(free);
+  }
+}
+// Visiteur du jour (environ 5 jours sur 7) : saison, météo et place respectées, pas celui rencontré la veille
+// quand un autre peut venir, et trois fois plus de chances pour ceux qu'on n'a pas rencontrés avant ce jour.
+function visitorOf(day) {
+  if (chance(day + ':visit') >= VISIT_ODDS) return null;
+  const season = seasonOf(day), weather = dayWeather(day), yesterday = shiftDay(day, -1);
+  const snowy = weather === 'snow' || dayWeather(yesterday) === 'snow', visits = S.visits || {};
+  const base = [];
+  for (const v of VISITORS) {
+    if ((v.seasons && !v.seasons.includes(season)) || (v.weather && !v.weather.includes(weather)) || (v.snow && !snowy)) continue;
+    const spot = visitorSpot(v, day);
+    if (spot) base.push({ id: v.id, spot });
+  }
+  const others = base.filter(c => !(visits[c.id] && visits[c.id].last === yesterday)), list = others.length ? others : base;
+  if (!list.length) return null;
+  const weight = c => (visits[c.id] && dayOf(visits[c.id].first) < day ? 1 : 3);
+  let roll = chance(day + ':who') * list.reduce((sum, c) => sum + weight(c), 0);
+  for (const c of list) { roll -= weight(c); if (roll < 0) return c; }
+  return list[list.length - 1];
+}

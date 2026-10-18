@@ -4,7 +4,10 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js'];
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf', 'chance', 'dayWeather', 'weatherOf', 'rainbowOn', 'shiftDay', 'WEATHER_ODDS', 'festivalsOn', 'giftAmount', 'nextFestival'];
+const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf', 'chance', 'dayWeather', 'weatherOf', 'rainbowOn', 'shiftDay', 'WEATHER_ODDS', 'festivalsOn', 'giftAmount', 'nextFestival', 'visitorSpot', 'visitorOf', 'VISITORS', 'keyToUTC'];
+const T0 = Date.parse('2026-10-18T12:00:00Z');
+const place = (a, tiles, size = 7) => { a.state.city = { size, tiles: tiles.map(([item, x, y], i) => ({ id: 't' + i, item, x, y, at: T0, paid: 0 })) }; };
+const visitor = (a, id) => a.VISITORS.find(v => v.id === id);
 function app(tz = 'Europe/Zurich', createdAt = Date.parse('2026-01-15T09:00:00Z')) {
   const a = loadApp(FILES, { expose: EXPOSE });
   a.state.clock.tz = tz; a.state.createdAt = createdAt; a.state.clock.maxSeen = 0;
@@ -128,4 +131,58 @@ test("prochaine date d'une fête, pour le carnet", () => {
   const a = app();
   assert.deepEqual([a.nextFestival('printemps', '2026-10-18'), a.nextFestival('nouvel-an', '2026-10-18'), a.nextFestival('ete', '2026-06-21'), a.nextFestival('anniversaire', '2026-10-18')],
     ['2027-03-20', '2026-12-31', '2026-06-21', '2027-01-15']);
+});
+
+test('visiteur : rien sans sa place, et une ville pleine garde ses toits et ses arbres', () => {
+  const a = app();
+  place(a, []);
+  assert.equal(a.visitorSpot(visitor(a, 'canards'), '2026-07-01'), null);
+  place(a, [['etang', 2, 3]]);
+  assert.deepEqual(plain(a.visitorSpot(visitor(a, 'canards'), '2026-07-01')), { x: 2, y: 3, on: 'etang' });
+  assert.deepEqual(plain(a.visitorSpot(visitor(a, 'montgolfiere'), '2026-07-01')), { sky: true });
+  place(a, Array.from({ length: 49 }, (_, i) => [i === 0 ? 'arbre' : 'maison', i % 7, Math.floor(i / 7)]));
+  for (const id of ['chat', 'herisson', 'renard', 'bonhomme', 'artiste']) assert.equal(a.visitorSpot(visitor(a, id), '2026-07-01'), null, id);
+  assert.deepEqual(plain(a.visitorSpot(visitor(a, 'ecureuil'), '2026-07-01')), { x: 0, y: 0, on: 'arbre' });
+  assert.equal(a.visitorSpot(visitor(a, 'cigogne'), '2026-07-01').on, 'maison');
+});
+
+test('visiteur du jour : reproductible, conditions respectées, environ 5 jours sur 7', () => {
+  const a = app();
+  place(a, [['etang', 1, 1], ['arbre', 3, 1], ['maison', 5, 1], ['banc', 1, 4], ['kiosque', 4, 4], ['chemin', 6, 6]]);
+  let present = 0;
+  for (let i = 0; i < 730; i++) {
+    const day = a.shiftDay('2026-01-01', i), v = a.visitorOf(day);
+    assert.deepEqual(plain(v), plain(a.visitorOf(day)));
+    if (!v) continue;
+    present++;
+    const def = visitor(a, v.id), season = a.seasonOf(day), weather = a.dayWeather(day);
+    if (def.seasons) assert.ok(def.seasons.includes(season), `${v.id} en ${season}`);
+    if (def.weather) assert.ok(def.weather.includes(weather), `${v.id} par ${weather}`);
+    if (def.snow) assert.ok(weather === 'snow' || a.dayWeather(a.shiftDay(day, -1)) === 'snow', `${v.id} sans neige`);
+  }
+  assert.ok(Math.abs(present / 730 - .7) < .06, String(present / 730));
+});
+
+test("visiteur : plus souvent ceux pas encore rencontrés, jamais celui d'hier quand un autre peut venir", () => {
+  const a = app();
+  place(a, [['etang', 1, 1], ['arbre', 3, 1], ['maison', 5, 1], ['banc', 1, 4], ['kiosque', 4, 4]]);
+  const days = Array.from({ length: 1095 }, (_, i) => a.shiftDay('2026-01-01', i));
+  const chats = () => days.map(a.visitorOf).filter(v => v && v.id === 'chat').length;
+  const before = chats();
+  const long = Date.parse('2025-01-01T12:00:00Z');
+  a.state.visits = Object.fromEntries(a.VISITORS.filter(v => v.id !== 'chat').map(v => [v.id, { first: long, count: 1, last: '2025-01-01' }]));
+  const after = chats();
+  assert.ok(after > before * 1.5, `${before} → ${after}`);
+  const day = days.find(d => (a.visitorOf(d) || {}).id === 'chat');
+  a.state.visits.chat = { first: long, count: 1, last: a.shiftDay(day, -1) };
+  assert.notEqual((a.visitorOf(day) || {}).id, 'chat');
+});
+
+test('rencontrer le visiteur du jour ne le change pas', () => {
+  const a = app();
+  place(a, [['etang', 1, 1], ['arbre', 3, 1], ['banc', 1, 4]]);
+  const day = Array.from({ length: 60 }, (_, i) => a.shiftDay('2026-07-01', i)).find(d => a.visitorOf(d));
+  const v = plain(a.visitorOf(day));
+  a.state.visits[v.id] = { first: a.keyToUTC(day), count: 1, last: day };
+  assert.deepEqual(plain(a.visitorOf(day)), v);
 });
