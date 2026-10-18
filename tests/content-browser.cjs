@@ -64,6 +64,39 @@ async function runContent(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Ensemble : découverte à la pose, gardée après un déplacement');
   }
+  // Carnet : compteurs et repère Nouveau dans le Journal, trois onglets, rien ne déborde à 320 px.
+  {
+    const past = Date.parse('2025-10-10T12:00:00Z');
+    const seed = town({ esprit: 5 }, [], { achievements: { 'premier-pas': past, hameau: past }, sets: { cocon: past } });
+    const { context, page, errors } = await newTown(browser, baseURL, seed, { viewport: { width: 320, height: 640 } });
+    try {
+      await page.locator('[data-tab="journal"]').click();
+      const card = page.locator('#carnetCard');
+      const text = await card.innerText();
+      assert.match(text, /Nouveau/);
+      assert.match(text, /2 sur 33/);
+      assert.match(text, /1 sur 12/);
+      await card.getByRole('button', { name: 'Ouvrir le carnet', exact: true }).click();
+      const body = page.locator('#sheetBody');
+      const names = await body.locator('.carnet-row strong').allInnerTexts();
+      assert.ok(names.indexOf('Premier pas') >= 0 && names.indexOf('Premier pas') < names.indexOf('Lève-tôt'), names.slice(0, 4).join(' | '));
+      await body.getByRole('radio', { name: 'Collection', exact: true }).click();
+      assert.equal(await body.locator('.carnet-cell').count(), 50);
+      await body.getByRole('radio', { name: 'Ensembles', exact: true }).click();
+      const sets = await body.locator('.carnet-row strong').allInnerTexts();
+      assert.equal(sets[0], 'Cocon');
+      assert.equal(sets.filter(name => name === 'Ensemble à découvrir').length, 11);
+      for (const tab of ['Succès', 'Collection', 'Ensembles']) {
+        await body.getByRole('radio', { name: tab, exact: true }).click();
+        const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, inner: innerWidth, body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth }));
+        assert.ok(w.doc <= w.inner && w.body <= w.client + 1, `le carnet déborde à 320 px (${tab})`);
+      }
+      await page.locator('#sheetClose').click();
+      assert.doesNotMatch(await card.innerText(), /Nouveau/);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Carnet : compteurs, onglets et repère Nouveau');
+  }
   return { scenarios };
 }
 module.exports = { runContent, newTown, town, openTile };

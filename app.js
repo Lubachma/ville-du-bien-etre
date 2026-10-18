@@ -15,7 +15,8 @@ const LS_BEAT = 'ville-bien-etre/v2:beat';       // battement de la session en c
 const LS_WAKE_ACK = 'ville-bien-etre/v1:wake-ok';
 const LS_BACKUP_AT = 'ville-bien-etre/v1:backup-at';     // dernière sauvegarde faite depuis cet appareil
 const LS_REMIND = 'ville-bien-etre/v1:backup-later';     // rappel de sauvegarde reporté jusqu'à cette date
-const LS_REMINDER = 'ville-bien-etre/v1:reminder-time';  // heure du rappel quotidien (agenda), propre à l'appareil
+const LS_REMINDER = 'ville-bien-etre/v1:reminder-time';
+const LS_CARNET_SEEN = 'ville-bien-etre/v1:carnet-seen';  // dernière ouverture du carnet sur cet appareil  // heure du rappel quotidien (agenda), propre à l'appareil
 const BACKUP_EVERY = 14 * 86400000;                       // rappel quand la dernière sauvegarde a plus de 14 jours
 const HISTORY_MAX = 150;
 const LIST_MAX = 60;
@@ -1210,6 +1211,22 @@ DICT.fr = {
   'city.stageReady': { m: "Tu peux construire l'étape {stage} du {item}.", f: "Tu peux construire l'étape {stage} de la {item}." },
   'city.listItemStage': '{item}, case {x}, {y} · étape {stage} sur 4',
   'set.discovered': 'Nouvel ensemble : {name} !',
+  // Carnet
+  'carnet.title': 'Carnet',
+  'carnet.cardLabel': 'Carnet : succès, collection et ensembles',
+  'carnet.open': 'Ouvrir le carnet',
+  'carnet.new': 'Nouveau',
+  'carnet.tabAchievements': 'Succès',
+  'carnet.tabCollection': 'Collection',
+  'carnet.tabSets': 'Ensembles',
+  'carnet.count': '{have} sur {total}',
+  'carnet.earnedOn': 'Obtenu le {date}',
+  'carnet.gift': 'Cadeau : {item}',
+  'carnet.progress': '{have} sur {need}',
+  'carnet.mystery': 'À découvrir',
+  'set.unknown': 'Ensemble à découvrir',
+  'set.hint': 'Place ces trois éléments dans un même carré de 3\u00a0×\u00a03 cases.',
+  'set.foundOn': 'Découvert le {date}',
 };
 
 
@@ -2041,6 +2058,22 @@ DICT.en = {
   'city.stageReady': 'You can build stage {stage} of the {item}.',
   'city.listItemStage': '{item}, square {x}, {y} · stage {stage} of 4',
   'set.discovered': 'New set: {name}!',
+  // Notebook
+  'carnet.title': 'Notebook',
+  'carnet.cardLabel': 'Notebook: achievements, collection and sets',
+  'carnet.open': 'Open the notebook',
+  'carnet.new': 'New',
+  'carnet.tabAchievements': 'Achievements',
+  'carnet.tabCollection': 'Collection',
+  'carnet.tabSets': 'Sets',
+  'carnet.count': '{have} of {total}',
+  'carnet.earnedOn': 'Earned on {date}',
+  'carnet.gift': 'Gift: {item}',
+  'carnet.progress': '{have} of {need}',
+  'carnet.mystery': 'To discover',
+  'set.unknown': 'Set to discover',
+  'set.hint': 'Place these three items within the same 3\u00a0×\u00a03 square.',
+  'set.foundOn': 'Discovered on {date}',
 };
 
 
@@ -4527,7 +4560,22 @@ const City = (() => {
     const pal = readPalette();
     const g = makePainter(c, tw, size / 2, size - 3 - tw / 2, pal);
     g.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
-    try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
+    if (!opts.silhouette) {
+      try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
+      return;
+    }
+    // Silhouette : l'élément en ombre unie, posé sur sa case visible.
+    const off = document.createElement('canvas');
+    off.width = cv.width; off.height = cv.height;
+    const o = off.getContext('2d');
+    o.setTransform(d, 0, 0, d, 0, 0);
+    try { DRAW[key](makePainter(o, tw, size / 2, size - 3 - tw / 2, pal), 0, 0, { stage: opts.stage || 4 }); } catch (e) { /* silhouette vide */ }
+    o.setTransform(1, 0, 0, 1, 0, 0);
+    o.globalCompositeOperation = 'source-in';
+    o.fillStyle = pal.night ? 'rgba(255,255,255,.3)' : 'rgba(40,60,50,.38)';
+    o.fillRect(0, 0, off.width, off.height);
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(off, 0, 0);
   }
   function pop(id) { if (!reducedMotion()) pops.set(id, performance.now()); }
   function relayout() { layout(); draw(); }
@@ -5262,6 +5310,7 @@ function renderJournal() {
     kpi(t('journal.kpiEffort'), fmtEffort(totalEffortMinutes()), S.earned ? t('journal.kpiEffortSubEarned', { time: fmtMin(totalMinutes()), coins: fmt(S.earned) }) : t('journal.kpiEffortSub', { time: fmtMin(totalMinutes()) })),
     kpi(t('journal.kpiSessions'), String(S.stats.ok), t('journal.kpiInterrupted', { n: S.stats.ko })));
   renderGoals();
+  renderCarnetCard();
   renderWeekChart();
   renderMeters();
   renderHistory();
@@ -5652,7 +5701,7 @@ function refreshLang() {
   fillSelects();
   enhanceActivityForms(true);
   // Construits une seule fois : ils reviennent au prochain rendu, dans la nouvelle langue.
-  for (const id of ['#drawFilters', '#goalsCard', '#routinesCard']) { const el = $(id); if (el) el.remove(); }
+  for (const id of ['#drawFilters', '#goalsCard', '#routinesCard', '#carnetCard']) { const el = $(id); if (el) el.remove(); }
   storageStatusSignature = '';
 }
 function changeLang(pref) {
@@ -6950,6 +6999,109 @@ async function requestWake() {
   if (run) setWake(res);
 }
 
+
+
+/* ---- 52-carnet.js ---- */
+/* =========================================================================
+   Carnet : succès, collection et ensembles, avec leurs compteurs dans le Journal.
+   ========================================================================= */
+const CARNET_TABS = [['achievements', 'carnet.tabAchievements'], ['collection', 'carnet.tabCollection'], ['sets', 'carnet.tabSets']];
+function carnetCounts() {
+  return {
+    achievements: { have: Object.keys(S.achievements || {}).length, total: ACHIEVEMENTS.length },
+    collection: collectionCount(),
+    sets: { have: Object.keys(S.sets || {}).length, total: SETS.length },
+  };
+}
+// Dernière ouverture du carnet sur cet appareil.
+function carnetSeen() { try { return Number(localStorage.getItem(LS_CARNET_SEEN)) || 0; } catch (e) { return 0; } }
+function markCarnetSeen() { try { localStorage.setItem(LS_CARNET_SEEN, String(Date.now())); } catch (e) { /* pas de stockage */ } }
+// Repère « Nouveau » : un succès ou un ensemble obtenu depuis la dernière ouverture.
+function hasNewInCarnet(seen = carnetSeen()) {
+  return [S.achievements, S.sets].some(dates => Object.values(dates || {}).some(at => at > seen));
+}
+const carnetDate = at => dayFmt('short').format(keyToUTC(dayOf(at)));
+
+function renderCarnetCard() {
+  if (!$('#view-journal')) return;
+  let card = $('#carnetCard');
+  if (!card) {
+    card = h('section', { id: 'carnetCard', class: 'card feature-card', 'aria-label': t('carnet.cardLabel') });
+    ($('#goalsCard') || $('#kpis')).after(card);
+  }
+  const counts = carnetCounts();
+  const row = (key, n) => h('div', { class: 'feature-between' }, h('span', {}, t(key)), h('strong', {}, t('carnet.count', n)));
+  card.replaceChildren(
+    h('div', { class: 'feature-between' },
+      h('h3', {}, t('carnet.title'), hasNewInCarnet() ? h('span', { class: 'badge-new' }, t('carnet.new')) : null),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => openCarnet() }, t('carnet.open'))),
+    row('carnet.tabAchievements', counts.achievements), row('carnet.tabCollection', counts.collection), row('carnet.tabSets', counts.sets));
+}
+
+function openCarnet(tab = 'achievements') {
+  markCarnetSeen();
+  openSheet(t('carnet.title'), body => {
+    const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('carnet.title') }), panel = h('div', { class: 'carnet-panel' });
+    const show = name => {
+      $$('button', seg).forEach((button, i) => button.setAttribute('aria-checked', String(CARNET_TABS[i][0] === name)));
+      panel.replaceChildren(name === 'collection' ? carnetCollection() : name === 'sets' ? carnetSets() : carnetAchievements());
+    };
+    for (const [name, key] of CARNET_TABS) seg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', onclick: () => show(name) }, t(key)));
+    body.append(seg, panel);
+    show(tab);
+  }, { onClose: () => renderCarnetCard() });
+}
+// Succès : ceux obtenus d'abord (les plus récents en tête), puis les autres avec leur condition et leur progression.
+function carnetAchievements() {
+  const got = S.achievements || {};
+  const earned = ACHIEVEMENTS.filter(def => got[def.id]).sort((a, b) => got[b.id] - got[a.id]);
+  const row = def => {
+    const at = got[def.id], progress = at ? null : achievementProgress(def);
+    const desc = def.id === 'sur-ta-lancee' && S.settings.hideStreak ? t('ach.sur-ta-lancee.descHidden') : t('ach.' + def.id + '.desc');
+    const value = n => (progress.unit === 'min' ? fmtMin(n) : n);
+    let gift = null;
+    if (def.reward) { gift = h('canvas', { 'aria-hidden': 'true' }); City.thumb(gift, def.reward, 40, { silhouette: !at }); }
+    return h('li', { class: 'carnet-row' + (at ? ' earned' : '') },
+      h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon(at ? 'sparkle' : 'lock')),
+      h('div', { class: 'carnet-text' }, h('strong', {}, achName(def.id)), h('span', { class: 'note' }, desc),
+        at ? h('span', { class: 'note' }, t('carnet.earnedOn', { date: carnetDate(at) })) : null,
+        progress ? h('span', { class: 'note' }, t('carnet.progress', { have: value(progress.have), need: value(progress.need) })) : null,
+        def.reward ? h('span', { class: 'note' }, t('carnet.gift', { item: itemName(def.reward) })) : null),
+      gift);
+  };
+  return h('ul', { class: 'carnet-list' }, ...earned.map(row), ...ACHIEVEMENTS.filter(def => !got[def.id]).map(row));
+}
+// Collection : les 50 éléments, en couleur s'ils sont dévoilés, sinon en silhouette avec leur condition.
+function carnetCollection() {
+  const cells = [];
+  for (const group of GROUPS) {
+    for (const key of Object.keys(ITEMS).filter(k => ITEMS[k].group === group)) {
+      const shown = isRevealed(key), lock = lockInfo(key), cv = h('canvas', { 'aria-hidden': 'true' });
+      City.thumb(cv, key, 56, { silhouette: !shown });
+      cells.push(h('li', { class: 'carnet-cell' + (lock ? ' locked' : '') }, cv,
+        h('strong', {}, shown ? itemName(key) : t('carnet.mystery')), lock ? h('span', { class: 'note' }, lock.text) : null));
+    }
+  }
+  return h('ul', { class: 'carnet-grid' }, ...cells);
+}
+// Ensembles : ceux découverts, puis ceux à découvrir, avec la silhouette de leurs trois éléments.
+function carnetSets() {
+  const got = S.sets || {};
+  const pieces = (set, known) => h('div', { class: 'carnet-pieces' }, ...set.items.map(item => {
+    const cv = h('canvas', { 'aria-hidden': 'true' });
+    City.thumb(cv, item, 44, { silhouette: !known });
+    return cv;
+  }));
+  const row = set => {
+    const at = got[set.id];
+    return h('li', { class: 'carnet-row carnet-set' + (at ? ' earned' : '') },
+      h('div', { class: 'carnet-text' }, h('strong', {}, at ? setName(set.id) : t('set.unknown')),
+        h('span', { class: 'note' }, at ? set.items.map(itemName).join(' · ') : t('set.hint')),
+        at ? h('span', { class: 'note' }, t('set.foundOn', { date: carnetDate(at) })) : null),
+      pieces(set, !!at));
+  };
+  return h('ul', { class: 'carnet-list' }, ...SETS.filter(set => got[set.id]).map(row), ...SETS.filter(set => !got[set.id]).map(row));
+}
 
 
 /* ---- 60-boot.js ---- */

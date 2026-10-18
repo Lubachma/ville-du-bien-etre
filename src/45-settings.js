@@ -138,7 +138,7 @@ function refreshLang() {
   fillSelects();
   enhanceActivityForms(true);
   // Construits une seule fois : ils reviennent au prochain rendu, dans la nouvelle langue.
-  for (const id of ['#drawFilters', '#goalsCard', '#routinesCard']) { const el = $(id); if (el) el.remove(); }
+  for (const id of ['#drawFilters', '#goalsCard', '#routinesCard', '#carnetCard']) { const el = $(id); if (el) el.remove(); }
   storageStatusSignature = '';
 }
 function changeLang(pref) {

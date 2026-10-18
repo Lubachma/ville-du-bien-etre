@@ -173,7 +173,22 @@ const City = (() => {
     const pal = readPalette();
     const g = makePainter(c, tw, size / 2, size - 3 - tw / 2, pal);
     g.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
-    try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
+    if (!opts.silhouette) {
+      try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
+      return;
+    }
+    // Silhouette : l'élément en ombre unie, posé sur sa case visible.
+    const off = document.createElement('canvas');
+    off.width = cv.width; off.height = cv.height;
+    const o = off.getContext('2d');
+    o.setTransform(d, 0, 0, d, 0, 0);
+    try { DRAW[key](makePainter(o, tw, size / 2, size - 3 - tw / 2, pal), 0, 0, { stage: opts.stage || 4 }); } catch (e) { /* silhouette vide */ }
+    o.setTransform(1, 0, 0, 1, 0, 0);
+    o.globalCompositeOperation = 'source-in';
+    o.fillStyle = pal.night ? 'rgba(255,255,255,.3)' : 'rgba(40,60,50,.38)';
+    o.fillRect(0, 0, off.width, off.height);
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(off, 0, 0);
   }
   function pop(id) { if (!reducedMotion()) pops.set(id, performance.now()); }
   function relayout() { layout(); draw(); }

@@ -76,6 +76,18 @@ async function runI18n(browser, baseURL) {
         assert.ok(widths.body <= widths.client + 1, `la fenêtre déborde à ${width} px`);
         await page.locator('#sheetClose').click();
       }
+      // Le carnet tient lui aussi, sur ses trois onglets.
+      await page.locator('[data-tab="journal"]').click();
+      await page.getByRole('button', { name: 'Open the notebook', exact: true }).click();
+      for (const tab of ['Achievements', 'Collection', 'Sets']) {
+        await page.locator('#sheetBody').getByRole('radio', { name: tab, exact: true }).click();
+        const widths = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, inner: innerWidth,
+          body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth }));
+        assert.ok(widths.doc <= widths.inner, `la page déborde à ${width} px (${tab})`);
+        assert.ok(widths.body <= widths.client + 1, `le carnet déborde à ${width} px (${tab})`);
+      }
+      await assertEnglish(page, 'le carnet');
+      await page.locator('#sheetClose').click();
     }
     await page.setViewportSize({ width: 390, height: 844 });
 
