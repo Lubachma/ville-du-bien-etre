@@ -1285,6 +1285,73 @@ DICT.fr = {
   'shop.nav': 'Rubriques',
   'shop.free': 'Offert',
   'shop.placeFree': 'Placer {item}, offert',
+  // Visiteurs : nom, trois phrases du jour, indice du carnet
+  'visitor.chat.name': 'Le chat voyageur',
+  'visitor.chat.line1': 'Il a trouvé le banc le plus doux de ta ville.',
+  'visitor.chat.line2': 'Il ronronne au soleil, sans se presser.',
+  'visitor.chat.line3': 'Il te regarde passer, puis referme les yeux.',
+  'visitor.chat.hint': 'Vient par beau temps, et adore les bancs.',
+  'visitor.herisson.name': 'Le hérisson',
+  'visitor.herisson.line1': 'Il fouille sous les feuilles, tout content.',
+  'visitor.herisson.line2': 'Il trottine entre les massifs.',
+  'visitor.herisson.line3': "Il s'arrête, renifle, et repart.",
+  'visitor.herisson.hint': "Vient du printemps à l'automne, près des arbres, des haies ou des fleurs.",
+  'visitor.ecureuil.name': "L'écureuil",
+  'visitor.ecureuil.line1': 'Il cache une noisette pour plus tard.',
+  'visitor.ecureuil.line2': 'Il saute de branche en branche.',
+  'visitor.ecureuil.line3': 'Il te regarde, la queue en panache.',
+  'visitor.ecureuil.hint': "Vient en automne et en hiver, s'il trouve un arbre.",
+  'visitor.cigogne.name': 'La cigogne',
+  'visitor.cigogne.line1': 'Elle a fait son nid sur un toit.',
+  'visitor.cigogne.line2': 'Elle claque du bec pour te saluer.',
+  'visitor.cigogne.line3': 'Elle se repose après un long voyage.',
+  'visitor.cigogne.hint': 'Vient au printemps et en été, sur un toit.',
+  'visitor.canards.name': 'Les canards',
+  'visitor.canards.line1': "Ils barbotent sur l'étang.",
+  'visitor.canards.line2': 'Ils se suivent en file, très sérieux.',
+  'visitor.canards.line3': "Ils plongent la tête, la queue en l'air.",
+  'visitor.canards.hint': "Viennent sauf en hiver, s'il y a un étang.",
+  'visitor.renard.name': 'Le renard',
+  'visitor.renard.line1': 'Il se faufile au bord de la ville.',
+  'visitor.renard.line2': "Il guette, curieux, puis s'assoit.",
+  'visitor.renard.line3': 'Sa queue rousse se voit de loin.',
+  'visitor.renard.hint': 'Vient en automne et en hiver, au bord de la ville.',
+  'visitor.chouette.name': 'La chouette',
+  'visitor.chouette.line1': 'Elle veille, perchée dans un arbre.',
+  'visitor.chouette.line2': "Elle tourne la tête, puis te fait un clin d'œil.",
+  'visitor.chouette.line3': 'Elle hulule doucement.',
+  'visitor.chouette.hint': "Vient en automne et en hiver, s'il y a un arbre.",
+  'visitor.montgolfiere.name': 'La montgolfière',
+  'visitor.montgolfiere.line1': 'Elle flotte au-dessus de ta ville.',
+  'visitor.montgolfiere.line2': 'De là-haut, ta ville est magnifique.',
+  'visitor.montgolfiere.line3': 'Elle prend son temps, portée par le vent.',
+  'visitor.montgolfiere.hint': 'Passe par beau temps, sauf en hiver.',
+  'visitor.bonhomme.name': 'Le bonhomme de neige',
+  'visitor.bonhomme.line1': "Quelqu'un l'a fait avec soin.",
+  'visitor.bonhomme.line2': 'Il porte fièrement son chapeau.',
+  'visitor.bonhomme.line3': 'Il sourit, tout blanc.',
+  'visitor.bonhomme.hint': 'Apparaît en hiver, quand il a neigé.',
+  'visitor.glaces.name': 'Le chariot de glaces',
+  'visitor.glaces.line1': 'Une glace à la fraise ? Ou à la vanille ?',
+  'visitor.glaces.line2': 'Il fait tinter sa clochette.',
+  'visitor.glaces.line3': "Parfait pour une journée d'été.",
+  'visitor.glaces.hint': 'Vient en été, quand il ne pleut pas.',
+  'visitor.accordeon.name': "L'accordéoniste",
+  'visitor.accordeon.line1': "Un air joyeux s'élève de l'accordéon.",
+  'visitor.accordeon.line2': 'Les notes font sourire les passants.',
+  'visitor.accordeon.line3': 'Une petite valse, rien que pour ta ville.',
+  'visitor.accordeon.hint': 'Vient quand il ne pleut pas, près du kiosque à musique.',
+  'visitor.artiste.name': "L'artiste peintre",
+  'visitor.artiste.line1': 'Le chevalet est tourné vers ta ville.',
+  'visitor.artiste.line2': 'Un coup de pinceau, puis un autre.',
+  'visitor.artiste.line3': 'Ta ville devient un tableau.',
+  'visitor.artiste.hint': "Vient du printemps à l'automne, par beau temps.",
+  'visit.count': { one: '{n} rencontre', other: '{n} rencontres' },
+  'visit.gift': 'Recevoir {coins}',
+  'visit.giftDone': "Cadeau reçu aujourd'hui.",
+  'visit.thanks': 'Merci ! {coins} pour ta ville.',
+  'visit.new': 'Nouveau visiteur : {name} !',
+  'city.listVisitor': 'Visiteur du jour : {name}',
 };
 
 
@@ -2150,6 +2217,73 @@ DICT.en = {
   'shop.nav': 'Sections',
   'shop.free': 'Free',
   'shop.placeFree': 'Place {item}, free',
+  // Visitors: name, three lines of the day, notebook hint
+  'visitor.chat.name': 'The wandering cat',
+  'visitor.chat.line1': 'It found the comfiest bench in your town.',
+  'visitor.chat.line2': 'It purrs in the sun, taking its time.',
+  'visitor.chat.line3': 'It watches you go by, then closes its eyes.',
+  'visitor.chat.hint': 'Comes in fair weather, and loves benches.',
+  'visitor.herisson.name': 'The hedgehog',
+  'visitor.herisson.line1': 'It rummages happily under the leaves.',
+  'visitor.herisson.line2': 'It trots between the flower beds.',
+  'visitor.herisson.line3': 'It stops, sniffs, and moves on.',
+  'visitor.herisson.hint': 'Comes from spring to autumn, near trees, hedges or flowers.',
+  'visitor.ecureuil.name': 'The squirrel',
+  'visitor.ecureuil.line1': 'It hides a hazelnut for later.',
+  'visitor.ecureuil.line2': 'It leaps from branch to branch.',
+  'visitor.ecureuil.line3': 'It looks at you, its tail held high.',
+  'visitor.ecureuil.hint': 'Comes in autumn and winter, if it finds a tree.',
+  'visitor.cigogne.name': 'The stork',
+  'visitor.cigogne.line1': 'It has built its nest on a roof.',
+  'visitor.cigogne.line2': 'It clatters its beak to greet you.',
+  'visitor.cigogne.line3': 'It rests after a long journey.',
+  'visitor.cigogne.hint': 'Comes in spring and summer, onto a roof.',
+  'visitor.canards.name': 'The ducks',
+  'visitor.canards.line1': 'They paddle on the pond.',
+  'visitor.canards.line2': 'They swim in a line, very serious.',
+  'visitor.canards.line3': 'They dip their heads, tails in the air.',
+  'visitor.canards.hint': 'Come except in winter, if there is a pond.',
+  'visitor.renard.name': 'The fox',
+  'visitor.renard.line1': 'It slips along the edge of town.',
+  'visitor.renard.line2': 'It peeks around, curious, then sits down.',
+  'visitor.renard.line3': 'Its red tail shows from afar.',
+  'visitor.renard.hint': 'Comes in autumn and winter, to the edge of town.',
+  'visitor.chouette.name': 'The owl',
+  'visitor.chouette.line1': 'It keeps watch from a tree.',
+  'visitor.chouette.line2': 'It turns its head, then gives you a wink.',
+  'visitor.chouette.line3': 'It hoots softly.',
+  'visitor.chouette.hint': 'Comes in autumn and winter, if there is a tree.',
+  'visitor.montgolfiere.name': 'The hot-air balloon',
+  'visitor.montgolfiere.line1': 'It floats above your town.',
+  'visitor.montgolfiere.line2': 'From up there, your town looks wonderful.',
+  'visitor.montgolfiere.line3': 'It takes its time, carried by the wind.',
+  'visitor.montgolfiere.hint': 'Passes by in fair weather, except in winter.',
+  'visitor.bonhomme.name': 'The snowman',
+  'visitor.bonhomme.line1': 'Someone made it with care.',
+  'visitor.bonhomme.line2': 'It wears its hat proudly.',
+  'visitor.bonhomme.line3': 'It smiles, all white.',
+  'visitor.bonhomme.hint': 'Appears in winter, after a snowfall.',
+  'visitor.glaces.name': 'The ice-cream cart',
+  'visitor.glaces.line1': 'Strawberry or vanilla?',
+  'visitor.glaces.line2': 'It rings its little bell.',
+  'visitor.glaces.line3': 'Perfect for a summer day.',
+  'visitor.glaces.hint': 'Comes in summer, when it is not raining.',
+  'visitor.accordeon.name': 'The accordionist',
+  'visitor.accordeon.line1': 'A cheerful tune rises from the accordion.',
+  'visitor.accordeon.line2': 'The notes make passers-by smile.',
+  'visitor.accordeon.line3': 'A little waltz, just for your town.',
+  'visitor.accordeon.hint': "Comes when it isn't raining, near the bandstand.",
+  'visitor.artiste.name': 'The painter',
+  'visitor.artiste.line1': 'The easel faces your town.',
+  'visitor.artiste.line2': 'One brushstroke, then another.',
+  'visitor.artiste.line3': 'Your town is becoming a painting.',
+  'visitor.artiste.hint': 'Comes from spring to autumn, in fair weather.',
+  'visit.count': { one: 'Met {n} time', other: 'Met {n} times' },
+  'visit.gift': 'Receive {coins}',
+  'visit.giftDone': 'Gift received today.',
+  'visit.thanks': 'Thank you! {coins} for your town.',
+  'visit.new': 'New visitor: {name}!',
+  'city.listVisitor': 'Visitor of the day: {name}',
 };
 
 
@@ -4920,6 +5054,155 @@ function drawDoer(g, x, y, cat, t) {
   }
 }
 
+/* Visiteurs. (sx, sy) est le point sous le visiteur : sol, banc, branche, toit ou eau ; s est la largeur de case.
+   look = { season } ; la nuit vient du peintre (le chat dort, la montgolfière allume son brûleur…). */
+const ellipseFill = (g, x, y, rx, ry, fill, rot = 0) => { g.ctx.beginPath(); g.ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); g.ctx.fillStyle = fill; g.ctx.fill(); };
+const line = (g, pts, stroke, width) => {
+  const ctx = g.ctx;
+  ctx.beginPath(); ctx.moveTo(...pts[0]); for (const p of pts.slice(1)) ctx.lineTo(...p);
+  ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, width); ctx.stroke();
+};
+const VISITOR_DRAW = {
+  chat(g, sx, sy, look, t) {
+    const s = g.tw, fur = g.c('#e0a15a'), dark = g.c('#a8692f');
+    if (g.night) {
+      // La nuit, le chat dort roulé en boule.
+      ellipseFill(g, sx, sy - s * .04, s * .1, s * .055, fur);
+      g.circle(sx + s * .07, sy - s * .07, s * .04, fur);
+      line(g, [[sx - s * .09, sy - s * .03], [sx - s * .02, sy + s * .01], [sx + s * .05, sy - s * .01]], dark, s * .02);
+      return;
+    }
+    const wag = g.anim ? Math.sin(t * 2) * s * .025 : 0;
+    line(g, [[sx + s * .04, sy - s * .03], [sx + s * .1, sy - s * .06], [sx + s * .11, sy - s * .12 + wag]], dark, s * .02);
+    ellipseFill(g, sx, sy - s * .07, s * .055, s * .075, fur);
+    g.circle(sx, sy - s * .17, s * .048, fur);
+    for (const k of [-1, 1]) g.poly([[sx + k * s * .045, sy - s * .19], [sx + k * s * .035, sy - s * .25], [sx + k * s * .01, sy - s * .21]], fur);
+    for (const k of [-1, 1]) g.circle(sx + k * s * .018, sy - s * .175, s * .007, g.c('#2c2c2c'));
+  },
+  herisson(g, sx, sy, look, t) {
+    const s = g.tw, step = g.anim ? Math.sin(t * 3) * s * .015 : 0, x = sx + step, body = g.c('#7d5e3f');
+    for (let i = 0; i <= 8; i++) {
+      const a = Math.PI + Math.PI * i / 8, cx = x + Math.cos(a) * s * .09, cy = sy - s * .02 + Math.sin(a) * s * .06;
+      g.poly([[cx - s * .015, cy + s * .01], [x + Math.cos(a) * s * .13, sy - s * .02 + Math.sin(a) * s * .09], [cx + s * .015, cy + s * .01]], g.c('#4f3a26'));
+    }
+    g.ctx.beginPath(); g.ctx.ellipse(x, sy - s * .02, s * .1, s * .065, 0, Math.PI, Math.PI * 2); g.ctx.closePath(); g.ctx.fillStyle = body; g.ctx.fill();
+    g.poly([[x + s * .08, sy - s * .05], [x + s * .15, sy - s * .015], [x + s * .08, sy - s * .005]], g.c('#c9a27a'));
+    g.circle(x + s * .15, sy - s * .015, s * .012, g.c('#2c2c2c'));
+  },
+  ecureuil(g, sx, sy, look, t) {
+    const s = g.tw, fur = g.c('#c4572f'), flick = g.anim ? Math.sin(t * 3) * s * .01 : 0;
+    g.circle(sx - s * .06, sy - s * .1 + flick, s * .055, fur);
+    g.circle(sx - s * .07, sy - s * .16 + flick, s * .04, fur);
+    ellipseFill(g, sx, sy - s * .06, s * .035, s * .05, fur);
+    g.circle(sx + s * .02, sy - s * .12, s * .028, fur);
+    g.poly([[sx + s * .015, sy - s * .14], [sx + s * .025, sy - s * .175], [sx + s * .035, sy - s * .145]], fur);
+    g.circle(sx + s * .03, sy - s * .125, s * .006, g.c('#2c2c2c'));
+    g.circle(sx + s * .035, sy - s * .07, s * .015, g.c('#8a5f3c'));
+  },
+  cigogne(g, sx, sy, look, t) {
+    const s = g.tw, nod = g.anim ? Math.sin(t * 1.5) * s * .008 : 0;
+    ellipseFill(g, sx, sy, s * .1, s * .035, g.c('#8a6a4a'));
+    line(g, [[sx - s * .015, sy - s * .08], [sx - s * .015, sy - s * .01]], g.c('#d9573b'), s * .01);
+    line(g, [[sx + s * .015, sy - s * .08], [sx + s * .015, sy - s * .01]], g.c('#d9573b'), s * .01);
+    ellipseFill(g, sx, sy - s * .12, s * .065, s * .045, g.c('#f6f6f2'));
+    ellipseFill(g, sx - s * .035, sy - s * .11, s * .04, s * .025, g.c('#2c2c2c'));
+    line(g, [[sx + s * .04, sy - s * .14], [sx + s * .05, sy - s * .23 + nod]], g.c('#f6f6f2'), s * .02);
+    g.circle(sx + s * .05, sy - s * .24 + nod, s * .022, g.c('#f6f6f2'));
+    line(g, [[sx + s * .065, sy - s * .24 + nod], [sx + s * .12, sy - s * .22 + nod]], g.c('#d9573b'), s * .012);
+  },
+  canards(g, sx, sy, look, t) {
+    const s = g.tw;
+    for (const [dx, dy, white] of [[-.12, .02, true], [0, -.02, false], [.12, .03, true]]) {
+      const x = sx + dx * s + (g.anim ? Math.sin(t * .6 + dx * 10) * s * .02 : 0), y = sy + dy * s + (g.anim ? Math.sin(t * 2 + dx * 7) * s * .005 : 0);
+      ellipseFill(g, x, y - s * .025, s * .045, s * .025, g.c(white ? '#f4f1e8' : '#8a6a4a'));
+      g.circle(x + s * .035, y - s * .06, s * .018, g.c(white ? '#f4f1e8' : '#3f7f4a'));
+      g.poly([[x + s * .05, y - s * .065], [x + s * .075, y - s * .058], [x + s * .05, y - s * .052]], g.c('#f2c14e'));
+    }
+  },
+  renard(g, sx, sy, look, t) {
+    const s = g.tw, fur = g.c('#d9822b'), white = g.c('#f6f1e7'), sway = g.anim ? Math.sin(t * 1.2) * .25 : 0;
+    ellipseFill(g, sx - s * .085, sy - s * .03, s * .075, s * .03, fur, .35 + sway);
+    g.circle(sx - s * .15, sy - s * .045, s * .022, white);
+    ellipseFill(g, sx, sy - s * .08, s * .05, s * .08, fur);
+    ellipseFill(g, sx + s * .015, sy - s * .08, s * .025, s * .05, white);
+    g.circle(sx + s * .01, sy - s * .18, s * .045, fur);
+    for (const k of [-1, 1]) g.poly([[sx + s * .01 + k * s * .04, sy - s * .2], [sx + s * .01 + k * s * .035, sy - s * .26], [sx + s * .01 + k * s * .01, sy - s * .22]], fur);
+    g.poly([[sx + s * .03, sy - s * .19], [sx + s * .08, sy - s * .17], [sx + s * .03, sy - s * .15]], white);
+    g.circle(sx + s * .08, sy - s * .17, s * .008, g.c('#2c2c2c'));
+    g.circle(sx + s * .02, sy - s * .19, s * .007, g.c('#2c2c2c'));
+  },
+  chouette(g, sx, sy, look, t) {
+    const s = g.tw, blink = g.anim && Math.floor(t / .4) % 12 === 0;
+    ellipseFill(g, sx, sy - s * .08, s * .05, s * .075, g.c('#8a6a4a'));
+    ellipseFill(g, sx, sy - s * .06, s * .032, s * .05, g.c('#c9a27a'));
+    for (const k of [-1, 1]) g.poly([[sx + k * s * .045, sy - s * .14], [sx + k * s * .05, sy - s * .18], [sx + k * s * .025, sy - s * .15]], g.c('#6b4f35'));
+    for (const k of [-1, 1]) {
+      const ex = sx + k * s * .022, ey = sy - s * .125;
+      if (g.night) g.glow(ex, ey, s * .04, .35);
+      g.circle(ex, ey, s * .02, g.night ? '#ffe9a0' : '#f6f1e7');
+      if (blink) line(g, [[ex - s * .015, ey], [ex + s * .015, ey]], g.c('#2c2c2c'), s * .008);
+      else g.circle(ex, ey, s * .009, g.c('#2c2c2c'));
+    }
+    g.poly([[sx - s * .008, sy - s * .11], [sx + s * .008, sy - s * .11], [sx, sy - s * .095]], g.c('#e2b33c'));
+  },
+  montgolfiere(g, sx, sy, look, t) {
+    const s = g.tw, y = sy + (g.anim ? Math.sin(t * .8) * s * .02 : 0), cols = ['#d9573b', '#f2c14e', '#3f78c4'];
+    line(g, [[sx - s * .12, y - s * .24], [sx - s * .045, y - s * .07]], g.c('#6b5a44'), s * .006);
+    line(g, [[sx + s * .12, y - s * .24], [sx + s * .045, y - s * .07]], g.c('#6b5a44'), s * .006);
+    ellipseFill(g, sx, y - s * .38, s * .19, s * .23, g.c(cols[0]));
+    ellipseFill(g, sx, y - s * .38, s * .12, s * .23, g.c(cols[1]));
+    ellipseFill(g, sx, y - s * .38, s * .05, s * .23, g.c(cols[2]));
+    if (g.night) g.glow(sx, y - s * .12, s * .12, .6);
+    g.poly([[sx - s * .045, y - s * .07], [sx + s * .045, y - s * .07], [sx + s * .04, y], [sx - s * .04, y]], g.c('#a3714a'));
+  },
+  bonhomme(g, sx, sy, look, t) {
+    const s = g.tw, snow = g.c('#f7f9fb', .3);
+    g.circle(sx, sy - s * .065, s * .07, snow);
+    g.circle(sx, sy - s * .17, s * .05, snow);
+    g.circle(sx, sy - s * .25, s * .036, snow);
+    line(g, [[sx - s * .045, sy - s * .17], [sx - s * .12, sy - s * .22]], g.c('#6b4f35'), s * .012);
+    line(g, [[sx + s * .045, sy - s * .17], [sx + s * .12, sy - s * .21]], g.c('#6b4f35'), s * .012);
+    g.poly([[sx - s * .035, sy - s * .28], [sx + s * .035, sy - s * .28], [sx + s * .028, sy - s * .34], [sx - s * .028, sy - s * .34]], g.c('#2c2c2c'));
+    line(g, [[sx - s * .05, sy - s * .28], [sx + s * .05, sy - s * .28]], g.c('#2c2c2c'), s * .012);
+    g.poly([[sx, sy - s * .255], [sx + s * .06, sy - s * .245], [sx, sy - s * .238]], g.c('#e07a2f'));
+    for (const k of [-1, 1]) g.circle(sx + k * s * .014, sy - s * .262, s * .006, g.c('#2c2c2c'));
+    for (const dy of [.15, .19]) g.circle(sx, sy - s * dy, s * .006, g.c('#2c2c2c'));
+  },
+  glaces(g, sx, sy, look, t) {
+    const s = g.tw, pink = g.c('#e87ba4'), cream = g.c('#fbf6ec');
+    g.poly([[sx - s * .1, sy - s * .03], [sx + s * .1, sy - s * .03], [sx + s * .1, sy - s * .13], [sx - s * .1, sy - s * .13]], cream);
+    g.poly([[sx - s * .1, sy - s * .08], [sx + s * .1, sy - s * .08], [sx + s * .1, sy - s * .1], [sx - s * .1, sy - s * .1]], pink);
+    for (const k of [-1, 1]) g.circle(sx + k * s * .07, sy - s * .025, s * .025, g.c('#3b3b3b'));
+    line(g, [[sx + s * .07, sy - s * .13], [sx + s * .07, sy - s * .3]], g.c('#8a8f96'), s * .01);
+    for (let i = 0; i < 4; i++) {
+      const a0 = Math.PI + Math.PI * i / 4, a1 = Math.PI + Math.PI * (i + 1) / 4, cx = sx + s * .07, cy = sy - s * .3, r = s * .13;
+      g.poly([[cx, cy], [cx + Math.cos(a0) * r, cy + Math.sin(a0) * r * .55], [cx + Math.cos(a1) * r, cy + Math.sin(a1) * r * .55]], i % 2 ? cream : pink);
+    }
+    g.poly([[sx - s * .05, sy - s * .13], [sx - s * .02, sy - s * .13], [sx - s * .035, sy - s * .09]], g.c('#d9a45a'));
+    g.circle(sx - s * .035, sy - s * .145, s * .022, pink);
+  },
+  accordeon(g, sx, sy, look, t) {
+    const s = g.tw, [cx, cy] = drawPerson(g, sx - s * .03, sy, g.c('#3f78c4'));
+    const squeeze = g.anim ? (1 + Math.sin(t * 4)) * s * .01 : s * .01;
+    g.poly([[cx - s * .05 - squeeze, cy + s * .01], [cx + s * .05 + squeeze, cy + s * .01], [cx + s * .05 + squeeze, cy + s * .07], [cx - s * .05 - squeeze, cy + s * .07]], g.c('#c4572f'));
+    for (const k of [-.02, 0, .02]) line(g, [[cx + k * s, cy + s * .015], [cx + k * s, cy + s * .065]], g.c('#f6f1e7'), s * .005);
+    for (let i = 0; i < 2; i++) {
+      const k = g.anim ? (t * .4 + i / 2) % 1 : .3 + i * .35, nx = sx + s * (.08 + .08 * k), ny = sy - s * (.18 + .14 * k);
+      g.circle(nx, ny, s * .014, g.c('#2c2c2c'));
+      line(g, [[nx + s * .012, ny], [nx + s * .012, ny - s * .045]], g.c('#2c2c2c'), s * .006);
+    }
+  },
+  artiste(g, sx, sy, look, t) {
+    const s = g.tw;
+    const [hx, hy] = drawPerson(g, sx - s * .08, sy, g.c('#7a5aa8'));
+    ellipseFill(g, hx + s * .005, hy - s * .062, s * .03, s * .012, g.c('#2c2c2c'));
+    line(g, [[sx + s * .02, sy], [sx + s * .07, sy - s * .24], [sx + s * .12, sy]], g.c('#8a6a4a'), s * .01);
+    g.poly([[sx + s * .015, sy - s * .27], [sx + s * .125, sy - s * .27], [sx + s * .125, sy - s * .13], [sx + s * .015, sy - s * .13]], g.c('#fbf8ef'));
+    const dab = g.anim ? Math.floor(t) % 3 : 0;
+    ['#3f78c4', '#3a9a7a', '#e2b33c'].forEach((col, i) => g.circle(sx + s * (.04 + .03 * i), sy - s * (.22 - .03 * ((i + dab) % 3)), s * .014, g.c(col)));
+  },
+};
+
 
 /* ---- 35-city.js ---- */
 /* =========================================================================
@@ -4987,7 +5270,23 @@ const City = (() => {
   // Promeneurs : chacun suit, aller et retour, un petit chemin de 12 pas sur les cases où l'on marche, tiré une fois
   // pour toutes de son indice ; un pas toutes les 4 s (2,5 s de marche, puis une pause).
   const WALK_STEPS = 12, STEP_S = 4, MOVE_S = 2.5, WALKER_COLORS = ['#d9573b', '#3f78c4', '#e3a12f', '#3a9a7a', '#d0628f', '#7a8b6e'];
-  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] };
+  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] }, visitorBox = null;
+  // Point sous le visiteur : sol, assise du banc, branche, toit, eau, ou ciel (qui dérive doucement).
+  function visitorAnchor(g, spot, t) {
+    if (spot.sky) return [W * .26 + Math.sin(t * .05) * W * .04, H * .36];
+    if (!spot.on) return g.P(spot.x + .5, spot.y + .5);
+    const hf = (ITEMS[spot.on] || { hf: .3 }).hf;
+    const z = spot.on === 'banc' ? .12 : spot.on === 'etang' ? .02 : ['arbre', 'cerisier', 'grandarbre'].includes(spot.on) ? hf * .72 : hf * .85;
+    return g.P(spot.x + .5, spot.y + .5, g.tw * z);
+  }
+  // Le visiteur, sa zone touchable et, tant qu'on ne l'a pas salué aujourd'hui, une étoile qui scintille au-dessus.
+  function drawVisitor(g, amb, t) {
+    const v = amb.visitor, [sx, sy] = visitorAnchor(g, v.spot, t), sky = !!v.spot.sky, tw = g.tw;
+    VISITOR_DRAW[v.id](g, sx, sy, { season: amb.season }, t);
+    visitorBox = sky ? { x: sx - tw * .3, y: sy - tw * .68, w: tw * .6, h: tw * .72 } : { x: sx - tw * .3, y: sy - tw * .5, w: tw * .6, h: tw * .6 };
+    const met = S.visits && S.visits[v.id] && S.visits[v.id].last === amb.day;
+    if (!met) star(g, sx + tw * .12, sy - tw * (sky ? .7 : .38), tw * .045 * (.7 + .3 * Math.sin(t * 3)));
+  }
   function walkPaths(cells) {
     const key = cells.map(c => c.x + ',' + c.y).join(';');
     if (walkCache.key === key) return walkCache.paths;
@@ -5170,11 +5469,16 @@ const City = (() => {
       for (const d of cells.length ? doerCells(cells) : []) people.push({ doer: d.cat, cell: d.cell, pos: { x: d.cell.x + .5, y: d.cell.y + .5 } });
       lastPeople = { walkers: n, doers: people.filter(p => p.doer).map(p => p.doer) };
       for (const p of people) list.push({ t: { id: '__person', x: Math.floor(p.pos.x) + .25, y: Math.floor(p.pos.y) + .25 }, person: p });
+      // Visiteur sur une case : juste après l'élément qu'il occupe, sinon au milieu de sa case.
+      const sp = amb.visitor && amb.visitor.spot;
+      if (sp && !sp.sky) list.push({ t: { id: '__visitor', x: sp.x + (sp.on ? .05 : .3), y: sp.y + (sp.on ? .05 : .3) }, visitor: true });
     }
     list.sort((p, q) => (p.t.x + p.t.y) - (q.t.x + q.t.y) || p.t.x - q.t.x);
     const now = performance.now();
     let animating = false;
-    for (const { t, ghost, person } of list) {
+    visitorBox = null;
+    for (const { t, ghost, person, visitor } of list) {
+      if (visitor) { drawVisitor(g, amb, g.anim ? pal.time : 0); continue; }
       if (person) {
         if (person.doer) drawDoer(g, person.cell.x, person.cell.y, person.doer, g.anim ? pal.time : 0);
         else {
@@ -5199,6 +5503,8 @@ const City = (() => {
       ctx.restore();
       if (fx && k < 1) overlay('front');
     }
+    // Visiteur dans le ciel (la montgolfière), par-dessus la ville.
+    if (amb && amb.visitor && amb.visitor.spot.sky) drawVisitor(g, amb, g.anim ? pal.time : 0);
     // Couche de vie : fumée des cheminées (automne, hiver, matin de la boulangerie), faisceau du phare inauguré la nuit.
     if (amb) {
       const t = g.anim ? pal.time : 0, smoky = amb.season === 'autumn' || amb.season === 'winter';
@@ -5294,6 +5600,26 @@ const City = (() => {
     ground();
     c.globalCompositeOperation = 'source-over';
   }
+  // Vignette d'un visiteur, posé sur sa case (la montgolfière au-dessus) ; en silhouette pour un visiteur pas encore rencontré.
+  function visitorThumb(cv, id, size = 64, opts = {}) {
+    const d = Math.min(3, window.devicePixelRatio || 1);
+    cv.width = size * d; cv.height = size * d;
+    const c = cv.getContext('2d');
+    c.setTransform(d, 0, 0, d, 0, 0);
+    c.clearRect(0, 0, size, size);
+    // Le sol sur une petite case, le visiteur dessiné plus grand pour qu'on le voie bien.
+    const pal = readPalette(), sky = id === 'montgolfiere', floor = makePainter(c, size * .8, size / 2, size * .5, pal);
+    const g = makePainter(c, size * (sky ? 1.25 : 1.7), size / 2, size * .5, pal), ground = () => floor.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
+    const [sx, sy] = sky ? [size / 2, size * .97] : floor.P(.5, .5);
+    if (!opts.silhouette) { ground(); VISITOR_DRAW[id](g, sx, sy, { season: 'summer' }, 0); return; }
+    VISITOR_DRAW[id](g, sx, sy, { season: 'summer' }, 0);
+    c.globalCompositeOperation = 'source-in';
+    c.fillStyle = pal.night ? 'rgba(255,255,255,.3)' : 'rgba(40,60,50,.38)';
+    c.fillRect(0, 0, size, size);
+    c.globalCompositeOperation = 'destination-over';
+    ground();
+    c.globalCompositeOperation = 'source-over';
+  }
   // Aucun effet quand le système demande de réduire les animations.
   function effect(id, kind) { if (reducedMotion()) return; effects.set(id, { kind, start: performance.now() }); draw(); }
   function sparkle(ids) { if (reducedMotion() || !ids.length) return; sparkles.push({ ids, start: performance.now() }); draw(); }
@@ -5321,6 +5647,8 @@ const City = (() => {
   canvas.addEventListener('click', e => {
     const [px, py] = point(e);
     if (Mode.state) { Mode.pickTile(tileAt(px, py)); return; }
+    const vb = visitorBox;
+    if (vb && px >= vb.x && px <= vb.x + vb.w && py >= vb.y && py <= vb.y + vb.h) { openVisitor(); return; }
     const b = pickBuilding(px, py);
     if (b) openBuildingSheet(b);
   });
@@ -5353,7 +5681,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, focus: () => { keyboard = true; canvas.focus(); draw(); } };
+  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb, focus: () => { keyboard = true; canvas.focus(); draw(); } };
 })();
 
 /* Placement / déplacement de bâtiments */
@@ -5634,8 +5962,11 @@ function renderVille() {
   }
   card.append(icon('sparkle'), box);
   box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, t('goal.choose')));
-  const list = $('#cityList');
-  list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
+  const list = $('#cityList'), amb = typeof ambientAt === 'function' ? ambientAt() : null;
+  // En tête, le visiteur du jour : sa fiche s'ouvre aussi d'ici (clavier, lecteur d'écran).
+  const visitorRow = amb && amb.visitor ? [h('li', {}, h('button', { type: 'button', onclick: () => openVisitor() },
+    t('city.listVisitor', { name: lowerFirst(t('visitor.' + amb.visitor.id + '.name')) })))] : [];
+  list.replaceChildren(...visitorRow, ...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
     const params = { item: itemName(tile.item), x: tile.x + 1, y: tile.y + 1, level: buildingLevel(tile.item) };
     const label = isWonder(tile.item) ? t('city.listItemStage', { ...params, stage: tile.stage || 1 }) : params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params);
     return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, label));
@@ -7984,6 +8315,53 @@ function catchUpCarnet() {
   const text = t('carnet.catchUp', { n: achievements.length }) + (sets.length ? ' ' + t('carnet.catchUpSets', { n: sets.length }) : '');
   toast(text, { label: t('carnet.open'), run: () => openCarnet() });
   return { achievements, sets };
+}
+
+
+/* ---- 53-visits.js ---- */
+/* =========================================================================
+   Visites : le visiteur du jour, sa fiche et son cadeau.
+   ========================================================================= */
+// Un nom au milieu d'une phrase : « Le hérisson » devient « le hérisson ».
+function lowerFirst(text) { return text ? text.charAt(0).toLocaleLowerCase(locale()) + text.slice(1) : text; }
+// Rencontre du jour : une seule par jour ; la première se remarque.
+function meetVisitor(id, day) {
+  const v = S.visits[id];
+  if (v && v.last === day) return { first: false };
+  S.visits[id] = v ? { first: v.first, count: v.count + 1, last: day } : { first: nowTs(), count: 1, last: day };
+  return { first: !v };
+}
+// Cadeau du visiteur : une fois par jour, et seulement pour aujourd'hui (l'horloge reculée n'en donne pas d'autre).
+function claimVisitGift(day) {
+  const key = 'visit:' + day;
+  if (day !== today() || S.gifts[key]) return false;
+  S.gifts[key] = nowTs();
+  S.coins = clamp(S.coins + GIFTS.visit, 0, COINS_MAX);
+  return true;
+}
+// Fiche du visiteur du jour : la rencontre, une phrase du jour, le nombre de rencontres et le cadeau.
+function openVisitor() {
+  const amb = ambientAt(), v = amb.visitor;
+  if (!v) return;
+  const { first } = meetVisitor(v.id, amb.day), name = t('visitor.' + v.id + '.name');
+  commit({ silent: true });
+  openSheet(name, body => {
+    const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
+    City.visitorThumb(cv, v.id, 96);
+    const line = t('visitor.' + v.id + '.line' + (1 + Math.floor(chance(amb.day + ':line') * 3)));
+    const gift = S.gifts['visit:' + amb.day]
+      ? h('p', { class: 'note' }, t('visit.giftDone'))
+      : h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => {
+        if (!claimVisitGift(amb.day)) return;
+        closeSheet(); commit(); bump();
+        toast(t('visit.thanks', { coins: fmt(GIFTS.visit) }));
+      } }, icon('sparkle'), t('visit.gift', { coins: fmt(GIFTS.visit) }));
+    body.append(h('div', { class: 'bsheet' }, cv, h('div', { class: 'bsheet-text' }, h('p', {}, line), h('span', { class: 'note' }, t('visit.count', { n: S.visits[v.id].count })))), gift);
+  });
+  if (first) {
+    const lead = t('visit.new', { name: lowerFirst(name) });
+    if (typeof celebrate === 'function') celebrate(noticeProgress(), lead); else toast(lead);
+  }
 }
 
 

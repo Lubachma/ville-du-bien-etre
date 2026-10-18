@@ -186,8 +186,11 @@ function renderVille() {
   }
   card.append(icon('sparkle'), box);
   box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, t('goal.choose')));
-  const list = $('#cityList');
-  list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
+  const list = $('#cityList'), amb = typeof ambientAt === 'function' ? ambientAt() : null;
+  // En tête, le visiteur du jour : sa fiche s'ouvre aussi d'ici (clavier, lecteur d'écran).
+  const visitorRow = amb && amb.visitor ? [h('li', {}, h('button', { type: 'button', onclick: () => openVisitor() },
+    t('city.listVisitor', { name: lowerFirst(t('visitor.' + amb.visitor.id + '.name')) })))] : [];
+  list.replaceChildren(...visitorRow, ...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
     const params = { item: itemName(tile.item), x: tile.x + 1, y: tile.y + 1, level: buildingLevel(tile.item) };
     const label = isWonder(tile.item) ? t('city.listItemStage', { ...params, stage: tile.stage || 1 }) : params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params);
     return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, label));

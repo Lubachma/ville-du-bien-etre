@@ -7,7 +7,7 @@ const PAINT = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10
   '30-paint.js', '31-paint-buildings.js', '32-paint-decor.js', '33-paint-wonders.js', '34-paint-life.js'];
 const PALETTE = { night: false, esprit: '#3f78c4', corps: '#d9573b', calme: '#3a9a7a', foyer: '#e3a12f', crea: '#d0628f', prestige: '#b8862b', decor: '#7a8b6e', accent: '#2e6f4e', danger: '#b4452e' };
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['makePainter', 'drawSmoke', 'drawBeam', 'drawWeather', 'drawSeasonLife', 'drawWalker', 'drawDoer'];
+const EXPOSE = ['makePainter', 'drawSmoke', 'drawBeam', 'drawWeather', 'drawSeasonLife', 'drawWalker', 'drawDoer', 'VISITOR_DRAW', 'VISITORS'];
 const app = () => loadApp(PAINT, { expose: EXPOSE });
 // Une case de 100 px dont le sommet est en (200, 200) : centre en (200, 225), bas en 250.
 function draw(a, fn, look = {}) {
@@ -57,6 +57,17 @@ test('habitants : chacun dessiné près de son point, promeneurs et habitants qu
   for (const look of [{}, { lantern: true }, { umbrella: true }, { hat: true }]) near(draw(a, g => a.drawWalker(g, 200, 220, { color: '#d9573b', ...look })), 200, 220, 'promeneur ' + JSON.stringify(look));
   const [cx, cy] = [200, 225];
   for (const cat of ['esprit', 'corps', 'calme', 'foyer', 'crea']) for (const t of [0, 2]) near(draw(a, g => a.drawDoer(g, 0, 0, cat, t)), cx, cy, `${cat} à ${t} s`);
+});
+
+test('visiteurs : chacun dessiné sur sa case, de jour comme de nuit ; la montgolfière dans le ciel', () => {
+  const a = app();
+  assert.deepEqual(Object.keys(a.VISITOR_DRAW).sort(), [...a.VISITORS.map(v => v.id)].sort());
+  for (const v of a.VISITORS) for (const dark of [0, 1]) for (const t of [0, 3]) {
+    const points = draw(a, g => a.VISITOR_DRAW[v.id](g, 200, 225, { season: 'summer' }, t), { dark });
+    assert.ok(points.length > 0, v.id + ' ne dessine rien');
+    const box = v.id === 'montgolfiere' ? [100, 300, 0, 300] : [140, 260, 115, 255];
+    for (const [x, y] of points) assert.ok(x >= box[0] && x <= box[1] && y >= box[2] && y <= box[3], `${v.id} déborde : ${x.toFixed(1)}, ${y.toFixed(1)}`);
+  }
 });
 
 module.exports = { app, draw, PALETTE };

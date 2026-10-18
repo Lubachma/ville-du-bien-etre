@@ -63,7 +63,23 @@ const City = (() => {
   // Promeneurs : chacun suit, aller et retour, un petit chemin de 12 pas sur les cases où l'on marche, tiré une fois
   // pour toutes de son indice ; un pas toutes les 4 s (2,5 s de marche, puis une pause).
   const WALK_STEPS = 12, STEP_S = 4, MOVE_S = 2.5, WALKER_COLORS = ['#d9573b', '#3f78c4', '#e3a12f', '#3a9a7a', '#d0628f', '#7a8b6e'];
-  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] };
+  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] }, visitorBox = null;
+  // Point sous le visiteur : sol, assise du banc, branche, toit, eau, ou ciel (qui dérive doucement).
+  function visitorAnchor(g, spot, t) {
+    if (spot.sky) return [W * .26 + Math.sin(t * .05) * W * .04, H * .36];
+    if (!spot.on) return g.P(spot.x + .5, spot.y + .5);
+    const hf = (ITEMS[spot.on] || { hf: .3 }).hf;
+    const z = spot.on === 'banc' ? .12 : spot.on === 'etang' ? .02 : ['arbre', 'cerisier', 'grandarbre'].includes(spot.on) ? hf * .72 : hf * .85;
+    return g.P(spot.x + .5, spot.y + .5, g.tw * z);
+  }
+  // Le visiteur, sa zone touchable et, tant qu'on ne l'a pas salué aujourd'hui, une étoile qui scintille au-dessus.
+  function drawVisitor(g, amb, t) {
+    const v = amb.visitor, [sx, sy] = visitorAnchor(g, v.spot, t), sky = !!v.spot.sky, tw = g.tw;
+    VISITOR_DRAW[v.id](g, sx, sy, { season: amb.season }, t);
+    visitorBox = sky ? { x: sx - tw * .3, y: sy - tw * .68, w: tw * .6, h: tw * .72 } : { x: sx - tw * .3, y: sy - tw * .5, w: tw * .6, h: tw * .6 };
+    const met = S.visits && S.visits[v.id] && S.visits[v.id].last === amb.day;
+    if (!met) star(g, sx + tw * .12, sy - tw * (sky ? .7 : .38), tw * .045 * (.7 + .3 * Math.sin(t * 3)));
+  }
   function walkPaths(cells) {
     const key = cells.map(c => c.x + ',' + c.y).join(';');
     if (walkCache.key === key) return walkCache.paths;
@@ -246,11 +262,16 @@ const City = (() => {
       for (const d of cells.length ? doerCells(cells) : []) people.push({ doer: d.cat, cell: d.cell, pos: { x: d.cell.x + .5, y: d.cell.y + .5 } });
       lastPeople = { walkers: n, doers: people.filter(p => p.doer).map(p => p.doer) };
       for (const p of people) list.push({ t: { id: '__person', x: Math.floor(p.pos.x) + .25, y: Math.floor(p.pos.y) + .25 }, person: p });
+      // Visiteur sur une case : juste après l'élément qu'il occupe, sinon au milieu de sa case.
+      const sp = amb.visitor && amb.visitor.spot;
+      if (sp && !sp.sky) list.push({ t: { id: '__visitor', x: sp.x + (sp.on ? .05 : .3), y: sp.y + (sp.on ? .05 : .3) }, visitor: true });
     }
     list.sort((p, q) => (p.t.x + p.t.y) - (q.t.x + q.t.y) || p.t.x - q.t.x);
     const now = performance.now();
     let animating = false;
-    for (const { t, ghost, person } of list) {
+    visitorBox = null;
+    for (const { t, ghost, person, visitor } of list) {
+      if (visitor) { drawVisitor(g, amb, g.anim ? pal.time : 0); continue; }
       if (person) {
         if (person.doer) drawDoer(g, person.cell.x, person.cell.y, person.doer, g.anim ? pal.time : 0);
         else {
@@ -275,6 +296,8 @@ const City = (() => {
       ctx.restore();
       if (fx && k < 1) overlay('front');
     }
+    // Visiteur dans le ciel (la montgolfière), par-dessus la ville.
+    if (amb && amb.visitor && amb.visitor.spot.sky) drawVisitor(g, amb, g.anim ? pal.time : 0);
     // Couche de vie : fumée des cheminées (automne, hiver, matin de la boulangerie), faisceau du phare inauguré la nuit.
     if (amb) {
       const t = g.anim ? pal.time : 0, smoky = amb.season === 'autumn' || amb.season === 'winter';
@@ -370,6 +393,26 @@ const City = (() => {
     ground();
     c.globalCompositeOperation = 'source-over';
   }
+  // Vignette d'un visiteur, posé sur sa case (la montgolfière au-dessus) ; en silhouette pour un visiteur pas encore rencontré.
+  function visitorThumb(cv, id, size = 64, opts = {}) {
+    const d = Math.min(3, window.devicePixelRatio || 1);
+    cv.width = size * d; cv.height = size * d;
+    const c = cv.getContext('2d');
+    c.setTransform(d, 0, 0, d, 0, 0);
+    c.clearRect(0, 0, size, size);
+    // Le sol sur une petite case, le visiteur dessiné plus grand pour qu'on le voie bien.
+    const pal = readPalette(), sky = id === 'montgolfiere', floor = makePainter(c, size * .8, size / 2, size * .5, pal);
+    const g = makePainter(c, size * (sky ? 1.25 : 1.7), size / 2, size * .5, pal), ground = () => floor.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
+    const [sx, sy] = sky ? [size / 2, size * .97] : floor.P(.5, .5);
+    if (!opts.silhouette) { ground(); VISITOR_DRAW[id](g, sx, sy, { season: 'summer' }, 0); return; }
+    VISITOR_DRAW[id](g, sx, sy, { season: 'summer' }, 0);
+    c.globalCompositeOperation = 'source-in';
+    c.fillStyle = pal.night ? 'rgba(255,255,255,.3)' : 'rgba(40,60,50,.38)';
+    c.fillRect(0, 0, size, size);
+    c.globalCompositeOperation = 'destination-over';
+    ground();
+    c.globalCompositeOperation = 'source-over';
+  }
   // Aucun effet quand le système demande de réduire les animations.
   function effect(id, kind) { if (reducedMotion()) return; effects.set(id, { kind, start: performance.now() }); draw(); }
   function sparkle(ids) { if (reducedMotion() || !ids.length) return; sparkles.push({ ids, start: performance.now() }); draw(); }
@@ -397,6 +440,8 @@ const City = (() => {
   canvas.addEventListener('click', e => {
     const [px, py] = point(e);
     if (Mode.state) { Mode.pickTile(tileAt(px, py)); return; }
+    const vb = visitorBox;
+    if (vb && px >= vb.x && px <= vb.x + vb.w && py >= vb.y && py <= vb.y + vb.h) { openVisitor(); return; }
     const b = pickBuilding(px, py);
     if (b) openBuildingSheet(b);
   });
@@ -429,7 +474,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, focus: () => { keyboard = true; canvas.focus(); draw(); } };
+  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb, focus: () => { keyboard = true; canvas.focus(); draw(); } };
 })();
 
 /* Placement / déplacement de bâtiments */

@@ -98,6 +98,33 @@ async function runAmbient(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Habitants');
   }
+  // Visiteur : on le touche, sa fiche s'ouvre, son cadeau se reçoit une fois ; la liste de la ville le cite.
+  {
+    const tiles = [{ id: 'b', item: 'banc', x: 2, y: 2, at: 1.79e12, paid: 2e6 }];
+    const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }, tiles), null);
+    try {
+      await page.evaluate(() => __ville.ambient.force({ visitor: { id: 'chat', spot: { x: 2, y: 2, on: 'banc' } } }));
+      const box = await page.evaluate(() => __ville.City.visitorBox());
+      assert.ok(box, 'le visiteur a une zone touchable');
+      const city = await page.locator('#city').boundingBox();
+      const coins = await page.evaluate(() => __ville.state.coins);
+      await page.mouse.click(city.x + box.x + box.w / 2, city.y + box.y + box.h / 2);
+      await page.locator('#sheet').waitFor();
+      assert.equal(await page.locator('#sheetTitle').innerText(), 'Le chat voyageur');
+      const gift = page.locator('#sheetBody').getByRole('button', { name: /^Recevoir\s2\sM/ });
+      await gift.click();
+      assert.equal(await page.evaluate(() => __ville.state.coins), coins + 2e6);
+      await page.mouse.click(city.x + box.x + box.w / 2, city.y + box.y + box.h / 2);
+      await page.locator('#sheet').waitFor();
+      assert.equal(await page.locator('#sheetBody').getByRole('button', { name: /^Recevoir/ }).count(), 0);
+      await page.locator('#sheetClose').click();
+      if (!(await page.locator('.city-list').evaluate(el => el.open))) await page.locator('.city-list summary').click();
+      assert.match(await page.locator('#cityList li').first().innerText(), /^Visiteur du jour\s:\sle chat voyageur/);
+      assert.equal(await page.evaluate(() => __ville.state.visits.chat.count), 1);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Visiteur');
+  }
   return { scenarios };
 }
 

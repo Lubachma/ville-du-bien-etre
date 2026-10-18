@@ -177,3 +177,152 @@ function drawDoer(g, x, y, cat, t) {
     g.circle(sx + s * .3, sy - s * .56, s * .07, g.c(t % 2 < 1 ? '#e87ba4' : '#2a78d6'));
   }
 }
+
+/* Visiteurs. (sx, sy) est le point sous le visiteur : sol, banc, branche, toit ou eau ; s est la largeur de case.
+   look = { season } ; la nuit vient du peintre (le chat dort, la montgolfière allume son brûleur…). */
+const ellipseFill = (g, x, y, rx, ry, fill, rot = 0) => { g.ctx.beginPath(); g.ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); g.ctx.fillStyle = fill; g.ctx.fill(); };
+const line = (g, pts, stroke, width) => {
+  const ctx = g.ctx;
+  ctx.beginPath(); ctx.moveTo(...pts[0]); for (const p of pts.slice(1)) ctx.lineTo(...p);
+  ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, width); ctx.stroke();
+};
+const VISITOR_DRAW = {
+  chat(g, sx, sy, look, t) {
+    const s = g.tw, fur = g.c('#e0a15a'), dark = g.c('#a8692f');
+    if (g.night) {
+      // La nuit, le chat dort roulé en boule.
+      ellipseFill(g, sx, sy - s * .04, s * .1, s * .055, fur);
+      g.circle(sx + s * .07, sy - s * .07, s * .04, fur);
+      line(g, [[sx - s * .09, sy - s * .03], [sx - s * .02, sy + s * .01], [sx + s * .05, sy - s * .01]], dark, s * .02);
+      return;
+    }
+    const wag = g.anim ? Math.sin(t * 2) * s * .025 : 0;
+    line(g, [[sx + s * .04, sy - s * .03], [sx + s * .1, sy - s * .06], [sx + s * .11, sy - s * .12 + wag]], dark, s * .02);
+    ellipseFill(g, sx, sy - s * .07, s * .055, s * .075, fur);
+    g.circle(sx, sy - s * .17, s * .048, fur);
+    for (const k of [-1, 1]) g.poly([[sx + k * s * .045, sy - s * .19], [sx + k * s * .035, sy - s * .25], [sx + k * s * .01, sy - s * .21]], fur);
+    for (const k of [-1, 1]) g.circle(sx + k * s * .018, sy - s * .175, s * .007, g.c('#2c2c2c'));
+  },
+  herisson(g, sx, sy, look, t) {
+    const s = g.tw, step = g.anim ? Math.sin(t * 3) * s * .015 : 0, x = sx + step, body = g.c('#7d5e3f');
+    for (let i = 0; i <= 8; i++) {
+      const a = Math.PI + Math.PI * i / 8, cx = x + Math.cos(a) * s * .09, cy = sy - s * .02 + Math.sin(a) * s * .06;
+      g.poly([[cx - s * .015, cy + s * .01], [x + Math.cos(a) * s * .13, sy - s * .02 + Math.sin(a) * s * .09], [cx + s * .015, cy + s * .01]], g.c('#4f3a26'));
+    }
+    g.ctx.beginPath(); g.ctx.ellipse(x, sy - s * .02, s * .1, s * .065, 0, Math.PI, Math.PI * 2); g.ctx.closePath(); g.ctx.fillStyle = body; g.ctx.fill();
+    g.poly([[x + s * .08, sy - s * .05], [x + s * .15, sy - s * .015], [x + s * .08, sy - s * .005]], g.c('#c9a27a'));
+    g.circle(x + s * .15, sy - s * .015, s * .012, g.c('#2c2c2c'));
+  },
+  ecureuil(g, sx, sy, look, t) {
+    const s = g.tw, fur = g.c('#c4572f'), flick = g.anim ? Math.sin(t * 3) * s * .01 : 0;
+    g.circle(sx - s * .06, sy - s * .1 + flick, s * .055, fur);
+    g.circle(sx - s * .07, sy - s * .16 + flick, s * .04, fur);
+    ellipseFill(g, sx, sy - s * .06, s * .035, s * .05, fur);
+    g.circle(sx + s * .02, sy - s * .12, s * .028, fur);
+    g.poly([[sx + s * .015, sy - s * .14], [sx + s * .025, sy - s * .175], [sx + s * .035, sy - s * .145]], fur);
+    g.circle(sx + s * .03, sy - s * .125, s * .006, g.c('#2c2c2c'));
+    g.circle(sx + s * .035, sy - s * .07, s * .015, g.c('#8a5f3c'));
+  },
+  cigogne(g, sx, sy, look, t) {
+    const s = g.tw, nod = g.anim ? Math.sin(t * 1.5) * s * .008 : 0;
+    ellipseFill(g, sx, sy, s * .1, s * .035, g.c('#8a6a4a'));
+    line(g, [[sx - s * .015, sy - s * .08], [sx - s * .015, sy - s * .01]], g.c('#d9573b'), s * .01);
+    line(g, [[sx + s * .015, sy - s * .08], [sx + s * .015, sy - s * .01]], g.c('#d9573b'), s * .01);
+    ellipseFill(g, sx, sy - s * .12, s * .065, s * .045, g.c('#f6f6f2'));
+    ellipseFill(g, sx - s * .035, sy - s * .11, s * .04, s * .025, g.c('#2c2c2c'));
+    line(g, [[sx + s * .04, sy - s * .14], [sx + s * .05, sy - s * .23 + nod]], g.c('#f6f6f2'), s * .02);
+    g.circle(sx + s * .05, sy - s * .24 + nod, s * .022, g.c('#f6f6f2'));
+    line(g, [[sx + s * .065, sy - s * .24 + nod], [sx + s * .12, sy - s * .22 + nod]], g.c('#d9573b'), s * .012);
+  },
+  canards(g, sx, sy, look, t) {
+    const s = g.tw;
+    for (const [dx, dy, white] of [[-.12, .02, true], [0, -.02, false], [.12, .03, true]]) {
+      const x = sx + dx * s + (g.anim ? Math.sin(t * .6 + dx * 10) * s * .02 : 0), y = sy + dy * s + (g.anim ? Math.sin(t * 2 + dx * 7) * s * .005 : 0);
+      ellipseFill(g, x, y - s * .025, s * .045, s * .025, g.c(white ? '#f4f1e8' : '#8a6a4a'));
+      g.circle(x + s * .035, y - s * .06, s * .018, g.c(white ? '#f4f1e8' : '#3f7f4a'));
+      g.poly([[x + s * .05, y - s * .065], [x + s * .075, y - s * .058], [x + s * .05, y - s * .052]], g.c('#f2c14e'));
+    }
+  },
+  renard(g, sx, sy, look, t) {
+    const s = g.tw, fur = g.c('#d9822b'), white = g.c('#f6f1e7'), sway = g.anim ? Math.sin(t * 1.2) * .25 : 0;
+    ellipseFill(g, sx - s * .085, sy - s * .03, s * .075, s * .03, fur, .35 + sway);
+    g.circle(sx - s * .15, sy - s * .045, s * .022, white);
+    ellipseFill(g, sx, sy - s * .08, s * .05, s * .08, fur);
+    ellipseFill(g, sx + s * .015, sy - s * .08, s * .025, s * .05, white);
+    g.circle(sx + s * .01, sy - s * .18, s * .045, fur);
+    for (const k of [-1, 1]) g.poly([[sx + s * .01 + k * s * .04, sy - s * .2], [sx + s * .01 + k * s * .035, sy - s * .26], [sx + s * .01 + k * s * .01, sy - s * .22]], fur);
+    g.poly([[sx + s * .03, sy - s * .19], [sx + s * .08, sy - s * .17], [sx + s * .03, sy - s * .15]], white);
+    g.circle(sx + s * .08, sy - s * .17, s * .008, g.c('#2c2c2c'));
+    g.circle(sx + s * .02, sy - s * .19, s * .007, g.c('#2c2c2c'));
+  },
+  chouette(g, sx, sy, look, t) {
+    const s = g.tw, blink = g.anim && Math.floor(t / .4) % 12 === 0;
+    ellipseFill(g, sx, sy - s * .08, s * .05, s * .075, g.c('#8a6a4a'));
+    ellipseFill(g, sx, sy - s * .06, s * .032, s * .05, g.c('#c9a27a'));
+    for (const k of [-1, 1]) g.poly([[sx + k * s * .045, sy - s * .14], [sx + k * s * .05, sy - s * .18], [sx + k * s * .025, sy - s * .15]], g.c('#6b4f35'));
+    for (const k of [-1, 1]) {
+      const ex = sx + k * s * .022, ey = sy - s * .125;
+      if (g.night) g.glow(ex, ey, s * .04, .35);
+      g.circle(ex, ey, s * .02, g.night ? '#ffe9a0' : '#f6f1e7');
+      if (blink) line(g, [[ex - s * .015, ey], [ex + s * .015, ey]], g.c('#2c2c2c'), s * .008);
+      else g.circle(ex, ey, s * .009, g.c('#2c2c2c'));
+    }
+    g.poly([[sx - s * .008, sy - s * .11], [sx + s * .008, sy - s * .11], [sx, sy - s * .095]], g.c('#e2b33c'));
+  },
+  montgolfiere(g, sx, sy, look, t) {
+    const s = g.tw, y = sy + (g.anim ? Math.sin(t * .8) * s * .02 : 0), cols = ['#d9573b', '#f2c14e', '#3f78c4'];
+    line(g, [[sx - s * .12, y - s * .24], [sx - s * .045, y - s * .07]], g.c('#6b5a44'), s * .006);
+    line(g, [[sx + s * .12, y - s * .24], [sx + s * .045, y - s * .07]], g.c('#6b5a44'), s * .006);
+    ellipseFill(g, sx, y - s * .38, s * .19, s * .23, g.c(cols[0]));
+    ellipseFill(g, sx, y - s * .38, s * .12, s * .23, g.c(cols[1]));
+    ellipseFill(g, sx, y - s * .38, s * .05, s * .23, g.c(cols[2]));
+    if (g.night) g.glow(sx, y - s * .12, s * .12, .6);
+    g.poly([[sx - s * .045, y - s * .07], [sx + s * .045, y - s * .07], [sx + s * .04, y], [sx - s * .04, y]], g.c('#a3714a'));
+  },
+  bonhomme(g, sx, sy, look, t) {
+    const s = g.tw, snow = g.c('#f7f9fb', .3);
+    g.circle(sx, sy - s * .065, s * .07, snow);
+    g.circle(sx, sy - s * .17, s * .05, snow);
+    g.circle(sx, sy - s * .25, s * .036, snow);
+    line(g, [[sx - s * .045, sy - s * .17], [sx - s * .12, sy - s * .22]], g.c('#6b4f35'), s * .012);
+    line(g, [[sx + s * .045, sy - s * .17], [sx + s * .12, sy - s * .21]], g.c('#6b4f35'), s * .012);
+    g.poly([[sx - s * .035, sy - s * .28], [sx + s * .035, sy - s * .28], [sx + s * .028, sy - s * .34], [sx - s * .028, sy - s * .34]], g.c('#2c2c2c'));
+    line(g, [[sx - s * .05, sy - s * .28], [sx + s * .05, sy - s * .28]], g.c('#2c2c2c'), s * .012);
+    g.poly([[sx, sy - s * .255], [sx + s * .06, sy - s * .245], [sx, sy - s * .238]], g.c('#e07a2f'));
+    for (const k of [-1, 1]) g.circle(sx + k * s * .014, sy - s * .262, s * .006, g.c('#2c2c2c'));
+    for (const dy of [.15, .19]) g.circle(sx, sy - s * dy, s * .006, g.c('#2c2c2c'));
+  },
+  glaces(g, sx, sy, look, t) {
+    const s = g.tw, pink = g.c('#e87ba4'), cream = g.c('#fbf6ec');
+    g.poly([[sx - s * .1, sy - s * .03], [sx + s * .1, sy - s * .03], [sx + s * .1, sy - s * .13], [sx - s * .1, sy - s * .13]], cream);
+    g.poly([[sx - s * .1, sy - s * .08], [sx + s * .1, sy - s * .08], [sx + s * .1, sy - s * .1], [sx - s * .1, sy - s * .1]], pink);
+    for (const k of [-1, 1]) g.circle(sx + k * s * .07, sy - s * .025, s * .025, g.c('#3b3b3b'));
+    line(g, [[sx + s * .07, sy - s * .13], [sx + s * .07, sy - s * .3]], g.c('#8a8f96'), s * .01);
+    for (let i = 0; i < 4; i++) {
+      const a0 = Math.PI + Math.PI * i / 4, a1 = Math.PI + Math.PI * (i + 1) / 4, cx = sx + s * .07, cy = sy - s * .3, r = s * .13;
+      g.poly([[cx, cy], [cx + Math.cos(a0) * r, cy + Math.sin(a0) * r * .55], [cx + Math.cos(a1) * r, cy + Math.sin(a1) * r * .55]], i % 2 ? cream : pink);
+    }
+    g.poly([[sx - s * .05, sy - s * .13], [sx - s * .02, sy - s * .13], [sx - s * .035, sy - s * .09]], g.c('#d9a45a'));
+    g.circle(sx - s * .035, sy - s * .145, s * .022, pink);
+  },
+  accordeon(g, sx, sy, look, t) {
+    const s = g.tw, [cx, cy] = drawPerson(g, sx - s * .03, sy, g.c('#3f78c4'));
+    const squeeze = g.anim ? (1 + Math.sin(t * 4)) * s * .01 : s * .01;
+    g.poly([[cx - s * .05 - squeeze, cy + s * .01], [cx + s * .05 + squeeze, cy + s * .01], [cx + s * .05 + squeeze, cy + s * .07], [cx - s * .05 - squeeze, cy + s * .07]], g.c('#c4572f'));
+    for (const k of [-.02, 0, .02]) line(g, [[cx + k * s, cy + s * .015], [cx + k * s, cy + s * .065]], g.c('#f6f1e7'), s * .005);
+    for (let i = 0; i < 2; i++) {
+      const k = g.anim ? (t * .4 + i / 2) % 1 : .3 + i * .35, nx = sx + s * (.08 + .08 * k), ny = sy - s * (.18 + .14 * k);
+      g.circle(nx, ny, s * .014, g.c('#2c2c2c'));
+      line(g, [[nx + s * .012, ny], [nx + s * .012, ny - s * .045]], g.c('#2c2c2c'), s * .006);
+    }
+  },
+  artiste(g, sx, sy, look, t) {
+    const s = g.tw;
+    const [hx, hy] = drawPerson(g, sx - s * .08, sy, g.c('#7a5aa8'));
+    ellipseFill(g, hx + s * .005, hy - s * .062, s * .03, s * .012, g.c('#2c2c2c'));
+    line(g, [[sx + s * .02, sy], [sx + s * .07, sy - s * .24], [sx + s * .12, sy]], g.c('#8a6a4a'), s * .01);
+    g.poly([[sx + s * .015, sy - s * .27], [sx + s * .125, sy - s * .27], [sx + s * .125, sy - s * .13], [sx + s * .015, sy - s * .13]], g.c('#fbf8ef'));
+    const dab = g.anim ? Math.floor(t) % 3 : 0;
+    ['#3f78c4', '#3a9a7a', '#e2b33c'].forEach((col, i) => g.circle(sx + s * (.04 + .03 * i), sy - s * (.22 - .03 * ((i + dab) % 3)), s * .014, g.c(col)));
+  },
+};

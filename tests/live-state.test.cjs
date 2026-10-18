@@ -2,9 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadApp, plain } = require('./helpers/app.cjs');
 
-const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js'];
+const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js', '53-visits.js'];
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'VISITORS'];
+const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'VISITORS', 'meetVisitor', 'claimVisitGift', 'today', 'shiftDay'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 const app = (globals = {}) => loadApp(FILES, { expose: EXPOSE, globals });
 
@@ -40,4 +40,24 @@ test("fusion de deux onglets : rencontres, saisons, et un cadeau reçu deux fois
   assert.deepEqual(plain(M.visits), { chat: { first: T0 - 864e5, count: 3, last: '2026-10-18' }, renard: { first: T0, count: 1, last: '2026-10-18' } });
   assert.deepEqual(plain(M.gifts), { 'visit:2026-10-18': T0, 'fest:printemps:2027': T0 });
   assert.equal(M.seasons.autumn, T0 - 1000);
+});
+
+test('rencontre : une par jour, la première se remarque', () => {
+  const a = app({ commit: () => true, toast() {} });
+  assert.deepEqual(plain(a.meetVisitor('chat', '2026-10-18')), { first: true });
+  assert.deepEqual(plain(a.meetVisitor('chat', '2026-10-18')), { first: false });
+  a.meetVisitor('chat', '2026-10-19');
+  assert.deepEqual([a.state.visits.chat.count, a.state.visits.chat.last], [2, '2026-10-19']);
+});
+
+test('cadeau du visiteur : une fois par jour, et pas pour un jour déjà passé', () => {
+  const a = app({ commit: () => true, toast() {} });
+  a.state.clock.tz = 'Europe/Zurich'; a.state.clock.maxSeen = 0;
+  const day = a.today(), coins = a.state.coins;
+  assert.equal(a.claimVisitGift(day), true);
+  assert.equal(a.claimVisitGift(day), false);
+  assert.equal(a.state.coins, coins + 2e6);
+  // Horloge reculée d'un jour : la veille est déjà passée, rien de plus.
+  assert.equal(a.claimVisitGift(a.shiftDay(day, -1)), false);
+  assert.equal(a.state.coins, coins + 2e6);
 });
