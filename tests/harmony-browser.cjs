@@ -185,7 +185,22 @@ async function harmonySheet(browser, baseURL) {
   return 'Harmonie de ta ville : étoiles gagnées et conseils doux';
 }
 
-const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble, harmonySheet];
+// Ambiances : chacune, rendue 4 s hors ligne au volume normal, reste sous la saturation avec un niveau moyen doux ; « Aucune » ne
+// fait aucun son.
+async function ambienceLevels(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([]), NOW);
+  try {
+    for (const kind of ['rain', 'waves', 'fire', 'wind', 'brown']) {
+      const m = await page.evaluate(k => __ville.ambience.measure(k), kind);
+      assert.ok(m.peak < 0.9 && m.rms >= 0.01 && m.rms <= 0.25, kind + ' ' + JSON.stringify(m));
+    }
+    assert.deepEqual(await page.evaluate(() => __ville.ambience.measure('none')), { peak: 0, rms: 0 });
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Ambiances : des niveaux doux, jamais saturés';
+}
+
+const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble, harmonySheet, ambienceLevels];
 async function runHarmony(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

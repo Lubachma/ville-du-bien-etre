@@ -143,7 +143,8 @@ function boot(hotData) {
     ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors },
     rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
-    harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() } };
+    harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
+    ambience: { kind: () => Ambience.kind, measure: kind => Ambience.measure(kind) } };
 }
 
 let booted = false;
