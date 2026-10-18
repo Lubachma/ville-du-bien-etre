@@ -1526,6 +1526,18 @@ DICT.fr = {
   'wish.thing.statue': 'une statue',
   'settings.townWishes': 'Souhaits des habitants',
   'wish.granted': "Souhait exaucé · {building} : « Merci, c'est parfait ! » · +{coins}",
+  'harmony.button': 'Harmonie {stars}',
+  'harmony.buttonLabel': { one: 'Harmonie : {n} étoile sur 5', other: 'Harmonie : {n} étoiles sur 5' },
+  'harmony.starOn': '★',
+  'harmony.starOff': '☆',
+  'harmony.title': 'Harmonie de ta ville',
+  'harmony.note': 'Une étoile gagnée le reste, même si la ville change.',
+  'harmony.earnedOn': 'Gagnée le {date}',
+  'harmony.verdure.hint': { one: 'Encore {n} élément de nature apporterait de la verdure', other: 'Encore {n} éléments de nature apporteraient de la verdure' },
+  'harmony.variete.hint': { one: "Des bâtiments d'un domaine de plus apporteraient de la variété", other: 'Des bâtiments de {n} domaines de plus apporteraient de la variété' },
+  'harmony.details.hint': { one: "Un décor à côté d'un bâtiment de plus ajouterait un petit détail", other: 'Un décor à côté de {n} bâtiments de plus ajouterait de petits détails' },
+  'harmony.quartiers.hint': { one: 'Un ensemble de voisinage de plus formerait un quartier', other: '{n} ensembles de voisinage de plus formeraient des quartiers' },
+  'harmony.lumieres.hint': { one: 'Un lampadaire ou une lanterne de plus ferait briller ta ville le soir', other: '{n} lampadaires ou lanternes de plus feraient briller ta ville le soir' },
   'harmony.star': "Nouvelle étoile d'harmonie : {name} · +{coins}",
   'harmony.verdure': 'Verdure',
   'harmony.variete': 'Variété',
@@ -2656,6 +2668,18 @@ DICT.en = {
   'wish.thing.statue': 'a statue',
   'settings.townWishes': "Residents' wishes",
   'wish.granted': "Wish granted · {building}: “Thank you, it's perfect!” · +{coins}",
+  'harmony.button': 'Harmony {stars}',
+  'harmony.buttonLabel': { one: 'Harmony: {n} of 5 stars', other: 'Harmony: {n} of 5 stars' },
+  'harmony.starOn': '★',
+  'harmony.starOff': '☆',
+  'harmony.title': "Your town's harmony",
+  'harmony.note': 'A star you earn stays yours, even if the town changes.',
+  'harmony.earnedOn': 'Earned on {date}',
+  'harmony.verdure.hint': { one: '{n} more nature item would add greenery', other: '{n} more nature items would add greenery' },
+  'harmony.variete.hint': { one: 'Buildings from one more domain would add variety', other: 'Buildings from {n} more domains would add variety' },
+  'harmony.details.hint': { one: 'A decoration next to one more building would add a little touch', other: 'A decoration next to {n} more buildings would add little touches' },
+  'harmony.quartiers.hint': { one: 'One more neighbourhood set would make a neighbourhood', other: '{n} more neighbourhood sets would make neighbourhoods' },
+  'harmony.lumieres.hint': { one: 'One more street lamp or lantern would make your town glow at night', other: '{n} more street lamps or lanterns would make your town glow at night' },
   'harmony.star': 'New harmony star: {name} · +{coins}',
   'harmony.verdure': 'Greenery',
   'harmony.variete': 'Variety',
@@ -7334,6 +7358,7 @@ function renderVille() {
   liveTick();
   renderCityCaption();
   if (typeof renderTownWishCard === 'function') renderTownWishCard();
+  if (typeof renderHarmonyButton === 'function') renderHarmonyButton();
   const ew = $('#elsewhere');
   ew.replaceChildren();
   ew.hidden = activeState() !== 'elsewhere';
@@ -10364,6 +10389,27 @@ function townWishBlock(tile) {
     ...wishPlaceButton(S.townWish.item));
 }
 
+// Bouton « Harmonie ★★☆☆☆ » sous la ville : les étoiles gagnées, pleines, puis celles à venir ; son nom les compte.
+function renderHarmonyButton() {
+  const btn = $('#harmonyBtn');
+  if (!btn) return;
+  const n = typeof starsEarned === 'function' ? starsEarned().length : 0;
+  btn.lastChild.textContent = t('harmony.button', { stars: t('harmony.starOn').repeat(n) + t('harmony.starOff').repeat(HARMONY.length - n) });
+  btn.setAttribute('aria-label', t('harmony.buttonLabel', { n }));
+}
+// Fenêtre « Harmonie de ta ville » : les cinq étoiles, chacune avec sa date si elle est gagnée, sinon un conseil doux et chiffré.
+function openHarmonySheet() {
+  openSheet(t('harmony.title'), body => {
+    body.append(h('p', { class: 'note' }, t('harmony.note')), h('ul', { class: 'harmony-list' }, ...harmonyCriteria().map(c => {
+      const at = S.gifts && S.gifts['star:' + c.id];
+      return h('li', { class: 'harmony-row' + (at ? ' earned' : '') },
+        h('span', { class: 'harmony-star', 'aria-hidden': 'true' }, t(at ? 'harmony.starOn' : 'harmony.starOff')),
+        h('span', { class: 'harmony-text' }, h('strong', {}, t('harmony.' + c.id)),
+          h('span', { class: 'note' }, at ? t('harmony.earnedOn', { date: carnetDate(at) }) : t('harmony.' + c.id + '.hint', { n: c.missing }))));
+    })));
+  });
+}
+
 
 /* ---- 60-boot.js ---- */
 /* =========================================================================
@@ -10391,6 +10437,7 @@ function bindEvents() {
   for (const tab of $$('.tab')) tab.addEventListener('click', () => { if (Mode.state && tab.dataset.tab !== 'ville') Mode.cancel(); go(tab.dataset.tab); });
   $('#settingsBtn').addEventListener('click', openSettings);
   $('#personalizeCity').addEventListener('click', openCityPersonalization);
+  $('#harmonyBtn').addEventListener('click', openHarmonySheet);
   $('#buildBtn').addEventListener('click', openShop);
   $('#ctaStart').addEventListener('click', () => go('activites', true));
   $('#ctaDraw').addEventListener('click', () => go('tirage', true));

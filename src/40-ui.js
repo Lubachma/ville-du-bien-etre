@@ -170,6 +170,7 @@ function renderVille() {
   liveTick();
   renderCityCaption();
   if (typeof renderTownWishCard === 'function') renderTownWishCard();
+  if (typeof renderHarmonyButton === 'function') renderHarmonyButton();
   const ew = $('#elsewhere');
   ew.replaceChildren();
   ew.hidden = activeState() !== 'elsewhere';

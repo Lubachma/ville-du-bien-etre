@@ -155,7 +155,37 @@ async function wishBubble(browser, baseURL) {
   return 'Souhait : la bulle au-dessus du bâtiment, qui ouvre sa fiche et le suit';
 }
 
-const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble];
+// Mesure, dans la fenêtre ouverte, que rien ne déborde.
+const fitsSheet = page => page.evaluate(() => document.querySelector('#sheetBody').scrollWidth <= document.querySelector('#sheetBody').clientWidth + 1
+  && document.documentElement.scrollWidth <= innerWidth);
+
+// « Harmonie de ta ville » : le bouton dit les étoiles gagnées ; la fenêtre liste les cinq, avec leur date ou un conseil chiffré,
+// jamais un mot de manque. À 320 px, en français puis en anglais.
+async function harmonySheet(browser, baseURL) {
+  const tiles = [tile('maison', 0, 0), tile('bibliotheque', 6, 0), tile('kiosque', 0, 6), tile('arbre', 3, 3), tile('fleurs', 4, 4)];
+  const { context, page, errors } = await cityAt(browser, baseURL, seed(tiles), NOW, { viewport: { width: 320, height: 640 } });
+  try {
+    const button = page.getByRole('button', { name: 'Harmonie : 2 étoiles sur 5', exact: true });
+    assert.equal(await button.innerText(), 'Harmonie ★★☆☆☆');
+    await button.click();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Harmonie de ta ville');
+    const text = await page.locator('#sheetBody').innerText();
+    assert.match(text, /Verdure\s+Gagnée le[\s\S]*Variété\s+Gagnée le[\s\S]*Petits détails\s+Un décor à côté de 3 bâtiments de plus ajouterait de petits détails/);
+    assert.match(text, /Quartiers\s+2 ensembles de voisinage de plus formeraient des quartiers[\s\S]*Lumières du soir\s+Un lampadaire ou une lanterne de plus ferait briller ta ville le soir/);
+    assert.doesNotMatch(text, /manque/i);
+    assert.equal(await fitsSheet(page), true);
+    await page.locator('#sheetClose').click();
+    await toEnglish(page);
+    await page.getByRole('button', { name: 'Harmony: 2 of 5 stars', exact: true }).click();
+    assert.equal(await page.locator('#sheetTitle').innerText(), "Your town's harmony");
+    assert.match(await page.locator('#sheetBody').innerText(), /Greenery\s+Earned on/);
+    assert.equal(await fitsSheet(page), true);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Harmonie de ta ville : étoiles gagnées et conseils doux';
+}
+
+const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble, harmonySheet];
 async function runHarmony(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

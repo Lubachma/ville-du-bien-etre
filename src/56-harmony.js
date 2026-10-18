@@ -40,3 +40,24 @@ function townWishBlock(tile) {
   return h('div', { class: 'wish-block' }, h('p', {}, t('wish.line', { thing: wishThing(S.townWish.item) })), h('p', { class: 'note' }, t('wish.hint')),
     ...wishPlaceButton(S.townWish.item));
 }
+
+// Bouton « Harmonie ★★☆☆☆ » sous la ville : les étoiles gagnées, pleines, puis celles à venir ; son nom les compte.
+function renderHarmonyButton() {
+  const btn = $('#harmonyBtn');
+  if (!btn) return;
+  const n = typeof starsEarned === 'function' ? starsEarned().length : 0;
+  btn.lastChild.textContent = t('harmony.button', { stars: t('harmony.starOn').repeat(n) + t('harmony.starOff').repeat(HARMONY.length - n) });
+  btn.setAttribute('aria-label', t('harmony.buttonLabel', { n }));
+}
+// Fenêtre « Harmonie de ta ville » : les cinq étoiles, chacune avec sa date si elle est gagnée, sinon un conseil doux et chiffré.
+function openHarmonySheet() {
+  openSheet(t('harmony.title'), body => {
+    body.append(h('p', { class: 'note' }, t('harmony.note')), h('ul', { class: 'harmony-list' }, ...harmonyCriteria().map(c => {
+      const at = S.gifts && S.gifts['star:' + c.id];
+      return h('li', { class: 'harmony-row' + (at ? ' earned' : '') },
+        h('span', { class: 'harmony-star', 'aria-hidden': 'true' }, t(at ? 'harmony.starOn' : 'harmony.starOff')),
+        h('span', { class: 'harmony-text' }, h('strong', {}, t('harmony.' + c.id)),
+          h('span', { class: 'note' }, at ? t('harmony.earnedOn', { date: carnetDate(at) }) : t('harmony.' + c.id + '.hint', { n: c.missing }))));
+    })));
+  });
+}
