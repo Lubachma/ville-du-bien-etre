@@ -171,6 +171,40 @@ async function runAmbient(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Carnet des visites');
   }
+  // Réglages de la ville vivante : ciel selon l'apparence, hémisphère sud en juillet, ville animée coupée ;
+  // les trois restent après un rechargement, et la section Apparence tient en anglais à 320 px.
+  {
+    const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }), '2026-07-01T10:00:00Z');
+    try {
+      const settings = async () => { await page.locator('#settingsBtn').click(); await page.locator('#settingsTheme').waitFor(); return page.locator('#settingsTheme'); };
+      let block = await settings();
+      await block.getByRole('radio', { name: "Selon l'apparence", exact: true }).click();
+      assert.equal(await page.evaluate(() => document.querySelector('#sky').style.getPropertyValue('--sky-top')), '');
+      await block.getByRole('radio', { name: 'Hémisphère sud', exact: true }).click();
+      assert.equal(await page.evaluate(() => __ville.ambient.at().season), 'winter');
+      await block.getByRole('switch', { name: 'Ville animée', exact: true }).click();
+      assert.equal(await block.getByRole('switch', { name: 'Ville animée', exact: true }).getAttribute('aria-checked'), 'false');
+      await page.locator('#sheetClose').click();
+      const before = await page.evaluate(() => __ville.City.frames());
+      await page.waitForTimeout(700);
+      assert.equal(await page.evaluate(() => __ville.City.frames()), before, 'la ville bouge encore');
+      await page.reload();
+      await page.waitForFunction(() => !!window.__ville);
+      assert.deepEqual(await page.evaluate(() => [__ville.state.settings.sky, __ville.state.settings.hemisphere, __ville.state.settings.ambient]), ['theme', 'south', false]);
+      block = await settings();
+      for (const name of ["Selon l'apparence", 'Hémisphère sud']) assert.equal(await block.getByRole('radio', { name, exact: true }).getAttribute('aria-checked'), 'true');
+      await page.locator('#settingsLang').getByRole('radio', { name: 'English', exact: true }).click();
+      await page.setViewportSize({ width: 320, height: 640 });
+      await page.locator('#sheetClose').click();
+      block = await settings();
+      await block.getByRole('radio', { name: 'Match appearance', exact: true }).waitFor();
+      await block.scrollIntoViewIfNeeded();
+      const w = await page.evaluate(() => ({ body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth, doc: document.documentElement.scrollWidth, inner: innerWidth }));
+      assert.ok(w.body <= w.client + 1 && w.doc <= w.inner, `la section Apparence déborde à 320 px : ${JSON.stringify(w)}`);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Réglages de la ville vivante');
+  }
   return { scenarios };
 }
 

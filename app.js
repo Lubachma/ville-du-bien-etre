@@ -1044,10 +1044,20 @@ DICT.fr = {
   'settings.sound': "Sonner à la fin d'une session",
   'settings.soundNote': 'Un son discret, qui suit le mode silencieux du téléphone. Touche un son pour l’écouter.',
   'settings.theme': 'Apparence',
-  'settings.themeNote': "Auto suit le réglage du téléphone. La nuit, les fenêtres de la ville s'allument.",
+  'settings.themeNote': 'Auto suit le réglage du téléphone.',
   'settings.themeAuto': 'Auto',
   'settings.themeLight': 'Jour',
   'settings.themeDark': 'Nuit',
+  'settings.sky': 'Ciel de la ville',
+  'settings.skyTime': "Selon l'heure",
+  'settings.skyTheme': "Selon l'apparence",
+  'settings.skyNote': "Selon l'heure, ta ville vit sa journée, de l'aube à la nuit. Selon l'apparence, elle suit le thème choisi.",
+  'settings.seasons': 'Saisons',
+  'settings.seasonsAuto': 'Automatiques',
+  'settings.seasonsNorth': 'Hémisphère nord',
+  'settings.seasonsSouth': 'Hémisphère sud',
+  'settings.ambient': 'Ville animée',
+  'settings.ambientNote': 'Coupe les mouvements continus pour économiser la batterie.',
   'settings.reset': 'Tout recommencer',
   'settings.resetConfirm': 'Confirmer : tout effacer',
   'settings.resetFinishSession': 'Termine la session en cours avant de recommencer.',
@@ -2014,10 +2024,20 @@ DICT.en = {
   'settings.sound': 'Play a sound at the end of a session',
   'settings.soundNote': "A gentle sound that follows the phone's silent mode. Tap a sound to hear it.",
   'settings.theme': 'Appearance',
-  'settings.themeNote': "Auto follows the phone's setting. At night, the town's windows light up.",
+  'settings.themeNote': "Auto follows the phone's setting.",
   'settings.themeAuto': 'Auto',
   'settings.themeLight': 'Day',
   'settings.themeDark': 'Night',
+  'settings.sky': 'Town sky',
+  'settings.skyTime': 'Time of day',
+  'settings.skyTheme': 'Match appearance',
+  'settings.skyNote': 'Time of day: your town lives its day, from dawn to night. Match appearance: it follows the chosen theme.',
+  'settings.seasons': 'Seasons',
+  'settings.seasonsAuto': 'Automatic',
+  'settings.seasonsNorth': 'Northern hemisphere',
+  'settings.seasonsSouth': 'Southern hemisphere',
+  'settings.ambient': 'Living town',
+  'settings.ambientNote': 'Turn it off to stop continuous motion and save battery.',
   'settings.reset': 'Start over',
   'settings.resetConfirm': 'Confirm: erase everything',
   'settings.resetFinishSession': 'Finish the current session before starting over.',
@@ -7212,10 +7232,35 @@ function settingsTheme() {
   const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.theme') });
   const themeLabels = { auto: t('settings.themeAuto'), light: t('settings.themeLight'), dark: t('settings.themeDark') };
   for (const v of THEMES) themeSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.theme === v), onclick: () => { S.settings.theme = v; commit({ silent: true }); applyTheme(); $$('button', themeSeg).forEach((b, i) => b.setAttribute('aria-checked', String(THEMES[i] === v))); } }, themeLabels[v]));
-  return settingsBlock('settingsTheme', h('div', { class: 'setting' },
-    h('span', { class: 'section-title' }, t('settings.theme')),
-    h('p', { class: 'note' }, t('settings.themeNote')),
-    themeSeg));
+  // Ville vivante : ciel, saisons et animation. La ville se redessine tout de suite ; l'hémisphère change aussi la
+  // légende et le visiteur du jour, donc la vue ouverte se met à jour.
+  const live = (render = false) => { commit({ silent: !render }); City.draw(); City.wake(); };
+  const choice = (key, label, labels) => {
+    const values = Object.keys(labels), seg = h('div', { class: 'seg' + (values.length === 2 ? ' seg-2' : ''), role: 'radiogroup', 'aria-label': label });
+    for (const v of values) seg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings[key] === v), onclick: () => {
+      S.settings[key] = v;
+      $$('button', seg).forEach((b, i) => b.setAttribute('aria-checked', String(values[i] === v)));
+      live(key === 'hemisphere');
+    } }, labels[v]));
+    return seg;
+  };
+  const skySeg = choice('sky', t('settings.sky'), { time: t('settings.skyTime'), theme: t('settings.skyTheme') });
+  const seasonSeg = choice('hemisphere', t('settings.seasons'), { auto: t('settings.seasonsAuto'), north: t('settings.seasonsNorth'), south: t('settings.seasonsSouth') });
+  const ambientSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.ambient), 'aria-label': t('settings.ambient'), onclick: () => {
+    S.settings.ambient = !S.settings.ambient;
+    ambientSw.setAttribute('aria-checked', String(S.settings.ambient));
+    live();
+  } });
+  return settingsBlock('settingsTheme',
+    h('div', { class: 'setting' },
+      h('span', { class: 'section-title' }, t('settings.theme')),
+      h('p', { class: 'note' }, t('settings.themeNote')),
+      themeSeg),
+    h('div', { class: 'setting' }, h('span', { class: 'setting-label' }, t('settings.sky')), h('p', { class: 'note' }, t('settings.skyNote')), skySeg),
+    h('div', { class: 'setting' }, h('span', { class: 'setting-label' }, t('settings.seasons')), seasonSeg),
+    h('div', { class: 'setting' },
+      h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.ambient')), ambientSw),
+      h('p', { class: 'note' }, t('settings.ambientNote'))));
 }
 function settingsStrict() {
   return settingsBlock('settingsStrict', h('div', { class: 'setting' }, h('span', { class: 'section-title' }, t('strict.title')), h('button', { class: 'btn btn-secondary', type: 'button', onclick: openStrict }, icon('lock'), t('strict.button'))));

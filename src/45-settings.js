@@ -279,10 +279,35 @@ function settingsTheme() {
   const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.theme') });
   const themeLabels = { auto: t('settings.themeAuto'), light: t('settings.themeLight'), dark: t('settings.themeDark') };
   for (const v of THEMES) themeSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.theme === v), onclick: () => { S.settings.theme = v; commit({ silent: true }); applyTheme(); $$('button', themeSeg).forEach((b, i) => b.setAttribute('aria-checked', String(THEMES[i] === v))); } }, themeLabels[v]));
-  return settingsBlock('settingsTheme', h('div', { class: 'setting' },
-    h('span', { class: 'section-title' }, t('settings.theme')),
-    h('p', { class: 'note' }, t('settings.themeNote')),
-    themeSeg));
+  // Ville vivante : ciel, saisons et animation. La ville se redessine tout de suite ; l'hémisphère change aussi la
+  // légende et le visiteur du jour, donc la vue ouverte se met à jour.
+  const live = (render = false) => { commit({ silent: !render }); City.draw(); City.wake(); };
+  const choice = (key, label, labels) => {
+    const values = Object.keys(labels), seg = h('div', { class: 'seg' + (values.length === 2 ? ' seg-2' : ''), role: 'radiogroup', 'aria-label': label });
+    for (const v of values) seg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings[key] === v), onclick: () => {
+      S.settings[key] = v;
+      $$('button', seg).forEach((b, i) => b.setAttribute('aria-checked', String(values[i] === v)));
+      live(key === 'hemisphere');
+    } }, labels[v]));
+    return seg;
+  };
+  const skySeg = choice('sky', t('settings.sky'), { time: t('settings.skyTime'), theme: t('settings.skyTheme') });
+  const seasonSeg = choice('hemisphere', t('settings.seasons'), { auto: t('settings.seasonsAuto'), north: t('settings.seasonsNorth'), south: t('settings.seasonsSouth') });
+  const ambientSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.ambient), 'aria-label': t('settings.ambient'), onclick: () => {
+    S.settings.ambient = !S.settings.ambient;
+    ambientSw.setAttribute('aria-checked', String(S.settings.ambient));
+    live();
+  } });
+  return settingsBlock('settingsTheme',
+    h('div', { class: 'setting' },
+      h('span', { class: 'section-title' }, t('settings.theme')),
+      h('p', { class: 'note' }, t('settings.themeNote')),
+      themeSeg),
+    h('div', { class: 'setting' }, h('span', { class: 'setting-label' }, t('settings.sky')), h('p', { class: 'note' }, t('settings.skyNote')), skySeg),
+    h('div', { class: 'setting' }, h('span', { class: 'setting-label' }, t('settings.seasons')), seasonSeg),
+    h('div', { class: 'setting' },
+      h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.ambient')), ambientSw),
+      h('p', { class: 'note' }, t('settings.ambientNote'))));
 }
 function settingsStrict() {
   return settingsBlock('settingsStrict', h('div', { class: 'setting' }, h('span', { class: 'section-title' }, t('strict.title')), h('button', { class: 'btn btn-secondary', type: 'button', onclick: openStrict }, icon('lock'), t('strict.button'))));
