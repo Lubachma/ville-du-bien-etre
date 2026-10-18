@@ -81,6 +81,24 @@ function setMood(entryId, level) {
   if (level) entry.mood = level; else delete entry.mood;
   return true;
 }
+// Ce qui te fait du bien, dès 5 humeurs notées : pour chaque domaine qui en a au moins 2 (dans l'ordre des domaines), les
+// séances suivies d'une bonne humeur (4 ou 5) ; en tête, la plus forte part, la première en cas d'égalité.
+function moodInsights() {
+  const rated = S.history.filter(e => e.ok && e.mood);
+  if (rated.length < 5) return null;
+  const rows = CAT_ORDER.map(cat => {
+    const moods = rated.filter(e => e.cat === cat);
+    return { cat, good: moods.filter(e => e.mood >= 4).length, total: moods.length };
+  }).filter(row => row.total >= 2);
+  const top = rows.reduce((best, row) => (!best || row.good / row.total > best.good / best.total ? row : best), null);
+  return { total: rated.length, rows, top };
+}
+// Moments difficiles : au moins 3 des 5 dernières humeurs notées ces 14 jours valent « Pas trop » ou « Pas bien du tout ».
+function moodDifficult(day = today()) {
+  const from = shiftDay(day, -13);
+  const recent = S.history.filter(e => e.ok && e.mood && validTs(e.at) && dayOf(e.at) >= from).sort((x, y) => y.at - x.at).slice(0, 5);
+  return recent.filter(e => e.mood <= 2).length >= 3;
+}
 // Note qu'un bilan a été montré ; l'année montrée couvre aussi son mois de décembre.
 function markRitual(kind, key) {
   S.rituals = { week: '', month: '', year: '', ...S.rituals, [kind]: key };

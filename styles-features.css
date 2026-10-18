@@ -62,3 +62,8 @@
 .mood-face[aria-checked="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
 .mood-foot { min-height: 32px; display: grid; place-items: center; }
 .mood-chosen { color: var(--muted); font-size: 14px; font-weight: 700; }
+/* Journal : « Ce qui te fait du bien » et la carte douce des moments difficiles. */
+.mood-top { margin: 6px 0 2px; font-weight: 700; }
+.mood-support { display: grid; gap: 10px; background: var(--accent-soft); border-color: transparent; }
+.mood-support p { margin: 0; }
+.mood-support .btn { justify-self: end; }

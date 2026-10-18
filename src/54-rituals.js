@@ -53,6 +53,41 @@ function moodPicker(entryId) {
   return box;
 }
 
+// La carte des moments difficiles, rangée par « Merci » pour 7 jours sur cet appareil.
+const MOOD_SUPPORT_PAUSE = 7 * 864e5;
+function moodSupportPaused() {
+  try { const at = Number(localStorage.getItem(LS_MOOD_CARD)); return at > 0 && Date.now() - at < MOOD_SUPPORT_PAUSE; } catch (e) { return false; }
+}
+// Journal, après la progression par domaine : la carte douce des moments difficiles, puis « Ce qui te fait du bien »
+// (une phrase pour le domaine en tête s'il a au moins une bonne humeur, et une barre par domaine). Aucune note globale.
+function renderMoodCards() {
+  const anchor = $('#meters') && $('#meters').closest('.card');
+  if (!anchor) return;
+  for (const id of ['moodSupport', 'moodCard']) { const old = document.getElementById(id); if (old) old.remove(); }
+  const cards = [];
+  if (moodDifficult() && !moodSupportPaused()) {
+    const card = h('section', { id: 'moodSupport', class: 'card mood-support' }, h('p', {}, t('mood.support')),
+      h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => {
+        try { localStorage.setItem(LS_MOOD_CARD, String(Date.now())); } catch (e) { /* stockage indisponible : rangée jusqu'au prochain affichage */ }
+        const next = card.nextElementSibling;
+        card.remove();
+        if (next) { next.tabIndex = -1; next.focus({ preventScroll: true }); }
+      } }, t('mood.thanks')));
+    cards.push(card);
+  }
+  const insights = moodInsights();
+  if (insights && insights.rows.length) {
+    const top = insights.top;
+    cards.push(h('section', { id: 'moodCard', class: 'card' }, h('h3', {}, t('mood.cardTitle')),
+      top.good ? h('p', { class: 'mood-top' }, t('mood.top', { cat: catName(top.cat), good: top.good, total: top.total, n: top.good })) : null,
+      h('p', { class: 'sub' }, t('mood.cardNote')),
+      h('div', { class: 'meters' }, ...insights.rows.map(row => h('div', { class: 'meter-row' },
+        h('div', { class: 'meter-top' }, h('span', { class: 'name' }, catDot(row.cat), catName(row.cat)), h('span', { class: 'val' }, t('mood.row', { good: row.good, total: row.total }))),
+        h('div', { class: 'meter', vars: { '--c': catVar(row.cat) }, 'aria-hidden': 'true' }, h('span', { style: 'width:' + Math.round(row.good / row.total * 100) + '%' })))))));
+  }
+  anchor.after(...cards);
+}
+
 // Bilan ou récapitulatif dû : il s'ouvre une seule fois, sur la Ville, quand aucune fenêtre ni séance n'est ouverte.
 function maybeOpenRitual() {
   if (currentTab !== 'ville' || document.visibilityState !== 'visible' || !$('#sheet').hidden || !$('#cityBig').hidden) return false;

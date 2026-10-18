@@ -1456,6 +1456,12 @@ DICT.fr = {
   'mood.4': 'Bien',
   'mood.5': 'Très bien',
   'mood.skip': 'Passer',
+  'mood.cardTitle': 'Ce qui te fait du bien',
+  'mood.top': 'Après {cat}, tu te sentais bien {good} fois sur {total}',
+  'mood.cardNote': 'Par domaine, les séances après lesquelles tu te sentais bien ou très bien',
+  'mood.row': '{good} sur {total}',
+  'mood.support': "Tes dernières séances ont été difficiles. Une activité tranquille, un moment dehors ou parler à quelqu'un de confiance peut aider. Si ça dure, un professionnel de santé peut t'accompagner.",
+  'mood.thanks': 'Merci',
   'city.listVisitor': 'Visiteur du jour : {name}',
   'fest.nouvel-an.name': 'Nouvel An',
   'fest.printemps.name': 'Fête du printemps',
@@ -2495,6 +2501,12 @@ DICT.en = {
   'mood.4': 'Good',
   'mood.5': 'Very good',
   'mood.skip': 'Skip',
+  'mood.cardTitle': 'What makes you feel good',
+  'mood.top': { one: 'After {cat}, you felt good {good} time out of {total}', other: 'After {cat}, you felt good {good} times out of {total}' },
+  'mood.cardNote': 'By domain, the sessions after which you felt good or very good',
+  'mood.row': '{good} of {total}',
+  'mood.support': 'Your last sessions have been hard. A quiet activity, some time outside or talking to someone you trust can help. If it lasts, a health professional can support you.',
+  'mood.thanks': 'Thank you',
   'city.listVisitor': 'Visitor of the day: {name}',
   'fest.nouvel-an.name': 'New Year',
   'fest.printemps.name': 'Spring festival',
@@ -4291,6 +4303,24 @@ function setMood(entryId, level) {
   if (!entry || !Number.isInteger(level) || level < 0 || level > 5) return false;
   if (level) entry.mood = level; else delete entry.mood;
   return true;
+}
+// Ce qui te fait du bien, dès 5 humeurs notées : pour chaque domaine qui en a au moins 2 (dans l'ordre des domaines), les
+// séances suivies d'une bonne humeur (4 ou 5) ; en tête, la plus forte part, la première en cas d'égalité.
+function moodInsights() {
+  const rated = S.history.filter(e => e.ok && e.mood);
+  if (rated.length < 5) return null;
+  const rows = CAT_ORDER.map(cat => {
+    const moods = rated.filter(e => e.cat === cat);
+    return { cat, good: moods.filter(e => e.mood >= 4).length, total: moods.length };
+  }).filter(row => row.total >= 2);
+  const top = rows.reduce((best, row) => (!best || row.good / row.total > best.good / best.total ? row : best), null);
+  return { total: rated.length, rows, top };
+}
+// Moments difficiles : au moins 3 des 5 dernières humeurs notées ces 14 jours valent « Pas trop » ou « Pas bien du tout ».
+function moodDifficult(day = today()) {
+  const from = shiftDay(day, -13);
+  const recent = S.history.filter(e => e.ok && e.mood && validTs(e.at) && dayOf(e.at) >= from).sort((x, y) => y.at - x.at).slice(0, 5);
+  return recent.filter(e => e.mood <= 2).length >= 3;
 }
 // Note qu'un bilan a été montré ; l'année montrée couvre aussi son mois de décembre.
 function markRitual(kind, key) {
@@ -7261,6 +7291,7 @@ function renderJournal() {
   renderCarnetCard();
   renderWeekChart();
   renderMeters();
+  if (typeof renderMoodCards === 'function') renderMoodCards();
   renderHistory();
 }
 // Carte « Série », ou « Jours actifs cette semaine » si la série est masquée. Aucun message de perte.
@@ -9456,6 +9487,41 @@ function moodPicker(entryId) {
   }
   update();
   return box;
+}
+
+// La carte des moments difficiles, rangée par « Merci » pour 7 jours sur cet appareil.
+const MOOD_SUPPORT_PAUSE = 7 * 864e5;
+function moodSupportPaused() {
+  try { const at = Number(localStorage.getItem(LS_MOOD_CARD)); return at > 0 && Date.now() - at < MOOD_SUPPORT_PAUSE; } catch (e) { return false; }
+}
+// Journal, après la progression par domaine : la carte douce des moments difficiles, puis « Ce qui te fait du bien »
+// (une phrase pour le domaine en tête s'il a au moins une bonne humeur, et une barre par domaine). Aucune note globale.
+function renderMoodCards() {
+  const anchor = $('#meters') && $('#meters').closest('.card');
+  if (!anchor) return;
+  for (const id of ['moodSupport', 'moodCard']) { const old = document.getElementById(id); if (old) old.remove(); }
+  const cards = [];
+  if (moodDifficult() && !moodSupportPaused()) {
+    const card = h('section', { id: 'moodSupport', class: 'card mood-support' }, h('p', {}, t('mood.support')),
+      h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => {
+        try { localStorage.setItem(LS_MOOD_CARD, String(Date.now())); } catch (e) { /* stockage indisponible : rangée jusqu'au prochain affichage */ }
+        const next = card.nextElementSibling;
+        card.remove();
+        if (next) { next.tabIndex = -1; next.focus({ preventScroll: true }); }
+      } }, t('mood.thanks')));
+    cards.push(card);
+  }
+  const insights = moodInsights();
+  if (insights && insights.rows.length) {
+    const top = insights.top;
+    cards.push(h('section', { id: 'moodCard', class: 'card' }, h('h3', {}, t('mood.cardTitle')),
+      top.good ? h('p', { class: 'mood-top' }, t('mood.top', { cat: catName(top.cat), good: top.good, total: top.total, n: top.good })) : null,
+      h('p', { class: 'sub' }, t('mood.cardNote')),
+      h('div', { class: 'meters' }, ...insights.rows.map(row => h('div', { class: 'meter-row' },
+        h('div', { class: 'meter-top' }, h('span', { class: 'name' }, catDot(row.cat), catName(row.cat)), h('span', { class: 'val' }, t('mood.row', { good: row.good, total: row.total }))),
+        h('div', { class: 'meter', vars: { '--c': catVar(row.cat) }, 'aria-hidden': 'true' }, h('span', { style: 'width:' + Math.round(row.good / row.total * 100) + '%' })))))));
+  }
+  anchor.after(...cards);
 }
 
 // Bilan ou récapitulatif dû : il s'ouvre une seule fois, sur la Ville, quand aucune fenêtre ni séance n'est ouverte.

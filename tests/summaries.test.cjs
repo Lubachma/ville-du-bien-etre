@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
   '25-challenges.js', '26-summaries.js', '46-features.js'];
-const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay', 'pendingRitual', 'markRitual', 'setMood'];
+const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay', 'pendingRitual', 'markRitual', 'setMood', 'moodInsights', 'moodDifficult'];
 function app(now = '2026-10-27T12:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
   a.state.clock.tz = 'Europe/Zurich'; a.state.clock.maxSeen = 0; a.state.createdAt = Date.parse('2026-05-04T09:00:00Z');
@@ -90,4 +90,23 @@ test('humeur : notée sur une séance, changée, retirée ; rien pour une séanc
   assert.equal(a.setMood(id, 0), true);
   assert.equal('mood' in a.state.history[1], false);
   assert.deepEqual([a.setMood('inconnue', 3), a.setMood(id, 9)], [false, false]);
+});
+
+const moodAt = (a, id, cat, mood, at) => a.state.history.push({ id, name: 'x', cat, min: 10, ok: true, reward: 1, at, day: '2026-10-20', source: 'direct', mode: 'focus', mood });
+test('humeur : ce qui te fait du bien, dès 5 humeurs notées', () => {
+  const a = app(), at = Date.parse('2026-10-20T10:00:00Z');
+  [['calme', 5], ['calme', 4], ['corps', 1], ['calme', 2]].forEach(([cat, mood], i) => moodAt(a, 'm' + i, cat, mood, at - i));
+  assert.equal(a.moodInsights(), null);
+  moodAt(a, 'm4', 'calme', 4, at - 4);
+  assert.deepEqual(plain(a.moodInsights()), { total: 5, rows: [{ cat: 'calme', good: 3, total: 4 }], top: { cat: 'calme', good: 3, total: 4 } });
+});
+test('humeur : les moments difficiles, sur les 5 dernières humeurs des 14 derniers jours', () => {
+  const a = app('2026-10-21T12:00:00Z'), now = Date.parse('2026-10-21T10:00:00Z');
+  [2, 1, 4].forEach((m, i) => moodAt(a, 'd' + i, 'calme', m, now - (i + 1) * 864e5));
+  assert.equal(a.moodDifficult('2026-10-21'), false);
+  moodAt(a, 'd3', 'calme', 2, now - 4 * 864e5);
+  assert.equal(a.moodDifficult('2026-10-21'), true);
+  const b = app('2026-10-21T12:00:00Z');
+  [2, 1, 2].forEach((m, i) => moodAt(b, 'o' + i, 'calme', m, now - (20 + i) * 864e5));
+  assert.equal(b.moodDifficult('2026-10-21'), false);
 });

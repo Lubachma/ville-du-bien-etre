@@ -25,6 +25,7 @@ function renderJournal() {
   renderCarnetCard();
   renderWeekChart();
   renderMeters();
+  if (typeof renderMoodCards === 'function') renderMoodCards();
   renderHistory();
 }
 // Carte « Série », ou « Jours actifs cette semaine » si la série est masquée. Aucun message de perte.

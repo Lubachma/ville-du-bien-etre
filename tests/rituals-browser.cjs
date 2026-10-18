@@ -203,7 +203,49 @@ async function moodAfterReturn(browser, baseURL) {
   return 'Humeur : au retour, sur la bonne séance';
 }
 
-const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn];
+// Des séances avec leur humeur, la plus récente d'abord, un jour d'écart chacune avant le mercredi 21 octobre 2026.
+function moodTown(moods) {
+  const history = moods.map(([cat, mood], i) => ({ id: 'm' + i, name: 'Pratique ' + cat, cat, min: 10, ok: true, reward: 10e6, at: at('2026-10-21T08:00:00Z') - i * 864e5,
+    day: '2026-10-' + String(21 - i).padStart(2, '0'), source: 'direct', mode: 'focus', mood }));
+  return town({ esprit: 5 }, [], { history, stats: { ok: history.length, byCat: { esprit: 5 }, days: {}, dailyCats: {} } });
+}
+const fitsPage = page => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+
+// Journal : « Ce qui te fait du bien » dès 5 humeurs, avec la phrase du domaine en tête ; la carte douce des moments
+// difficiles, que « Merci » range pour 7 jours, rechargement compris. À 320 px, en français et en anglais.
+async function moodCards(browser, baseURL) {
+  const options = { viewport: { width: 320, height: 640 } };
+  const good = await cityAt(browser, baseURL, moodTown([['calme', 5], ['corps', 2], ['calme', 4], ['corps', 4], ['calme', 4]]), '2026-10-21T10:00:00Z', options);
+  try {
+    await good.page.locator('[data-tab="journal"]').click();
+    const card = good.page.locator('#moodCard');
+    assert.match(await card.innerText(), /Ce qui te fait du bien[\s\S]*Après Calme, tu te sentais bien 3 fois sur 3/);
+    assert.deepEqual(await card.locator('.meter-row .name').allInnerTexts(), ['Corps', 'Calme']);
+    assert.equal(await good.page.locator('#moodSupport').count(), 0);
+    assert.equal(await fitsPage(good.page), true);
+    await toEnglish(good.page);
+    assert.match(await card.innerText(), /What makes you feel good[\s\S]*After Calm, you felt good 3 times out of 3/);
+    assert.deepEqual(good.errors, []);
+  } finally { await good.context.close(); }
+  const hard = await cityAt(browser, baseURL, moodTown([['calme', 2], ['corps', 1], ['calme', 4], ['corps', 2], ['calme', 5]]), '2026-10-21T10:00:00Z', options);
+  try {
+    await hard.page.locator('[data-tab="journal"]').click();
+    const support = hard.page.locator('#moodSupport');
+    assert.match(await support.innerText(), /Tes dernières séances ont été difficiles\.[\s\S]*un professionnel de santé peut t'accompagner/);
+    assert.equal(await fitsPage(hard.page), true);
+    await support.getByRole('button', { name: 'Merci', exact: true }).click();
+    assert.equal(await support.count(), 0);
+    await hard.page.reload();
+    await hard.page.waitForFunction(() => !!window.__ville);
+    await hard.page.locator('[data-tab="journal"]').click();
+    assert.equal(await hard.page.locator('#moodCard').isVisible(), true);
+    assert.equal(await hard.page.locator('#moodSupport').count(), 0);
+    assert.deepEqual(hard.errors, []);
+  } finally { await hard.context.close(); }
+  return 'Ce qui te fait du bien, et les moments difficiles';
+}
+
+const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
