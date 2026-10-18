@@ -139,8 +139,8 @@ async function runContent(browser, baseURL) {
         document.createElement = (tag, ...rest) => { if (String(tag).toLowerCase() === 'canvas') window.__canvases++; return make(tag, ...rest); };
       });
       await body.getByRole('radio', { name: 'Collection', exact: true }).click();
-      assert.equal(await body.locator('.carnet-cell').count(), 50);
-      assert.equal(await page.evaluate(() => window.__canvases), 50);
+      assert.equal(await body.locator('.carnet-cell').count(), 51);
+      assert.equal(await page.evaluate(() => window.__canvases), 51);
       await body.getByRole('radio', { name: 'Ensembles', exact: true }).click();
       const sets = await body.locator('.carnet-row strong').allInnerTexts();
       assert.equal(sets[0], 'Cocon');
@@ -267,7 +267,7 @@ async function runContent(browser, baseURL) {
       const decor = page.locator('#shop-decor');
       assert.equal(await decor.getByRole('button', { name: /^Placer .+ pour / }).count(), 6);
       assert.match(await decor.innerText(), /Haie/);
-      assert.equal(await decor.locator('.shop-item.hidden').count(), 9);
+      assert.equal(await decor.locator('.shop-item.hidden').count(), 10);
       assert.match(await decor.innerText(), /Récompense du succès «\sLève-tôt\s»/);
       await page.locator('#sheetClose').click();
       await page.evaluate(() => { __ville.state.achievements['leve-tot'] = Date.now(); });
