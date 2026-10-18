@@ -1,6 +1,6 @@
 /* ---------- Tirage contextualisé ---------- */
 const ACT_DRAW_TIMES = [0, 5, 10, 15, 20, 30, 60, 180];
-const DRAW_ENERGIES = [['any', 'Peu importe'], ['low', 'Basse'], ['medium', 'Moyenne'], ['high', 'Haute']];
+const drawEnergies = () => [['any', t('draw.energyAny')], ['low', t('draw.energyLow')], ['medium', t('draw.energyMedium')], ['high', t('draw.energyHigh')]];
 let drawAnim = null;
 let drawBusyUntil = 0;
 function drawFilters() {
@@ -37,22 +37,22 @@ function renderDrawFilters() {
       h('select', { class: 'select', id, onchange: () => {
         S.draw.filters = { maxMin: Number($('#drawMaxMin').value), energy: $('#drawEnergy').value, place: $('#drawPlace').value };
         commit();
-        announce(S.draw.current ? 'Filtres enregistrés pour le prochain tirage. Le tirage actuel est conservé.' : 'Filtres mis à jour.');
+        announce(S.draw.current ? t('draw.filtersSavedKeep') : t('draw.filtersUpdated'));
       } }, options));
     // Repliés par défaut : le bouton « Tirer au sort » reste visible sans faire défiler.
     root = h('details', { class: 'card draw-filters', id: 'drawFilters' },
       h('summary', {}, h('span', { class: 'draw-filter-head' },
-        h('span', { class: 'draw-filter-title' }, 'Ce qui me convient maintenant'),
+        h('span', { class: 'draw-filter-title' }, t('draw.filtersTitle')),
         h('span', { class: 'draw-filter-summary', id: 'drawFilterSummary' }))),
       h('div', { class: 'draw-filter-body' },
         h('div', { class: 'draw-filter-fields' },
-          field('drawMaxMin', 'Mon temps', ACT_DRAW_TIMES.map(t => h('option', { value: t }, t ? t + NB + 'min maximum' : 'Sans limite'))),
-          field('drawEnergy', 'Mon énergie', activityOptions(DRAW_ENERGIES, 'any')),
-          field('drawPlace', 'Mon lieu', activityOptions(ACT_PLACES, 'any'))),
+          field('drawMaxMin', t('draw.myTime'), ACT_DRAW_TIMES.map(m => h('option', { value: m }, m ? t('draw.maxMinutes', { n: m }) : t('draw.noLimit')))),
+          field('drawEnergy', t('draw.myEnergy'), activityOptions(drawEnergies(), 'any')),
+          field('drawPlace', t('draw.myPlace'), activityOptions(actPlaces(), 'any'))),
         h('div', { class: 'draw-filter-actions' }, h('span', { class: 'draw-filter-count', id: 'drawFilterCount', 'aria-live': 'polite' }),
           h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
-            S.draw.filters = { maxMin: 0, energy: 'any', place: 'any' }; commit(); announce('Filtres réinitialisés.');
-          } }, 'Tout proposer')),
+            S.draw.filters = { maxMin: 0, energy: 'any', place: 'any' }; commit(); announce(t('draw.filtersReset'));
+          } }, t('draw.showAll'))),
         h('p', { class: 'note', id: 'drawFilterNote' })));
     $('#drawCard').before(root);
   }
@@ -60,14 +60,12 @@ function renderDrawFilters() {
   $('#drawMaxMin').value = String(f.maxMin);
   $('#drawEnergy').value = f.energy;
   $('#drawPlace').value = f.place;
-  const active = [f.maxMin ? f.maxMin + NB + 'min max' : '',
-    f.energy !== 'any' ? 'énergie ' + DRAW_ENERGIES.find(([value]) => value === f.energy)[1].toLowerCase() : '',
-    f.place !== 'any' ? ACT_PLACES.find(([value]) => value === f.place)[1].toLowerCase() : ''].filter(Boolean);
-  $('#drawFilterSummary').textContent = frTypo((active.length ? active.join(' · ') : 'Temps, énergie, lieu') + ' · ' + plural(count, 'idée', 'idées'));
-  $('#drawFilterCount').textContent = frTypo(plural(count, 'idée disponible', 'idées disponibles'));
-  $('#drawFilterNote').textContent = frTypo(S.draw.current
-    ? 'Ces filtres s’appliquent au prochain tirage. Le tirage actuel, son bonus et le prix de sa relance sont conservés.'
-    : 'Les idées demandant moins d’énergie restent proposées. Le bonus nécessite au moins ' + DRAW_MIN_POOL + ' idées disponibles avec ces filtres.');
+  const active = [f.maxMin ? t('draw.summaryMax', { n: f.maxMin }) : '',
+    f.energy !== 'any' ? t('draw.summaryEnergy', { energy: drawEnergies().find(([value]) => value === f.energy)[1].toLowerCase() }) : '',
+    f.place !== 'any' ? actPlaces().find(([value]) => value === f.place)[1].toLowerCase() : ''].filter(Boolean);
+  $('#drawFilterSummary').textContent = frTypo((active.length ? active.join(' · ') : t('draw.summaryDefault')) + ' · ' + t('draw.ideas', { n: count }));
+  $('#drawFilterCount').textContent = frTypo(t('draw.ideasAvailable', { n: count }));
+  $('#drawFilterNote').textContent = frTypo(S.draw.current ? t('draw.filtersNoteCurrent') : t('draw.filtersNote', { min: DRAW_MIN_POOL }));
 }
 function renderTirage() {
   for (const b of $$('#poolSeg button')) b.setAttribute('aria-checked', String(b.dataset.pool === S.draw.pool));
@@ -84,12 +82,12 @@ function renderDraw() {
   const items = poolItems(S.draw.pool);
   const count = items.length;
   if (!cur) {
-    const note = !count ? 'Aucune idée disponible avec ces critères. Ajuste les filtres ou ajoute une idée.'
-      : count < DRAW_MIN_POOL ? 'Tirage parmi ' + plural(count, 'idée', 'idées') + '. Il faut au moins ' + DRAW_MIN_POOL + ' idées disponibles avec ces filtres pour gagner le bonus.'
-      : 'Tirage parmi ' + count + ' idées. Le premier tirage est gratuit.';
+    const note = !count ? t('draw.noneAvailable')
+      : count < DRAW_MIN_POOL ? t('draw.fewIdeas', { n: count, min: DRAW_MIN_POOL })
+      : t('draw.manyIdeas', { n: count });
     card.append(h('div', { class: 'draw-empty' }, icon('dice')),
-      h('p', { class: 'draw-name' }, 'Que faire maintenant ?'), h('p', { class: 'sub' }, note),
-      h('div', { class: 'draw-actions' }, h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: count ? null : true, onclick: doDraw }, icon('dice'), 'Tirer au sort')));
+      h('p', { class: 'draw-name' }, t('draw.whatNow')), h('p', { class: 'sub' }, note),
+      h('div', { class: 'draw-actions' }, h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: count ? null : true, onclick: doDraw }, icon('dice'), t('draw.drawButton'))));
     return;
   }
   const r = rewardFor(cur.min, cur.bonus), cost = rerollCost();
@@ -97,35 +95,35 @@ function renderDraw() {
   const available = currentDrawAvailable(cur);
   const outsideFilters = !matchesDrawFilters(cur) || (S.draw.pool !== 'both' && cur.kind !== S.draw.pool);
   const bonusNote = cur.bonus ? null
-    : cur.pool < DRAW_MIN_POOL ? 'Pas de bonus : moins de ' + DRAW_MIN_POOL + ' idées étaient disponibles lors de ce tirage.'
-    : 'Plus de bonus après ces relances.';
+    : cur.pool < DRAW_MIN_POOL ? t('draw.noBonusFew', { min: DRAW_MIN_POOL })
+    : t('draw.noBonusRerolls');
   card.append(...[
-    h('p', { class: 'draw-kind' }, cur.kind === 'chores' ? 'Obligation tirée' : 'Envie tirée'),
-    h('p', { class: 'draw-name' }, cur.name),
+    h('p', { class: 'draw-kind' }, cur.kind === 'chores' ? t('draw.kindChore') : t('draw.kindWish')),
+    h('p', { class: 'draw-name' }, displayName(cur.name)),
     h('div', { class: 'draw-meta' }, h('span', { class: 'pill' }, cur.min + NB + 'min'),
       h('span', { class: 'pill' }, catDot(cur.cat), catName(cur.cat)),
       h('span', { class: 'pill' }, activityModeLabel(cur.mode)),
-      cur.bonus ? h('span', { class: 'pill bonus' }, 'Bonus +' + cur.bonus + NB + '%') : null),
-    h('p', { class: 'sub' }, 'Gain à la fin : ' + fmt(r.total)),
+      cur.bonus ? h('span', { class: 'pill bonus' }, t('draw.bonusPill', { pct: cur.bonus })) : null),
+    h('p', { class: 'sub' }, t('draw.gain', { coins: fmt(r.total) })),
     bonusNote ? h('p', { class: 'note' }, bonusNote) : null,
-    outsideFilters ? h('p', { class: 'note' }, 'Ce tirage ne correspond plus aux filtres choisis. Tu peux le garder ; les filtres seront utilisés à la prochaine relance.') : null,
-    !available ? h('p', { class: 'note' }, 'Cette tâche a été terminée depuis le tirage. Elle redeviendra disponible à sa prochaine échéance, ou via « Remettre disponible » dans sa liste.') : null,
+    outsideFilters ? h('p', { class: 'note' }, t('draw.outsideFilters')) : null,
+    !available ? h('p', { class: 'note' }, t('draw.doneSince', { button: t('act.makeAvailable') })) : null,
     h('div', { class: 'draw-actions' },
-      h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: available ? null : true, onclick: acceptDraw }, icon('play'), 'C’est parti'),
-      h('button', { class: 'btn btn-secondary', type: 'button', disabled: short || !canReroll ? true : null, onclick: doDraw }, icon('reroll'), 'Relancer · ' + fmt(cost))),
-    !canReroll ? h('p', { class: 'note' }, 'Aucune autre idée disponible avec ces filtres. Ajuste-les pour relancer ; aucune pièce n’est dépensée.')
-      : short ? h('p', { class: 'note' }, 'Il te manque ' + fmt(cost - S.coins) + ' pour relancer.')
-      : h('p', { class: 'note' }, 'Chaque relance coûte des pièces et divise le bonus par deux.'),
+      h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: available ? null : true, onclick: acceptDraw }, icon('play'), t('draw.accept')),
+      h('button', { class: 'btn btn-secondary', type: 'button', disabled: short || !canReroll ? true : null, onclick: doDraw }, icon('reroll'), t('draw.reroll', { coins: fmt(cost) }))),
+    !canReroll ? h('p', { class: 'note' }, t('draw.noOther'))
+      : short ? h('p', { class: 'note' }, t('draw.shortReroll', { coins: fmt(cost - S.coins) }))
+      : h('p', { class: 'note' }, t('draw.rerollNote')),
   ].filter(Boolean));
 }
 function doDraw() {
   if (drawAnim || performance.now() < drawBusyUntil) return;
   const items = poolItems(S.draw.pool), cur = S.draw.current;
-  if (!items.length) { toast('Aucune idée disponible. Ajuste les filtres ou ajoute une idée.'); return; }
+  if (!items.length) { toast(t('draw.noneToast')); return; }
   const candidates = drawAlternatives(items, cur);
-  if (!candidates.length) { toast('Aucune autre idée disponible : aucune pièce dépensée.'); return; }
+  if (!candidates.length) { toast(t('draw.noOtherToast')); return; }
   const cost = rerollCost();
-  if (cost > S.coins) { toast('Il te manque ' + fmt(cost - S.coins) + ' pour relancer.'); return; }
+  if (cost > S.coins) { toast(t('draw.shortReroll', { coins: fmt(cost - S.coins) })); return; }
   drawBusyUntil = performance.now() + 700;
   if (cost) { S.coins -= cost; S.draw.rerolls += 1; }
   const arr = new Uint32Array(1);
@@ -141,14 +139,14 @@ function doDraw() {
 }
 function animateDraw(items, pick) {
   const card = $('#drawCard');
-  if (reducedMotion() || items.length < 2) { drawAnim = null; renderDraw(); announce('Tirage : ' + pick.name + '.'); return; }
+  if (reducedMotion() || items.length < 2) { drawAnim = null; renderDraw(); announce(t('draw.result', { name: displayName(pick.name) })); return; }
   const nameEl = h('p', { class: 'draw-name spinning', 'aria-hidden': 'true' });
   card.setAttribute('aria-busy', 'true');
-  card.replaceChildren(h('p', { class: 'draw-kind' }, 'Tirage en cours'), nameEl);
+  card.replaceChildren(h('p', { class: 'draw-kind' }, t('draw.spinning')), nameEl);
   let i = Math.floor(Math.random() * items.length), delay = 45;
   const step = () => {
-    if (delay > 230) { drawAnim = null; renderDraw(); announce('Tirage : ' + pick.name + '.'); return; }
-    nameEl.textContent = items[i++ % items.length].name;
+    if (delay > 230) { drawAnim = null; renderDraw(); announce(t('draw.result', { name: displayName(pick.name) })); return; }
+    nameEl.textContent = displayName(items[i++ % items.length].name);
     delay *= 1.17; drawAnim = setTimeout(step, delay);
   };
   step();
@@ -156,23 +154,24 @@ function animateDraw(items, pick) {
 function acceptDraw() {
   const cur = S.draw.current;
   if (!cur) return;
-  if (!currentDrawAvailable(cur)) { toast('Cette tâche est terminée ou en attente.'); return; }
+  if (!currentDrawAvailable(cur)) { toast(t('draw.taskUnavailable')); return; }
   openStartSheet(cur, { source: cur.kind, drawPct: cur.bonus, draw: clone(cur), drawRerolls: S.draw.rerolls, fixedDuration: true });
 }
 function renderList(key, ul) {
   ul.replaceChildren();
   const arr = S[key];
-  if (!arr.length) ul.append(h('li', {}, h('span', { class: 'empty' }, 'La liste est vide. Ajoute une idée ci-dessous.')));
+  if (!arr.length) ul.append(h('li', {}, h('span', { class: 'empty' }, t('draw.listEmpty'))));
   for (const it of arr) {
     const available = taskAvailable(it), status = taskStatus(it);
+    const name = displayName(it.name), energies = actEnergies();
     ul.append(h('li', { class: available ? null : 'task-waiting' },
-      h('div', { class: 'row-main' }, h('span', { class: 'row-title' }, it.name),
-        h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · exemple' : '')),
-        h('span', { class: 'task-status' }, activityModeLabel(it.mode) + ' · énergie ' + (ACT_ENERGIES.find(([value]) => value === (it.energy || 'medium')) || ACT_ENERGIES[1])[1].toLowerCase()),
+      h('div', { class: 'row-main' }, h('span', { class: 'row-title' }, name),
+        h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · ' + t('draw.example') : '')),
+        h('span', { class: 'task-status' }, t('draw.modeEnergy', { mode: activityModeLabel(it.mode), energy: (energies.find(([value]) => value === (it.energy || 'medium')) || energies[1])[1].toLowerCase() })),
         status ? h('span', { class: 'task-status' }, status) : null,
-        !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': 'Remettre disponible : ' + it.name, onclick: () => resetTask(key, it.id) }, 'Remettre disponible') : null),
+        !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': t('act.makeAvailableNamed', { name }), onclick: () => resetTask(key, it.id) }, t('act.makeAvailable')) : null),
       h('div', { class: 'task-actions' },
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Modifier ' + it.name, onclick: () => openEditSheet(key, it.id) }, icon('pencil')),
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Supprimer ' + it.name, onclick: () => removeWithUndo(key, it.id) }, icon('trash')))));
+        h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('act.editNamed', { name }), onclick: () => openEditSheet(key, it.id) }, icon('pencil')),
+        h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('act.deleteNamed', { name }), onclick: () => removeWithUndo(key, it.id) }, icon('trash')))));
   }
 }

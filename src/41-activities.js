@@ -1,13 +1,12 @@
 /* ---------- Activités, modes et disponibilité ---------- */
-const ACT_ENERGIES = [['low', 'Douce'], ['medium', 'Modérée'], ['high', 'Soutenue']];
-const ACT_PLACES = [['any', 'Peu importe'], ['inside', 'À l’intérieur'], ['outside', 'À l’extérieur']];
-const ACT_REPEATS = [['always', 'Toujours disponible'], ['once', 'Une seule fois'], ['daily', 'Chaque jour'], ['weekly', 'Tous les 7 jours']];
+// Choix proposés, [valeur, libellé] dans la langue affichée.
+const actEnergies = () => [['low', t('act.energyLow')], ['medium', t('act.energyMedium')], ['high', t('act.energyHigh')]];
+const actPlaces = () => [['any', t('act.placeAny')], ['inside', t('act.placeInside')], ['outside', t('act.placeOutside')]];
+const actRepeats = () => [['always', t('act.repeatAlways')], ['once', t('act.repeatOnce')], ['daily', t('act.repeatDaily')], ['weekly', t('act.repeatWeekly')]];
 function activityOptions(choices, value) { return choices.map(([v, label]) => h('option', { value: v, selected: v === value ? true : null }, label)); }
-function activityModeLabel(mode) { return mode === 'free' ? 'Activité libre' : 'Concentration'; }
+function activityModeLabel(mode) { return mode === 'free' ? t('act.modeFree') : t('act.modeFocus'); }
 function activityModeNote(mode) {
-  return mode === 'free'
-    ? 'Marche, sport, musique… le chrono continue avec l’écran verrouillé ou une autre app. Reviens ici pour retrouver la fin de la session.'
-    : 'Garde l’app à l’écran. Après plus de ' + S.settings.grace + NB + 's d’absence, la session est interrompue ; le temps effectué reste dans le journal.';
+  return mode === 'free' ? t('act.modeFreeNote') : t('act.modeFocusNote', { grace: S.settings.grace });
 }
 function taskNextDay(it) {
   if (!it.completedAt || !['daily', 'weekly'].includes(it.repeat)) return null;
@@ -22,10 +21,10 @@ function taskAvailable(it, at = nowTs()) {
 function taskStatus(it) {
   if (!taskAvailable(it)) {
     const next = taskNextDay(it);
-    return next ? 'En attente · disponible ' + dayLabel(next) : 'Terminée · une seule fois';
+    return next ? t('act.statusWaiting', { day: dayLabel(next) }) : t('act.statusDoneOnce');
   }
-  const repeat = ACT_REPEATS.find(([value]) => value === it.repeat);
-  return repeat && it.repeat !== 'always' ? 'Disponible · ' + repeat[1].toLowerCase() : '';
+  const repeat = actRepeats().find(([value]) => value === it.repeat);
+  return repeat && it.repeat !== 'always' ? t('act.statusRepeat', { repeat: repeat[1].toLowerCase() }) : '';
 }
 // Appelée uniquement à la réussite d’une session, avant le commit de la récompense.
 function completeTask(a) {
@@ -46,17 +45,17 @@ function resetTask(key, id) {
   if (!it) return;
   it.completedAt = 0;   // même valeur que normalize() pour « jamais terminée »
   commit();
-  toast('Remise à disposition.');
+  toast(t('act.resetDone'));
 }
 function activityFields(prefix, it = {}) {
   const select = (name, label, choices, value) => h('div', { class: 'field' },
     h('label', { for: prefix + name }, label),
     h('select', { class: 'select', id: prefix + name, name }, activityOptions(choices, value)));
   return h('div', { class: 'activity-fields' },
-    select('mode', 'Mode', [['focus', 'Concentration'], ['free', 'Activité libre']], it.mode || 'focus'),
-    select('repeat', 'Fréquence', ACT_REPEATS, it.repeat || 'always'),
-    select('energy', 'Énergie nécessaire', ACT_ENERGIES, it.energy || 'medium'),
-    select('place', 'Lieu', ACT_PLACES, it.place || 'any'));
+    select('mode', t('act.mode'), [['focus', t('act.modeFocus')], ['free', t('act.modeFree')]], it.mode || 'focus'),
+    select('repeat', t('act.repeat'), actRepeats(), it.repeat || 'always'),
+    select('energy', t('act.energy'), actEnergies(), it.energy || 'medium'),
+    select('place', t('act.place'), actPlaces(), it.place || 'any'));
 }
 function readActivityFields(form, defaults = {}) {
   const choice = (name, allowed, fallback) => {
@@ -76,8 +75,8 @@ function enhanceActivityForms() {
     const form = $('#' + id);
     if (!form || $('.activity-fields', form)) continue;
     const fields = activityFields(id + '-', { repeat });
-    const details = h('details', { class: 'activity-options' }, h('summary', {}, 'Mode, fréquence et contexte'), fields,
-      h('p', { class: 'note' }, 'Le contexte aide le tirage à proposer une idée adaptée. Une tâche ponctuelle ou récurrente quitte le tirage après une session réussie.'));
+    const details = h('details', { class: 'activity-options' }, h('summary', {}, t('act.optionsSummary')), fields,
+      h('p', { class: 'note' }, t('act.optionsNote')));
     if (id === 'addActForm') form.insertBefore(details, $('button[type="submit"]', form));
     else form.append(details);
   }
@@ -88,40 +87,38 @@ function renderActivities() {
   const grid = $('#actsGrid');
   grid.replaceChildren();
   $('#editActs').setAttribute('aria-pressed', String(editingActs));
-  $('#editActs').lastChild.textContent = editingActs ? 'Terminé' : 'Modifier';
+  $('#editActs').lastChild.textContent = editingActs ? t('act.doneEditing') : t('act.edit');
   $('#addActForm').hidden = !editingActs;
-  $('#actsLede').textContent = frTypo(editingActs
-    ? 'Touche une activité pour modifier son mode, sa durée ou sa fréquence.'
-    : 'Choisis une activité et lance le chrono. Chaque minute terminée rapporte 1' + NB + 'M de pièces.');
+  $('#actsLede').textContent = frTypo(editingActs ? t('act.ledeEditing') : t('act.lede'));
   for (const a of S.activities) {
     const available = taskAvailable(a);
     const card = h('button', { class: 'act' + (!available ? ' task-waiting' : ''), type: 'button', vars: { '--c': catVar(a.cat) },
-      'aria-label': editingActs || !available ? 'Modifier ' + a.name : null,
+      'aria-label': editingActs || !available ? t('act.editNamed', { name: displayName(a.name) }) : null,
       onclick: () => { if (editingActs || !available) openEditSheet('activities', a.id); else openStartSheet(a); } },
-      h('span', { class: 'act-name' }, a.name), catLabel(a.cat),
+      h('span', { class: 'act-name' }, displayName(a.name)), catLabel(a.cat),
       h('span', { class: 'act-mode' }, activityModeLabel(a.mode)),
       h('span', { class: 'act-meta' }, a.min + NB + 'min · ' + fmt(a.min * RATE)),
       taskStatus(a) ? h('span', { class: 'task-status' }, taskStatus(a)) : null);
     if (editingActs) grid.append(h('div', { class: 'act-wrap' }, card,
-      h('button', { class: 'act-del', type: 'button', 'aria-label': 'Supprimer ' + a.name, onclick: () => removeWithUndo('activities', a.id) }, icon('trash'))));
+      h('button', { class: 'act-del', type: 'button', 'aria-label': t('act.deleteNamed', { name: displayName(a.name) }), onclick: () => removeWithUndo('activities', a.id) }, icon('trash'))));
     else grid.append(card);
   }
-  if (!S.activities.length) grid.append(h('p', { class: 'empty-state', style: 'grid-column:1/-1' }, 'Aucune activité. Touche « Modifier » pour en ajouter.'));
+  if (!S.activities.length) grid.append(h('p', { class: 'empty-state', style: 'grid-column:1/-1' }, t('act.empty', { button: t('act.edit') })));
   if (typeof renderRoutines === 'function') renderRoutines();
 }
 
 function openStartSheet(act, options = {}) {
   let min = act.min, mode = act.mode === 'free' ? 'free' : 'focus';
   const durs = DURATIONS.includes(act.min) ? DURATIONS : [...DURATIONS, act.min].sort((a, b) => a - b);
-  openSheet(act.name, body => {
-    const chips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': 'Durée' });
-    const modes = h('div', { class: 'chips mode-choices', role: 'radiogroup', 'aria-label': 'Mode de session' });
+  openSheet(displayName(act.name), body => {
+    const chips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': t('act.duration') });
+    const modes = h('div', { class: 'chips mode-choices', role: 'radiogroup', 'aria-label': t('act.sessionMode') });
     const preview = h('p', { class: 'note' });
     const modeNote = h('p', { class: 'note', id: 'startModeNote', 'aria-live': 'polite' });
     const startBtn = h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'button', onclick: () => {
       const key = options.source && options.source !== 'direct' ? options.source : 'activities';
       const current = S[key] && S[key].find(item => item.id === act.id);
-      if (current && !taskAvailable(current)) { closeSheet(); toast('Cette tâche est terminée ou en attente de sa prochaine échéance.'); return; }
+      if (current && !taskAvailable(current)) { closeSheet(); toast(t('act.taskUnavailable')); return; }
       closeSheet();
       beginSession(Object.assign({}, options, { name: act.name, cat: act.cat, min, mode, source: options.source || 'direct', sourceId: act.id }));
     } }, icon('play'), h('span', {}, ''));
@@ -132,14 +129,14 @@ function openStartSheet(act, options = {}) {
       $$('.chip', chips).forEach((c, i) => { c.setAttribute('aria-checked', String(durs[i] === min)); c.tabIndex = durs[i] === min ? 0 : -1; });
       $$('.chip', modes).forEach(c => { c.setAttribute('aria-checked', String(c.dataset.mode === mode)); c.tabIndex = c.dataset.mode === mode ? 0 : -1; });
       const r = rewardFor(min, options.drawPct || 0);
-      preview.textContent = frTypo('Gain à la fin : ' + fmt(r.total) + (r.streakPct ? ' (série de ' + r.streakDays + NB + 'jours : +' + r.streakPct + NB + '%)' : '') + '.');
+      preview.textContent = frTypo(r.streakPct ? t('act.gainPreviewStreak', { coins: fmt(r.total), days: r.streakDays, pct: r.streakPct }) : t('act.gainPreview', { coins: fmt(r.total) }));
       modeNote.textContent = frTypo(activityModeNote(mode));
-      startBtn.lastChild.textContent = 'Commencer · ' + min + NB + 'min';
+      startBtn.lastChild.textContent = t('act.startButton', { min });
     }
     body.append(catLabel(act.cat),
-      options.fixedDuration ? h('p', { class: 'sub' }, 'Durée du tirage : ' + min + NB + 'min. Le bonus du tirage est conservé.')
-        : h('div', { class: 'field' }, h('span', { class: 'sub' }, 'Durée'), chips),
-      h('div', { class: 'field' }, h('span', { class: 'sub' }, 'Mode de session'), modes), modeNote, preview, startBtn);
+      options.fixedDuration ? h('p', { class: 'sub' }, t('act.drawDuration', { min }))
+        : h('div', { class: 'field' }, h('span', { class: 'sub' }, t('act.duration')), chips),
+      h('div', { class: 'field' }, h('span', { class: 'sub' }, t('act.sessionMode')), modes), modeNote, preview, startBtn);
     update();
   });
 }
@@ -147,15 +144,15 @@ function openStartSheet(act, options = {}) {
 function openEditSheet(key, id) {
   const it = S[key].find(x => x.id === id);
   if (!it) return;
-  const title = key === 'activities' ? 'Modifier l’activité' : key === 'wishes' ? 'Modifier l’envie' : 'Modifier l’obligation';
+  const title = key === 'activities' ? t('act.editActivity') : key === 'wishes' ? t('act.editWish') : t('act.editChore');
   openSheet(title, body => {
-    const name = h('input', { class: 'input', id: 'editName', maxlength: '40', value: it.name, autocomplete: 'off', required: true });
+    const name = h('input', { class: 'input', id: 'editName', maxlength: '40', value: displayName(it.name), autocomplete: 'off', required: true });
     const cat = h('select', { class: 'select', id: 'editCat' }, catOptions(it.cat));
     const min = h('select', { class: 'select', id: 'editMin' }, minOptions(it.min));
     const form = h('form', { class: 'add-form', onsubmit: e => {
       e.preventDefault();
       const cur = S[key].find(x => x.id === id);
-      if (!cur) { closeSheet(); toast('Cet élément n’existe plus.'); return; }
+      if (!cur) { closeSheet(); toast(t('act.gone')); return; }
       const nm = name.value.trim().slice(0, 40);
       if (!nm) { name.focus(); return; }
       cur.name = nm;
@@ -163,17 +160,17 @@ function openEditSheet(key, id) {
       cur.min = int(Number(min.value), 1, 180, cur.min);
       Object.assign(cur, readActivityFields(form));
       delete cur.ex;
-      closeSheet(); commit(); toast('Modifications enregistrées.');
+      closeSheet(); commit(); toast(t('act.saved'));
     } },
-      h('div', { class: 'field' }, h('label', { for: 'editName' }, 'Nom'), name),
+      h('div', { class: 'field' }, h('label', { for: 'editName' }, t('act.name')), name),
       h('div', { class: 'row-2' },
-        h('div', { class: 'field' }, h('label', { for: 'editCat' }, 'Domaine'), cat),
-        h('div', { class: 'field' }, h('label', { for: 'editMin' }, 'Durée'), min)),
+        h('div', { class: 'field' }, h('label', { for: 'editCat' }, t('act.domain')), cat),
+        h('div', { class: 'field' }, h('label', { for: 'editMin' }, t('act.duration')), min)),
       activityFields('edit-', it),
-      h('p', { class: 'note' }, 'Concentration garde l’app à l’écran. Activité libre continue écran verrouillé. La fréquence s’applique après une session réussie.'),
-      h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'submit' }, icon('check'), 'Enregistrer'));
+      h('p', { class: 'note' }, t('act.editNote')),
+      h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'submit' }, icon('check'), t('common.save')));
     if (!taskAvailable(it)) form.append(h('p', { class: 'task-status' }, taskStatus(it)),
-      h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); resetTask(key, id); } }, icon('reroll'), 'Remettre disponible'));
+      h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); resetTask(key, id); } }, icon('reroll'), t('act.makeAvailable')));
     body.append(form);
   });
 }

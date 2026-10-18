@@ -450,7 +450,7 @@ DICT.fr = {
 
   // Textes fixes de la page : activités, tirage, journal, session
   'act.edit': 'Modifier',
-  'act.lede': 'Choisis une activité et lance le chrono. Chaque minute rapporte 1\u00a0M de pièces.',
+  'act.lede': 'Choisis une activité et lance le chrono. Chaque minute terminée rapporte 1\u00a0M de pièces.',
   'act.newTitle': 'Nouvelle activité',
   'act.name': 'Nom',
   'act.namePlaceholder': "Ex. Apprendre l'espagnol",
@@ -482,6 +482,106 @@ DICT.fr = {
   'session.dialogLabel': 'Session en cours',
   'session.strictButton': "Mode strict : bloquer le téléphone sur l'app",
   'session.abandon': 'Abandonner',
+
+  // Activités : choix, fiches et formulaires
+  'common.save': 'Enregistrer',
+  'act.energyLow': 'Douce',
+  'act.energyMedium': 'Modérée',
+  'act.energyHigh': 'Soutenue',
+  'act.placeAny': 'Peu importe',
+  'act.placeInside': 'À l’intérieur',
+  'act.placeOutside': 'À l’extérieur',
+  'act.repeatAlways': 'Toujours disponible',
+  'act.repeatOnce': 'Une seule fois',
+  'act.repeatDaily': 'Chaque jour',
+  'act.repeatWeekly': 'Tous les 7 jours',
+  'act.modeFree': 'Activité libre',
+  'act.modeFocus': 'Concentration',
+  'act.modeFreeNote': 'Marche, sport, musique… le chrono continue avec l’écran verrouillé ou une autre app. Reviens ici pour retrouver la fin de la session.',
+  'act.modeFocusNote': 'Garde l’app à l’écran. Après plus de {grace}\u00a0s d’absence, la session est interrompue ; le temps effectué reste dans le journal.',
+  'act.statusWaiting': 'En attente · disponible {day}',
+  'act.statusDoneOnce': 'Terminée · une seule fois',
+  'act.statusRepeat': 'Disponible · {repeat}',
+  'act.resetDone': 'Remise à disposition.',
+  'act.mode': 'Mode',
+  'act.repeat': 'Fréquence',
+  'act.energy': 'Énergie nécessaire',
+  'act.place': 'Lieu',
+  'act.optionsSummary': 'Mode, fréquence et contexte',
+  'act.optionsNote': 'Le contexte aide le tirage à proposer une idée adaptée. Une tâche ponctuelle ou récurrente quitte le tirage après une session réussie.',
+  'act.doneEditing': 'Terminé',
+  'act.ledeEditing': 'Touche une activité pour modifier son mode, sa durée ou sa fréquence.',
+  'act.editNamed': 'Modifier {name}',
+  'act.deleteNamed': 'Supprimer {name}',
+  'act.empty': 'Aucune activité. Touche « {button} » pour en ajouter.',
+  'act.sessionMode': 'Mode de session',
+  'act.taskUnavailable': 'Cette tâche est terminée ou en attente de sa prochaine échéance.',
+  'act.gainPreview': 'Gain à la fin : {coins}.',
+  'act.gainPreviewStreak': 'Gain à la fin : {coins} (série de {days}\u00a0jours : +{pct}\u00a0%).',
+  'act.startButton': 'Commencer · {min}\u00a0min',
+  'act.drawDuration': 'Durée du tirage : {min}\u00a0min. Le bonus du tirage est conservé.',
+  'act.editActivity': 'Modifier l’activité',
+  'act.editWish': 'Modifier l’envie',
+  'act.editChore': 'Modifier l’obligation',
+  'act.gone': 'Cet élément n’existe plus.',
+  'act.saved': 'Modifications enregistrées.',
+  'act.editNote': 'Concentration garde l’app à l’écran. Activité libre continue écran verrouillé. La fréquence s’applique après une session réussie.',
+  'act.makeAvailable': 'Remettre disponible',
+  'act.makeAvailableNamed': 'Remettre disponible : {name}',
+  'act.listFull': 'La liste est pleine ({max} activités).',
+  'act.added': 'Activité ajoutée.',
+  'session.abandonConfirm': "Confirmer l'abandon",
+
+  // Tirage au sort : filtres, carte et listes
+  'draw.energyAny': 'Peu importe',
+  'draw.energyLow': 'Basse',
+  'draw.energyMedium': 'Moyenne',
+  'draw.energyHigh': 'Haute',
+  'draw.filtersSavedKeep': 'Filtres enregistrés pour le prochain tirage. Le tirage actuel est conservé.',
+  'draw.filtersUpdated': 'Filtres mis à jour.',
+  'draw.filtersTitle': 'Ce qui me convient maintenant',
+  'draw.myTime': 'Mon temps',
+  'draw.myEnergy': 'Mon énergie',
+  'draw.myPlace': 'Mon lieu',
+  'draw.maxMinutes': '{n}\u00a0min maximum',
+  'draw.noLimit': 'Sans limite',
+  'draw.filtersReset': 'Filtres réinitialisés.',
+  'draw.showAll': 'Tout proposer',
+  'draw.summaryMax': '{n}\u00a0min max',
+  'draw.summaryEnergy': 'énergie {energy}',
+  'draw.summaryDefault': 'Temps, énergie, lieu',
+  'draw.ideas': { one: '{n}\u00a0idée', other: '{n}\u00a0idées' },
+  'draw.ideasAvailable': { one: '{n}\u00a0idée disponible', other: '{n}\u00a0idées disponibles' },
+  'draw.filtersNoteCurrent': 'Ces filtres s’appliquent au prochain tirage. Le tirage actuel, son bonus et le prix de sa relance sont conservés.',
+  'draw.filtersNote': 'Les idées demandant moins d’énergie restent proposées. Le bonus nécessite au moins {min} idées disponibles avec ces filtres.',
+  'draw.noneAvailable': 'Aucune idée disponible avec ces critères. Ajuste les filtres ou ajoute une idée.',
+  'draw.fewIdeas': { one: 'Tirage parmi {n}\u00a0idée. Il faut au moins {min} idées disponibles avec ces filtres pour gagner le bonus.', other: 'Tirage parmi {n}\u00a0idées. Il faut au moins {min} idées disponibles avec ces filtres pour gagner le bonus.' },
+  'draw.manyIdeas': 'Tirage parmi {n} idées. Le premier tirage est gratuit.',
+  'draw.whatNow': 'Que faire maintenant ?',
+  'draw.drawButton': 'Tirer au sort',
+  'draw.noBonusFew': 'Pas de bonus : moins de {min} idées étaient disponibles lors de ce tirage.',
+  'draw.noBonusRerolls': 'Plus de bonus après ces relances.',
+  'draw.kindChore': 'Obligation tirée',
+  'draw.kindWish': 'Envie tirée',
+  'draw.bonusPill': 'Bonus +{pct}\u00a0%',
+  'draw.gain': 'Gain à la fin : {coins}',
+  'draw.outsideFilters': 'Ce tirage ne correspond plus aux filtres choisis. Tu peux le garder ; les filtres seront utilisés à la prochaine relance.',
+  'draw.doneSince': 'Cette tâche a été terminée depuis le tirage. Elle redeviendra disponible à sa prochaine échéance, ou via « {button} » dans sa liste.',
+  'draw.accept': 'C’est parti',
+  'draw.reroll': 'Relancer · {coins}',
+  'draw.noOther': 'Aucune autre idée disponible avec ces filtres. Ajuste-les pour relancer ; aucune pièce n’est dépensée.',
+  'draw.shortReroll': 'Il te manque {coins} pour relancer.',
+  'draw.rerollNote': 'Chaque relance coûte des pièces et divise le bonus par deux.',
+  'draw.noneToast': 'Aucune idée disponible. Ajuste les filtres ou ajoute une idée.',
+  'draw.noOtherToast': 'Aucune autre idée disponible : aucune pièce dépensée.',
+  'draw.result': 'Tirage : {name}.',
+  'draw.spinning': 'Tirage en cours',
+  'draw.taskUnavailable': 'Cette tâche est terminée ou en attente.',
+  'draw.listEmpty': 'La liste est vide. Ajoute une idée ci-dessous.',
+  'draw.example': 'exemple',
+  'draw.modeEnergy': '{mode} · énergie {energy}',
+  'draw.listFull': 'La liste est pleine ({max} idées).',
+  'draw.added': 'Ajouté à la liste.',
 };
 
 
@@ -644,7 +744,7 @@ DICT.en = {
 
   // Fixed page texts: activities, draw, journal, session
   'act.edit': 'Edit',
-  'act.lede': 'Pick an activity and start the timer. Every minute earns 1\u00a0M coins.',
+  'act.lede': 'Pick an activity and start the timer. Every completed minute earns 1\u00a0M coins.',
   'act.newTitle': 'New activity',
   'act.name': 'Name',
   'act.namePlaceholder': 'E.g. Learn Spanish',
@@ -676,6 +776,106 @@ DICT.en = {
   'session.dialogLabel': 'Session in progress',
   'session.strictButton': 'Strict mode: lock the phone to the app',
   'session.abandon': 'Stop',
+
+  // Activities: choices, sheets and forms
+  'common.save': 'Save',
+  'act.energyLow': 'Gentle',
+  'act.energyMedium': 'Moderate',
+  'act.energyHigh': 'Vigorous',
+  'act.placeAny': 'Anywhere',
+  'act.placeInside': 'Indoors',
+  'act.placeOutside': 'Outdoors',
+  'act.repeatAlways': 'Always available',
+  'act.repeatOnce': 'Just once',
+  'act.repeatDaily': 'Every day',
+  'act.repeatWeekly': 'Every 7 days',
+  'act.modeFree': 'Free activity',
+  'act.modeFocus': 'Focus',
+  'act.modeFreeNote': 'Walking, sport, music… the timer keeps running with the screen locked or in another app. Come back here to see the end of the session.',
+  'act.modeFocusNote': 'Keep the app on screen. After more than {grace}\u00a0s away, the session is interrupted; the time you did stays in the journal.',
+  'act.statusWaiting': 'Waiting · available {day}',
+  'act.statusDoneOnce': 'Done · just once',
+  'act.statusRepeat': 'Available · {repeat}',
+  'act.resetDone': 'Available again.',
+  'act.mode': 'Mode',
+  'act.repeat': 'Frequency',
+  'act.energy': 'Energy needed',
+  'act.place': 'Place',
+  'act.optionsSummary': 'Mode, frequency and context',
+  'act.optionsNote': 'Context helps the draw suggest a suitable idea. A one-off or recurring task leaves the draw after a successful session.',
+  'act.doneEditing': 'Done',
+  'act.ledeEditing': 'Tap an activity to change its mode, duration or frequency.',
+  'act.editNamed': 'Edit {name}',
+  'act.deleteNamed': 'Delete {name}',
+  'act.empty': 'No activities. Tap “{button}” to add some.',
+  'act.sessionMode': 'Session mode',
+  'act.taskUnavailable': 'This task is done or waiting for its next due date.',
+  'act.gainPreview': 'Reward at the end: {coins}.',
+  'act.gainPreviewStreak': 'Reward at the end: {coins} ({days}-day streak: +{pct}%).',
+  'act.startButton': 'Start · {min}\u00a0min',
+  'act.drawDuration': 'Draw duration: {min}\u00a0min. The draw bonus is kept.',
+  'act.editActivity': 'Edit activity',
+  'act.editWish': 'Edit wish',
+  'act.editChore': 'Edit chore',
+  'act.gone': 'This item no longer exists.',
+  'act.saved': 'Changes saved.',
+  'act.editNote': 'Focus keeps the app on screen. Free activity keeps going with the screen locked. The frequency applies after a successful session.',
+  'act.makeAvailable': 'Make available again',
+  'act.makeAvailableNamed': 'Make available again: {name}',
+  'act.listFull': 'The list is full ({max} activities).',
+  'act.added': 'Activity added.',
+  'session.abandonConfirm': 'Confirm stop',
+
+  // Random draw: filters, card and lists
+  'draw.energyAny': 'Any',
+  'draw.energyLow': 'Low',
+  'draw.energyMedium': 'Medium',
+  'draw.energyHigh': 'High',
+  'draw.filtersSavedKeep': 'Filters saved for the next draw. The current draw is kept.',
+  'draw.filtersUpdated': 'Filters updated.',
+  'draw.filtersTitle': 'What suits me right now',
+  'draw.myTime': 'My time',
+  'draw.myEnergy': 'My energy',
+  'draw.myPlace': 'My place',
+  'draw.maxMinutes': '{n}\u00a0min maximum',
+  'draw.noLimit': 'No limit',
+  'draw.filtersReset': 'Filters reset.',
+  'draw.showAll': 'Suggest everything',
+  'draw.summaryMax': '{n}\u00a0min max',
+  'draw.summaryEnergy': '{energy} energy',
+  'draw.summaryDefault': 'Time, energy, place',
+  'draw.ideas': { one: '{n}\u00a0idea', other: '{n}\u00a0ideas' },
+  'draw.ideasAvailable': { one: '{n}\u00a0idea available', other: '{n}\u00a0ideas available' },
+  'draw.filtersNoteCurrent': 'These filters apply to the next draw. The current draw, its bonus and its redraw price are kept.',
+  'draw.filtersNote': 'Ideas that need less energy are still suggested. The bonus needs at least {min} ideas available with these filters.',
+  'draw.noneAvailable': 'No ideas available with these criteria. Adjust the filters or add an idea.',
+  'draw.fewIdeas': { one: 'Drawing from {n}\u00a0idea. You need at least {min} ideas available with these filters to earn the bonus.', other: 'Drawing from {n}\u00a0ideas. You need at least {min} ideas available with these filters to earn the bonus.' },
+  'draw.manyIdeas': 'Drawing from {n} ideas. The first draw is free.',
+  'draw.whatNow': 'What now?',
+  'draw.drawButton': 'Draw',
+  'draw.noBonusFew': 'No bonus: fewer than {min} ideas were available for this draw.',
+  'draw.noBonusRerolls': 'No bonus left after these redraws.',
+  'draw.kindChore': 'Chore drawn',
+  'draw.kindWish': 'Wish drawn',
+  'draw.bonusPill': 'Bonus +{pct}%',
+  'draw.gain': 'Reward at the end: {coins}',
+  'draw.outsideFilters': 'This draw no longer matches the chosen filters. You can keep it; the filters will be used on the next redraw.',
+  'draw.doneSince': 'This task was completed after the draw. It will be available again at its next due date, or via “{button}” in its list.',
+  'draw.accept': "Let's go",
+  'draw.reroll': 'Redraw · {coins}',
+  'draw.noOther': 'No other idea available with these filters. Adjust them to redraw; no coins are spent.',
+  'draw.shortReroll': 'You need {coins} more to redraw.',
+  'draw.rerollNote': 'Each redraw costs coins and halves the bonus.',
+  'draw.noneToast': 'No ideas available. Adjust the filters or add an idea.',
+  'draw.noOtherToast': 'No other idea available: no coins spent.',
+  'draw.result': 'Draw: {name}.',
+  'draw.spinning': 'Drawing…',
+  'draw.taskUnavailable': 'This task is done or waiting.',
+  'draw.listEmpty': 'The list is empty. Add an idea below.',
+  'draw.example': 'example',
+  'draw.modeEnergy': '{mode} · {energy} energy',
+  'draw.listFull': 'The list is full ({max} ideas).',
+  'draw.added': 'Added to the list.',
 };
 
 
@@ -2568,15 +2768,14 @@ function renderVille() {
 
 /* ---- 41-activities.js ---- */
 /* ---------- Activités, modes et disponibilité ---------- */
-const ACT_ENERGIES = [['low', 'Douce'], ['medium', 'Modérée'], ['high', 'Soutenue']];
-const ACT_PLACES = [['any', 'Peu importe'], ['inside', 'À l’intérieur'], ['outside', 'À l’extérieur']];
-const ACT_REPEATS = [['always', 'Toujours disponible'], ['once', 'Une seule fois'], ['daily', 'Chaque jour'], ['weekly', 'Tous les 7 jours']];
+// Choix proposés, [valeur, libellé] dans la langue affichée.
+const actEnergies = () => [['low', t('act.energyLow')], ['medium', t('act.energyMedium')], ['high', t('act.energyHigh')]];
+const actPlaces = () => [['any', t('act.placeAny')], ['inside', t('act.placeInside')], ['outside', t('act.placeOutside')]];
+const actRepeats = () => [['always', t('act.repeatAlways')], ['once', t('act.repeatOnce')], ['daily', t('act.repeatDaily')], ['weekly', t('act.repeatWeekly')]];
 function activityOptions(choices, value) { return choices.map(([v, label]) => h('option', { value: v, selected: v === value ? true : null }, label)); }
-function activityModeLabel(mode) { return mode === 'free' ? 'Activité libre' : 'Concentration'; }
+function activityModeLabel(mode) { return mode === 'free' ? t('act.modeFree') : t('act.modeFocus'); }
 function activityModeNote(mode) {
-  return mode === 'free'
-    ? 'Marche, sport, musique… le chrono continue avec l’écran verrouillé ou une autre app. Reviens ici pour retrouver la fin de la session.'
-    : 'Garde l’app à l’écran. Après plus de ' + S.settings.grace + NB + 's d’absence, la session est interrompue ; le temps effectué reste dans le journal.';
+  return mode === 'free' ? t('act.modeFreeNote') : t('act.modeFocusNote', { grace: S.settings.grace });
 }
 function taskNextDay(it) {
   if (!it.completedAt || !['daily', 'weekly'].includes(it.repeat)) return null;
@@ -2591,10 +2790,10 @@ function taskAvailable(it, at = nowTs()) {
 function taskStatus(it) {
   if (!taskAvailable(it)) {
     const next = taskNextDay(it);
-    return next ? 'En attente · disponible ' + dayLabel(next) : 'Terminée · une seule fois';
+    return next ? t('act.statusWaiting', { day: dayLabel(next) }) : t('act.statusDoneOnce');
   }
-  const repeat = ACT_REPEATS.find(([value]) => value === it.repeat);
-  return repeat && it.repeat !== 'always' ? 'Disponible · ' + repeat[1].toLowerCase() : '';
+  const repeat = actRepeats().find(([value]) => value === it.repeat);
+  return repeat && it.repeat !== 'always' ? t('act.statusRepeat', { repeat: repeat[1].toLowerCase() }) : '';
 }
 // Appelée uniquement à la réussite d’une session, avant le commit de la récompense.
 function completeTask(a) {
@@ -2615,17 +2814,17 @@ function resetTask(key, id) {
   if (!it) return;
   it.completedAt = 0;   // même valeur que normalize() pour « jamais terminée »
   commit();
-  toast('Remise à disposition.');
+  toast(t('act.resetDone'));
 }
 function activityFields(prefix, it = {}) {
   const select = (name, label, choices, value) => h('div', { class: 'field' },
     h('label', { for: prefix + name }, label),
     h('select', { class: 'select', id: prefix + name, name }, activityOptions(choices, value)));
   return h('div', { class: 'activity-fields' },
-    select('mode', 'Mode', [['focus', 'Concentration'], ['free', 'Activité libre']], it.mode || 'focus'),
-    select('repeat', 'Fréquence', ACT_REPEATS, it.repeat || 'always'),
-    select('energy', 'Énergie nécessaire', ACT_ENERGIES, it.energy || 'medium'),
-    select('place', 'Lieu', ACT_PLACES, it.place || 'any'));
+    select('mode', t('act.mode'), [['focus', t('act.modeFocus')], ['free', t('act.modeFree')]], it.mode || 'focus'),
+    select('repeat', t('act.repeat'), actRepeats(), it.repeat || 'always'),
+    select('energy', t('act.energy'), actEnergies(), it.energy || 'medium'),
+    select('place', t('act.place'), actPlaces(), it.place || 'any'));
 }
 function readActivityFields(form, defaults = {}) {
   const choice = (name, allowed, fallback) => {
@@ -2645,8 +2844,8 @@ function enhanceActivityForms() {
     const form = $('#' + id);
     if (!form || $('.activity-fields', form)) continue;
     const fields = activityFields(id + '-', { repeat });
-    const details = h('details', { class: 'activity-options' }, h('summary', {}, 'Mode, fréquence et contexte'), fields,
-      h('p', { class: 'note' }, 'Le contexte aide le tirage à proposer une idée adaptée. Une tâche ponctuelle ou récurrente quitte le tirage après une session réussie.'));
+    const details = h('details', { class: 'activity-options' }, h('summary', {}, t('act.optionsSummary')), fields,
+      h('p', { class: 'note' }, t('act.optionsNote')));
     if (id === 'addActForm') form.insertBefore(details, $('button[type="submit"]', form));
     else form.append(details);
   }
@@ -2657,40 +2856,38 @@ function renderActivities() {
   const grid = $('#actsGrid');
   grid.replaceChildren();
   $('#editActs').setAttribute('aria-pressed', String(editingActs));
-  $('#editActs').lastChild.textContent = editingActs ? 'Terminé' : 'Modifier';
+  $('#editActs').lastChild.textContent = editingActs ? t('act.doneEditing') : t('act.edit');
   $('#addActForm').hidden = !editingActs;
-  $('#actsLede').textContent = frTypo(editingActs
-    ? 'Touche une activité pour modifier son mode, sa durée ou sa fréquence.'
-    : 'Choisis une activité et lance le chrono. Chaque minute terminée rapporte 1' + NB + 'M de pièces.');
+  $('#actsLede').textContent = frTypo(editingActs ? t('act.ledeEditing') : t('act.lede'));
   for (const a of S.activities) {
     const available = taskAvailable(a);
     const card = h('button', { class: 'act' + (!available ? ' task-waiting' : ''), type: 'button', vars: { '--c': catVar(a.cat) },
-      'aria-label': editingActs || !available ? 'Modifier ' + a.name : null,
+      'aria-label': editingActs || !available ? t('act.editNamed', { name: displayName(a.name) }) : null,
       onclick: () => { if (editingActs || !available) openEditSheet('activities', a.id); else openStartSheet(a); } },
-      h('span', { class: 'act-name' }, a.name), catLabel(a.cat),
+      h('span', { class: 'act-name' }, displayName(a.name)), catLabel(a.cat),
       h('span', { class: 'act-mode' }, activityModeLabel(a.mode)),
       h('span', { class: 'act-meta' }, a.min + NB + 'min · ' + fmt(a.min * RATE)),
       taskStatus(a) ? h('span', { class: 'task-status' }, taskStatus(a)) : null);
     if (editingActs) grid.append(h('div', { class: 'act-wrap' }, card,
-      h('button', { class: 'act-del', type: 'button', 'aria-label': 'Supprimer ' + a.name, onclick: () => removeWithUndo('activities', a.id) }, icon('trash'))));
+      h('button', { class: 'act-del', type: 'button', 'aria-label': t('act.deleteNamed', { name: displayName(a.name) }), onclick: () => removeWithUndo('activities', a.id) }, icon('trash'))));
     else grid.append(card);
   }
-  if (!S.activities.length) grid.append(h('p', { class: 'empty-state', style: 'grid-column:1/-1' }, 'Aucune activité. Touche « Modifier » pour en ajouter.'));
+  if (!S.activities.length) grid.append(h('p', { class: 'empty-state', style: 'grid-column:1/-1' }, t('act.empty', { button: t('act.edit') })));
   if (typeof renderRoutines === 'function') renderRoutines();
 }
 
 function openStartSheet(act, options = {}) {
   let min = act.min, mode = act.mode === 'free' ? 'free' : 'focus';
   const durs = DURATIONS.includes(act.min) ? DURATIONS : [...DURATIONS, act.min].sort((a, b) => a - b);
-  openSheet(act.name, body => {
-    const chips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': 'Durée' });
-    const modes = h('div', { class: 'chips mode-choices', role: 'radiogroup', 'aria-label': 'Mode de session' });
+  openSheet(displayName(act.name), body => {
+    const chips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': t('act.duration') });
+    const modes = h('div', { class: 'chips mode-choices', role: 'radiogroup', 'aria-label': t('act.sessionMode') });
     const preview = h('p', { class: 'note' });
     const modeNote = h('p', { class: 'note', id: 'startModeNote', 'aria-live': 'polite' });
     const startBtn = h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'button', onclick: () => {
       const key = options.source && options.source !== 'direct' ? options.source : 'activities';
       const current = S[key] && S[key].find(item => item.id === act.id);
-      if (current && !taskAvailable(current)) { closeSheet(); toast('Cette tâche est terminée ou en attente de sa prochaine échéance.'); return; }
+      if (current && !taskAvailable(current)) { closeSheet(); toast(t('act.taskUnavailable')); return; }
       closeSheet();
       beginSession(Object.assign({}, options, { name: act.name, cat: act.cat, min, mode, source: options.source || 'direct', sourceId: act.id }));
     } }, icon('play'), h('span', {}, ''));
@@ -2701,14 +2898,14 @@ function openStartSheet(act, options = {}) {
       $$('.chip', chips).forEach((c, i) => { c.setAttribute('aria-checked', String(durs[i] === min)); c.tabIndex = durs[i] === min ? 0 : -1; });
       $$('.chip', modes).forEach(c => { c.setAttribute('aria-checked', String(c.dataset.mode === mode)); c.tabIndex = c.dataset.mode === mode ? 0 : -1; });
       const r = rewardFor(min, options.drawPct || 0);
-      preview.textContent = frTypo('Gain à la fin : ' + fmt(r.total) + (r.streakPct ? ' (série de ' + r.streakDays + NB + 'jours : +' + r.streakPct + NB + '%)' : '') + '.');
+      preview.textContent = frTypo(r.streakPct ? t('act.gainPreviewStreak', { coins: fmt(r.total), days: r.streakDays, pct: r.streakPct }) : t('act.gainPreview', { coins: fmt(r.total) }));
       modeNote.textContent = frTypo(activityModeNote(mode));
-      startBtn.lastChild.textContent = 'Commencer · ' + min + NB + 'min';
+      startBtn.lastChild.textContent = t('act.startButton', { min });
     }
     body.append(catLabel(act.cat),
-      options.fixedDuration ? h('p', { class: 'sub' }, 'Durée du tirage : ' + min + NB + 'min. Le bonus du tirage est conservé.')
-        : h('div', { class: 'field' }, h('span', { class: 'sub' }, 'Durée'), chips),
-      h('div', { class: 'field' }, h('span', { class: 'sub' }, 'Mode de session'), modes), modeNote, preview, startBtn);
+      options.fixedDuration ? h('p', { class: 'sub' }, t('act.drawDuration', { min }))
+        : h('div', { class: 'field' }, h('span', { class: 'sub' }, t('act.duration')), chips),
+      h('div', { class: 'field' }, h('span', { class: 'sub' }, t('act.sessionMode')), modes), modeNote, preview, startBtn);
     update();
   });
 }
@@ -2716,15 +2913,15 @@ function openStartSheet(act, options = {}) {
 function openEditSheet(key, id) {
   const it = S[key].find(x => x.id === id);
   if (!it) return;
-  const title = key === 'activities' ? 'Modifier l’activité' : key === 'wishes' ? 'Modifier l’envie' : 'Modifier l’obligation';
+  const title = key === 'activities' ? t('act.editActivity') : key === 'wishes' ? t('act.editWish') : t('act.editChore');
   openSheet(title, body => {
-    const name = h('input', { class: 'input', id: 'editName', maxlength: '40', value: it.name, autocomplete: 'off', required: true });
+    const name = h('input', { class: 'input', id: 'editName', maxlength: '40', value: displayName(it.name), autocomplete: 'off', required: true });
     const cat = h('select', { class: 'select', id: 'editCat' }, catOptions(it.cat));
     const min = h('select', { class: 'select', id: 'editMin' }, minOptions(it.min));
     const form = h('form', { class: 'add-form', onsubmit: e => {
       e.preventDefault();
       const cur = S[key].find(x => x.id === id);
-      if (!cur) { closeSheet(); toast('Cet élément n’existe plus.'); return; }
+      if (!cur) { closeSheet(); toast(t('act.gone')); return; }
       const nm = name.value.trim().slice(0, 40);
       if (!nm) { name.focus(); return; }
       cur.name = nm;
@@ -2732,17 +2929,17 @@ function openEditSheet(key, id) {
       cur.min = int(Number(min.value), 1, 180, cur.min);
       Object.assign(cur, readActivityFields(form));
       delete cur.ex;
-      closeSheet(); commit(); toast('Modifications enregistrées.');
+      closeSheet(); commit(); toast(t('act.saved'));
     } },
-      h('div', { class: 'field' }, h('label', { for: 'editName' }, 'Nom'), name),
+      h('div', { class: 'field' }, h('label', { for: 'editName' }, t('act.name')), name),
       h('div', { class: 'row-2' },
-        h('div', { class: 'field' }, h('label', { for: 'editCat' }, 'Domaine'), cat),
-        h('div', { class: 'field' }, h('label', { for: 'editMin' }, 'Durée'), min)),
+        h('div', { class: 'field' }, h('label', { for: 'editCat' }, t('act.domain')), cat),
+        h('div', { class: 'field' }, h('label', { for: 'editMin' }, t('act.duration')), min)),
       activityFields('edit-', it),
-      h('p', { class: 'note' }, 'Concentration garde l’app à l’écran. Activité libre continue écran verrouillé. La fréquence s’applique après une session réussie.'),
-      h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'submit' }, icon('check'), 'Enregistrer'));
+      h('p', { class: 'note' }, t('act.editNote')),
+      h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'submit' }, icon('check'), t('common.save')));
     if (!taskAvailable(it)) form.append(h('p', { class: 'task-status' }, taskStatus(it)),
-      h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); resetTask(key, id); } }, icon('reroll'), 'Remettre disponible'));
+      h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); resetTask(key, id); } }, icon('reroll'), t('act.makeAvailable')));
     body.append(form);
   });
 }
@@ -2751,7 +2948,7 @@ function openEditSheet(key, id) {
 /* ---- 42-draw.js ---- */
 /* ---------- Tirage contextualisé ---------- */
 const ACT_DRAW_TIMES = [0, 5, 10, 15, 20, 30, 60, 180];
-const DRAW_ENERGIES = [['any', 'Peu importe'], ['low', 'Basse'], ['medium', 'Moyenne'], ['high', 'Haute']];
+const drawEnergies = () => [['any', t('draw.energyAny')], ['low', t('draw.energyLow')], ['medium', t('draw.energyMedium')], ['high', t('draw.energyHigh')]];
 let drawAnim = null;
 let drawBusyUntil = 0;
 function drawFilters() {
@@ -2788,22 +2985,22 @@ function renderDrawFilters() {
       h('select', { class: 'select', id, onchange: () => {
         S.draw.filters = { maxMin: Number($('#drawMaxMin').value), energy: $('#drawEnergy').value, place: $('#drawPlace').value };
         commit();
-        announce(S.draw.current ? 'Filtres enregistrés pour le prochain tirage. Le tirage actuel est conservé.' : 'Filtres mis à jour.');
+        announce(S.draw.current ? t('draw.filtersSavedKeep') : t('draw.filtersUpdated'));
       } }, options));
     // Repliés par défaut : le bouton « Tirer au sort » reste visible sans faire défiler.
     root = h('details', { class: 'card draw-filters', id: 'drawFilters' },
       h('summary', {}, h('span', { class: 'draw-filter-head' },
-        h('span', { class: 'draw-filter-title' }, 'Ce qui me convient maintenant'),
+        h('span', { class: 'draw-filter-title' }, t('draw.filtersTitle')),
         h('span', { class: 'draw-filter-summary', id: 'drawFilterSummary' }))),
       h('div', { class: 'draw-filter-body' },
         h('div', { class: 'draw-filter-fields' },
-          field('drawMaxMin', 'Mon temps', ACT_DRAW_TIMES.map(t => h('option', { value: t }, t ? t + NB + 'min maximum' : 'Sans limite'))),
-          field('drawEnergy', 'Mon énergie', activityOptions(DRAW_ENERGIES, 'any')),
-          field('drawPlace', 'Mon lieu', activityOptions(ACT_PLACES, 'any'))),
+          field('drawMaxMin', t('draw.myTime'), ACT_DRAW_TIMES.map(m => h('option', { value: m }, m ? t('draw.maxMinutes', { n: m }) : t('draw.noLimit')))),
+          field('drawEnergy', t('draw.myEnergy'), activityOptions(drawEnergies(), 'any')),
+          field('drawPlace', t('draw.myPlace'), activityOptions(actPlaces(), 'any'))),
         h('div', { class: 'draw-filter-actions' }, h('span', { class: 'draw-filter-count', id: 'drawFilterCount', 'aria-live': 'polite' }),
           h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
-            S.draw.filters = { maxMin: 0, energy: 'any', place: 'any' }; commit(); announce('Filtres réinitialisés.');
-          } }, 'Tout proposer')),
+            S.draw.filters = { maxMin: 0, energy: 'any', place: 'any' }; commit(); announce(t('draw.filtersReset'));
+          } }, t('draw.showAll'))),
         h('p', { class: 'note', id: 'drawFilterNote' })));
     $('#drawCard').before(root);
   }
@@ -2811,14 +3008,12 @@ function renderDrawFilters() {
   $('#drawMaxMin').value = String(f.maxMin);
   $('#drawEnergy').value = f.energy;
   $('#drawPlace').value = f.place;
-  const active = [f.maxMin ? f.maxMin + NB + 'min max' : '',
-    f.energy !== 'any' ? 'énergie ' + DRAW_ENERGIES.find(([value]) => value === f.energy)[1].toLowerCase() : '',
-    f.place !== 'any' ? ACT_PLACES.find(([value]) => value === f.place)[1].toLowerCase() : ''].filter(Boolean);
-  $('#drawFilterSummary').textContent = frTypo((active.length ? active.join(' · ') : 'Temps, énergie, lieu') + ' · ' + plural(count, 'idée', 'idées'));
-  $('#drawFilterCount').textContent = frTypo(plural(count, 'idée disponible', 'idées disponibles'));
-  $('#drawFilterNote').textContent = frTypo(S.draw.current
-    ? 'Ces filtres s’appliquent au prochain tirage. Le tirage actuel, son bonus et le prix de sa relance sont conservés.'
-    : 'Les idées demandant moins d’énergie restent proposées. Le bonus nécessite au moins ' + DRAW_MIN_POOL + ' idées disponibles avec ces filtres.');
+  const active = [f.maxMin ? t('draw.summaryMax', { n: f.maxMin }) : '',
+    f.energy !== 'any' ? t('draw.summaryEnergy', { energy: drawEnergies().find(([value]) => value === f.energy)[1].toLowerCase() }) : '',
+    f.place !== 'any' ? actPlaces().find(([value]) => value === f.place)[1].toLowerCase() : ''].filter(Boolean);
+  $('#drawFilterSummary').textContent = frTypo((active.length ? active.join(' · ') : t('draw.summaryDefault')) + ' · ' + t('draw.ideas', { n: count }));
+  $('#drawFilterCount').textContent = frTypo(t('draw.ideasAvailable', { n: count }));
+  $('#drawFilterNote').textContent = frTypo(S.draw.current ? t('draw.filtersNoteCurrent') : t('draw.filtersNote', { min: DRAW_MIN_POOL }));
 }
 function renderTirage() {
   for (const b of $$('#poolSeg button')) b.setAttribute('aria-checked', String(b.dataset.pool === S.draw.pool));
@@ -2835,12 +3030,12 @@ function renderDraw() {
   const items = poolItems(S.draw.pool);
   const count = items.length;
   if (!cur) {
-    const note = !count ? 'Aucune idée disponible avec ces critères. Ajuste les filtres ou ajoute une idée.'
-      : count < DRAW_MIN_POOL ? 'Tirage parmi ' + plural(count, 'idée', 'idées') + '. Il faut au moins ' + DRAW_MIN_POOL + ' idées disponibles avec ces filtres pour gagner le bonus.'
-      : 'Tirage parmi ' + count + ' idées. Le premier tirage est gratuit.';
+    const note = !count ? t('draw.noneAvailable')
+      : count < DRAW_MIN_POOL ? t('draw.fewIdeas', { n: count, min: DRAW_MIN_POOL })
+      : t('draw.manyIdeas', { n: count });
     card.append(h('div', { class: 'draw-empty' }, icon('dice')),
-      h('p', { class: 'draw-name' }, 'Que faire maintenant ?'), h('p', { class: 'sub' }, note),
-      h('div', { class: 'draw-actions' }, h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: count ? null : true, onclick: doDraw }, icon('dice'), 'Tirer au sort')));
+      h('p', { class: 'draw-name' }, t('draw.whatNow')), h('p', { class: 'sub' }, note),
+      h('div', { class: 'draw-actions' }, h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: count ? null : true, onclick: doDraw }, icon('dice'), t('draw.drawButton'))));
     return;
   }
   const r = rewardFor(cur.min, cur.bonus), cost = rerollCost();
@@ -2848,35 +3043,35 @@ function renderDraw() {
   const available = currentDrawAvailable(cur);
   const outsideFilters = !matchesDrawFilters(cur) || (S.draw.pool !== 'both' && cur.kind !== S.draw.pool);
   const bonusNote = cur.bonus ? null
-    : cur.pool < DRAW_MIN_POOL ? 'Pas de bonus : moins de ' + DRAW_MIN_POOL + ' idées étaient disponibles lors de ce tirage.'
-    : 'Plus de bonus après ces relances.';
+    : cur.pool < DRAW_MIN_POOL ? t('draw.noBonusFew', { min: DRAW_MIN_POOL })
+    : t('draw.noBonusRerolls');
   card.append(...[
-    h('p', { class: 'draw-kind' }, cur.kind === 'chores' ? 'Obligation tirée' : 'Envie tirée'),
-    h('p', { class: 'draw-name' }, cur.name),
+    h('p', { class: 'draw-kind' }, cur.kind === 'chores' ? t('draw.kindChore') : t('draw.kindWish')),
+    h('p', { class: 'draw-name' }, displayName(cur.name)),
     h('div', { class: 'draw-meta' }, h('span', { class: 'pill' }, cur.min + NB + 'min'),
       h('span', { class: 'pill' }, catDot(cur.cat), catName(cur.cat)),
       h('span', { class: 'pill' }, activityModeLabel(cur.mode)),
-      cur.bonus ? h('span', { class: 'pill bonus' }, 'Bonus +' + cur.bonus + NB + '%') : null),
-    h('p', { class: 'sub' }, 'Gain à la fin : ' + fmt(r.total)),
+      cur.bonus ? h('span', { class: 'pill bonus' }, t('draw.bonusPill', { pct: cur.bonus })) : null),
+    h('p', { class: 'sub' }, t('draw.gain', { coins: fmt(r.total) })),
     bonusNote ? h('p', { class: 'note' }, bonusNote) : null,
-    outsideFilters ? h('p', { class: 'note' }, 'Ce tirage ne correspond plus aux filtres choisis. Tu peux le garder ; les filtres seront utilisés à la prochaine relance.') : null,
-    !available ? h('p', { class: 'note' }, 'Cette tâche a été terminée depuis le tirage. Elle redeviendra disponible à sa prochaine échéance, ou via « Remettre disponible » dans sa liste.') : null,
+    outsideFilters ? h('p', { class: 'note' }, t('draw.outsideFilters')) : null,
+    !available ? h('p', { class: 'note' }, t('draw.doneSince', { button: t('act.makeAvailable') })) : null,
     h('div', { class: 'draw-actions' },
-      h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: available ? null : true, onclick: acceptDraw }, icon('play'), 'C’est parti'),
-      h('button', { class: 'btn btn-secondary', type: 'button', disabled: short || !canReroll ? true : null, onclick: doDraw }, icon('reroll'), 'Relancer · ' + fmt(cost))),
-    !canReroll ? h('p', { class: 'note' }, 'Aucune autre idée disponible avec ces filtres. Ajuste-les pour relancer ; aucune pièce n’est dépensée.')
-      : short ? h('p', { class: 'note' }, 'Il te manque ' + fmt(cost - S.coins) + ' pour relancer.')
-      : h('p', { class: 'note' }, 'Chaque relance coûte des pièces et divise le bonus par deux.'),
+      h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: available ? null : true, onclick: acceptDraw }, icon('play'), t('draw.accept')),
+      h('button', { class: 'btn btn-secondary', type: 'button', disabled: short || !canReroll ? true : null, onclick: doDraw }, icon('reroll'), t('draw.reroll', { coins: fmt(cost) }))),
+    !canReroll ? h('p', { class: 'note' }, t('draw.noOther'))
+      : short ? h('p', { class: 'note' }, t('draw.shortReroll', { coins: fmt(cost - S.coins) }))
+      : h('p', { class: 'note' }, t('draw.rerollNote')),
   ].filter(Boolean));
 }
 function doDraw() {
   if (drawAnim || performance.now() < drawBusyUntil) return;
   const items = poolItems(S.draw.pool), cur = S.draw.current;
-  if (!items.length) { toast('Aucune idée disponible. Ajuste les filtres ou ajoute une idée.'); return; }
+  if (!items.length) { toast(t('draw.noneToast')); return; }
   const candidates = drawAlternatives(items, cur);
-  if (!candidates.length) { toast('Aucune autre idée disponible : aucune pièce dépensée.'); return; }
+  if (!candidates.length) { toast(t('draw.noOtherToast')); return; }
   const cost = rerollCost();
-  if (cost > S.coins) { toast('Il te manque ' + fmt(cost - S.coins) + ' pour relancer.'); return; }
+  if (cost > S.coins) { toast(t('draw.shortReroll', { coins: fmt(cost - S.coins) })); return; }
   drawBusyUntil = performance.now() + 700;
   if (cost) { S.coins -= cost; S.draw.rerolls += 1; }
   const arr = new Uint32Array(1);
@@ -2892,14 +3087,14 @@ function doDraw() {
 }
 function animateDraw(items, pick) {
   const card = $('#drawCard');
-  if (reducedMotion() || items.length < 2) { drawAnim = null; renderDraw(); announce('Tirage : ' + pick.name + '.'); return; }
+  if (reducedMotion() || items.length < 2) { drawAnim = null; renderDraw(); announce(t('draw.result', { name: displayName(pick.name) })); return; }
   const nameEl = h('p', { class: 'draw-name spinning', 'aria-hidden': 'true' });
   card.setAttribute('aria-busy', 'true');
-  card.replaceChildren(h('p', { class: 'draw-kind' }, 'Tirage en cours'), nameEl);
+  card.replaceChildren(h('p', { class: 'draw-kind' }, t('draw.spinning')), nameEl);
   let i = Math.floor(Math.random() * items.length), delay = 45;
   const step = () => {
-    if (delay > 230) { drawAnim = null; renderDraw(); announce('Tirage : ' + pick.name + '.'); return; }
-    nameEl.textContent = items[i++ % items.length].name;
+    if (delay > 230) { drawAnim = null; renderDraw(); announce(t('draw.result', { name: displayName(pick.name) })); return; }
+    nameEl.textContent = displayName(items[i++ % items.length].name);
     delay *= 1.17; drawAnim = setTimeout(step, delay);
   };
   step();
@@ -2907,24 +3102,25 @@ function animateDraw(items, pick) {
 function acceptDraw() {
   const cur = S.draw.current;
   if (!cur) return;
-  if (!currentDrawAvailable(cur)) { toast('Cette tâche est terminée ou en attente.'); return; }
+  if (!currentDrawAvailable(cur)) { toast(t('draw.taskUnavailable')); return; }
   openStartSheet(cur, { source: cur.kind, drawPct: cur.bonus, draw: clone(cur), drawRerolls: S.draw.rerolls, fixedDuration: true });
 }
 function renderList(key, ul) {
   ul.replaceChildren();
   const arr = S[key];
-  if (!arr.length) ul.append(h('li', {}, h('span', { class: 'empty' }, 'La liste est vide. Ajoute une idée ci-dessous.')));
+  if (!arr.length) ul.append(h('li', {}, h('span', { class: 'empty' }, t('draw.listEmpty'))));
   for (const it of arr) {
     const available = taskAvailable(it), status = taskStatus(it);
+    const name = displayName(it.name), energies = actEnergies();
     ul.append(h('li', { class: available ? null : 'task-waiting' },
-      h('div', { class: 'row-main' }, h('span', { class: 'row-title' }, it.name),
-        h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · exemple' : '')),
-        h('span', { class: 'task-status' }, activityModeLabel(it.mode) + ' · énergie ' + (ACT_ENERGIES.find(([value]) => value === (it.energy || 'medium')) || ACT_ENERGIES[1])[1].toLowerCase()),
+      h('div', { class: 'row-main' }, h('span', { class: 'row-title' }, name),
+        h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · ' + t('draw.example') : '')),
+        h('span', { class: 'task-status' }, t('draw.modeEnergy', { mode: activityModeLabel(it.mode), energy: (energies.find(([value]) => value === (it.energy || 'medium')) || energies[1])[1].toLowerCase() })),
         status ? h('span', { class: 'task-status' }, status) : null,
-        !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': 'Remettre disponible : ' + it.name, onclick: () => resetTask(key, it.id) }, 'Remettre disponible') : null),
+        !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': t('act.makeAvailableNamed', { name }), onclick: () => resetTask(key, it.id) }, t('act.makeAvailable')) : null),
       h('div', { class: 'task-actions' },
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Modifier ' + it.name, onclick: () => openEditSheet(key, it.id) }, icon('pencil')),
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Supprimer ' + it.name, onclick: () => removeWithUndo(key, it.id) }, icon('trash')))));
+        h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('act.editNamed', { name }), onclick: () => openEditSheet(key, it.id) }, icon('pencil')),
+        h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('act.deleteNamed', { name }), onclick: () => removeWithUndo(key, it.id) }, icon('trash')))));
   }
 }
 
@@ -4405,7 +4601,7 @@ let kbdMode = false;
 function bindEvents() {
   if (bound) return;
   bound = true;
-  for (const t of $$('.tab')) t.addEventListener('click', () => { if (Mode.state && t.dataset.tab !== 'ville') Mode.cancel(); go(t.dataset.tab); });
+  for (const tab of $$('.tab')) tab.addEventListener('click', () => { if (Mode.state && tab.dataset.tab !== 'ville') Mode.cancel(); go(tab.dataset.tab); });
   $('#settingsBtn').addEventListener('click', openSettings);
   $('#personalizeCity').addEventListener('click', openCityPersonalization);
   $('#buildBtn').addEventListener('click', openShop);
@@ -4427,11 +4623,11 @@ function bindEvents() {
     e.preventDefault();
     const name = $('#actName').value.trim().slice(0, 40);
     if (!name) return;
-    if (S.activities.length >= LIST_MAX) { toast('La liste est pleine (' + LIST_MAX + ' activités).'); return; }
+    if (S.activities.length >= LIST_MAX) { toast(t('act.listFull', { max: LIST_MAX })); return; }
     S.activities.push(Object.assign({ id: uid(), name, cat: $('#actCat').value, min: Number($('#actMin').value) }, readActivityFields($('#addActForm'))));
     $('#actName').value = '';
     commit();
-    toast('Activité ajoutée.');
+    toast(t('act.added'));
   });
   for (const f of [$('#addWish'), $('#addChore')]) {
     f.addEventListener('submit', e => {
@@ -4439,16 +4635,16 @@ function bindEvents() {
       const name = f.elements.name.value.trim().slice(0, 40);
       if (!name) return;
       const key = f.dataset.list;
-      if (S[key].length >= LIST_MAX) { toast('La liste est pleine (' + LIST_MAX + ' idées).'); return; }
+      if (S[key].length >= LIST_MAX) { toast(t('draw.listFull', { max: LIST_MAX })); return; }
       S[key].push(Object.assign({ id: uid(), name, cat: f.elements.cat.value, min: Number(f.elements.min.value) }, readActivityFields(f)));
       f.elements.name.value = '';
       commit();
-      toast('Ajouté à la liste.');
+      toast(t('draw.added'));
     });
   }
   for (const b of $$('#poolSeg button')) b.addEventListener('click', () => { if (S.draw.pool !== b.dataset.pool) { S.draw.pool = b.dataset.pool; commit(); } });
   $('#strictBtn').addEventListener('click', openStrict);
-  twoStep($('#abandonBtn'), 'Abandonner', "Confirmer l'abandon", abandon);
+  twoStep($('#abandonBtn'), t('session.abandon'), t('session.abandonConfirm'), abandon);
 
   // Présence pendant une session + resynchronisation au retour
   document.addEventListener('visibilitychange', () => {

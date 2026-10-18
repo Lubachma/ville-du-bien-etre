@@ -20,7 +20,7 @@ let kbdMode = false;
 function bindEvents() {
   if (bound) return;
   bound = true;
-  for (const t of $$('.tab')) t.addEventListener('click', () => { if (Mode.state && t.dataset.tab !== 'ville') Mode.cancel(); go(t.dataset.tab); });
+  for (const tab of $$('.tab')) tab.addEventListener('click', () => { if (Mode.state && tab.dataset.tab !== 'ville') Mode.cancel(); go(tab.dataset.tab); });
   $('#settingsBtn').addEventListener('click', openSettings);
   $('#personalizeCity').addEventListener('click', openCityPersonalization);
   $('#buildBtn').addEventListener('click', openShop);
@@ -42,11 +42,11 @@ function bindEvents() {
     e.preventDefault();
     const name = $('#actName').value.trim().slice(0, 40);
     if (!name) return;
-    if (S.activities.length >= LIST_MAX) { toast('La liste est pleine (' + LIST_MAX + ' activités).'); return; }
+    if (S.activities.length >= LIST_MAX) { toast(t('act.listFull', { max: LIST_MAX })); return; }
     S.activities.push(Object.assign({ id: uid(), name, cat: $('#actCat').value, min: Number($('#actMin').value) }, readActivityFields($('#addActForm'))));
     $('#actName').value = '';
     commit();
-    toast('Activité ajoutée.');
+    toast(t('act.added'));
   });
   for (const f of [$('#addWish'), $('#addChore')]) {
     f.addEventListener('submit', e => {
@@ -54,16 +54,16 @@ function bindEvents() {
       const name = f.elements.name.value.trim().slice(0, 40);
       if (!name) return;
       const key = f.dataset.list;
-      if (S[key].length >= LIST_MAX) { toast('La liste est pleine (' + LIST_MAX + ' idées).'); return; }
+      if (S[key].length >= LIST_MAX) { toast(t('draw.listFull', { max: LIST_MAX })); return; }
       S[key].push(Object.assign({ id: uid(), name, cat: f.elements.cat.value, min: Number(f.elements.min.value) }, readActivityFields(f)));
       f.elements.name.value = '';
       commit();
-      toast('Ajouté à la liste.');
+      toast(t('draw.added'));
     });
   }
   for (const b of $$('#poolSeg button')) b.addEventListener('click', () => { if (S.draw.pool !== b.dataset.pool) { S.draw.pool = b.dataset.pool; commit(); } });
   $('#strictBtn').addEventListener('click', openStrict);
-  twoStep($('#abandonBtn'), 'Abandonner', "Confirmer l'abandon", abandon);
+  twoStep($('#abandonBtn'), t('session.abandon'), t('session.abandonConfirm'), abandon);
 
   // Présence pendant une session + resynchronisation au retour
   document.addEventListener('visibilitychange', () => {
