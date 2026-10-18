@@ -145,7 +145,7 @@ src/
 ├── 28-harmony.js       # harmony (five criteria, stars) and residents' wishes (draw, granting)
 ├── 30-paint.js         # isometric painter and the drawings of the first 22 items
 ├── 31-paint-buildings.js # drawings of the 15 new buildings
-├── 32-paint-decor.js   # drawings of the 10 new decorations
+├── 32-paint-decor.js   # drawings of the 11 new decorations
 ├── 33-paint-wonders.js # wonder drawings, stage by stage
 ├── 34-paint-life.js    # drawings of town life: smoke, beam, weather, small lives, residents, visitors, festivals
 ├── 35-city.js          # city canvas: sky and light of the moment, light animation loop, touch and keyboard, placement effects, snapshot

@@ -34,7 +34,6 @@ function harmonyCriteria(city = S.city) {
 function starsEarned() { return HARMONY.filter(id => S.gifts && S.gifts['star:' + id]); }
 // Nouvelles étoiles : chaque critère rempli pour la première fois rapporte 10 M, une seule fois. N'enregistre pas.
 function claimStars(city = S.city) {
-  if (!S.gifts) S.gifts = {};
   const fresh = harmonyCriteria(city).filter(c => c.met && !S.gifts['star:' + c.id]).map(c => c.id);
   for (const id of fresh) {
     S.gifts['star:' + id] = nowTs();
@@ -64,12 +63,16 @@ function townWishTile() {
   if (S.settings.townWishes === false || !w || w.done || w.skipped) return null;
   return S.city.tiles.find(tile => tile.id === w.tile) || null;
 }
+// Jour sans souhait possible : la recherche ne reprend qu'au changement suivant de l'état (sa révision), ou le lendemain.
+let wishless = '';
 // Souhait du jour, tiré pour la journée (le même dans tous les onglets) quand aucun n'est en cours et que le dernier date d'un
 // jour antérieur : un seul par jour. N'enregistre pas.
 function drawTownWish(day = today()) {
   if (S.settings.townWishes === false || townWishTile() || (S.townWish && S.townWish.day >= day)) return false;
+  const key = day + '|' + (S.revision || '');
+  if (wishless === key) return false;
   const list = wishCandidates();
-  if (!list.length) return false;
+  if (!list.length) { wishless = key; return false; }
   const pick = list[Math.floor(chance(day + ':souhait') * list.length)];
   S.townWish = { day, tile: pick.tile, item: pick.item };
   return true;

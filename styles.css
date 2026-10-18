@@ -745,7 +745,13 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .storage-status, .update-notice { display: grid; gap: 8px; margin-bottom: 16px; }
 .storage-status { border-color: var(--danger); background: var(--danger-soft); }
 .status-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.city-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; margin-top: -16px; }
+/* Outils sous la ville : une seule rangée de boutons de même largeur, l'icône au-dessus du nom (sur deux lignes au plus). */
+.city-tools { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin-top: -12px; }
+.city-tools .btn {
+  flex-direction: column; justify-content: flex-start; gap: 3px; min-height: 56px; padding: 8px 4px;
+  font-size: 13px; line-height: 1.2; white-space: normal; text-wrap: balance; text-align: center; overflow-wrap: anywhere;
+}
+.city-tools .btn .ic { width: 20px; height: 20px; flex: none; }
 .city-tools .btn[hidden] { display: none; }
 /* Partager ma ville : le lien dans un champ qu'on peut sélectionner, ses deux boutons l'un sous l'autre, puis la partie
    « Visiter une ville amie ». */

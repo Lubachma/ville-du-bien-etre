@@ -7,7 +7,7 @@ const wishThing = item => t('wish.thing.' + item);
 // note dit ce qu'il faut encore, sans rien de plus.
 function wishPlaceButton(item) {
   const price = priceOf(item), short = price > S.coins, thing = wishThing(item);
-  return [h('button', { class: 'btn btn-primary btn-sm', type: 'button', disabled: short ? true : null, onclick: () => { closeSheet(); Mode.startPlace(item); } },
+  return [h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, onclick: () => { closeSheet(); Mode.startPlace(item); } },
     price ? t('wish.place', { thing, price: fmt(price) }) : t('wish.placeFree', { thing })),
   short ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(price - S.coins) })) : null].filter(Boolean);
 }

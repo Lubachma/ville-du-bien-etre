@@ -145,7 +145,7 @@ function boot(hotData) {
     rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
     harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
-    ambience: { kind: () => Ambience.kind, measure: kind => Ambience.measure(kind) } };
+    ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume) } };
 }
 
 let booted = false;

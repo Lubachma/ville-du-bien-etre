@@ -4756,7 +4756,6 @@ function harmonyCriteria(city = S.city) {
 function starsEarned() { return HARMONY.filter(id => S.gifts && S.gifts['star:' + id]); }
 // Nouvelles étoiles : chaque critère rempli pour la première fois rapporte 10 M, une seule fois. N'enregistre pas.
 function claimStars(city = S.city) {
-  if (!S.gifts) S.gifts = {};
   const fresh = harmonyCriteria(city).filter(c => c.met && !S.gifts['star:' + c.id]).map(c => c.id);
   for (const id of fresh) {
     S.gifts['star:' + id] = nowTs();
@@ -4786,12 +4785,16 @@ function townWishTile() {
   if (S.settings.townWishes === false || !w || w.done || w.skipped) return null;
   return S.city.tiles.find(tile => tile.id === w.tile) || null;
 }
+// Jour sans souhait possible : la recherche ne reprend qu'au changement suivant de l'état (sa révision), ou le lendemain.
+let wishless = '';
 // Souhait du jour, tiré pour la journée (le même dans tous les onglets) quand aucun n'est en cours et que le dernier date d'un
 // jour antérieur : un seul par jour. N'enregistre pas.
 function drawTownWish(day = today()) {
   if (S.settings.townWishes === false || townWishTile() || (S.townWish && S.townWish.day >= day)) return false;
+  const key = day + '|' + (S.revision || '');
+  if (wishless === key) return false;
   const list = wishCandidates();
-  if (!list.length) return false;
+  if (!list.length) { wishless = key; return false; }
   const pick = list[Math.floor(chance(day + ':souhait') * list.length)];
   S.townWish = { day, tile: pick.tile, item: pick.item };
   return true;
@@ -6507,23 +6510,45 @@ const City = (() => {
   // pour toutes de son indice ; un pas toutes les 4 s (2,5 s de marche, puis une pause).
   const WALK_STEPS = 12, STEP_S = 4, MOVE_S = 2.5, WALKER_COLORS = ['#d9573b', '#3f78c4', '#e3a12f', '#3a9a7a', '#d0628f', '#7a8b6e'];
   let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] }, visitorBox = null, wishBox = null;
+  // Boutons posés sur le canevas, en points du canevas : « Construire » et la vue en grand, ou les boutons de la vue en grand.
+  function overlayBoxes() {
+    const box = canvas.getBoundingClientRect(), els = canvas === small ? [$('#buildBtn'), $('#cityExpand')] : [$('.city-big-tools')];
+    return els.filter(el => el && el.getClientRects().length).map(el => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left - box.left, y: r.top - box.top, w: r.width, h: r.height };
+    });
+  }
+  // Centre de la bulle (rayon r) : à sa place si aucun bouton ne la cache ; sinon glissée de côté, au plus près, hors des
+  // boutons ; sinon juste sous eux. Toujours entière dans le canevas.
+  function bubbleSpot(x, y, r) {
+    const m = 4, zones = overlayBoxes();
+    const under = (px, py) => zones.find(z => px + r > z.x - m && px - r < z.x + z.w + m && py + r > z.y - m && py - r < z.y + z.h + m);
+    x = clamp(x, r + m, W - r - m);
+    y = Math.max(y, r + m);
+    const z = under(x, y);
+    if (!z) return [x, y];
+    const sides = [z.x - m - r, z.x + z.w + m + r].filter(px => px >= r + m && px <= W - r - m && !under(px, y));
+    if (sides.length) return [sides.sort((a, b) => Math.abs(a - x) - Math.abs(b - x))[0], y];
+    return [x, z.y + z.h + m + r];
+  }
   // Souhait d'habitant : une bulle blanche au-dessus du bâtiment, le décor souhaité dessiné en petit dedans. Sa zone (wishBox)
   // ouvre la fiche du bâtiment, comme la case du visiteur.
   function drawWishBubble(g, pal) {
     const tile = typeof townWishTile === 'function' ? townWishTile() : null, item = tile && S.townWish.item;
     if (!tile || !isItem(item)) return;
-    const r = Math.max(13, g.tw * .32), [bx, by] = g.P(tile.x + .5, tile.y + .5, g.tw * ((ITEMS[tile.item].hf || .5) + .28)), cy = by - r * 1.25;
-    const ctx = g.ctx;
+    const r = Math.max(13, g.tw * .32), [ax, ay] = g.P(tile.x + .5, tile.y + .5, g.tw * ((ITEMS[tile.item].hf || .5) + .28));
+    const [bx, cy] = bubbleSpot(ax, ay - r * 1.25, r), ctx = g.ctx;
     ctx.beginPath();
     ctx.arc(bx, cy, r, 0, Math.PI * 2);
-    ctx.moveTo(bx - r * .32, cy + r * .9); ctx.lineTo(bx, by); ctx.lineTo(bx + r * .32, cy + r * .9);
+    // La pointe vers le bâtiment, quand il est sous la bulle ; tracée dans le même sens que le rond, pour qu'ils se remplissent ensemble.
+    if (ay > cy + r) { ctx.moveTo(bx + r * .32, cy + r * .9); ctx.lineTo(ax, ay); ctx.lineTo(bx - r * .32, cy + r * .9); }
     ctx.fillStyle = g.night ? 'rgba(236,242,236,.92)' : 'rgba(255,255,255,.95)';
     ctx.strokeStyle = 'rgba(30,50,40,.25)'; ctx.lineWidth = 1;
     ctx.fill(); ctx.stroke();
     // Le décor, en couleurs de jour, centré sur le milieu de son dessin (du sol de sa case jusqu'à son sommet).
     const tw = r * 1.6, mini = makePainter(ctx, tw, bx, cy - tw / 4 + tw * (ITEMS[item].hf || .3) / 2, { ...pal, night: false, dark: 0 });
     DRAW[item](mini, 0, 0, {});
-    wishBox = { x: bx - r, y: cy - r, w: r * 2, h: by - (cy - r), tile: tile.id };
+    wishBox = { x: bx - r, y: cy - r, w: r * 2, h: Math.max(r * 2, ay - (cy - r)), tile: tile.id };
   }
   // Point sous le visiteur : sol, assise du banc, branche, toit, eau, ou ciel (qui dérive doucement).
   function visitorAnchor(g, spot, t) {
@@ -9803,8 +9828,18 @@ function noiseBuffer(ctx, seconds, color, bursts = 0) {
   for (let i = 0; i < n; i++) data[i] = i < blend ? raw[i] * (i / blend) + raw[n + i] * (1 - i / blend) : raw[i];
   return buffer;
 }
-// Le graphe d'une ambiance, branché par l'appelant sur sa sortie : sources en boucle, filtres et lentes modulations.
-// gain : le volume choisi (SOUND_GAIN). Rien pour « Aucune ».
+// Garde-fou en fin de chaîne : le son passe tel quel jusqu'à 0,6, puis ses crêtes s'arrondissent sans jamais atteindre 0,9,
+// même au volume « fort » (le bruit est tiré au hasard : ses crêtes changent d'une boucle à l'autre).
+const SOFT_LIMIT = (() => {
+  const n = 1025, curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = i / (n - 1) * 2 - 1, a = Math.abs(x);
+    curve[i] = a <= .6 ? x : Math.sign(x) * (.6 + .3 * Math.tanh((a - .6) / .3));
+  }
+  return curve;
+})();
+// Le graphe d'une ambiance, branché par l'appelant sur sa sortie : sources en boucle, filtres et lentes modulations, puis le
+// garde-fou. gain : le volume choisi (SOUND_GAIN). Rien pour « Aucune ».
 function buildAmbience(ctx, kind, gain = 1) {
   if (!AMBIENCES.includes(kind) || kind === 'none') return null;
   const out = ctx.createGain(), sources = [];
@@ -9845,7 +9880,10 @@ function buildAmbience(ctx, kind, gain = 1) {
     chain(loop(6, 'brown'), filter('lowpass', 1000), level(.5), out);
   }
   for (const src of sources) src.start();
-  return { output: out, stop(when) { for (const src of sources) { try { src.stop(when); } catch (e) { /* déjà arrêtée */ } } } };
+  const limit = ctx.createWaveShaper();
+  limit.curve = SOFT_LIMIT;
+  out.connect(limit);
+  return { output: limit, stop(when) { for (const src of sources) { try { src.stop(when); } catch (e) { /* déjà arrêtée */ } } } };
 }
 // L'ambiance qui joue : un graphe, son fondu, et son nom.
 const Ambience = {
@@ -9928,11 +9966,11 @@ const Ambience = {
       Chime.rest(5000);
     });
   },
-  // Niveaux d'une ambiance rendue 4 s hors ligne, au volume normal : crête et moyenne quadratique.
-  async measure(kind) {
+  // Niveaux d'une ambiance rendue 4 s hors ligne, au volume donné (normal par défaut) : crête et moyenne quadratique.
+  async measure(kind, volume = 'normal') {
     const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext, rate = 44100;
     if (!OAC || kind === 'none') return { peak: 0, rms: 0 };
-    const off = new OAC(1, rate * 4, rate), graph = buildAmbience(off, kind, 1);
+    const off = new OAC(1, rate * 4, rate), graph = buildAmbience(off, kind, SOUND_GAIN[volume] || 1);
     if (!graph) return { peak: 0, rms: 0 };
     graph.output.connect(off.destination);
     const data = (await off.startRendering()).getChannelData(0);
@@ -10655,7 +10693,7 @@ const wishThing = item => t('wish.thing.' + item);
 // note dit ce qu'il faut encore, sans rien de plus.
 function wishPlaceButton(item) {
   const price = priceOf(item), short = price > S.coins, thing = wishThing(item);
-  return [h('button', { class: 'btn btn-primary btn-sm', type: 'button', disabled: short ? true : null, onclick: () => { closeSheet(); Mode.startPlace(item); } },
+  return [h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, onclick: () => { closeSheet(); Mode.startPlace(item); } },
     price ? t('wish.place', { thing, price: fmt(price) }) : t('wish.placeFree', { thing })),
   short ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(price - S.coins) })) : null].filter(Boolean);
 }
@@ -10859,7 +10897,7 @@ function boot(hotData) {
     rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
     harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
-    ambience: { kind: () => Ambience.kind, measure: kind => Ambience.measure(kind) } };
+    ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume) } };
 }
 
 let booted = false;

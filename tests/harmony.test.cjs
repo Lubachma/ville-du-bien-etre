@@ -135,6 +135,28 @@ test('souhaits : candidats — décors aimés, débloqués, absents, avec une ca
   assert.deepEqual(plain(wishTown([['maison', 1, 1], ...ring]).wishCandidates()), []);
 });
 
+test('ambiance : le garde-fou garde le son tel quel sous 0,6 et toutes ses crêtes sous 0,9', () => {
+  const curve = loadApp(['00-core.js', '51-ambience.js'], { expose: ['SOFT_LIMIT'] }).SOFT_LIMIT, n = curve.length;
+  curve.forEach((y, i) => {
+    const x = i / (n - 1) * 2 - 1;
+    if (Math.abs(x) <= .6) assert.ok(Math.abs(y - x) < 1e-6, x + ' → ' + y);
+    assert.ok(Math.abs(y) < .9 && (!i || y > curve[i - 1]), x + ' → ' + y);
+  });
+});
+
+test('souhaits : un jour sans souhait possible, la recherche attend que la ville change', () => {
+  const ring = [[0, 0], [1, 0], [2, 0], [0, 1], [2, 1], [0, 2], [1, 2], [2, 2]].map(([x, y]) => ['chemin', x, y]);
+  const a = wishTown([['maison', 1, 1], ...ring]), s = a.state;
+  let searches = 0;
+  s.city.tiles = new Proxy(s.city.tiles, { get(target, key, receiver) { if (key === 'filter') searches++; return Reflect.get(target, key, receiver); } });
+  assert.deepEqual([a.drawTownWish('2026-10-20'), a.drawTownWish('2026-10-20')], [false, false]);
+  assert.equal(searches, 1);
+  // Un chemin enlevé et enregistré (nouvelle révision) : la maison a une case libre, le souhait vient le jour même.
+  s.city.tiles = s.city.tiles.filter(tile => !(tile.x === 2 && tile.y === 2));
+  s.revision = 'apres';
+  assert.equal(a.drawTownWish('2026-10-20'), true);
+});
+
 test('souhaits : même tirage pour un même jour, un seul par jour', () => {
   const list = [['maison', 1, 1], ['bibliotheque', 5, 5], ['kiosque', 1, 5]];
   const a = wishTown(list), b = wishTown(list);

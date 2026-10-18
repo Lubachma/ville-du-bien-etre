@@ -26,8 +26,18 @@ function noiseBuffer(ctx, seconds, color, bursts = 0) {
   for (let i = 0; i < n; i++) data[i] = i < blend ? raw[i] * (i / blend) + raw[n + i] * (1 - i / blend) : raw[i];
   return buffer;
 }
-// Le graphe d'une ambiance, branché par l'appelant sur sa sortie : sources en boucle, filtres et lentes modulations.
-// gain : le volume choisi (SOUND_GAIN). Rien pour « Aucune ».
+// Garde-fou en fin de chaîne : le son passe tel quel jusqu'à 0,6, puis ses crêtes s'arrondissent sans jamais atteindre 0,9,
+// même au volume « fort » (le bruit est tiré au hasard : ses crêtes changent d'une boucle à l'autre).
+const SOFT_LIMIT = (() => {
+  const n = 1025, curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = i / (n - 1) * 2 - 1, a = Math.abs(x);
+    curve[i] = a <= .6 ? x : Math.sign(x) * (.6 + .3 * Math.tanh((a - .6) / .3));
+  }
+  return curve;
+})();
+// Le graphe d'une ambiance, branché par l'appelant sur sa sortie : sources en boucle, filtres et lentes modulations, puis le
+// garde-fou. gain : le volume choisi (SOUND_GAIN). Rien pour « Aucune ».
 function buildAmbience(ctx, kind, gain = 1) {
   if (!AMBIENCES.includes(kind) || kind === 'none') return null;
   const out = ctx.createGain(), sources = [];
@@ -68,7 +78,10 @@ function buildAmbience(ctx, kind, gain = 1) {
     chain(loop(6, 'brown'), filter('lowpass', 1000), level(.5), out);
   }
   for (const src of sources) src.start();
-  return { output: out, stop(when) { for (const src of sources) { try { src.stop(when); } catch (e) { /* déjà arrêtée */ } } } };
+  const limit = ctx.createWaveShaper();
+  limit.curve = SOFT_LIMIT;
+  out.connect(limit);
+  return { output: limit, stop(when) { for (const src of sources) { try { src.stop(when); } catch (e) { /* déjà arrêtée */ } } } };
 }
 // L'ambiance qui joue : un graphe, son fondu, et son nom.
 const Ambience = {
@@ -151,11 +164,11 @@ const Ambience = {
       Chime.rest(5000);
     });
   },
-  // Niveaux d'une ambiance rendue 4 s hors ligne, au volume normal : crête et moyenne quadratique.
-  async measure(kind) {
+  // Niveaux d'une ambiance rendue 4 s hors ligne, au volume donné (normal par défaut) : crête et moyenne quadratique.
+  async measure(kind, volume = 'normal') {
     const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext, rate = 44100;
     if (!OAC || kind === 'none') return { peak: 0, rms: 0 };
-    const off = new OAC(1, rate * 4, rate), graph = buildAmbience(off, kind, 1);
+    const off = new OAC(1, rate * 4, rate), graph = buildAmbience(off, kind, SOUND_GAIN[volume] || 1);
     if (!graph) return { peak: 0, rms: 0 };
     graph.output.connect(off.destination);
     const data = (await off.startRendering()).getChannelData(0);

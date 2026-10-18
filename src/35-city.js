@@ -65,23 +65,45 @@ const City = (() => {
   // pour toutes de son indice ; un pas toutes les 4 s (2,5 s de marche, puis une pause).
   const WALK_STEPS = 12, STEP_S = 4, MOVE_S = 2.5, WALKER_COLORS = ['#d9573b', '#3f78c4', '#e3a12f', '#3a9a7a', '#d0628f', '#7a8b6e'];
   let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] }, visitorBox = null, wishBox = null;
+  // Boutons posés sur le canevas, en points du canevas : « Construire » et la vue en grand, ou les boutons de la vue en grand.
+  function overlayBoxes() {
+    const box = canvas.getBoundingClientRect(), els = canvas === small ? [$('#buildBtn'), $('#cityExpand')] : [$('.city-big-tools')];
+    return els.filter(el => el && el.getClientRects().length).map(el => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left - box.left, y: r.top - box.top, w: r.width, h: r.height };
+    });
+  }
+  // Centre de la bulle (rayon r) : à sa place si aucun bouton ne la cache ; sinon glissée de côté, au plus près, hors des
+  // boutons ; sinon juste sous eux. Toujours entière dans le canevas.
+  function bubbleSpot(x, y, r) {
+    const m = 4, zones = overlayBoxes();
+    const under = (px, py) => zones.find(z => px + r > z.x - m && px - r < z.x + z.w + m && py + r > z.y - m && py - r < z.y + z.h + m);
+    x = clamp(x, r + m, W - r - m);
+    y = Math.max(y, r + m);
+    const z = under(x, y);
+    if (!z) return [x, y];
+    const sides = [z.x - m - r, z.x + z.w + m + r].filter(px => px >= r + m && px <= W - r - m && !under(px, y));
+    if (sides.length) return [sides.sort((a, b) => Math.abs(a - x) - Math.abs(b - x))[0], y];
+    return [x, z.y + z.h + m + r];
+  }
   // Souhait d'habitant : une bulle blanche au-dessus du bâtiment, le décor souhaité dessiné en petit dedans. Sa zone (wishBox)
   // ouvre la fiche du bâtiment, comme la case du visiteur.
   function drawWishBubble(g, pal) {
     const tile = typeof townWishTile === 'function' ? townWishTile() : null, item = tile && S.townWish.item;
     if (!tile || !isItem(item)) return;
-    const r = Math.max(13, g.tw * .32), [bx, by] = g.P(tile.x + .5, tile.y + .5, g.tw * ((ITEMS[tile.item].hf || .5) + .28)), cy = by - r * 1.25;
-    const ctx = g.ctx;
+    const r = Math.max(13, g.tw * .32), [ax, ay] = g.P(tile.x + .5, tile.y + .5, g.tw * ((ITEMS[tile.item].hf || .5) + .28));
+    const [bx, cy] = bubbleSpot(ax, ay - r * 1.25, r), ctx = g.ctx;
     ctx.beginPath();
     ctx.arc(bx, cy, r, 0, Math.PI * 2);
-    ctx.moveTo(bx - r * .32, cy + r * .9); ctx.lineTo(bx, by); ctx.lineTo(bx + r * .32, cy + r * .9);
+    // La pointe vers le bâtiment, quand il est sous la bulle ; tracée dans le même sens que le rond, pour qu'ils se remplissent ensemble.
+    if (ay > cy + r) { ctx.moveTo(bx + r * .32, cy + r * .9); ctx.lineTo(ax, ay); ctx.lineTo(bx - r * .32, cy + r * .9); }
     ctx.fillStyle = g.night ? 'rgba(236,242,236,.92)' : 'rgba(255,255,255,.95)';
     ctx.strokeStyle = 'rgba(30,50,40,.25)'; ctx.lineWidth = 1;
     ctx.fill(); ctx.stroke();
     // Le décor, en couleurs de jour, centré sur le milieu de son dessin (du sol de sa case jusqu'à son sommet).
     const tw = r * 1.6, mini = makePainter(ctx, tw, bx, cy - tw / 4 + tw * (ITEMS[item].hf || .3) / 2, { ...pal, night: false, dark: 0 });
     DRAW[item](mini, 0, 0, {});
-    wishBox = { x: bx - r, y: cy - r, w: r * 2, h: by - (cy - r), tile: tile.id };
+    wishBox = { x: bx - r, y: cy - r, w: r * 2, h: Math.max(r * 2, ay - (cy - r)), tile: tile.id };
   }
   // Point sous le visiteur : sol, assise du banc, branche, toit, eau, ou ciel (qui dérive doucement).
   function visitorAnchor(g, spot, t) {

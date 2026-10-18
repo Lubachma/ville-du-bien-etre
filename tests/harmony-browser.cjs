@@ -102,8 +102,10 @@ async function wishCard(browser, baseURL) {
 async function wishCardPoorAndOff(browser, baseURL) {
   const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { coins: 0 }), NOW);
   try {
-    const card = page.locator('#townWishCard');
-    assert.equal(await card.getByRole('button', { name: /^Placer/ }).isDisabled(), true);
+    const card = page.locator('#townWishCard'), place = card.getByRole('button', { name: /^Placer/ });
+    assert.equal(await place.isDisabled(), true);
+    // Comme dans la boutique : un bouton trop cher passe au style secondaire.
+    assert.deepEqual(await place.evaluate(b => [b.classList.contains('btn-secondary'), b.classList.contains('btn-primary')]), [true, false]);
     assert.match(await card.innerText(), /Il te manque \d\sM/);
     await page.locator('#settingsBtn').click();
     await page.locator('#settingsRituals').getByRole('switch', { name: 'Souhaits des habitants', exact: true }).click();
@@ -156,6 +158,33 @@ async function wishBubble(browser, baseURL) {
   return 'Souhait : la bulle au-dessus du bâtiment, qui ouvre sa fiche et le suit';
 }
 
+// Sur un petit téléphone, la bulle d'un bâtiment du fond ne passe ni sous « Construire » ni sous le bouton de la vue en grand,
+// ni au-dessus du haut de la ville : elle reste entière, et un toucher ouvre la fiche du bâtiment.
+async function wishBubbleClear(browser, baseURL) {
+  for (const [item, x, y, name] of [['maison', 0, 2, 'Maison'], ['moulin', 0, 0, 'Moulin']]) {
+    const { context, page, errors } = await cityAt(browser, baseURL, seed([tile(item, x, y)]), NOW, { viewport: { width: 320, height: 568 } });
+    try {
+      const { box, zones, width } = await page.evaluate(() => {
+        const cv = document.querySelector('#city').getBoundingClientRect();
+        const rel = el => { const r = el.getBoundingClientRect(); return { x: r.left - cv.left, y: r.top - cv.top, w: r.width, h: r.height }; };
+        return { box: __ville.City.wishBox(), zones: ['#buildBtn', '#cityExpand'].map(sel => rel(document.querySelector(sel))), width: cv.width };
+      });
+      assert.ok(box, item + ' : bulle');
+      const bubble = { x: box.x, y: box.y, w: box.w, h: box.w };   // le rond, sans sa pointe
+      assert.ok(bubble.x >= 0 && bubble.y >= 0 && bubble.x + bubble.w <= width, item + ' ' + JSON.stringify(bubble));
+      for (const z of zones) {
+        const apart = bubble.x >= z.x + z.w || bubble.x + bubble.w <= z.x || bubble.y >= z.y + z.h || bubble.y + bubble.h <= z.y;
+        assert.ok(apart, item + ' ' + JSON.stringify({ bubble, z }));
+      }
+      await tapBubble(page, '#city');
+      await page.locator('#sheet').waitFor();
+      assert.equal(await page.locator('#sheetTitle').innerText(), name);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Souhait : la bulle entière et touchable, même au fond de la ville sur un petit téléphone';
+}
+
 // Mesure, dans la fenêtre ouverte, que rien ne déborde.
 const fitsSheet = page => page.evaluate(() => document.querySelector('#sheetBody').scrollWidth <= document.querySelector('#sheetBody').clientWidth + 1
   && document.documentElement.scrollWidth <= innerWidth);
@@ -186,14 +215,40 @@ async function harmonySheet(browser, baseURL) {
   return 'Harmonie de ta ville : étoiles gagnées et conseils doux';
 }
 
-// Ambiances : chacune, rendue 4 s hors ligne au volume normal, reste sous la saturation avec un niveau moyen doux ; « Aucune » ne
-// fait aucun son.
+// Les trois boutons sous la ville (« Personnaliser », « Partager », « Harmonie ») tiennent sur une seule rangée, à 320 comme à
+// 390 px, en français et en anglais, sans texte qui déborde : « Lancer une activité » reste près de la ville.
+async function cityToolsOneRow(browser, baseURL) {
+  const tools = page => page.evaluate(() => [...document.querySelectorAll('.city-tools .btn')].filter(b => !b.hidden).map(b => {
+    const r = b.getBoundingClientRect();
+    return { top: Math.round(r.top), left: r.left, right: r.right, over: b.scrollWidth > b.clientWidth + 1 };
+  }));
+  for (const width of [320, 390]) {
+    const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)]), NOW, { viewport: { width, height: 844 } });
+    try {
+      for (const lang of ['fr', 'en']) {
+        if (lang === 'en') await toEnglish(page);
+        const row = await tools(page);
+        assert.equal(row.length, 3);
+        assert.equal(new Set(row.map(b => b.top)).size, 1, width + ' ' + lang + ' ' + JSON.stringify(row));
+        assert.ok(row.every(b => !b.over && b.left >= 0 && b.right <= width), width + ' ' + lang + ' ' + JSON.stringify(row));
+      }
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Outils sous la ville : une seule rangée, même sur un petit téléphone';
+}
+
+// Ambiances : chacune, rendue 4 s hors ligne au volume normal, reste sous la saturation avec un niveau moyen doux ; au volume
+// « Fort », nettement plus forte (niveau moyen au moins ×1,4 : les crêtes d'un bruit tiré au hasard varient trop pour comparer)
+// et toujours sous la saturation ; « Aucune » ne fait aucun son.
 async function ambienceLevels(browser, baseURL) {
   const { context, page, errors } = await cityAt(browser, baseURL, seed([]), NOW);
   try {
     for (const kind of ['rain', 'waves', 'fire', 'wind', 'brown']) {
       const m = await page.evaluate(k => __ville.ambience.measure(k), kind);
       assert.ok(m.peak < 0.9 && m.rms >= 0.01 && m.rms <= 0.25, kind + ' ' + JSON.stringify(m));
+      const loud = await page.evaluate(k => __ville.ambience.measure(k, 'loud'), kind);
+      assert.ok(loud.rms > m.rms * 1.4 && loud.peak < 0.9, kind + ' fort ' + JSON.stringify({ normal: m, loud }));
     }
     assert.deepEqual(await page.evaluate(() => __ville.ambience.measure('none')), { peak: 0, rms: 0 });
     assert.deepEqual(errors, []);
@@ -355,8 +410,8 @@ async function ambiencePreviewAfterIdle(browser, baseURL) {
   return 'Ambiance : l’aperçu s’entend même après la mise en veille du son';
 }
 
-const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble, harmonySheet, ambienceLevels, ambienceWithSession,
-  ambienceStopsOnAbandon, ambienceAfterReload, ambienceSettings, ambienceDuringSession, ambiencePreviewAfterIdle];
+const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble, wishBubbleClear, harmonySheet, cityToolsOneRow,
+  ambienceLevels, ambienceWithSession, ambienceStopsOnAbandon, ambienceAfterReload, ambienceSettings, ambienceDuringSession, ambiencePreviewAfterIdle];
 async function runHarmony(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
