@@ -141,7 +141,8 @@ function boot(hotData) {
   if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
     ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors },
     rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
-    share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit } };
+    share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
+    harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() } };
 }
 
 let booted = false;

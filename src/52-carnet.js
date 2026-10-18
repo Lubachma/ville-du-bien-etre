@@ -150,9 +150,13 @@ function carnetVisits() {
 }
 
 // Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.
-function celebrate({ achievements = [], sets = [], challenges = [] } = {}, lead = '') {
-  // Défis relevés : leur ligne suit le texte d'ouverture.
-  lead = [lead, ...challenges.map(ch => t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) }))].filter(Boolean).join(' · ');
+function celebrate({ achievements = [], sets = [], challenges = [], townWish = null, stars = [] } = {}, lead = '') {
+  // Défis relevés, souhait exaucé (le bâtiment remercie, avec des étincelles) et étoiles d'harmonie : leurs lignes suivent le texte
+  // d'ouverture.
+  lead = [lead, ...challenges.map(ch => t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) })),
+    townWish && t('wish.granted', { building: itemName(townWish.building), coins: fmt(GIFTS.townWish) }),
+    ...stars.map(id => t('harmony.star', { name: t('harmony.' + id), coins: fmt(GIFTS.star) }))].filter(Boolean).join(' · ');
+  if (townWish) City.sparkle([townWish.tile]);
   // Au démarrage, le message de rattrapage en attente rejoint ce message-ci.
   const note = lead || achievements.length || sets.length ? takeCarnetNote() : '';
   if (!achievements.length && !sets.length) {
@@ -174,11 +178,18 @@ function celebrate({ achievements = [], sets = [], challenges = [] } = {}, lead 
   toast(line(shown), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') }, line(n > 1 ? t('ach.spokenMany', { n, names }) : shown));
 }
 // Après une pose, un déplacement, un agrandissement ou une étape : ce qui vient d'être obtenu, sans rien afficher.
-// Les défis relevés passent avant les succès, pour que ceux qui en dépendent suivent dans le même message.
+// Les défis relevés, le souhait exaucé et les étoiles passent avant les succès, pour que ceux qui en dépendent suivent dans le
+// même message.
 function noticeProgress() {
   const challenges = typeof claimChallenges === 'function' ? claimChallenges() : [];
+  const townWish = typeof claimTownWish === 'function' ? claimTownWish() : null;
+  const stars = typeof claimStars === 'function' ? claimStars() : [];
   const sets = discoverSets();
-  return { sets, achievements: checkAchievements(), challenges };
+  return { sets, achievements: checkAchievements(), challenges, townWish, stars };
+}
+// Quelque chose à annoncer : un ensemble, un succès, un défi relevé, un souhait exaucé ou une étoile.
+function hasNews(fresh = {}) {
+  return !!((fresh.sets || []).length || (fresh.achievements || []).length || (fresh.challenges || []).length || fresh.townWish || (fresh.stars || []).length);
 }
 // Ville d'avant la mise à jour ou sauvegarde restaurée : tout ce qui était déjà mérité, en un seul message.
 // Au démarrage (defer), le message attend : il rejoint le premier message de la ville (une fête), sinon flushCarnetNote l'affiche.

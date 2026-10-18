@@ -1,0 +1,64 @@
+const assert = require('node:assert/strict');
+const { town } = require('./content-browser.cjs');
+const { cityAt } = require('./ambient-browser.cjs');
+
+// Étape 5, harmonie et ambiance : chaque scénario est une fonction à part, qu'on peut lancer seule.
+const at = iso => Date.parse(iso);
+const NOW = '2026-10-21T10:00:00Z';
+const tile = (item, x, y, extra = {}) => ({ id: item + x + y, item, x, y, at: at('2026-10-01T09:00:00Z'), paid: 1e6, ...extra });
+// Une ville amorcée à date de création fixe, avec peu de minutes : seuls les décors de départ sont débloqués.
+const seed = (tiles, extra = {}) => town({ esprit: 5 }, tiles, { createdAt: at('2026-05-04T09:00:00Z'), ...extra });
+const NAMES = { fleurs: 'Massif de fleurs', banc: 'Banc' }, PRICES = { fleurs: 1e6, banc: 2e6 };
+const toastMatches = (page, re) => page.waitForFunction(source => new RegExp(source).test(document.querySelector('#toast').textContent), re.source, { timeout: 5000 });
+
+// Pose : le décor souhaité, posé à côté du bâtiment, exauce le souhait — le bâtiment remercie, et 3 M arrivent.
+async function wishGrantedOnBuild(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { achievements: { 'premiere-pierre': at('2026-05-05T09:00:00Z') } }), NOW);
+  try {
+    const wish = await page.evaluate(() => __ville.harmony.wish());
+    assert.ok(wish && NAMES[wish.item], JSON.stringify(wish));
+    const coins = await page.evaluate(() => __ville.state.coins);
+    await page.locator('#buildBtn').click();
+    await page.getByRole('button', { name: new RegExp('^Placer ' + NAMES[wish.item] + ' pour') }).click();
+    await page.locator('#city').press('ArrowRight');   // (4, 3), juste à côté de la maison (3, 3)
+    await page.locator('#city').press('Enter');
+    await page.locator('#placeConfirm').click();
+    await toastMatches(page, /Souhait exaucé/);
+    assert.match(await page.locator('#toast').innerText(), /Souhait exaucé · Maison\s:\s«\sMerci, c'est parfait\s!\s»\s·\s\+3\sM/);
+    assert.deepEqual(await page.evaluate(() => ({ coins: __ville.state.coins, gift: !!__ville.state.gifts['wish:2026-10-21'] })),
+      { coins: coins - PRICES[wish.item] + 3e6, gift: true });
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Souhait exaucé en posant le décor voulu';
+}
+
+// Ville d'avant l'étape 5 : les étoiles qu'elle mérite déjà arrivent en un seul message à la première ouverture, payées une fois.
+async function starsAtFirstOpen(browser, baseURL) {
+  const tiles = [tile('maison', 0, 0), tile('bibliotheque', 6, 0), tile('kiosque', 0, 6), tile('arbre', 3, 3), tile('fleurs', 4, 4), tile('lampadaire', 6, 6)];
+  const state = seed(tiles);
+  const { context, page, errors } = await cityAt(browser, baseURL, state, NOW);
+  try {
+    await toastMatches(page, /Nouvelle étoile d'harmonie/);
+    const text = await page.locator('#toast').innerText();
+    assert.equal((text.match(/Nouvelle étoile d'harmonie/g) || []).length, 3, text);
+    assert.match(text, /Verdure[\s\S]*Variété[\s\S]*Lumières du soir/);
+    const coins = await page.evaluate(() => __ville.state.coins);
+    assert.equal(coins, state.coins + 30e6);
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    await page.waitForTimeout(400);
+    assert.doesNotMatch(await page.locator('#toast').innerText(), /Nouvelle étoile/);
+    assert.equal(await page.evaluate(() => __ville.state.coins), coins);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Étoiles d’une ville déjà harmonieuse : un seul message, payées une fois';
+}
+
+const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen];
+async function runHarmony(browser, baseURL) {
+  const scenarios = [];
+  for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
+  return { scenarios };
+}
+
+module.exports = { runHarmony, SCENARIOS, seed, tile, NOW };

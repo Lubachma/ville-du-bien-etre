@@ -84,17 +84,15 @@ function noteSeason(day) {
   S.seasons[season] = nowTs();
   return true;
 }
-// À chaque affichage de la Ville : la saison vue, les fêtes du jour, puis les défis relevés. Un seul enregistrement : celui
-// des fêtes quand il y en a, sinon celui des défis payés, sinon un enregistrement discret pour la saison ; avec les succès.
+// À chaque affichage de la Ville : la saison vue, le souhait du jour, les fêtes du jour, puis ce qui vient d'être obtenu (défis,
+// souhait exaucé, étoiles, ensembles, succès). Un seul enregistrement : celui des fêtes quand il y en a, sinon un enregistrement
+// visible s'il y a du nouveau (des pièces), sinon discret pour la saison ou le souhait tiré.
 function liveTick(day = today()) {
-  const season = noteSeason(day);
+  const season = noteSeason(day), drawn = typeof drawTownWish === 'function' && drawTownWish(day);
   if (greetFestivals(day).length) return;
-  const claimed = typeof claimChallenges === 'function' ? claimChallenges(day) : [];
-  if (!season && !claimed.length) return;
-  const progress = progressNow();
-  progress.challenges = [...claimed, ...(progress.challenges || [])];
-  // Des pièces en plus : l'en-tête se met à jour ; une saison seule s'enregistre discrètement.
-  commit(claimed.length ? {} : { silent: true });
+  const progress = progressNow(), news = typeof hasNews === 'function' && hasNews(progress);
+  if (!season && !drawn && !news) return;
+  commit(news ? {} : { silent: true });
   cheer(progress, '');
 }
 // Début de la légende de la ville : moment, météo (et arc-en-ciel), visiteur de passage et fêtes du jour.

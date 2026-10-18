@@ -1505,6 +1505,13 @@ DICT.fr = {
   'recap.cardMonth': 'Ton mois',
   'recap.cardYear': 'Ton année',
   'recap.open': 'Voir',
+  'wish.granted': "Souhait exaucé · {building} : « Merci, c'est parfait ! » · +{coins}",
+  'harmony.star': "Nouvelle étoile d'harmonie : {name} · +{coins}",
+  'harmony.verdure': 'Verdure',
+  'harmony.variete': 'Variété',
+  'harmony.details': 'Petits détails',
+  'harmony.quartiers': 'Quartiers',
+  'harmony.lumieres': 'Lumières du soir',
   'share.button': 'Partager ma ville',
   'share.title': 'Partager ma ville',
   'share.privacy': "Ton ami verra ta ville telle qu'elle est : son nom et ses éléments, sans tes minutes, ton journal ni tes humeurs.",
@@ -2608,6 +2615,13 @@ DICT.en = {
   'recap.cardMonth': 'Your month',
   'recap.cardYear': 'Your year',
   'recap.open': 'View',
+  'wish.granted': "Wish granted · {building}: “Thank you, it's perfect!” · +{coins}",
+  'harmony.star': 'New harmony star: {name} · +{coins}',
+  'harmony.verdure': 'Greenery',
+  'harmony.variete': 'Variety',
+  'harmony.details': 'Little touches',
+  'harmony.quartiers': 'Neighbourhoods',
+  'harmony.lumieres': 'Evening lights',
   'share.button': 'Share my town',
   'share.title': 'Share my town',
   'share.privacy': 'Your friend will see your town as it is: its name and its items, without your minutes, your journal or your moods.',
@@ -7039,8 +7053,8 @@ const Mode = {
       Chime.place('build');
       commit();
       bump();
-      // Un ensemble, un succès ou un défi relevé : le message de fête remplace celui de la pose.
-      if (fresh.sets.length || fresh.achievements.length || fresh.challenges.length) celebrate(fresh); else toast(t('city.built', name));
+      // Un ensemble, un succès, un défi, un souhait exaucé ou une étoile : le message de fête remplace celui de la pose.
+      if (hasNews(fresh)) celebrate(fresh); else toast(t('city.built', name));
     } else {
       const tile = S.city.tiles.find(t => t.id === st.tileId);
       if (!tile) { this.cancel(); return; }
@@ -7052,7 +7066,7 @@ const Mode = {
       City.effect(tile.id, 'move');
       Chime.place('move');
       commit();
-      if (fresh.sets.length || fresh.achievements.length || fresh.challenges.length) celebrate(fresh); else toast(t('city.moved'));
+      if (hasNews(fresh)) celebrate(fresh); else toast(t('city.moved'));
     }
   },
   cancel() { this.state = null; this.render(); City.draw(); },
@@ -7882,7 +7896,7 @@ function expandCity() {
   commit();
   City.relayout();
   bump();
-  if (fresh.sets.length || fresh.achievements.length || fresh.challenges.length) celebrate(fresh); else toast(t('shop.expanded', { size: ns }));
+  if (hasNews(fresh)) celebrate(fresh); else toast(t('shop.expanded', { size: ns }));
 }
 // Bouton d'une merveille dans la boutique : commencer le chantier, le continuer, ou rien une fois inaugurée.
 function wonderShopAction(key, sub) {
@@ -9705,9 +9719,13 @@ function carnetVisits() {
 }
 
 // Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.
-function celebrate({ achievements = [], sets = [], challenges = [] } = {}, lead = '') {
-  // Défis relevés : leur ligne suit le texte d'ouverture.
-  lead = [lead, ...challenges.map(ch => t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) }))].filter(Boolean).join(' · ');
+function celebrate({ achievements = [], sets = [], challenges = [], townWish = null, stars = [] } = {}, lead = '') {
+  // Défis relevés, souhait exaucé (le bâtiment remercie, avec des étincelles) et étoiles d'harmonie : leurs lignes suivent le texte
+  // d'ouverture.
+  lead = [lead, ...challenges.map(ch => t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) })),
+    townWish && t('wish.granted', { building: itemName(townWish.building), coins: fmt(GIFTS.townWish) }),
+    ...stars.map(id => t('harmony.star', { name: t('harmony.' + id), coins: fmt(GIFTS.star) }))].filter(Boolean).join(' · ');
+  if (townWish) City.sparkle([townWish.tile]);
   // Au démarrage, le message de rattrapage en attente rejoint ce message-ci.
   const note = lead || achievements.length || sets.length ? takeCarnetNote() : '';
   if (!achievements.length && !sets.length) {
@@ -9729,11 +9747,18 @@ function celebrate({ achievements = [], sets = [], challenges = [] } = {}, lead 
   toast(line(shown), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') }, line(n > 1 ? t('ach.spokenMany', { n, names }) : shown));
 }
 // Après une pose, un déplacement, un agrandissement ou une étape : ce qui vient d'être obtenu, sans rien afficher.
-// Les défis relevés passent avant les succès, pour que ceux qui en dépendent suivent dans le même message.
+// Les défis relevés, le souhait exaucé et les étoiles passent avant les succès, pour que ceux qui en dépendent suivent dans le
+// même message.
 function noticeProgress() {
   const challenges = typeof claimChallenges === 'function' ? claimChallenges() : [];
+  const townWish = typeof claimTownWish === 'function' ? claimTownWish() : null;
+  const stars = typeof claimStars === 'function' ? claimStars() : [];
   const sets = discoverSets();
-  return { sets, achievements: checkAchievements(), challenges };
+  return { sets, achievements: checkAchievements(), challenges, townWish, stars };
+}
+// Quelque chose à annoncer : un ensemble, un succès, un défi relevé, un souhait exaucé ou une étoile.
+function hasNews(fresh = {}) {
+  return !!((fresh.sets || []).length || (fresh.achievements || []).length || (fresh.challenges || []).length || fresh.townWish || (fresh.stars || []).length);
 }
 // Ville d'avant la mise à jour ou sauvegarde restaurée : tout ce qui était déjà mérité, en un seul message.
 // Au démarrage (defer), le message attend : il rejoint le premier message de la ville (une fête), sinon flushCarnetNote l'affiche.
@@ -9838,17 +9863,15 @@ function noteSeason(day) {
   S.seasons[season] = nowTs();
   return true;
 }
-// À chaque affichage de la Ville : la saison vue, les fêtes du jour, puis les défis relevés. Un seul enregistrement : celui
-// des fêtes quand il y en a, sinon celui des défis payés, sinon un enregistrement discret pour la saison ; avec les succès.
+// À chaque affichage de la Ville : la saison vue, le souhait du jour, les fêtes du jour, puis ce qui vient d'être obtenu (défis,
+// souhait exaucé, étoiles, ensembles, succès). Un seul enregistrement : celui des fêtes quand il y en a, sinon un enregistrement
+// visible s'il y a du nouveau (des pièces), sinon discret pour la saison ou le souhait tiré.
 function liveTick(day = today()) {
-  const season = noteSeason(day);
+  const season = noteSeason(day), drawn = typeof drawTownWish === 'function' && drawTownWish(day);
   if (greetFestivals(day).length) return;
-  const claimed = typeof claimChallenges === 'function' ? claimChallenges(day) : [];
-  if (!season && !claimed.length) return;
-  const progress = progressNow();
-  progress.challenges = [...claimed, ...(progress.challenges || [])];
-  // Des pièces en plus : l'en-tête se met à jour ; une saison seule s'enregistre discrètement.
-  commit(claimed.length ? {} : { silent: true });
+  const progress = progressNow(), news = typeof hasNews === 'function' && hasNews(progress);
+  if (!season && !drawn && !news) return;
+  commit(news ? {} : { silent: true });
   cheer(progress, '');
 }
 // Début de la légende de la ville : moment, météo (et arc-en-ciel), visiteur de passage et fêtes du jour.
@@ -10368,7 +10391,8 @@ function boot(hotData) {
   if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
     ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors },
     rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
-    share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit } };
+    share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
+    harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() } };
 }
 
 let booted = false;
