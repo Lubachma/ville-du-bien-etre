@@ -173,8 +173,9 @@ const FESTIVALS = [
   { id: 'lumieres', north: ['12-20', '12-21', '12-22'], south: ['06-20', '06-21', '06-22'] },
   { id: 'anniversaire' },
 ];
-// Cadeaux en pièces : visiteur du jour, fête, anniversaire de la ville, défi de la semaine relevé.
-const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6, challenge: 5e6 };
+// Cadeaux en pièces : visiteur du jour, fête, anniversaire de la ville, défi de la semaine relevé, souhait d'habitant exaucé,
+// étoile d'harmonie gagnée.
+const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6, challenge: 5e6, townWish: 3e6, star: 10e6 };
 // Visiteurs : saisons où ils viennent, météo qu'ils aiment, neige récente, endroit où ils se placent (24-ambient.js) ;
 // plural pour un nom au pluriel (les canards), qui accorde la légende.
 const VISITORS = [
@@ -206,6 +207,15 @@ const SHARE_ITEMS = Object.freeze(['arbre', 'fleurs', 'chemin', 'banc', 'lampada
   'planetarium', 'skatepark', 'escalade', 'gymnase', 'labyrinthe', 'source', 'pagode', 'galerie', 'cinema', 'chapiteau', 'haie', 'cerisier', 'livres', 'lanterne',
   'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'grandarbre', 'phare', 'granderoue']);
 const POSTCARDS_MAX = 50;            // cartes postales des villes amies gardées dans le carnet
+// Harmonie : les cinq étoiles, une par critère (28-harmony.js).
+const HARMONY = ['verdure', 'variete', 'details', 'quartiers', 'lumieres'];
+// Souhaits des habitants : les décors que les bâtiments de chaque domaine aimeraient avoir juste à côté.
+const WISH_LIKES = {
+  foyer: ['fleurs', 'haie', 'banc', 'potager'], esprit: ['banc', 'arbre', 'livres', 'lanterne'], corps: ['arbre', 'fanions', 'banc', 'fleurs'],
+  calme: ['cerisier', 'etang', 'pasjaponais', 'lanterne'], crea: ['lampadaire', 'fanions', 'statue', 'fleurs'],
+};
+// Ambiances sonores pendant les séances (51-ambience.js) ; « none » par défaut.
+const AMBIENCES = ['none', 'rain', 'waves', 'fire', 'wind', 'brown'];
 const SOUTH_TZ = ['Australia/', 'Antarctica/', 'America/Argentina/', 'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu',
   'Pacific/Noumea', 'Pacific/Port_Moresby', 'America/Santiago', 'America/Punta_Arenas', 'America/Sao_Paulo', 'America/Montevideo', 'America/Asuncion',
   'America/La_Paz', 'America/Lima', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Windhoek', 'Africa/Gaborone',

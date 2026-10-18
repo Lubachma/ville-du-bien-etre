@@ -178,8 +178,9 @@ const FESTIVALS = [
   { id: 'lumieres', north: ['12-20', '12-21', '12-22'], south: ['06-20', '06-21', '06-22'] },
   { id: 'anniversaire' },
 ];
-// Cadeaux en pièces : visiteur du jour, fête, anniversaire de la ville, défi de la semaine relevé.
-const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6, challenge: 5e6 };
+// Cadeaux en pièces : visiteur du jour, fête, anniversaire de la ville, défi de la semaine relevé, souhait d'habitant exaucé,
+// étoile d'harmonie gagnée.
+const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6, challenge: 5e6, townWish: 3e6, star: 10e6 };
 // Visiteurs : saisons où ils viennent, météo qu'ils aiment, neige récente, endroit où ils se placent (24-ambient.js) ;
 // plural pour un nom au pluriel (les canards), qui accorde la légende.
 const VISITORS = [
@@ -211,6 +212,15 @@ const SHARE_ITEMS = Object.freeze(['arbre', 'fleurs', 'chemin', 'banc', 'lampada
   'planetarium', 'skatepark', 'escalade', 'gymnase', 'labyrinthe', 'source', 'pagode', 'galerie', 'cinema', 'chapiteau', 'haie', 'cerisier', 'livres', 'lanterne',
   'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'grandarbre', 'phare', 'granderoue']);
 const POSTCARDS_MAX = 50;            // cartes postales des villes amies gardées dans le carnet
+// Harmonie : les cinq étoiles, une par critère (28-harmony.js).
+const HARMONY = ['verdure', 'variete', 'details', 'quartiers', 'lumieres'];
+// Souhaits des habitants : les décors que les bâtiments de chaque domaine aimeraient avoir juste à côté.
+const WISH_LIKES = {
+  foyer: ['fleurs', 'haie', 'banc', 'potager'], esprit: ['banc', 'arbre', 'livres', 'lanterne'], corps: ['arbre', 'fanions', 'banc', 'fleurs'],
+  calme: ['cerisier', 'etang', 'pasjaponais', 'lanterne'], crea: ['lampadaire', 'fanions', 'statue', 'fleurs'],
+};
+// Ambiances sonores pendant les séances (51-ambience.js) ; « none » par défaut.
+const AMBIENCES = ['none', 'rain', 'waves', 'fire', 'wind', 'brown'];
 const SOUTH_TZ = ['Australia/', 'Antarctica/', 'America/Argentina/', 'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu',
   'Pacific/Noumea', 'Pacific/Port_Moresby', 'America/Santiago', 'America/Punta_Arenas', 'America/Sao_Paulo', 'America/Montevideo', 'America/Asuncion',
   'America/La_Paz', 'America/Lima', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Windhoek', 'Africa/Gaborone',
@@ -2673,7 +2683,8 @@ function defaultState() {
   return {
     v: 2, createdAt: now, updatedAt: 0, revision: '',
     coins: 5e6, earned: 0,
-    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false, soundType: 'chime', soundVolume: 'normal', vibrate: true, sky: 'time', hemisphere: 'auto', ambient: true, rituals: true, challenges: true, mood: true },
+    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false, soundType: 'chime', soundVolume: 'normal', vibrate: true, sky: 'time', hemisphere: 'auto', ambient: true, rituals: true, challenges: true, mood: true,
+      ambience: 'none', ambienceVolume: 'normal', townWishes: true },
     clock: { tz: currentTz(), maxSeen: now, lastDay: '' },
     activities: [
       { id: uid(), name: t('tpl.act.reading'), cat: 'esprit', min: 10 },
@@ -2696,7 +2707,7 @@ function defaultState() {
     draw: { pool: 'wishes', current: null, rerolls: 0, filters: { maxMin: 0, energy: 'any', place: 'any' } },
     goals: { minutes: 60, days: 3, cat: 'all', building: '' },
     personal: { name: '' }, routines: [], routineRun: null, pauses: [], achievements: {}, sets: {}, visits: {}, gifts: {}, seasons: {},
-    challenges: { week: '', swapped: -1 }, postcards: {}, rituals: { week: '', month: '', year: '' }, shareId: '',
+    challenges: { week: '', swapped: -1 }, postcards: {}, rituals: { week: '', month: '', year: '' }, shareId: '', townWish: null,
     city: {
       size: 7,
       tiles: [
@@ -2825,6 +2836,10 @@ function normalize(raw) {
     ambient: st.ambient !== false,
     // Rituels : bilans qui s'ouvrent d'eux-mêmes, défis de la semaine, humeur après une séance.
     rituals: st.rituals !== false, challenges: st.challenges !== false, mood: st.mood !== false,
+    // Harmonie et ambiance : son pendant les séances (aucun par défaut) et son volume, souhaits des habitants.
+    ambience: AMBIENCES.includes(st.ambience) ? st.ambience : 'none',
+    ambienceVolume: own(SOUND_GAIN, st.ambienceVolume) ? st.ambienceVolume : 'normal',
+    townWishes: st.townWishes !== false,
   };
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))
@@ -2842,6 +2857,7 @@ function normalize(raw) {
   s.rituals = { week: isDayKey(ri.week) ? ri.week : '', month: text(ri.month, /^\d{4}-(0[1-9]|1[0-2])$/), year: text(ri.year, /^\d{4}$/) };
   s.shareId = text(raw.shareId, /^[0-9a-f]{12}$/);
   s.postcards = knownPostcards(raw.postcards);
+  s.townWish = knownTownWish(raw.townWish);
   const ck = obj(raw.clock);
   s.clock = {
     tz: validTz(ck.tz) ? ck.tz : s.clock.tz,
@@ -2946,11 +2962,19 @@ function normalize(raw) {
 // Une suppression gagne sur une édition concurrente. Pour un même champ édité
 // des deux côtés, le maximum JSON est un départage stable, indépendant de l'onglet.
 // Dates d'obtention (succès, ensembles) dont l'identifiant figure dans la table donnée.
-// Cadeaux : « visit:AAAA-MM-JJ » pour un visiteur, « fest:<fête>:<année> » pour une fête, « chal:<semaine>:<défi> » pour un défi relevé.
+// Cadeaux : « visit:AAAA-MM-JJ » pour un visiteur, « fest:<fête>:<année> » pour une fête, « chal:<semaine>:<défi> » pour un défi relevé,
+// « wish:<jour du souhait> » pour un souhait exaucé, « star:<critère> » pour une étoile d'harmonie.
 const GIFT_KEY = new RegExp('^(visit:\\d{4}-\\d{2}-\\d{2}|fest:(' + FESTIVALS.map(f => f.id).join('|') + '):\\d{4}|chal:\\d{4}-\\d{2}-\\d{2}:('
-  + CHALLENGES.map(c => c.id).join('|') + '))$');
+  + CHALLENGES.map(c => c.id).join('|') + ')|wish:\\d{4}-\\d{2}-\\d{2}|star:(' + HARMONY.join('|') + '))$');
 // Cartes postales des villes amies, par identifiant de partage : code de la ville, nom, taille, nombre d'éléments et date de la visite.
 // Seules les plus récentes restent.
+// Souhait d'habitant en cours : jour du tirage, bâtiment (identifiant de son élément) et décor aimé ; exaucé (date) ou laissé
+// de côté. Sinon, aucun souhait.
+function knownTownWish(raw) {
+  const w = obj(raw);
+  if (!isDayKey(w.day) || typeof w.tile !== 'string' || !w.tile || w.tile.length > 40 || !Object.values(WISH_LIKES).some(list => list.includes(w.item))) return null;
+  return { day: w.day, tile: w.tile, item: w.item, ...(validTs(w.done) ? { done: w.done } : {}), ...(w.skipped === true ? { skipped: true } : {}) };
+}
 function knownPostcards(raw) {
   const cards = Object.entries(obj(raw)).filter(([id, c]) => /^[0-9a-f]{12}$/.test(id) && c && typeof c.code === 'string' && /^[A-Za-z0-9_-]{4,4000}$/.test(c.code)
     && SIZES.includes(c.size) && validTs(c.at)).map(([id, c]) => [id, { code: c.code, name: str(c.name, 40), size: c.size, count: int(c.count, 0, 121, 0), at: c.at }]);
@@ -3172,6 +3196,9 @@ function merge3(B, L, R) {
   M.rituals = Object.fromEntries(['week', 'month', 'year'].map(k => [k, [obj(L.rituals)[k] || '', obj(R.rituals)[k] || ''].sort().pop()]));
   M.challenges = clone([obj(L.challenges), obj(R.challenges)].sort((p, q) => String(p.week || '').localeCompare(String(q.week || '')) || (p.swapped ?? -1) - (q.swapped ?? -1)).pop());
   M.shareId = R.shareId || L.shareId || '';
+  // Souhait d'habitant : celui du jour le plus récent ; le même jour, un souhait exaucé ou laissé de côté l'emporte.
+  const wishRank = w => (w.done ? 2 : w.skipped ? 1 : 0);
+  M.townWish = clone([L.townWish, R.townWish].filter(Boolean).sort((p, q) => String(p.day).localeCompare(String(q.day)) || wishRank(p) - wishRank(q)).pop() || null);
   // Un cadeau reçu dans les deux onglets à la fois ne compte qu'une fois.
   if (typeof giftAmount === 'function') {
     for (const key of Object.keys(L.gifts || {})) if (!(key in (B.gifts || {})) && key in (R.gifts || {})) M.coins -= giftAmount(key);
@@ -4127,7 +4154,7 @@ function mirrorOf(id) {
 function giftAmount(key) {
   const k = String(key);
   return k.startsWith('visit:') ? GIFTS.visit : k.startsWith('fest:anniversaire:') ? GIFTS.birthday : k.startsWith('fest:') ? GIFTS.fest
-    : k.startsWith('chal:') ? GIFTS.challenge : 0;
+    : k.startsWith('chal:') ? GIFTS.challenge : k.startsWith('wish:') ? GIFTS.townWish : k.startsWith('star:') ? GIFTS.star : 0;
 }
 // Premier jour de la fête, ce jour-là ou après.
 function nextFestival(id, day) {
