@@ -553,7 +553,7 @@ DICT.en = {
   'settings.graceNote': 'Focus mode only: how long the app can leave the screen without the session being interrupted.',
   'settings.keepAwake': 'Keep the screen on during a session',
   'settings.sound': 'Play a sound at the end of a session',
-  'settings.soundNote': "A gentle chime that follows the phone's silent mode.",
+  'settings.soundNote': "A gentle sound that follows the phone's silent mode. Tap a sound to hear it.",
   'settings.theme': 'Appearance',
   'settings.themeNote': "Auto follows the phone's setting. At night, the town's windows light up.",
   'settings.themeAuto': 'Auto',
@@ -634,4 +634,15 @@ DICT.en = {
   'journal.restsLeft': { one: '{n}\u00a0rest day left this week', other: '{n}\u00a0rest days left this week' },
   'result.consistency': 'Consistency bonus',
   'act.gainPreviewConsistency': 'Reward at the end: {coins} (consistency bonus +{pct}%).',
+
+  // End sound, volume and vibration
+  'settings.soundType': 'End sound',
+  'settings.soundChime': 'Chime',
+  'settings.soundBowl': 'Bowl',
+  'settings.soundBells': 'Bells',
+  'settings.volume': 'Volume',
+  'settings.volumeSoft': 'Soft',
+  'settings.volumeNormal': 'Normal',
+  'settings.volumeLoud': 'Loud',
+  'settings.vibrate': 'Vibrate at the end of a session',
 };

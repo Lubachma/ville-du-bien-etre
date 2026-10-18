@@ -99,14 +99,21 @@ function releaseWake() {
   if (w && !w.released) { try { w.release(); } catch (e) { /* déjà libéré */ } }
 }
 
-/* Carillon de fin : préparé au moment du tap (sur iPhone, le son n'est permis qu'après un geste),
-   joué quand le chrono arrive au bout, puis mis en veille jusqu'à la session suivante. */
+/* Son de fin : préparé au moment du tap (sur iPhone, le son n'est permis qu'après un geste),
+   joué quand le chrono arrive au bout, puis mis en veille jusqu'à la session suivante.
+   Chaque son : notes [départ s, fréquence Hz], harmoniques [multiple, volume], durée d'extinction s. */
+const SOUNDS = {
+  chime: { notes: [[0, 784], [.38, 1047]], partials: [[1, .2], [2.76, .05], [5.4, .02]], decay: 1.9 },
+  bowl: { notes: [[0, 220]], partials: [[1, .26], [2.71, .07], [5.2, .025]], decay: 4 },
+  bells: { notes: [[0, 1319], [.16, 1568], [.32, 2093]], partials: [[1, .14], [3, .03]], decay: .6 },
+};
 const Chime = {
   ctx: null,
   idle: 0,
-  unlock() {
+  // force : l'aperçu des Réglages joue même si le son de fin est coupé.
+  unlock(force) {
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!S.settings.sound || !AC) return;
+    if ((!S.settings.sound && !force) || !AC) return;
     try {
       clearTimeout(this.idle);
       if (!this.ctx) this.ctx = new AC();
@@ -118,30 +125,39 @@ const Chime = {
       src.start(0);
     } catch (e) { this.ctx = null; }
   },
+  // La vibration a son propre réglage : elle prévient même quand le son est coupé.
   play() {
+    try { if (S.settings.vibrate && typeof navigator.vibrate === 'function') navigator.vibrate([160, 90, 160]); } catch (e) { /* pas de vibreur */ }
     if (!S.settings.sound) return;
-    try { if (navigator.vibrate) navigator.vibrate([160, 90, 160]); } catch (e) { /* pas de vibreur */ }
-    const c = this.ctx;
+    this.sound();
+    this.rest(3000);
+  },
+  // Aperçu dans les Réglages, pendant le geste : le son choisi, sans vibration.
+  preview() {
+    this.unlock(true);
+    this.sound();
+    this.rest(5000);
+  },
+  sound() {
+    const c = this.ctx, def = SOUNDS[S.settings.soundType] || SOUNDS.chime, gain = SOUND_GAIN[S.settings.soundVolume] || 1;
     if (!c) return;
     try {
       if (c.state !== 'running') c.resume().catch(() => {});
       const t0 = c.currentTime + .05;
-      // Deux notes (sol puis do) aux harmoniques de lame métallique, éteintes en 2 s environ.
-      for (const [dt, f] of [[0, 784], [.38, 1047]]) {
-        for (const [k, vol] of [[1, .2], [2.76, .05], [5.4, .02]]) {
+      for (const [dt, f] of def.notes) {
+        for (const [k, vol] of def.partials) {
           const o = c.createOscillator(), g = c.createGain();
           o.frequency.value = f * k;
           g.gain.setValueAtTime(.0001, t0 + dt);
-          g.gain.exponentialRampToValueAtTime(vol, t0 + dt + .012);
-          g.gain.exponentialRampToValueAtTime(.0001, t0 + dt + 1.9);
+          g.gain.exponentialRampToValueAtTime(vol * gain, t0 + dt + .012);
+          g.gain.exponentialRampToValueAtTime(.0001, t0 + dt + def.decay);
           o.connect(g);
           g.connect(c.destination);
           o.start(t0 + dt);
-          o.stop(t0 + dt + 2);
+          o.stop(t0 + dt + def.decay + .1);
         }
       }
     } catch (e) { /* pas de son ici */ }
-    this.rest(3000);
   },
   // Hors session, le son est mis en veille (batterie) ; le prochain tap le réveille.
   rest(delay) {

@@ -16,7 +16,7 @@ function defaultState() {
   return {
     v: 2, createdAt: now, updatedAt: 0, revision: '',
     coins: 5e6, earned: 0,
-    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false },
+    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false, soundType: 'chime', soundVolume: 'normal', vibrate: true },
     clock: { tz: currentTz(), maxSeen: now, lastDay: '' },
     activities: [
       { id: uid(), name: t('tpl.act.reading'), cat: 'esprit', min: 10 },
@@ -155,6 +155,9 @@ function normalize(raw) {
     restDays: [0, 1, 2].includes(st.restDays) ? st.restDays : 2,
     weekStart: st.weekStart === 'sun' ? 'sun' : 'mon',
     hideStreak: st.hideStreak === true,
+    soundType: SOUND_TYPES.includes(st.soundType) ? st.soundType : 'chime',
+    soundVolume: own(SOUND_GAIN, st.soundVolume) ? st.soundVolume : 'normal',
+    vibrate: st.vibrate !== false,
   };
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))

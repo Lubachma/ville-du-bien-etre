@@ -553,7 +553,7 @@ DICT.fr = {
   'settings.graceNote': "En mode Concentration uniquement : durée pendant laquelle l'app peut quitter l'écran sans que la session soit interrompue.",
   'settings.keepAwake': "Garder l'écran allumé pendant une session",
   'settings.sound': "Sonner à la fin d'une session",
-  'settings.soundNote': 'Un carillon discret, qui suit le mode silencieux du téléphone.',
+  'settings.soundNote': 'Un son discret, qui suit le mode silencieux du téléphone. Touche un son pour l’écouter.',
   'settings.theme': 'Apparence',
   'settings.themeNote': "Auto suit le réglage du téléphone. La nuit, les fenêtres de la ville s'allument.",
   'settings.themeAuto': 'Auto',
@@ -634,4 +634,15 @@ DICT.fr = {
   'journal.restsLeft': { one: '{n}\u00a0jour de repos restant cette semaine', other: '{n}\u00a0jours de repos restants cette semaine' },
   'result.consistency': 'Bonus de régularité',
   'act.gainPreviewConsistency': 'Gain à la fin : {coins} (bonus de régularité +{pct}\u00a0%).',
+
+  // Son de fin, volume et vibration
+  'settings.soundType': 'Son de fin',
+  'settings.soundChime': 'Carillon',
+  'settings.soundBowl': 'Bol',
+  'settings.soundBells': 'Clochettes',
+  'settings.volume': 'Volume',
+  'settings.volumeSoft': 'Doux',
+  'settings.volumeNormal': 'Normal',
+  'settings.volumeLoud': 'Fort',
+  'settings.vibrate': "Vibrer à la fin d'une session",
 };

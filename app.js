@@ -24,6 +24,8 @@ const DRAW_MIN_POOL = 3;                          // idées minimum pour qu'un t
 const RETURN_BONUS = 20;                          // cadeau de bon retour en %, après au moins 2 jours d'absence
 const GRACE_CHOICES = [5, 10, 20];
 const THEMES = ['auto', 'light', 'dark'];
+const SOUND_TYPES = ['chime', 'bowl', 'bells'];                 // sons de fin proposés
+const SOUND_GAIN = { soft: .5, normal: 1, loud: 1.6 };          // volume : multiplicateur du son
 const SIZES = [7, 9, 11];
 const EXPAND_PRICE = { 9: 120e6, 11: 400e6 };
 const DUP_STEP = 0.5;                             // chaque exemplaire supplémentaire coûte 50 % de plus
@@ -848,7 +850,7 @@ DICT.fr = {
   'settings.graceNote': "En mode Concentration uniquement : durée pendant laquelle l'app peut quitter l'écran sans que la session soit interrompue.",
   'settings.keepAwake': "Garder l'écran allumé pendant une session",
   'settings.sound': "Sonner à la fin d'une session",
-  'settings.soundNote': 'Un carillon discret, qui suit le mode silencieux du téléphone.',
+  'settings.soundNote': 'Un son discret, qui suit le mode silencieux du téléphone. Touche un son pour l’écouter.',
   'settings.theme': 'Apparence',
   'settings.themeNote': "Auto suit le réglage du téléphone. La nuit, les fenêtres de la ville s'allument.",
   'settings.themeAuto': 'Auto',
@@ -929,6 +931,17 @@ DICT.fr = {
   'journal.restsLeft': { one: '{n}\u00a0jour de repos restant cette semaine', other: '{n}\u00a0jours de repos restants cette semaine' },
   'result.consistency': 'Bonus de régularité',
   'act.gainPreviewConsistency': 'Gain à la fin : {coins} (bonus de régularité +{pct}\u00a0%).',
+
+  // Son de fin, volume et vibration
+  'settings.soundType': 'Son de fin',
+  'settings.soundChime': 'Carillon',
+  'settings.soundBowl': 'Bol',
+  'settings.soundBells': 'Clochettes',
+  'settings.volume': 'Volume',
+  'settings.volumeSoft': 'Doux',
+  'settings.volumeNormal': 'Normal',
+  'settings.volumeLoud': 'Fort',
+  'settings.vibrate': "Vibrer à la fin d'une session",
 };
 
 
@@ -1488,7 +1501,7 @@ DICT.en = {
   'settings.graceNote': 'Focus mode only: how long the app can leave the screen without the session being interrupted.',
   'settings.keepAwake': 'Keep the screen on during a session',
   'settings.sound': 'Play a sound at the end of a session',
-  'settings.soundNote': "A gentle chime that follows the phone's silent mode.",
+  'settings.soundNote': "A gentle sound that follows the phone's silent mode. Tap a sound to hear it.",
   'settings.theme': 'Appearance',
   'settings.themeNote': "Auto follows the phone's setting. At night, the town's windows light up.",
   'settings.themeAuto': 'Auto',
@@ -1569,6 +1582,17 @@ DICT.en = {
   'journal.restsLeft': { one: '{n}\u00a0rest day left this week', other: '{n}\u00a0rest days left this week' },
   'result.consistency': 'Consistency bonus',
   'act.gainPreviewConsistency': 'Reward at the end: {coins} (consistency bonus +{pct}%).',
+
+  // End sound, volume and vibration
+  'settings.soundType': 'End sound',
+  'settings.soundChime': 'Chime',
+  'settings.soundBowl': 'Bowl',
+  'settings.soundBells': 'Bells',
+  'settings.volume': 'Volume',
+  'settings.volumeSoft': 'Soft',
+  'settings.volumeNormal': 'Normal',
+  'settings.volumeLoud': 'Loud',
+  'settings.vibrate': 'Vibrate at the end of a session',
 };
 
 
@@ -1591,7 +1615,7 @@ function defaultState() {
   return {
     v: 2, createdAt: now, updatedAt: 0, revision: '',
     coins: 5e6, earned: 0,
-    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false },
+    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false, soundType: 'chime', soundVolume: 'normal', vibrate: true },
     clock: { tz: currentTz(), maxSeen: now, lastDay: '' },
     activities: [
       { id: uid(), name: t('tpl.act.reading'), cat: 'esprit', min: 10 },
@@ -1730,6 +1754,9 @@ function normalize(raw) {
     restDays: [0, 1, 2].includes(st.restDays) ? st.restDays : 2,
     weekStart: st.weekStart === 'sun' ? 'sun' : 'mon',
     hideStreak: st.hideStreak === true,
+    soundType: SOUND_TYPES.includes(st.soundType) ? st.soundType : 'chime',
+    soundVolume: own(SOUND_GAIN, st.soundVolume) ? st.soundVolume : 'normal',
+    vibrate: st.vibrate !== false,
   };
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))
@@ -4289,8 +4316,28 @@ function settingsSessions() {
     S.settings.sound = !S.settings.sound;
     soundSw.setAttribute('aria-checked', String(S.settings.sound));
     commit({ silent: true });
-    if (S.settings.sound) { Chime.unlock(); Chime.play(); }   // pour l'entendre une fois
+    if (S.settings.sound) Chime.preview();   // pour l'entendre une fois
   } });
+  // Type et volume : chaque choix fait entendre le son, pendant le geste.
+  const soundSeg = (label, values, labels, key) => {
+    const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': label });
+    for (const v of values) seg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings[key] === v), onclick: () => {
+      S.settings[key] = v;
+      commit({ silent: true });
+      $$('button', seg).forEach((b, i) => b.setAttribute('aria-checked', String(values[i] === v)));
+      Chime.preview();
+    } }, labels[v]));
+    return seg;
+  };
+  const typeSeg = soundSeg(t('settings.soundType'), SOUND_TYPES, { chime: t('settings.soundChime'), bowl: t('settings.soundBowl'), bells: t('settings.soundBells') }, 'soundType');
+  const volumeSeg = soundSeg(t('settings.volume'), Object.keys(SOUND_GAIN), { soft: t('settings.volumeSoft'), normal: t('settings.volumeNormal'), loud: t('settings.volumeLoud') }, 'soundVolume');
+  // Pas de vibreur (iPhone, ordinateur) : pas d'interrupteur.
+  const vibrateSw = typeof navigator.vibrate === 'function' ? h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.vibrate), 'aria-label': t('settings.vibrate'), onclick: () => {
+    S.settings.vibrate = !S.settings.vibrate;
+    vibrateSw.setAttribute('aria-checked', String(S.settings.vibrate));
+    commit({ silent: true });
+    if (S.settings.vibrate) { try { navigator.vibrate(160); } catch (e) { /* pas de vibreur */ } }
+  } }) : null;
   return settingsBlock('settingsSessions',
     h('div', { class: 'setting' },
       h('span', { class: 'section-title' }, t('settings.grace')),
@@ -4299,7 +4346,10 @@ function settingsSessions() {
     h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.keepAwake')), sw),
     h('div', { class: 'setting' },
       h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.sound')), soundSw),
-      h('p', { class: 'note' }, t('settings.soundNote'))));
+      h('p', { class: 'note' }, t('settings.soundNote')),
+      h('span', { class: 'setting-label' }, t('settings.soundType')), typeSeg,
+      h('span', { class: 'setting-label' }, t('settings.volume')), volumeSeg),
+    vibrateSw ? h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.vibrate')), vibrateSw) : null);
 }
 // Série : repos par semaine, pause, masquage. Un changement ne redessine que cette section.
 function settingsStreak(focus) {
@@ -4946,14 +4996,21 @@ function releaseWake() {
   if (w && !w.released) { try { w.release(); } catch (e) { /* déjà libéré */ } }
 }
 
-/* Carillon de fin : préparé au moment du tap (sur iPhone, le son n'est permis qu'après un geste),
-   joué quand le chrono arrive au bout, puis mis en veille jusqu'à la session suivante. */
+/* Son de fin : préparé au moment du tap (sur iPhone, le son n'est permis qu'après un geste),
+   joué quand le chrono arrive au bout, puis mis en veille jusqu'à la session suivante.
+   Chaque son : notes [départ s, fréquence Hz], harmoniques [multiple, volume], durée d'extinction s. */
+const SOUNDS = {
+  chime: { notes: [[0, 784], [.38, 1047]], partials: [[1, .2], [2.76, .05], [5.4, .02]], decay: 1.9 },
+  bowl: { notes: [[0, 220]], partials: [[1, .26], [2.71, .07], [5.2, .025]], decay: 4 },
+  bells: { notes: [[0, 1319], [.16, 1568], [.32, 2093]], partials: [[1, .14], [3, .03]], decay: .6 },
+};
 const Chime = {
   ctx: null,
   idle: 0,
-  unlock() {
+  // force : l'aperçu des Réglages joue même si le son de fin est coupé.
+  unlock(force) {
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!S.settings.sound || !AC) return;
+    if ((!S.settings.sound && !force) || !AC) return;
     try {
       clearTimeout(this.idle);
       if (!this.ctx) this.ctx = new AC();
@@ -4965,30 +5022,39 @@ const Chime = {
       src.start(0);
     } catch (e) { this.ctx = null; }
   },
+  // La vibration a son propre réglage : elle prévient même quand le son est coupé.
   play() {
+    try { if (S.settings.vibrate && typeof navigator.vibrate === 'function') navigator.vibrate([160, 90, 160]); } catch (e) { /* pas de vibreur */ }
     if (!S.settings.sound) return;
-    try { if (navigator.vibrate) navigator.vibrate([160, 90, 160]); } catch (e) { /* pas de vibreur */ }
-    const c = this.ctx;
+    this.sound();
+    this.rest(3000);
+  },
+  // Aperçu dans les Réglages, pendant le geste : le son choisi, sans vibration.
+  preview() {
+    this.unlock(true);
+    this.sound();
+    this.rest(5000);
+  },
+  sound() {
+    const c = this.ctx, def = SOUNDS[S.settings.soundType] || SOUNDS.chime, gain = SOUND_GAIN[S.settings.soundVolume] || 1;
     if (!c) return;
     try {
       if (c.state !== 'running') c.resume().catch(() => {});
       const t0 = c.currentTime + .05;
-      // Deux notes (sol puis do) aux harmoniques de lame métallique, éteintes en 2 s environ.
-      for (const [dt, f] of [[0, 784], [.38, 1047]]) {
-        for (const [k, vol] of [[1, .2], [2.76, .05], [5.4, .02]]) {
+      for (const [dt, f] of def.notes) {
+        for (const [k, vol] of def.partials) {
           const o = c.createOscillator(), g = c.createGain();
           o.frequency.value = f * k;
           g.gain.setValueAtTime(.0001, t0 + dt);
-          g.gain.exponentialRampToValueAtTime(vol, t0 + dt + .012);
-          g.gain.exponentialRampToValueAtTime(.0001, t0 + dt + 1.9);
+          g.gain.exponentialRampToValueAtTime(vol * gain, t0 + dt + .012);
+          g.gain.exponentialRampToValueAtTime(.0001, t0 + dt + def.decay);
           o.connect(g);
           g.connect(c.destination);
           o.start(t0 + dt);
-          o.stop(t0 + dt + 2);
+          o.stop(t0 + dt + def.decay + .1);
         }
       }
     } catch (e) { /* pas de son ici */ }
-    this.rest(3000);
   },
   // Hors session, le son est mis en veille (batterie) ; le prochain tap le réveille.
   rest(delay) {

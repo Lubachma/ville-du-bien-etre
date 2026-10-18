@@ -175,8 +175,28 @@ function settingsSessions() {
     S.settings.sound = !S.settings.sound;
     soundSw.setAttribute('aria-checked', String(S.settings.sound));
     commit({ silent: true });
-    if (S.settings.sound) { Chime.unlock(); Chime.play(); }   // pour l'entendre une fois
+    if (S.settings.sound) Chime.preview();   // pour l'entendre une fois
   } });
+  // Type et volume : chaque choix fait entendre le son, pendant le geste.
+  const soundSeg = (label, values, labels, key) => {
+    const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': label });
+    for (const v of values) seg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings[key] === v), onclick: () => {
+      S.settings[key] = v;
+      commit({ silent: true });
+      $$('button', seg).forEach((b, i) => b.setAttribute('aria-checked', String(values[i] === v)));
+      Chime.preview();
+    } }, labels[v]));
+    return seg;
+  };
+  const typeSeg = soundSeg(t('settings.soundType'), SOUND_TYPES, { chime: t('settings.soundChime'), bowl: t('settings.soundBowl'), bells: t('settings.soundBells') }, 'soundType');
+  const volumeSeg = soundSeg(t('settings.volume'), Object.keys(SOUND_GAIN), { soft: t('settings.volumeSoft'), normal: t('settings.volumeNormal'), loud: t('settings.volumeLoud') }, 'soundVolume');
+  // Pas de vibreur (iPhone, ordinateur) : pas d'interrupteur.
+  const vibrateSw = typeof navigator.vibrate === 'function' ? h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.vibrate), 'aria-label': t('settings.vibrate'), onclick: () => {
+    S.settings.vibrate = !S.settings.vibrate;
+    vibrateSw.setAttribute('aria-checked', String(S.settings.vibrate));
+    commit({ silent: true });
+    if (S.settings.vibrate) { try { navigator.vibrate(160); } catch (e) { /* pas de vibreur */ } }
+  } }) : null;
   return settingsBlock('settingsSessions',
     h('div', { class: 'setting' },
       h('span', { class: 'section-title' }, t('settings.grace')),
@@ -185,7 +205,10 @@ function settingsSessions() {
     h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.keepAwake')), sw),
     h('div', { class: 'setting' },
       h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.sound')), soundSw),
-      h('p', { class: 'note' }, t('settings.soundNote'))));
+      h('p', { class: 'note' }, t('settings.soundNote')),
+      h('span', { class: 'setting-label' }, t('settings.soundType')), typeSeg,
+      h('span', { class: 'setting-label' }, t('settings.volume')), volumeSeg),
+    vibrateSw ? h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.vibrate')), vibrateSw) : null);
 }
 // Série : repos par semaine, pause, masquage. Un changement ne redessine que cette section.
 function settingsStreak(focus) {
