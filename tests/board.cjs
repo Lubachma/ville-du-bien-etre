@@ -243,6 +243,77 @@ async function harmonyBoards(browser, baseURL) {
   await done(shot, 'ambiance.png');
 }
 
+// Étape 6 : le compagnon — les trois animaux dans leurs neuf gestes, puis avec chaque accessoire ; la séance Esprit, la séance Calme
+// avec la respiration, l'écran de fin avec un niveau gagné, et la ville de jour (avec son bouton) et de nuit (devant sa Cabane).
+async function companionBoards(browser, baseURL) {
+  const { seed, tile, NOW } = require('./companion-browser.cjs');
+  const { activities, startSession } = require('./rituals-browser.cjs');
+  const pet = (extra = {}) => ({ species: 'ourson', name: 'Caramel', since: Date.parse('2026-10-01T09:00:00Z'), minutes: 50, wear: 'echarpe', ...extra });
+  const open = async (state, { height = 844, clock = false } = {}) => {
+    const page = await browser.newPage({ viewport: { width: 390, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich', serviceWorkers: 'block' });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    if (clock) await page.clock.install({ time: new Date(NOW) }); else await page.clock.setFixedTime(new Date(NOW));
+    await page.addInitScript(s => { window.__VILLE_DEBUG__ = true; if (!localStorage.getItem('ville-bien-etre/v2')) localStorage.setItem('ville-bien-etre/v2', JSON.stringify(s)); }, state);
+    await page.goto(baseURL + '#debug');
+    await page.waitForFunction(() => !!window.__ville);
+    await page.evaluate(() => { const toast = document.querySelector('#toast'); if (toast) toast.hidden = true; });
+    return { page, errors };
+  };
+  const done = async ({ page, errors }, name) => {
+    await page.close();
+    if (errors.length) throw new Error(name + ' : ' + errors.join(' | '));
+    console.log('planche :', path.relative(root, path.join(out, name)));
+  };
+  const hideToast = page => page.evaluate(() => { const toast = document.querySelector('#toast'); if (toast) toast.hidden = true; });
+  // Une grille de canevas peints par l'app (une case vide pour « null »).
+  const grid = async (name, looks) => {
+    const shot = await open(seed([]), { height: 900 });
+    await shot.page.evaluate(list => {
+      document.body.replaceChildren();
+      document.body.style.cssText = 'margin:0;background:#f4f1e8';
+      const box = document.createElement('div');
+      box.style.cssText = 'display:grid;grid-template-columns:repeat(10,96px);gap:4px;padding:8px;width:max-content';
+      document.body.append(box);
+      for (const look of list) {
+        const cv = document.createElement('canvas');
+        cv.style.cssText = 'width:96px;height:96px;background:#fff;border-radius:8px';
+        box.append(cv);
+        if (look) window.__ville.companion.paint(cv, look, 96);
+      }
+    }, looks);
+    await shot.page.locator('body > div').screenshot({ path: path.join(out, name) });
+    await done(shot, name);
+  };
+  const SPECIES = ['lapin', 'marmotte', 'ourson'], POSES = ['idle', 'walk', 'sleep', 'read', 'stretch', 'meditate', 'water', 'paint', 'cheer'];
+  const WEAR = ['', 'echarpe', 'bonnet', 'lunettes', 'couronne', 'noeud', 'paille', 'sac', 'casque', 'cape'];
+  await grid('compagnons.png', SPECIES.flatMap(species => [...POSES.map(pose => ({ species, pose, wear: '' })), { species, pose: 'idle', wear: '', face: true }]));
+  await grid('accessoires.png', SPECIES.flatMap(species => WEAR.map(wear => ({ species, pose: 'idle', wear }))));
+  for (const [name, cat, settings] of [['seance-compagnon.png', 'esprit', {}], ['respiration-compagnon.png', 'calme', { breathing: true }]]) {
+    const shot = await open(seed([tile('maison', 3, 3)], { companion: pet(), activities: activities(), settings: { lang: 'fr', sound: false, ...settings } }), { clock: true });
+    await startSession(shot.page, 'Pratique ' + cat, 10);
+    await shot.page.clock.fastForward(2000);
+    await hideToast(shot.page);
+    await shot.page.locator('#session').screenshot({ path: path.join(out, name) });
+    await done(shot, name);
+  }
+  // 10 min de plus, de 55 à 65 : le niveau 3 et son bonnet.
+  let shot = await open(seed([tile('maison', 3, 3)], { companion: pet({ minutes: 55 }), activities: activities(), settings: { lang: 'fr', sound: false } }), { clock: true, height: 1100 });
+  await startSession(shot.page, 'Pratique esprit', 10);
+  await shot.page.clock.fastForward(10 * 60000 + 1000);
+  await shot.page.locator('#sessResult').waitFor();
+  await hideToast(shot.page);
+  await shot.page.locator('#session').screenshot({ path: path.join(out, 'fin-compagnon.png') });
+  await done(shot, 'fin-compagnon.png');
+  for (const [name, amb] of [['ville-compagnon-jour.png', DAY], ['ville-compagnon-nuit.png', NIGHT]]) {
+    shot = await open(seed([tile('maison', 3, 3), tile('cabane', 1, 1), tile('arbre', 2, 3), tile('fleurs', 4, 2), tile('chemin', 4, 3)],
+      { companion: pet({ minutes: 1800, wear: 'bonnet' }), settings: { lang: 'fr', townWishes: false } }));
+    await freeze(shot.page, amb);
+    await shot.page.locator('#sky').screenshot({ path: path.join(out, name) });
+    await done(shot, name);
+  }
+}
+
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const server = http.createServer(async (req, res) => {
@@ -270,6 +341,7 @@ async function harmonyBoards(browser, baseURL) {
     await lifeBoards(browser, baseURL);
     await ritualBoards(browser, baseURL);
     await harmonyBoards(browser, baseURL);
+    await companionBoards(browser, baseURL);
     await measure(browser, baseURL);
   } finally {
     await browser.close();

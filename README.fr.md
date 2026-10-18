@@ -46,8 +46,10 @@
 | 💭 **Souhaits des habitants** | Chaque jour, un bâtiment aimerait un décor juste à côté (« J’aimerais un banc juste à côté. ») : une bulle au-dessus de lui, une carte sous la ville avec « Placer un banc ». L’exaucer rapporte 3 M et un merci. Un souhait n’expire jamais, et « Pas maintenant » le range sans un mot de plus |
 | ⭐ **Harmonie** | Cinq étoiles à gagner en arrangeant sa ville : verdure, variété, petits détails, quartiers et lumières du soir, chacune avec un conseil doux. Une étoile gagnée le reste ; les cinq offrent l’Arche fleurie |
 | 🎧 **Sons d’ambiance** | Pendant une séance, au choix : pluie, vagues, feu de camp, vent ou bruit doux, fabriqués par le navigateur (aucun fichier, hors connexion). Coupés par défaut, ils s’éteignent en douceur avant le son de fin |
+| 🐾 **Un compagnon** | Après une première séance, un lapin, une marmotte ou un ourson, qu’on nomme, s’installe dans la ville : il s’y promène le jour, dort la nuit, et fait chaque séance avec toi (il lit, s’étire, médite, arrose ou peint). Il a un mot gentil chaque jour et ne réclame jamais rien. Le temps passé ensemble fait grandir la complicité, sur dix niveaux qui offrent neuf accessoires ; au dernier, la Cabane |
+| 🌬️ **Respirer ensemble** | Pendant les séances Calme, au choix : 5 s pour inspirer, 5 s pour expirer, le compagnon qui grandit doucement à l’inspiration ; rien ne bouge avec les mouvements réduits |
 | 📒 **Journal** | Aujourd’hui, série, bilans et récapitulatifs, objectif et défis de la semaine, graphique des 7 derniers jours, progression par domaine, ce qui te fait du bien, dernières sessions |
-| 🏆 **Collection et succès** | Un carnet dans le Journal : 45 succès (premiers pas, domaines, moments de la journée, régularité, temps, ville, ville vivante, rituels, harmonie), dont 6 qui offrent un décor ; la collection des 51 éléments, les ensembles découverts, les visiteurs rencontrés, les fêtes vécues et les cartes postales des villes amies. Une ville existante reçoit d’un coup les succès déjà mérités |
+| 🏆 **Collection et succès** | Un carnet dans le Journal : 48 succès (premiers pas, domaines, moments de la journée, régularité, temps, ville, ville vivante, rituels, harmonie, compagnon), dont 7 qui offrent un décor ; la collection des 52 éléments, les ensembles découverts, les visiteurs rencontrés, les fêtes vécues et les cartes postales des villes amies. Une ville existante reçoit d’un coup les succès déjà mérités |
 | 🌱 **Série bienveillante** | 0 à 2 jours de repos par semaine, un mode pause, un cadeau de bon retour (+20 %) après une coupure, et jamais de message culpabilisant. La série peut être masquée ; son bonus continue de s’appliquer |
 | 🌍 **Langues** | Français et anglais, selon le téléphone ou au choix dans les réglages. Le changement est immédiat, sans recharger ; les exemples d’activités jamais renommés suivent la langue |
 | 💾 **Sauvegardes** | Export en fichier (sur iPhone : « Enregistrer dans Fichiers ») ou en texte, restauration sur un autre appareil ; rappel au bout de 14 jours |
@@ -65,10 +67,11 @@
 ## ⚙️ Réglages
 
 - **Langue** : automatique (la langue du téléphone, sinon l’anglais), Français ou English.
-- **Sessions** : tolérance de sortie (5, 10 ou 20 s), écran allumé, son de fin (carillon, bol ou clochettes ; doux, normal ou fort), ambiance pendant les séances et son volume (sur iPhone, elle s’arrête quand l’écran se verrouille), vibration.
+- **Sessions** : tolérance de sortie (5, 10 ou 20 s), écran allumé, son de fin (carillon, bol ou clochettes ; doux, normal ou fort), ambiance pendant les séances et son volume (sur iPhone, elle s’arrête quand l’écran se verrouille), respiration guidée pendant les séances Calme, vibration.
 - **Série** : jours de repos par semaine, pause, série masquée.
 - **Semaine et rappel** : la semaine commence le lundi ou le dimanche ; un rappel quotidien ajouté à ton agenda (fichier `.ics` ou Google Agenda), car l’app elle-même n’envoie pas de notification.
 - **Rituels** : bilans au début de la semaine et du mois (coupés, ils ne s’ouvrent plus d’eux-mêmes et restent dans le Journal), défis de la semaine, humeur demandée après une séance, souhaits des habitants.
+- **Compagnon** : l’afficher ou non (dans la ville et pendant les séances), changer d’animal ou de nom ; sans compagnon, l’accueillir plus tard.
 - **Apparence** : thème (auto, jour, nuit), **ciel de la ville** (selon l’heure ou selon l’apparence), **saisons** (automatiques, hémisphère nord ou sud) et **ville animée** (la couper arrête les mouvements continus pour économiser la batterie).
 - **Mode strict** (Accès guidé ou épinglage d’application), **sauvegarde** et **tout recommencer**.
 
@@ -110,9 +113,9 @@ Le build est un petit script Node : il assemble `src/` en `app.js` et donne au s
 |----------|------|
 | `npm run build` | Génère `app.js` et `sw.js` depuis `src/` |
 | `npm run check` | Syntaxe JavaScript et manifeste |
-| `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda, succès, ensembles, merveilles, ville vivante (heure, saisons, météo, visiteurs, fêtes), défis, bilans et récapitulatifs, humeur, lien de ville et cartes postales, harmonie et souhaits, dessins |
-| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son, rappel, carnet, merveilles, boutique et pose, ville vivante (ciel, animation sobre, habitants, visiteur, fête, réglages), rituels (défis, bilan, humeur, récapitulatifs et leur image, visite d’une ville amie, partage, cartes postales, réglages), harmonie (souhaits, bulle, étoiles) et ambiances (niveaux, séance, choix) |
-| `npm run board` | Planche des dessins dans `test-results/planche/` : ville de jour et de nuit, merveilles par étape, écran de 320 px, vignettes du carnet, moments, saisons, météo, visiteurs et fêtes, rituels (bilan, récapitulatif et son image, visite, Journal), souhait du jour, harmonie, Arche fleurie et écran d’une séance avec son ambiance ; temps de dessin d’une image, processeur ralenti 4 fois |
+| `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda, succès, ensembles, merveilles, ville vivante (heure, saisons, météo, visiteurs, fêtes), défis, bilans et récapitulatifs, humeur, lien de ville et cartes postales, harmonie et souhaits, compagnon (complicité, accessoires, mot du jour, fusion), dessins |
+| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son, rappel, carnet, merveilles, boutique et pose, ville vivante (ciel, animation sobre, habitants, visiteur, fête, réglages), rituels (défis, bilan, humeur, récapitulatifs et leur image, visite d’une ville amie, partage, cartes postales, réglages), harmonie (souhaits, bulle, étoiles), ambiances (niveaux, séance, choix) et compagnon (arrivée, ville, fiche, séance, respiration, réglages) |
+| `npm run board` | Planche des dessins dans `test-results/planche/` : ville de jour et de nuit, merveilles par étape, écran de 320 px, vignettes du carnet, moments, saisons, météo, visiteurs et fêtes, rituels (bilan, récapitulatif et son image, visite, Journal), souhait du jour, harmonie, Arche fleurie et écran d’une séance avec son ambiance, compagnon (gestes, accessoires, séance, respiration, écran de fin, ville de jour et de nuit avec sa Cabane) ; temps de dessin d’une image, processeur ralenti 4 fois |
 | `npm run serve` | Serveur local sur le port 8766 |
 | `npm run package` | Prépare le dossier publiable `dist/` |
 
@@ -143,12 +146,14 @@ src/
 ├── 26-summaries.js     # bilans et récapitulatifs : résumé d’une période, bilan dû, humeur
 ├── 27-share.js         # lien de ville : code compact, lecture prudente, cartes postales
 ├── 28-harmony.js       # harmonie (cinq critères, étoiles) et souhaits des habitants (tirage, exaucement)
+├── 29-companion.js     # compagnon : arrivée, complicité, accessoires, geste de chaque domaine, mot du jour
 ├── 30-paint.js         # pinceau isométrique et dessins des 22 premiers éléments
 ├── 31-paint-buildings.js # dessins des 15 nouveaux bâtiments
-├── 32-paint-decor.js   # dessins des 11 nouveaux décors
+├── 32-paint-decor.js   # dessins des 12 nouveaux décors
 ├── 33-paint-wonders.js # dessins des merveilles, étape par étape
 ├── 34-paint-life.js    # dessins de la vie : fumée, faisceau, météo, petites vies, habitants, visiteurs, fêtes
 ├── 35-city.js          # canvas de la ville : ciel et lumière du moment, animation sobre, tactile et clavier, effets de pose, capture
+├── 36-paint-companion.js # dessins du compagnon : trois animaux, neuf gestes, neuf accessoires
 ├── 40-ui.js            # navigation, fenêtres, annonces, vue Ville
 ├── 41-activities.js    # activités, modes, fréquences, fenêtres de lancement et d’édition
 ├── 42-draw.js          # tirage au sort selon le contexte
@@ -166,6 +171,8 @@ src/
 ├── 54-rituals.js       # défis, bilans, récapitulatifs et leur image, humeur (interface)
 ├── 55-share.js         # partager sa ville, visiter une ville amie, lien collé
 ├── 56-harmony.js       # carte du souhait du jour, fenêtre de l’harmonie
+├── 57-companion.js     # compagnon : invitation, choix de l’animal et du nom, fiche et garde-robe, bouton sur la ville
+├── 58-companion-session.js # compagnon pendant la séance et sur l’écran de fin, respiration guidée
 ├── 60-boot.js          # événements et démarrage
 └── 70-install.js       # installation, cache hors connexion, mises à jour
 scripts/                # build, vérification, packaging, serveur, modèle du service worker

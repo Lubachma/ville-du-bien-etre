@@ -46,8 +46,10 @@
 | 💭 **Residents' wishes** | Every day, a building would love a decoration right next to it (“I'd love a bench right next to me.”): a bubble above it, a card under the town with “Place a bench”. Granting it brings 3 M and a thank-you. A wish never expires, and “Not now” puts it away without another word |
 | ⭐ **Harmony** | Five stars to earn by arranging your town: greenery, variety, little touches, neighbourhoods and evening lights, each with a gentle hint. A star you earn stays yours; all five give the Flower arch |
 | 🎧 **Ambient sounds** | During a session, if you like: rain, waves, campfire, wind or soft noise, made by the browser (no files, works offline). Off by default, they fade out before the end sound |
+| 🐾 **A companion** | After a first session, a rabbit, a marmot or a bear cub that you name settles in your town: it strolls by day, sleeps at night, and does every session with you (reading, stretching, meditating, watering or painting). It has a kind word every day and never asks for anything. Time spent together grows your friendship over ten levels that give nine accessories; the last one gives the Hut |
+| 🌬️ **Breathe together** | In Calm sessions, if you like: 5 s to breathe in, 5 s to breathe out, with the companion gently growing as you breathe in; nothing moves with reduced motion |
 | 📒 **Journal** | Today, streak, reviews and recaps, weekly goal and challenges, 7-day chart, progress per domain, what makes you feel good, latest sessions |
-| 🏆 **Collection and achievements** | A notebook in the Journal: 45 achievements (first steps, domains, times of day, regularity, time, city, living town, rituals, harmony), 6 of which give a decoration; the collection of all 51 items, the sets discovered, the visitors met, the festivals celebrated and the postcards of friends' towns. An existing city receives the achievements it already earned in one go |
+| 🏆 **Collection and achievements** | A notebook in the Journal: 48 achievements (first steps, domains, times of day, regularity, time, city, living town, rituals, harmony, companion), 7 of which give a decoration; the collection of all 52 items, the sets discovered, the visitors met, the festivals celebrated and the postcards of friends' towns. An existing city receives the achievements it already earned in one go |
 | 🌱 **Kind streak** | 0 to 2 rest days per week, a pause mode, a +20 % welcome-back gift after a break, and never a guilt message. The streak can be hidden; its bonus still applies |
 | 🌍 **Languages** | English and French, following the phone or chosen in the settings. Switching is instant, without a reload; example activities you haven't renamed follow the language |
 | 💾 **Backups** | Export to a file (on iPhone: “Save to Files”) or a text, restore on another device; a reminder appears after 14 days |
@@ -65,10 +67,11 @@
 ## ⚙️ Settings
 
 - **Language**: automatic (the phone's language, otherwise English), Français or English.
-- **Sessions**: grace period (5, 10 or 20 s), keep the screen on, end sound (chime, bowl or bells; soft, normal or loud), ambience during sessions and its volume (on iPhone, it stops when the screen locks), vibration.
+- **Sessions**: grace period (5, 10 or 20 s), keep the screen on, end sound (chime, bowl or bells; soft, normal or loud), ambience during sessions and its volume (on iPhone, it stops when the screen locks), guided breathing in Calm sessions, vibration.
 - **Streak**: rest days per week, pause, hide the streak.
 - **Week and reminder**: the week starts on Monday or Sunday; a daily reminder added to your calendar (`.ics` file or Google Calendar) — the app itself sends no notifications.
 - **Rituals**: reviews at the start of the week and month (turned off, they no longer open by themselves and stay in the Journal), weekly challenges, asking how you feel after a session, residents' wishes.
+- **Companion**: show it or not (in the town and during sessions), change its animal or name; without one, welcome it later.
 - **Appearance**: theme (auto, day, night), **town sky** (time of day or match appearance), **seasons** (automatic, northern or southern hemisphere) and **living town** (turning it off stops continuous motion to save battery).
 - **Strict mode** (Guided Access or app pinning), **backup** and **start over**.
 
@@ -110,9 +113,9 @@ The build is a small Node script: it concatenates `src/` into `app.js` and stamp
 |---------|------|
 | `npm run build` | Generates `app.js` and `sw.js` from `src/` |
 | `npm run check` | JavaScript syntax and manifest validation |
-| `npm test` | Unit tests (node:test): rules, streak, translations, storage, merges, sessions, backups, calendar reminder, achievements, sets, wonders, living town (time, seasons, weather, visitors, festivals), challenges, reviews and recaps, mood, town links and postcards, harmony and wishes, drawings |
-| `npm run test:browser` | Playwright scenarios: mobile layouts, offline under the Pages subpath, sessions, migration, updates, languages, streak, sound, reminder, notebook, wonders, shop and placement, living town (sky, light animation loop, residents, visitor, festival, settings), rituals (challenges, review, mood, recaps and their picture, visiting a friend's town, sharing, postcards, settings), harmony (wishes, bubble, stars) and ambiences (levels, session, choice) |
-| `npm run board` | Drawing board in `test-results/planche/`: city by day and by night, wonders by stage, a 320 px screen, notebook thumbnails, times of day, seasons, weather, visitors and festivals, rituals (review, recap and its picture, visit, Journal), wish of the day, harmony, the Flower arch and a session screen with its ambience; drawing time of one frame with a 4× slower processor |
+| `npm test` | Unit tests (node:test): rules, streak, translations, storage, merges, sessions, backups, calendar reminder, achievements, sets, wonders, living town (time, seasons, weather, visitors, festivals), challenges, reviews and recaps, mood, town links and postcards, harmony and wishes, companion (friendship, accessories, word of the day, merges), drawings |
+| `npm run test:browser` | Playwright scenarios: mobile layouts, offline under the Pages subpath, sessions, migration, updates, languages, streak, sound, reminder, notebook, wonders, shop and placement, living town (sky, light animation loop, residents, visitor, festival, settings), rituals (challenges, review, mood, recaps and their picture, visiting a friend's town, sharing, postcards, settings), harmony (wishes, bubble, stars), ambiences (levels, session, choice) and the companion (arrival, town, sheet, session, breathing, settings) |
+| `npm run board` | Drawing board in `test-results/planche/`: city by day and by night, wonders by stage, a 320 px screen, notebook thumbnails, times of day, seasons, weather, visitors and festivals, rituals (review, recap and its picture, visit, Journal), wish of the day, harmony, the Flower arch and a session screen with its ambience, the companion (poses, accessories, session, breathing, end screen, town by day and by night with its Hut); drawing time of one frame with a 4× slower processor |
 | `npm run serve` | Local server on port 8766 |
 | `npm run package` | Prepares the deployable `dist/` folder |
 
@@ -143,12 +146,14 @@ src/
 ├── 26-summaries.js     # reviews and recaps: summary of a period, review due, mood
 ├── 27-share.js         # town link: compact code, careful reading, postcards
 ├── 28-harmony.js       # harmony (five criteria, stars) and residents' wishes (draw, granting)
+├── 29-companion.js     # companion: arrival, friendship, accessories, the pose of each domain, word of the day
 ├── 30-paint.js         # isometric painter and the drawings of the first 22 items
 ├── 31-paint-buildings.js # drawings of the 15 new buildings
-├── 32-paint-decor.js   # drawings of the 11 new decorations
+├── 32-paint-decor.js   # drawings of the 12 new decorations
 ├── 33-paint-wonders.js # wonder drawings, stage by stage
 ├── 34-paint-life.js    # drawings of town life: smoke, beam, weather, small lives, residents, visitors, festivals
 ├── 35-city.js          # city canvas: sky and light of the moment, light animation loop, touch and keyboard, placement effects, snapshot
+├── 36-paint-companion.js # companion drawings: three animals, nine poses, nine accessories
 ├── 40-ui.js            # navigation, sheets, toasts, city view
 ├── 41-activities.js    # activities, modes, frequencies, start and edit sheets
 ├── 42-draw.js          # contextual random draw
@@ -166,6 +171,8 @@ src/
 ├── 54-rituals.js       # challenges, reviews, recaps and their picture, mood (interface)
 ├── 55-share.js         # share your town, visit a friend's town, pasted link
 ├── 56-harmony.js       # wish of the day card, harmony window
+├── 57-companion.js     # companion: invitation, choosing the animal and name, sheet and wardrobe, button on the town
+├── 58-companion-session.js # companion during the session and on the end screen, guided breathing
 ├── 60-boot.js          # events and startup
 └── 70-install.js       # install prompt, offline cache, updates
 scripts/                # build, check, package, serve, service worker template

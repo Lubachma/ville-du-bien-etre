@@ -6882,15 +6882,18 @@ const City = (() => {
     DRAW[item](mini, 0, 0, {});
     wishBox = { x: bx - r, y: cy - r, w: r * 2, h: Math.max(r * 2, ay - (cy - r)), tile: tile.id };
   }
-  // Compagnon : le jour, sur son chemin de promenade à demi-vitesse ; la nuit, endormi à côté de la première Cabane posée (la case
-  // voisine où marcher la plus en avant, pour que la Cabane ne le cache pas ; sinon sa propre case), ou sans Cabane sur la case où
-  // marcher la plus proche du centre. Rien sans compagnon affiché ni case où marcher.
+  // Compagnon : le jour, sur son chemin de promenade à demi-vitesse ; la nuit, endormi à côté de la première Cabane posée (une case
+  // voisine où marcher, sinon sa propre case), ou sans Cabane près du centre. Pour qu'aucun élément ne le cache, la case choisie a
+  // d'abord le moins d'éléments sur les trois cases devant elle, puis est la plus en avant (ou la plus proche du centre). Rien sans
+  // compagnon affiché ni case où marcher.
   function companionSpot(cells, night, t) {
     if (!S.companion || S.settings.companionShown === false || !cells.length) return null;
     if (!night) { const p = walkerPos(walkPaths(cells)[5], 5, t / 2); return { x: p.x, y: p.y, pose: 'walk' }; }
-    const hut = S.city.tiles.find(tile => tile.item === 'cabane'), centre = (N - 1) / 2, far = cell => Math.abs(cell.x - centre) + Math.abs(cell.y - centre);
-    const near = hut ? cells.filter(other => Math.abs(other.x - hut.x) <= 1 && Math.abs(other.y - hut.y) <= 1).sort((a, b) => b.x + b.y - (a.x + a.y)) : [];
-    const cell = hut ? near[0] || hut : [...cells].sort((a, b) => far(a) - far(b))[0];
+    const hut = S.city.tiles.find(tile => tile.item === 'cabane'), centre = (N - 1) / 2;
+    const hidden = cell => S.city.tiles.filter(tile => tile.x - cell.x >= 0 && tile.x - cell.x <= 1 && tile.y - cell.y >= 0 && tile.y - cell.y <= 1 && (tile.x !== cell.x || tile.y !== cell.y)).length;
+    const rank = hut ? cell => -(cell.x + cell.y) : cell => Math.abs(cell.x - centre) + Math.abs(cell.y - centre);
+    const pool = hut ? cells.filter(other => Math.abs(other.x - hut.x) <= 1 && Math.abs(other.y - hut.y) <= 1) : cells;
+    const cell = [...pool].sort((a, b) => hidden(a) - hidden(b) || rank(a) - rank(b))[0] || hut;
     return { x: cell.x + .5, y: cell.y + .5, pose: 'sleep' };
   }
   // Le compagnon, un peu plus grand que les habitants, et sa zone touchable (au moins 32 points de côté).
