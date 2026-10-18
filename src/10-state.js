@@ -818,6 +818,8 @@ function afterReplace() {
     Mode.state = null;
     Selection.id = null;
     if (!$('#sheet').hidden && !sheetKeepOnSync) closeSheet();
+    // Langue changée sur un autre écran : celui-ci suit.
+    if (typeof refreshLang === 'function' && resolveLang(S.settings.lang) !== LANG) refreshLang();
     City.relayout();
     renderAll();
     checkActive();

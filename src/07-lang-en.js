@@ -611,4 +611,8 @@ DICT.en = {
   'install.install': 'Install',
   'install.hide': "Don't show again",
   'install.help': "You can also use your browser's menu → Install app or Add to Home screen. The app keeps working here.",
+
+  // Language setting
+  'settings.lang': 'Language',
+  'settings.langNote': "Automatic: your phone's language if it is available, otherwise English.",
 };

@@ -905,6 +905,10 @@ DICT.fr = {
   'install.install': 'Installer',
   'install.hide': 'Ne plus afficher',
   'install.help': 'Tu peux aussi utiliser le menu de ton navigateur → Installer l’application ou Ajouter à l’écran d’accueil. L’app reste utilisable ici.',
+
+  // Réglage de la langue
+  'settings.lang': 'Langue',
+  'settings.langNote': 'Automatique : la langue de ton téléphone si elle est disponible, sinon l’anglais.',
 };
 
 
@@ -1522,6 +1526,10 @@ DICT.en = {
   'install.install': 'Install',
   'install.hide': "Don't show again",
   'install.help': "You can also use your browser's menu → Install app or Add to Home screen. The app keeps working here.",
+
+  // Language setting
+  'settings.lang': 'Language',
+  'settings.langNote': "Automatic: your phone's language if it is available, otherwise English.",
 };
 
 
@@ -2346,6 +2354,8 @@ function afterReplace() {
     Mode.state = null;
     Selection.id = null;
     if (!$('#sheet').hidden && !sheetKeepOnSync) closeSheet();
+    // Langue changée sur un autre écran : celui-ci suit.
+    if (typeof refreshLang === 'function' && resolveLang(S.settings.lang) !== LANG) refreshLang();
     City.relayout();
     renderAll();
     checkActive();
@@ -3298,15 +3308,17 @@ function toast(msg, action) {
 }
 function hideToast() { $('#toast').hidden = true; }
 function bump() { const c = $('#balanceChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
+// Les libellés peuvent être des fonctions : un bouton créé au démarrage suit alors la langue affichée.
 function twoStep(btn, label, confirmLabel, action) {
+  const text = value => (typeof value === 'function' ? value() : value);
   let armed = false, timer = 0;
-  const reset = () => { armed = false; btn.textContent = label; btn.classList.remove('btn-danger'); };
+  const reset = () => { armed = false; btn.textContent = text(label); btn.classList.remove('btn-danger'); };
   btn.addEventListener('click', () => {
     if (!armed) {
       armed = true;
-      btn.textContent = confirmLabel;
+      btn.textContent = text(confirmLabel);
       btn.classList.add('btn-danger');
-      announce(t('ui.confirmAgain', { action: confirmLabel }));
+      announce(t('ui.confirmAgain', { action: text(confirmLabel) }));
       timer = setTimeout(reset, 4000);
       return;
     }
@@ -3485,14 +3497,18 @@ function readActivityFields(form, defaults = {}) {
     repeat: choice('repeat', ['always', 'once', 'daily', 'weekly'], 'always'),
   };
 }
-function enhanceActivityForms() {
+// force : la langue a changé, on reconstruit les blocs en gardant les choix en cours.
+function enhanceActivityForms(force) {
   for (const [id, repeat] of [['addActForm', 'always'], ['addWish', 'always'], ['addChore', 'once']]) {
     const form = $('#' + id);
-    if (!form || $('.activity-fields', form)) continue;
-    const fields = activityFields(id + '-', { repeat });
-    const details = h('details', { class: 'activity-options' }, h('summary', {}, t('act.optionsSummary')), fields,
+    if (!form) continue;
+    const old = $('.activity-options', form);
+    if (old && !force) continue;
+    const fields = activityFields(id + '-', old ? readActivityFields(form, { repeat }) : { repeat });
+    const details = h('details', { class: 'activity-options', open: old && old.open ? true : null }, h('summary', {}, t('act.optionsSummary')), fields,
       h('p', { class: 'note' }, t('act.optionsNote')));
-    if (id === 'addActForm') form.insertBefore(details, $('button[type="submit"]', form));
+    if (old) old.replaceWith(details);
+    else if (id === 'addActForm') form.insertBefore(details, $('button[type="submit"]', form));
     else form.append(details);
   }
 }
@@ -4038,6 +4054,7 @@ function restoreBackup(st) {
   S.clock = { tz: clock.tz, maxSeen: Math.max(clock.maxSeen, st.clock.maxSeen), lastDay: maxDay(clock.lastDay, st.clock.lastDay) };
   Mode.state = null;
   closeSheet();
+  refreshLang();
   const saved = commit({ flush: true });
   City.relayout();
   toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
@@ -4111,107 +4128,147 @@ async function saveBackupFile() {
   toast(t('backup.downloaded'));
 }
 
-function openSettings() {
-  openSheet(t('nav.settings'), body => {
-    const graceSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.grace') });
-    for (const g of GRACE_CHOICES) graceSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.grace === g), onclick: () => { S.settings.grace = g; commit({ silent: true }); $$('button', graceSeg).forEach((b, i) => b.setAttribute('aria-checked', String(GRACE_CHOICES[i] === g))); } }, g + NB + 's'));
-    const sw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.keepAwake), 'aria-label': t('settings.keepAwake'), onclick: () => { S.settings.keepAwake = !S.settings.keepAwake; sw.setAttribute('aria-checked', String(S.settings.keepAwake)); commit({ silent: true }); } });
-    const soundSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.sound), 'aria-label': t('settings.sound'), onclick: () => {
-      S.settings.sound = !S.settings.sound;
-      soundSw.setAttribute('aria-checked', String(S.settings.sound));
-      commit({ silent: true });
-      if (S.settings.sound) { Chime.unlock(); Chime.play(); }   // pour l'entendre une fois
-    } });
-    const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.theme') });
-    const themeLabels = { auto: t('settings.themeAuto'), light: t('settings.themeLight'), dark: t('settings.themeDark') };
-    for (const v of THEMES) themeSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.theme === v), onclick: () => { S.settings.theme = v; commit({ silent: true }); applyTheme(); $$('button', themeSeg).forEach((b, i) => b.setAttribute('aria-checked', String(THEMES[i] === v))); } }, themeLabels[v]));
-    const exportArea = h('textarea', { class: 'textarea', id: 'exportArea', readonly: true, hidden: true, 'aria-label': t('backup.exportArea') });
-    const importArea = h('textarea', { class: 'textarea', id: 'importArea', placeholder: t('backup.importPlaceholder'), 'aria-label': t('backup.importArea') });
-    const preview = h('div', { class: 'restore-preview', hidden: true });
-    const fail = msg => { preview.replaceChildren(h('p', { class: 'note warn-text', role: 'alert' }, msg)); preview.hidden = false; };
-    const verify = () => {
-      const res = readBackup(importArea.value);
-      if (res.error) { fail(res.error); return; }
-      preview.replaceChildren();
-      preview.hidden = false;
-      const replace = h('button', { class: 'btn btn-secondary', type: 'button' }, t('backup.replace'));
-      twoStep(replace, t('backup.replace'), t('backup.replaceConfirm'), () => restoreBackup(res.state));
-      preview.append(
-        h('p', {}, h('strong', {}, t('backup.thisBackup')), summary(res.state)),
-        h('p', {}, h('strong', {}, t('backup.currentCity')), summary(S)),
-        replace);
-    };
-    const fileInput = h('input', { type: 'file', accept: '.txt,text/plain', hidden: true, tabindex: '-1', 'aria-hidden': 'true' });
-    fileInput.addEventListener('change', () => {
-      const f = fileInput.files && fileInput.files[0];
-      if (!f) return;
-      const clear = () => { fileInput.value = ''; };
-      if (f.size > 4e6) { clear(); fail(t('backup.notBackupFile')); return; }
-      f.text().then(text => { clear(); importArea.value = text.trim(); verify(); }, () => { clear(); fail(t('backup.fileUnreadable')); });
-    });
-    const reset = h('button', { class: 'btn btn-ghost', type: 'button' }, t('settings.reset'));
-    twoStep(reset, t('settings.reset'), t('settings.resetConfirm'), () => {
-      if (S.active || run) { toast(t('settings.resetFinishSession')); return; }
-      const clock = S.clock;
-      S = defaultState();
-      S.clock = { tz: clock.tz, maxSeen: clock.maxSeen, lastDay: clock.lastDay };
-      closeSheet();
-      Mode.state = null;
-      commit({ flush: true });
-      City.relayout();
-      toast(t('settings.resetDone'));
-    });
-    body.append(
-      h('div', { class: 'setting' },
-        h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: openHelp }, icon('info'), t('settings.helpButton')),
-        h('p', { class: 'note', id: 'pwaStatus', role: 'status' }, pwaText()),
-        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
-          if (window.VillePWA) window.VillePWA.check().then(() => { renderPwaStatus(); toast(t('pwa.checked')); }, () => toast(t('pwa.checkFailed')));
-        } }, t('pwa.checkButton'))),
-      h('hr', { class: 'divider' }),
-      h('div', { class: 'setting' },
-        h('span', { class: 'section-title' }, t('settings.grace')),
-        h('p', { class: 'note' }, t('settings.graceNote')),
-        graceSeg),
-      h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.keepAwake')), sw),
-      h('div', { class: 'setting' },
-        h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.sound')), soundSw),
-        h('p', { class: 'note' }, t('settings.soundNote'))),
-      h('hr', { class: 'divider' }),
-      h('div', { class: 'setting' },
-        h('span', { class: 'section-title' }, t('settings.theme')),
-        h('p', { class: 'note' }, t('settings.themeNote')),
-        themeSeg),
-      h('hr', { class: 'divider' }),
-      h('div', { class: 'setting' }, h('span', { class: 'section-title' }, t('strict.title')), h('button', { class: 'btn btn-secondary', type: 'button', onclick: openStrict }, icon('lock'), t('strict.button'))),
-      h('hr', { class: 'divider' }),
-      h('div', { class: 'setting' },
-        h('span', { class: 'section-title' }, t('backup.title')),
-        h('p', { class: 'note', id: 'syncStatus', role: 'status' }, syncText()),
-        h('p', { class: 'note', id: 'backupLast' }, lastBackupText()),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => saveBackupFile() }, icon('download'), t('backup.saveFile')),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => {
-          const text = exportBackup();
-          exportArea.value = text;
-          exportArea.hidden = false;
-          const done = () => { markBackup(); toast(t('backup.copied')); };
-          const fallback = () => { exportArea.focus(); exportArea.select(); toast(t('backup.selectAndCopy')); };
-          try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
-        } }, icon('copy'), t('backup.copy')),
-        exportArea),
-      h('div', { class: 'setting' },
-        h('span', { class: 'setting-label' }, t('backup.restoreTitle')),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => fileInput.click() }, icon('upload'), t('backup.openFile')),
-        fileInput,
-        importArea,
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: verify }, t('backup.verify')),
-        preview),
-      h('hr', { class: 'divider' }),
-      reset,
-      h('p', { class: 'note' }, t('settings.earnings')));
-  });
+// Remet toute l'interface dans la langue de la ville : réglage, sauvegarde restaurée, autre onglet.
+function refreshLang() {
+  setLang(S.settings.lang);
+  applyStaticText();
+  fillSelects();
+  enhanceActivityForms(true);
+  // Construits une seule fois : ils reviennent au prochain rendu, dans la nouvelle langue.
+  for (const id of ['#drawFilters', '#goalsCard', '#routinesCard']) { const el = $(id); if (el) el.remove(); }
+  storageStatusSignature = '';
+}
+function changeLang(pref) {
+  if (!['auto', 'fr', 'en'].includes(pref)) return;
+  S.settings.lang = pref;
+  commit({ silent: true });
+  refreshLang();
+  renderAll();
+  openSettings();
+  setTimeout(() => { const radio = $('#settingsLang [aria-checked="true"]'); if (radio) radio.focus({ preventScroll: true }); }, 40);
 }
 
+/* Réglages : une fonction par section, assemblées dans l'ordre de la conception. */
+function settingsBlock(id, ...kids) { return h('div', { class: 'settings-section', id }, ...kids); }
+function settingsStart() {
+  return settingsBlock('settingsStart', h('div', { class: 'setting' },
+    h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: openHelp }, icon('info'), t('settings.helpButton')),
+    h('p', { class: 'note', id: 'pwaStatus', role: 'status' }, pwaText()),
+    h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+      if (window.VillePWA) window.VillePWA.check().then(() => { renderPwaStatus(); toast(t('pwa.checked')); }, () => toast(t('pwa.checkFailed')));
+    } }, t('pwa.checkButton'))));
+}
+function settingsLang() {
+  const labels = { auto: t('lang.auto'), fr: t('lang.fr'), en: t('lang.en') };
+  const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.lang') });
+  // Les noms des langues gardent leur propre langue, pour la lecture vocale.
+  for (const v of ['auto', 'fr', 'en']) seg.append(h('button', { type: 'button', role: 'radio', lang: v === 'auto' ? null : v, 'aria-checked': String(S.settings.lang === v), onclick: () => { if (S.settings.lang !== v) changeLang(v); } }, labels[v]));
+  return settingsBlock('settingsLang', h('div', { class: 'setting' },
+    h('span', { class: 'section-title' }, t('settings.lang')), h('p', { class: 'note' }, t('settings.langNote')), seg));
+}
+function settingsSessions() {
+  const graceSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.grace') });
+  for (const g of GRACE_CHOICES) graceSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.grace === g), onclick: () => { S.settings.grace = g; commit({ silent: true }); $$('button', graceSeg).forEach((b, i) => b.setAttribute('aria-checked', String(GRACE_CHOICES[i] === g))); } }, g + NB + 's'));
+  const sw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.keepAwake), 'aria-label': t('settings.keepAwake'), onclick: () => { S.settings.keepAwake = !S.settings.keepAwake; sw.setAttribute('aria-checked', String(S.settings.keepAwake)); commit({ silent: true }); } });
+  const soundSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.sound), 'aria-label': t('settings.sound'), onclick: () => {
+    S.settings.sound = !S.settings.sound;
+    soundSw.setAttribute('aria-checked', String(S.settings.sound));
+    commit({ silent: true });
+    if (S.settings.sound) { Chime.unlock(); Chime.play(); }   // pour l'entendre une fois
+  } });
+  return settingsBlock('settingsSessions',
+    h('div', { class: 'setting' },
+      h('span', { class: 'section-title' }, t('settings.grace')),
+      h('p', { class: 'note' }, t('settings.graceNote')),
+      graceSeg),
+    h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.keepAwake')), sw),
+    h('div', { class: 'setting' },
+      h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.sound')), soundSw),
+      h('p', { class: 'note' }, t('settings.soundNote'))));
+}
+function settingsTheme() {
+  const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.theme') });
+  const themeLabels = { auto: t('settings.themeAuto'), light: t('settings.themeLight'), dark: t('settings.themeDark') };
+  for (const v of THEMES) themeSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.theme === v), onclick: () => { S.settings.theme = v; commit({ silent: true }); applyTheme(); $$('button', themeSeg).forEach((b, i) => b.setAttribute('aria-checked', String(THEMES[i] === v))); } }, themeLabels[v]));
+  return settingsBlock('settingsTheme', h('div', { class: 'setting' },
+    h('span', { class: 'section-title' }, t('settings.theme')),
+    h('p', { class: 'note' }, t('settings.themeNote')),
+    themeSeg));
+}
+function settingsStrict() {
+  return settingsBlock('settingsStrict', h('div', { class: 'setting' }, h('span', { class: 'section-title' }, t('strict.title')), h('button', { class: 'btn btn-secondary', type: 'button', onclick: openStrict }, icon('lock'), t('strict.button'))));
+}
+function settingsBackup() {
+  const exportArea = h('textarea', { class: 'textarea', id: 'exportArea', readonly: true, hidden: true, 'aria-label': t('backup.exportArea') });
+  const importArea = h('textarea', { class: 'textarea', id: 'importArea', placeholder: t('backup.importPlaceholder'), 'aria-label': t('backup.importArea') });
+  const preview = h('div', { class: 'restore-preview', hidden: true });
+  const fail = msg => { preview.replaceChildren(h('p', { class: 'note warn-text', role: 'alert' }, msg)); preview.hidden = false; };
+  const verify = () => {
+    const res = readBackup(importArea.value);
+    if (res.error) { fail(res.error); return; }
+    preview.replaceChildren();
+    preview.hidden = false;
+    const replace = h('button', { class: 'btn btn-secondary', type: 'button' }, t('backup.replace'));
+    twoStep(replace, t('backup.replace'), t('backup.replaceConfirm'), () => restoreBackup(res.state));
+    preview.append(
+      h('p', {}, h('strong', {}, t('backup.thisBackup')), summary(res.state)),
+      h('p', {}, h('strong', {}, t('backup.currentCity')), summary(S)),
+      replace);
+  };
+  const fileInput = h('input', { type: 'file', accept: '.txt,text/plain', hidden: true, tabindex: '-1', 'aria-hidden': 'true' });
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    const clear = () => { fileInput.value = ''; };
+    if (f.size > 4e6) { clear(); fail(t('backup.notBackupFile')); return; }
+    f.text().then(text => { clear(); importArea.value = text.trim(); verify(); }, () => { clear(); fail(t('backup.fileUnreadable')); });
+  });
+  return settingsBlock('settingsBackup',
+    h('div', { class: 'setting' },
+      h('span', { class: 'section-title' }, t('backup.title')),
+      h('p', { class: 'note', id: 'syncStatus', role: 'status' }, syncText()),
+      h('p', { class: 'note', id: 'backupLast' }, lastBackupText()),
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => saveBackupFile() }, icon('download'), t('backup.saveFile')),
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => {
+        const text = exportBackup();
+        exportArea.value = text;
+        exportArea.hidden = false;
+        const done = () => { markBackup(); toast(t('backup.copied')); };
+        const fallback = () => { exportArea.focus(); exportArea.select(); toast(t('backup.selectAndCopy')); };
+        try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+      } }, icon('copy'), t('backup.copy')),
+      exportArea),
+    h('div', { class: 'setting' },
+      h('span', { class: 'setting-label' }, t('backup.restoreTitle')),
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => fileInput.click() }, icon('upload'), t('backup.openFile')),
+      fileInput,
+      importArea,
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: verify }, t('backup.verify')),
+      preview));
+}
+function settingsReset() {
+  const reset = h('button', { class: 'btn btn-ghost', type: 'button' }, t('settings.reset'));
+  twoStep(reset, t('settings.reset'), t('settings.resetConfirm'), () => {
+    if (S.active || run) { toast(t('settings.resetFinishSession')); return; }
+    const clock = S.clock;
+    setLang('auto');   // une ville neuve suit la langue du téléphone, ses exemples aussi
+    S = defaultState();
+    S.clock = { tz: clock.tz, maxSeen: clock.maxSeen, lastDay: clock.lastDay };
+    closeSheet();
+    Mode.state = null;
+    refreshLang();
+    commit({ flush: true });
+    City.relayout();
+    toast(t('settings.resetDone'));
+  });
+  return settingsBlock('settingsReset', reset, h('p', { class: 'note' }, t('settings.earnings')));
+}
+function openSettings() {
+  openSheet(t('nav.settings'), body => {
+    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
+    sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
+  });
+}
 
 
 /* ---- 46-features.js ---- */
@@ -5291,7 +5348,7 @@ function bindEvents() {
   }
   for (const b of $$('#poolSeg button')) b.addEventListener('click', () => { if (S.draw.pool !== b.dataset.pool) { S.draw.pool = b.dataset.pool; commit(); } });
   $('#strictBtn').addEventListener('click', openStrict);
-  twoStep($('#abandonBtn'), t('session.abandon'), t('session.abandonConfirm'), abandon);
+  twoStep($('#abandonBtn'), () => t('session.abandon'), () => t('session.abandonConfirm'), abandon);
 
   // Présence pendant une session + resynchronisation au retour
   document.addEventListener('visibilitychange', () => {

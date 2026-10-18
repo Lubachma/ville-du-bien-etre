@@ -63,7 +63,7 @@ function bindEvents() {
   }
   for (const b of $$('#poolSeg button')) b.addEventListener('click', () => { if (S.draw.pool !== b.dataset.pool) { S.draw.pool = b.dataset.pool; commit(); } });
   $('#strictBtn').addEventListener('click', openStrict);
-  twoStep($('#abandonBtn'), t('session.abandon'), t('session.abandonConfirm'), abandon);
+  twoStep($('#abandonBtn'), () => t('session.abandon'), () => t('session.abandonConfirm'), abandon);
 
   // Présence pendant une session + resynchronisation au retour
   document.addEventListener('visibilitychange', () => {

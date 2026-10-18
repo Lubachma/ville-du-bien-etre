@@ -514,6 +514,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
 .info-list li { display: flex; gap: 10px; align-items: flex-start; color: var(--ink-2); }
 .info-list .ic { color: var(--accent); margin-top: 1px; }
 .setting { display: grid; gap: 8px; }
+.settings-section { display: grid; gap: 16px; }
+/* Dans une fenêtre, un libellé long (selon la langue) passe à la ligne au lieu d'élargir la colonne. */
+.sheet-body .btn { white-space: normal; text-align: center; text-wrap: balance; padding-block: 6px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .switch {
   position: relative; width: 52px; height: 32px; flex: none;

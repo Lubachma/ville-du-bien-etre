@@ -70,14 +70,18 @@ function readActivityFields(form, defaults = {}) {
     repeat: choice('repeat', ['always', 'once', 'daily', 'weekly'], 'always'),
   };
 }
-function enhanceActivityForms() {
+// force : la langue a changé, on reconstruit les blocs en gardant les choix en cours.
+function enhanceActivityForms(force) {
   for (const [id, repeat] of [['addActForm', 'always'], ['addWish', 'always'], ['addChore', 'once']]) {
     const form = $('#' + id);
-    if (!form || $('.activity-fields', form)) continue;
-    const fields = activityFields(id + '-', { repeat });
-    const details = h('details', { class: 'activity-options' }, h('summary', {}, t('act.optionsSummary')), fields,
+    if (!form) continue;
+    const old = $('.activity-options', form);
+    if (old && !force) continue;
+    const fields = activityFields(id + '-', old ? readActivityFields(form, { repeat }) : { repeat });
+    const details = h('details', { class: 'activity-options', open: old && old.open ? true : null }, h('summary', {}, t('act.optionsSummary')), fields,
       h('p', { class: 'note' }, t('act.optionsNote')));
-    if (id === 'addActForm') form.insertBefore(details, $('button[type="submit"]', form));
+    if (old) old.replaceWith(details);
+    else if (id === 'addActForm') form.insertBefore(details, $('button[type="submit"]', form));
     else form.append(details);
   }
 }

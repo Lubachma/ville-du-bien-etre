@@ -68,15 +68,17 @@ function toast(msg, action) {
 }
 function hideToast() { $('#toast').hidden = true; }
 function bump() { const c = $('#balanceChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
+// Les libellés peuvent être des fonctions : un bouton créé au démarrage suit alors la langue affichée.
 function twoStep(btn, label, confirmLabel, action) {
+  const text = value => (typeof value === 'function' ? value() : value);
   let armed = false, timer = 0;
-  const reset = () => { armed = false; btn.textContent = label; btn.classList.remove('btn-danger'); };
+  const reset = () => { armed = false; btn.textContent = text(label); btn.classList.remove('btn-danger'); };
   btn.addEventListener('click', () => {
     if (!armed) {
       armed = true;
-      btn.textContent = confirmLabel;
+      btn.textContent = text(confirmLabel);
       btn.classList.add('btn-danger');
-      announce(t('ui.confirmAgain', { action: confirmLabel }));
+      announce(t('ui.confirmAgain', { action: text(confirmLabel) }));
       timer = setTimeout(reset, 4000);
       return;
     }

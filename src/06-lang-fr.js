@@ -611,4 +611,8 @@ DICT.fr = {
   'install.install': 'Installer',
   'install.hide': 'Ne plus afficher',
   'install.help': 'Tu peux aussi utiliser le menu de ton navigateur → Installer l’application ou Ajouter à l’écran d’accueil. L’app reste utilisable ici.',
+
+  // Réglage de la langue
+  'settings.lang': 'Langue',
+  'settings.langNote': 'Automatique : la langue de ton téléphone si elle est disponible, sinon l’anglais.',
 };
