@@ -120,7 +120,7 @@ function boot(hotData) {
     const hot = window.claude && window.claude.hot;
     if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (run && !run.ended ? { run: { id: run.id, elapsed: run.elapsed, exits: run.exits } } : {}));
   } catch (e) { /* pas de rechargement à chaud ici */ }
-  if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, log: [] };
+  if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [] };
 }
 
 let booted = false;

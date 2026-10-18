@@ -1193,6 +1193,22 @@ DICT.fr = {
   'wonder.granderoue.stage2': 'Roue',
   'wonder.granderoue.stage3': 'Nacelles',
   'wonder.granderoue.stage4': 'Inauguration',
+  // Merveilles : boutique, fiche et ville
+  'shop.startWonder': 'Commencer le chantier',
+  'shop.startWonderFor': 'Commencer le chantier : {item} pour {price}',
+  'shop.wonderContinue': 'Étape {stage} sur 4 · Continuer',
+  'shop.wonderDone': { m: 'Inauguré', f: 'Inaugurée' },
+  'wonder.stageOf': 'Étape {stage} sur 4 : {name}',
+  'wonder.next': 'Étape suivante : {name}',
+  'wonder.need': '{have} sur {need} au total',
+  'wonder.build': "Construire l'étape · {price}",
+  'wonder.noDemolish': 'Une merveille ne se démolit pas : tu peux la déplacer.',
+  'wonder.stageBuilt': '{item} : étape {stage} construite',
+  'wonder.inaugurated': { m: '{item} est inauguré !', f: '{item} est inaugurée !' },
+  'wonder.already': 'Une seule merveille de chaque : {item} est déjà dans ta ville.',
+  'city.nextStage': { m: 'Prochaine étape du {item} : encore {time} au total.', f: 'Prochaine étape de la {item} : encore {time} au total.' },
+  'city.stageReady': { m: "Tu peux construire l'étape {stage} du {item}.", f: "Tu peux construire l'étape {stage} de la {item}." },
+  'city.listItemStage': '{item}, case {x}, {y} · étape {stage} sur 4',
 };
 
 
@@ -2007,6 +2023,22 @@ DICT.en = {
   'wonder.granderoue.stage2': 'Wheel',
   'wonder.granderoue.stage3': 'Cabins',
   'wonder.granderoue.stage4': 'Opening',
+  // Wonders: shop, sheet and town
+  'shop.startWonder': 'Start building',
+  'shop.startWonderFor': 'Start building {item} for {price}',
+  'shop.wonderContinue': 'Stage {stage} of 4 · Continue',
+  'shop.wonderDone': 'Opened',
+  'wonder.stageOf': 'Stage {stage} of 4: {name}',
+  'wonder.next': 'Next stage: {name}',
+  'wonder.need': '{have} of {need} in total',
+  'wonder.build': 'Build this stage · {price}',
+  'wonder.noDemolish': "A wonder can't be demolished: you can move it.",
+  'wonder.stageBuilt': '{item}: stage {stage} built',
+  'wonder.inaugurated': '{item} is open!',
+  'wonder.already': 'Only one of each wonder: {item} is already in your town.',
+  'city.nextStage': 'Next stage of the {item}: {time} more in total.',
+  'city.stageReady': 'You can build stage {stage} of the {item}.',
+  'city.listItemStage': '{item}, square {x}, {y} · stage {stage} of 4',
 };
 
 
@@ -3063,6 +3095,13 @@ function nextUnlock() {
     const rem = l.need - l.have;
     if (!best || rem < best.rem || (rem === best.rem && ITEMS[k].price < ITEMS[best.key].price)) best = { key: k, rem, l };
   }
+  // L'étape suivante d'une merveille posée compte aussi, quand elle attend encore des minutes.
+  for (const tile of S.city.tiles) {
+    const next = isWonder(tile.item) ? wonderNext(tile) : null;
+    if (!next || next.ready) continue;
+    const rem = next.need - next.have;
+    if (!best || rem < best.rem) best = { key: tile.item, rem, l: { have: next.have, need: next.need, cat: null }, stage: next.stage };
+  }
   return best;
 }
 // Prochain élément à débloquer d'une rubrique : le moins de minutes restantes, puis le moins cher, puis l'ordre de la table.
@@ -3080,6 +3119,31 @@ function nextInGroup(group) {
 // Un élément dévoilé se montre en couleur : débloqué, prochain de sa rubrique, ou objectif choisi.
 function isRevealed(key) { return !lockInfo(key) || nextInGroup(ITEMS[key].group) === key || (S.goals && S.goals.building) === key; }
 function ownedCount(key) { return S.city.tiles.filter(t => t.item === key).length; }
+// Merveilles : une seule de chaque par ville, construite en quatre étapes sur la même case.
+function wonderTile(key) { return S.city.tiles.find(t => t.item === key) || null; }
+function wonderNext(tile) {
+  const stages = ITEMS[tile.item].wonder, stage = tile.stage || 1;
+  if (stage >= stages.length) return null;
+  const [need, price] = stages[stage], have = totalMinutes();
+  return { stage: stage + 1, need, have, price, ready: have >= need, affordable: S.coins >= price };
+}
+// Construit l'étape suivante si elle est prête et payable ; l'appelant enregistre et affiche.
+function buildWonderStage(tile) {
+  const next = wonderNext(tile);
+  if (!next || !next.ready || !next.affordable) return false;
+  S.coins -= next.price;
+  tile.stage = next.stage;
+  tile.paid = wonderPaid(tile.item, tile.stage);
+  return true;
+}
+// Domaines pratiqués depuis le début de la semaine : les fleurs du Grand Arbre en prennent les couleurs.
+function weekCats(day = today()) {
+  const seen = new Set();
+  for (let d = weekStartOf(day); d <= day; d = shiftDay(d, 1)) {
+    for (const [cat, min] of Object.entries(S.stats.dailyCats[d] || {})) if (min > 0) seen.add(cat);
+  }
+  return CAT_ORDER.filter(cat => seen.has(cat));
+}
 // Chaque exemplaire supplémentaire d'un bâtiment coûte 50 % de plus (le décor garde son prix).
 // Un décor offert est gratuit tant qu'aucun n'est posé ; une merveille, unique, coûte le prix de sa première étape.
 function priceOf(key) {
@@ -4064,8 +4128,10 @@ const City = (() => {
     }
     const list = S.city.tiles.map(t => ({ t, ghost: false }));
     if (!clean && Mode.state && Mode.state.target) {
-      const key = Mode.state.type === 'place' ? Mode.state.item : (S.city.tiles.find(t => t.id === Mode.state.tileId) || {}).item;
-      if (key) list.push({ t: { id: '__ghost', item: key, x: Mode.state.target.x, y: Mode.state.target.y }, ghost: true });
+      const moving = Mode.state.type === 'move' ? S.city.tiles.find(t => t.id === Mode.state.tileId) || {} : null;
+      const key = moving ? moving.item : Mode.state.item;
+      // Une merveille qu'on pose apparaît en chantier ; déplacée, elle garde son étape.
+      if (key) list.push({ t: { id: '__ghost', item: key, x: Mode.state.target.x, y: Mode.state.target.y, stage: moving ? moving.stage : 1 }, ghost: true });
     }
     const hiddenId = !clean && Mode.state && Mode.state.type === 'move' && Mode.state.target ? Mode.state.tileId : null;
     list.sort((p, q) => (p.t.x + p.t.y) - (q.t.x + q.t.y) || p.t.x - q.t.x);
@@ -4084,7 +4150,7 @@ const City = (() => {
           const [cx, cy] = g.P(t.x + .5, t.y + .5);
           ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
         }
-        DRAW[t.item](g, t.x, t.y);
+        DRAW[t.item](g, t.x, t.y, t);
         drawGrowth(g, t.item, t.x, t.y);
       } catch (e) { /* un bâtiment illisible ne bloque pas le reste de la ville */ }
       ctx.restore();
@@ -4128,7 +4194,8 @@ const City = (() => {
     }
   }
 
-  function thumb(cv, key, size = 64) {
+  // opts.stage : étape d'une merveille (la merveille terminée par défaut).
+  function thumb(cv, key, size = 64, opts = {}) {
     if (!isItem(key)) return;
     const it = ITEMS[key];
     const d = Math.min(3, window.devicePixelRatio || 1);
@@ -4140,7 +4207,7 @@ const City = (() => {
     const pal = readPalette();
     const g = makePainter(c, tw, size / 2, size - 3 - tw / 2, pal);
     g.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
-    try { DRAW[key](g, 0, 0); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
+    try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
   }
   function pop(id) { if (!reducedMotion()) pops.set(id, performance.now()); }
   function relayout() { layout(); draw(); }
@@ -4240,10 +4307,12 @@ const Mode = {
       const price = priceOf(st.item);
       const lock = lockInfo(st.item);
       if (lock) { toast(t('city.stillLocked', name)); this.cancel(); return; }
+      if (isWonder(st.item) && wonderTile(st.item)) { toast(t('wonder.already', name)); this.cancel(); return; }
       if (S.coins < price) { toast(t('shop.missingToast', { coins: fmt(price - S.coins) })); return; }
       if (!this.isFree(st.target)) { toast(t('city.taken')); return; }
       S.coins -= price;
       const tile = { id: uid(), item: st.item, x: st.target.x, y: st.target.y, at: Date.now(), paid: price };
+      if (isWonder(st.item)) tile.stage = 1;
       S.city.tiles.push(tile);
       this.state = null;
       City.pop(tile.id);
@@ -4451,14 +4520,19 @@ function renderVille() {
   const nu = nextUnlock();
   const affordable = Object.keys(ITEMS).filter(k => !lockInfo(k) && ITEMS[k].group !== 'decor' && priceOf(k) <= S.coins && !ownedCount(k));
   const box = h('div', { class: 'next-main' });
+  // Une étape de merveille prête et payable : la ville le dit aussi.
+  const readyStage = S.city.tiles.filter(tile => isWonder(tile.item)).map(tile => [tile, wonderNext(tile)]).find(([, next]) => next && next.ready && next.affordable);
   if (affordable.length) {
     const k = affordable.sort((a, b) => priceOf(b) - priceOf(a))[0];
     box.append(h('p', {}, tParts('city.affordable', { item: h('strong', {}, itemName(k)), price: fmt(priceOf(k)) })));
+  } else if (readyStage) {
+    const [tile, next] = readyStage;
+    box.append(h('p', {}, tParts('city.stageReady', { stage: next.stage, item: h('strong', {}, itemName(tile.item)), g: itemGender(tile.item) })));
   }
   if (nu) {
     const pct = clamp(nu.l.have / nu.l.need * 100, 0, 100);
-    const params = { item: h('strong', {}, itemName(nu.key)), time: fmtMin(nu.rem), cat: nu.l.cat ? catName(nu.l.cat) : '', of: nu.l.cat ? catOf(nu.l.cat) : '' };
-    box.append(h('p', {}, nu.l.need === 1 ? tParts('city.nextFirst', params) : nu.l.cat ? tParts('city.nextCat', params) : tParts('city.nextTotal', params)));
+    const params = { item: h('strong', {}, itemName(nu.key)), time: fmtMin(nu.rem), cat: nu.l.cat ? catName(nu.l.cat) : '', of: nu.l.cat ? catOf(nu.l.cat) : '', g: itemGender(nu.key) };
+    box.append(h('p', {}, nu.stage ? tParts('city.nextStage', params) : nu.l.need === 1 ? tParts('city.nextFirst', params) : nu.l.cat ? tParts('city.nextCat', params) : tParts('city.nextTotal', params)));
     if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': t('city.progressTo', { item: itemName(nu.key) }), 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
   } else {
     box.append(h('p', {}, t('city.allUnlocked')));
@@ -4468,7 +4542,8 @@ function renderVille() {
   const list = $('#cityList');
   list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
     const params = { item: itemName(tile.item), x: tile.x + 1, y: tile.y + 1, level: buildingLevel(tile.item) };
-    return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params)));
+    const label = isWonder(tile.item) ? t('city.listItemStage', { ...params, stage: tile.stage || 1 }) : params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params);
+    return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, label));
   }));
 }
 
@@ -4992,13 +5067,15 @@ function openShop() {
           sub.append(h('span', {}, icon('lock'), ' ', lock.text));
           if (lock.need > 1) sub.append(h('div', { class: 'meter', vars: { '--c': lock.cat ? catVar(lock.cat) : 'var(--cat-prestige)' } }, h('span', { style: 'width:' + clamp(lock.have / lock.need * 100, 0, 100) + '%' })));
           action = h('span', { class: 'pill' }, fmt(price));
+        } else if (isWonder(key)) {
+          action = wonderShopAction(key, sub);
         } else {
           const short = price > S.coins;
           const extra = owned && it.group !== 'decor' ? ' · ' + t('shop.owned', { n: owned, pct: Math.round(DUP_STEP * 100 * owned) }) : '';
           sub.append(h('span', {}, (short ? t('shop.missing', { coins: fmt(price - S.coins) }) : t('shop.available')) + extra));
           action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': t('shop.placeFor', { item: itemName(key), price: fmt(price) }), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
         }
-        sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, itemName(key)), sub), action));
+        sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') + (isWonder(key) && !lock ? ' wonder' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, itemName(key)), sub), action));
       }
       body.append(sec);
     }
@@ -5034,8 +5111,55 @@ function expandCity() {
   bump();
   toast(t('shop.expanded', { size: ns }));
 }
+// Bouton d'une merveille dans la boutique : commencer le chantier, le continuer, ou rien une fois inaugurée.
+function wonderShopAction(key, sub) {
+  const tile = wonderTile(key), price = priceOf(key);
+  if (!tile) {
+    const short = price > S.coins;
+    sub.append(h('span', {}, (short ? t('shop.missing', { coins: fmt(price - S.coins) }) : t('shop.available')) + ' · ' + fmt(price)));
+    return h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null,
+      'aria-label': t('shop.startWonderFor', { item: itemName(key), price: fmt(price) }), onclick: () => { closeSheet(); Mode.startPlace(key); } }, t('shop.startWonder'));
+  }
+  const stage = tile.stage || 1;
+  sub.append(h('span', {}, t('wonder.stageOf', { stage, name: t('wonder.' + key + '.stage' + stage) })));
+  if (stage >= ITEMS[key].wonder.length) return h('span', { class: 'pill' }, t('shop.wonderDone', { g: itemGender(key) }));
+  return h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => { closeSheet(); openBuildingSheet(tile); } }, t('shop.wonderContinue', { stage }));
+}
+// Fiche d'une merveille : son étape, la suivante avec sa jauge et son prix. Elle se déplace mais ne se démolit pas.
+function openWonderSheet(tile) {
+  const key = tile.item, stage = tile.stage || 1, next = wonderNext(tile), stageName = n => t('wonder.' + key + '.stage' + n);
+  Selection.id = tile.id;
+  City.draw();
+  openSheet(itemName(key), body => {
+    const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
+    City.thumb(cv, key, 96, { stage });
+    body.append(h('div', { class: 'bsheet' }, cv,
+      h('div', { class: 'bsheet-text' }, h('span', { class: 'cat-label' }, groupName(ITEMS[key].group)),
+        h('span', { class: 'note' }, t('wonder.stageOf', { stage, name: stageName(stage) })),
+        h('span', { class: 'note' }, t('city.square', { x: tile.x + 1, y: tile.y + 1 })))));
+    if (next) {
+      const need = t('wonder.need', { have: fmtMin(next.have), need: fmtMin(next.need) });
+      body.append(...[h('p', {}, t('wonder.next', { name: stageName(next.stage) })),
+        h('div', { class: 'meter', vars: { '--c': 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': need, 'aria-valuemin': '0', 'aria-valuemax': String(next.need), 'aria-valuenow': String(Math.round(Math.min(next.have, next.need))) },
+          h('span', { style: 'width:' + clamp(next.have / next.need * 100, 0, 100) + '%' })),
+        h('p', { class: 'note' }, need),
+        next.ready && !next.affordable ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(next.price - S.coins) })) : null,
+        h('button', { class: 'btn btn-primary btn-block', type: 'button', disabled: next.ready && next.affordable ? null : true, onclick: () => {
+          if (!buildWonderStage(tile)) return;
+          closeSheet();
+          commit();
+          bump();
+          const params = { item: itemName(key), stage: tile.stage, g: itemGender(key) };
+          toast(tile.stage >= ITEMS[key].wonder.length ? t('wonder.inaugurated', params) : t('wonder.stageBuilt', params));
+        } }, t('wonder.build', { price: fmt(next.price) }))].filter(Boolean));
+    }
+    body.append(h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); Mode.startMove(tile); } }, icon('move'), t('shop.move')),
+      h('p', { class: 'note' }, t('wonder.noDemolish')));
+  }, { onClose: () => { Selection.id = null; City.draw(); } });
+}
 function openBuildingSheet(tile) {
   if (!tile || !isItem(tile.item)) return;
+  if (isWonder(tile.item)) { openWonderSheet(tile); return; }
   const it = ITEMS[tile.item];
   Selection.id = tile.id;
   City.draw();
@@ -6629,7 +6753,7 @@ function boot(hotData) {
     const hot = window.claude && window.claude.hot;
     if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (run && !run.ended ? { run: { id: run.id, elapsed: run.elapsed, exits: run.exits } } : {}));
   } catch (e) { /* pas de rechargement à chaud ici */ }
-  if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, log: [] };
+  if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [] };
 }
 
 let booted = false;

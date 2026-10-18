@@ -506,6 +506,8 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
   background: var(--surface);
 }
 .shop-item.locked { background: var(--surface-2); }
+/* Merveille : le bouton, plus long, passe sous le texte */
+.shop-item.wonder > .btn, .shop-item.wonder > .pill { grid-column: 2 / -1; justify-self: start; }
 .shop-item canvas { width: 64px; height: 64px; display: block; }
 .shop-item.locked canvas { filter: grayscale(1); opacity: .55; }
 .shop-item .si-name { font-weight: 700; overflow-wrap: anywhere; }

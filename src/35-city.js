@@ -91,8 +91,10 @@ const City = (() => {
     }
     const list = S.city.tiles.map(t => ({ t, ghost: false }));
     if (!clean && Mode.state && Mode.state.target) {
-      const key = Mode.state.type === 'place' ? Mode.state.item : (S.city.tiles.find(t => t.id === Mode.state.tileId) || {}).item;
-      if (key) list.push({ t: { id: '__ghost', item: key, x: Mode.state.target.x, y: Mode.state.target.y }, ghost: true });
+      const moving = Mode.state.type === 'move' ? S.city.tiles.find(t => t.id === Mode.state.tileId) || {} : null;
+      const key = moving ? moving.item : Mode.state.item;
+      // Une merveille qu'on pose apparaît en chantier ; déplacée, elle garde son étape.
+      if (key) list.push({ t: { id: '__ghost', item: key, x: Mode.state.target.x, y: Mode.state.target.y, stage: moving ? moving.stage : 1 }, ghost: true });
     }
     const hiddenId = !clean && Mode.state && Mode.state.type === 'move' && Mode.state.target ? Mode.state.tileId : null;
     list.sort((p, q) => (p.t.x + p.t.y) - (q.t.x + q.t.y) || p.t.x - q.t.x);
@@ -111,7 +113,7 @@ const City = (() => {
           const [cx, cy] = g.P(t.x + .5, t.y + .5);
           ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
         }
-        DRAW[t.item](g, t.x, t.y);
+        DRAW[t.item](g, t.x, t.y, t);
         drawGrowth(g, t.item, t.x, t.y);
       } catch (e) { /* un bâtiment illisible ne bloque pas le reste de la ville */ }
       ctx.restore();
@@ -155,7 +157,8 @@ const City = (() => {
     }
   }
 
-  function thumb(cv, key, size = 64) {
+  // opts.stage : étape d'une merveille (la merveille terminée par défaut).
+  function thumb(cv, key, size = 64, opts = {}) {
     if (!isItem(key)) return;
     const it = ITEMS[key];
     const d = Math.min(3, window.devicePixelRatio || 1);
@@ -167,7 +170,7 @@ const City = (() => {
     const pal = readPalette();
     const g = makePainter(c, tw, size / 2, size - 3 - tw / 2, pal);
     g.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
-    try { DRAW[key](g, 0, 0); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
+    try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
   }
   function pop(id) { if (!reducedMotion()) pops.set(id, performance.now()); }
   function relayout() { layout(); draw(); }
@@ -267,10 +270,12 @@ const Mode = {
       const price = priceOf(st.item);
       const lock = lockInfo(st.item);
       if (lock) { toast(t('city.stillLocked', name)); this.cancel(); return; }
+      if (isWonder(st.item) && wonderTile(st.item)) { toast(t('wonder.already', name)); this.cancel(); return; }
       if (S.coins < price) { toast(t('shop.missingToast', { coins: fmt(price - S.coins) })); return; }
       if (!this.isFree(st.target)) { toast(t('city.taken')); return; }
       S.coins -= price;
       const tile = { id: uid(), item: st.item, x: st.target.x, y: st.target.y, at: Date.now(), paid: price };
+      if (isWonder(st.item)) tile.stage = 1;
       S.city.tiles.push(tile);
       this.state = null;
       City.pop(tile.id);

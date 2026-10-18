@@ -165,14 +165,19 @@ function renderVille() {
   const nu = nextUnlock();
   const affordable = Object.keys(ITEMS).filter(k => !lockInfo(k) && ITEMS[k].group !== 'decor' && priceOf(k) <= S.coins && !ownedCount(k));
   const box = h('div', { class: 'next-main' });
+  // Une étape de merveille prête et payable : la ville le dit aussi.
+  const readyStage = S.city.tiles.filter(tile => isWonder(tile.item)).map(tile => [tile, wonderNext(tile)]).find(([, next]) => next && next.ready && next.affordable);
   if (affordable.length) {
     const k = affordable.sort((a, b) => priceOf(b) - priceOf(a))[0];
     box.append(h('p', {}, tParts('city.affordable', { item: h('strong', {}, itemName(k)), price: fmt(priceOf(k)) })));
+  } else if (readyStage) {
+    const [tile, next] = readyStage;
+    box.append(h('p', {}, tParts('city.stageReady', { stage: next.stage, item: h('strong', {}, itemName(tile.item)), g: itemGender(tile.item) })));
   }
   if (nu) {
     const pct = clamp(nu.l.have / nu.l.need * 100, 0, 100);
-    const params = { item: h('strong', {}, itemName(nu.key)), time: fmtMin(nu.rem), cat: nu.l.cat ? catName(nu.l.cat) : '', of: nu.l.cat ? catOf(nu.l.cat) : '' };
-    box.append(h('p', {}, nu.l.need === 1 ? tParts('city.nextFirst', params) : nu.l.cat ? tParts('city.nextCat', params) : tParts('city.nextTotal', params)));
+    const params = { item: h('strong', {}, itemName(nu.key)), time: fmtMin(nu.rem), cat: nu.l.cat ? catName(nu.l.cat) : '', of: nu.l.cat ? catOf(nu.l.cat) : '', g: itemGender(nu.key) };
+    box.append(h('p', {}, nu.stage ? tParts('city.nextStage', params) : nu.l.need === 1 ? tParts('city.nextFirst', params) : nu.l.cat ? tParts('city.nextCat', params) : tParts('city.nextTotal', params)));
     if (nu.l.need > 1) box.append(h('div', { class: 'meter', vars: { '--c': nu.l.cat ? catVar(nu.l.cat) : 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': t('city.progressTo', { item: itemName(nu.key) }), 'aria-valuemin': '0', 'aria-valuemax': String(nu.l.need), 'aria-valuenow': String(Math.round(nu.l.have)) }, h('span', { style: 'width:' + pct + '%' })));
   } else {
     box.append(h('p', {}, t('city.allUnlocked')));
@@ -182,7 +187,8 @@ function renderVille() {
   const list = $('#cityList');
   list.replaceChildren(...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
     const params = { item: itemName(tile.item), x: tile.x + 1, y: tile.y + 1, level: buildingLevel(tile.item) };
-    return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params)));
+    const label = isWonder(tile.item) ? t('city.listItemStage', { ...params, stage: tile.stage || 1 }) : params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params);
+    return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, label));
   }));
 }
 

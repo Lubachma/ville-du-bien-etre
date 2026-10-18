@@ -16,13 +16,15 @@ function openShop() {
           sub.append(h('span', {}, icon('lock'), ' ', lock.text));
           if (lock.need > 1) sub.append(h('div', { class: 'meter', vars: { '--c': lock.cat ? catVar(lock.cat) : 'var(--cat-prestige)' } }, h('span', { style: 'width:' + clamp(lock.have / lock.need * 100, 0, 100) + '%' })));
           action = h('span', { class: 'pill' }, fmt(price));
+        } else if (isWonder(key)) {
+          action = wonderShopAction(key, sub);
         } else {
           const short = price > S.coins;
           const extra = owned && it.group !== 'decor' ? ' · ' + t('shop.owned', { n: owned, pct: Math.round(DUP_STEP * 100 * owned) }) : '';
           sub.append(h('span', {}, (short ? t('shop.missing', { coins: fmt(price - S.coins) }) : t('shop.available')) + extra));
           action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': t('shop.placeFor', { item: itemName(key), price: fmt(price) }), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
         }
-        sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, itemName(key)), sub), action));
+        sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') + (isWonder(key) && !lock ? ' wonder' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, itemName(key)), sub), action));
       }
       body.append(sec);
     }
@@ -58,8 +60,55 @@ function expandCity() {
   bump();
   toast(t('shop.expanded', { size: ns }));
 }
+// Bouton d'une merveille dans la boutique : commencer le chantier, le continuer, ou rien une fois inaugurée.
+function wonderShopAction(key, sub) {
+  const tile = wonderTile(key), price = priceOf(key);
+  if (!tile) {
+    const short = price > S.coins;
+    sub.append(h('span', {}, (short ? t('shop.missing', { coins: fmt(price - S.coins) }) : t('shop.available')) + ' · ' + fmt(price)));
+    return h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null,
+      'aria-label': t('shop.startWonderFor', { item: itemName(key), price: fmt(price) }), onclick: () => { closeSheet(); Mode.startPlace(key); } }, t('shop.startWonder'));
+  }
+  const stage = tile.stage || 1;
+  sub.append(h('span', {}, t('wonder.stageOf', { stage, name: t('wonder.' + key + '.stage' + stage) })));
+  if (stage >= ITEMS[key].wonder.length) return h('span', { class: 'pill' }, t('shop.wonderDone', { g: itemGender(key) }));
+  return h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => { closeSheet(); openBuildingSheet(tile); } }, t('shop.wonderContinue', { stage }));
+}
+// Fiche d'une merveille : son étape, la suivante avec sa jauge et son prix. Elle se déplace mais ne se démolit pas.
+function openWonderSheet(tile) {
+  const key = tile.item, stage = tile.stage || 1, next = wonderNext(tile), stageName = n => t('wonder.' + key + '.stage' + n);
+  Selection.id = tile.id;
+  City.draw();
+  openSheet(itemName(key), body => {
+    const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
+    City.thumb(cv, key, 96, { stage });
+    body.append(h('div', { class: 'bsheet' }, cv,
+      h('div', { class: 'bsheet-text' }, h('span', { class: 'cat-label' }, groupName(ITEMS[key].group)),
+        h('span', { class: 'note' }, t('wonder.stageOf', { stage, name: stageName(stage) })),
+        h('span', { class: 'note' }, t('city.square', { x: tile.x + 1, y: tile.y + 1 })))));
+    if (next) {
+      const need = t('wonder.need', { have: fmtMin(next.have), need: fmtMin(next.need) });
+      body.append(...[h('p', {}, t('wonder.next', { name: stageName(next.stage) })),
+        h('div', { class: 'meter', vars: { '--c': 'var(--cat-prestige)' }, role: 'progressbar', 'aria-label': need, 'aria-valuemin': '0', 'aria-valuemax': String(next.need), 'aria-valuenow': String(Math.round(Math.min(next.have, next.need))) },
+          h('span', { style: 'width:' + clamp(next.have / next.need * 100, 0, 100) + '%' })),
+        h('p', { class: 'note' }, need),
+        next.ready && !next.affordable ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(next.price - S.coins) })) : null,
+        h('button', { class: 'btn btn-primary btn-block', type: 'button', disabled: next.ready && next.affordable ? null : true, onclick: () => {
+          if (!buildWonderStage(tile)) return;
+          closeSheet();
+          commit();
+          bump();
+          const params = { item: itemName(key), stage: tile.stage, g: itemGender(key) };
+          toast(tile.stage >= ITEMS[key].wonder.length ? t('wonder.inaugurated', params) : t('wonder.stageBuilt', params));
+        } }, t('wonder.build', { price: fmt(next.price) }))].filter(Boolean));
+    }
+    body.append(h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: () => { closeSheet(); Mode.startMove(tile); } }, icon('move'), t('shop.move')),
+      h('p', { class: 'note' }, t('wonder.noDemolish')));
+  }, { onClose: () => { Selection.id = null; City.draw(); } });
+}
 function openBuildingSheet(tile) {
   if (!tile || !isItem(tile.item)) return;
+  if (isWonder(tile.item)) { openWonderSheet(tile); return; }
   const it = ITEMS[tile.item];
   Selection.id = tile.id;
   City.draw();

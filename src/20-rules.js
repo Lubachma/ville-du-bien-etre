@@ -159,6 +159,13 @@ function nextUnlock() {
     const rem = l.need - l.have;
     if (!best || rem < best.rem || (rem === best.rem && ITEMS[k].price < ITEMS[best.key].price)) best = { key: k, rem, l };
   }
+  // L'étape suivante d'une merveille posée compte aussi, quand elle attend encore des minutes.
+  for (const tile of S.city.tiles) {
+    const next = isWonder(tile.item) ? wonderNext(tile) : null;
+    if (!next || next.ready) continue;
+    const rem = next.need - next.have;
+    if (!best || rem < best.rem) best = { key: tile.item, rem, l: { have: next.have, need: next.need, cat: null }, stage: next.stage };
+  }
   return best;
 }
 // Prochain élément à débloquer d'une rubrique : le moins de minutes restantes, puis le moins cher, puis l'ordre de la table.
@@ -176,6 +183,31 @@ function nextInGroup(group) {
 // Un élément dévoilé se montre en couleur : débloqué, prochain de sa rubrique, ou objectif choisi.
 function isRevealed(key) { return !lockInfo(key) || nextInGroup(ITEMS[key].group) === key || (S.goals && S.goals.building) === key; }
 function ownedCount(key) { return S.city.tiles.filter(t => t.item === key).length; }
+// Merveilles : une seule de chaque par ville, construite en quatre étapes sur la même case.
+function wonderTile(key) { return S.city.tiles.find(t => t.item === key) || null; }
+function wonderNext(tile) {
+  const stages = ITEMS[tile.item].wonder, stage = tile.stage || 1;
+  if (stage >= stages.length) return null;
+  const [need, price] = stages[stage], have = totalMinutes();
+  return { stage: stage + 1, need, have, price, ready: have >= need, affordable: S.coins >= price };
+}
+// Construit l'étape suivante si elle est prête et payable ; l'appelant enregistre et affiche.
+function buildWonderStage(tile) {
+  const next = wonderNext(tile);
+  if (!next || !next.ready || !next.affordable) return false;
+  S.coins -= next.price;
+  tile.stage = next.stage;
+  tile.paid = wonderPaid(tile.item, tile.stage);
+  return true;
+}
+// Domaines pratiqués depuis le début de la semaine : les fleurs du Grand Arbre en prennent les couleurs.
+function weekCats(day = today()) {
+  const seen = new Set();
+  for (let d = weekStartOf(day); d <= day; d = shiftDay(d, 1)) {
+    for (const [cat, min] of Object.entries(S.stats.dailyCats[d] || {})) if (min > 0) seen.add(cat);
+  }
+  return CAT_ORDER.filter(cat => seen.has(cat));
+}
 // Chaque exemplaire supplémentaire d'un bâtiment coûte 50 % de plus (le décor garde son prix).
 // Un décor offert est gratuit tant qu'aucun n'est posé ; une merveille, unique, coûte le prix de sa première étape.
 function priceOf(key) {
