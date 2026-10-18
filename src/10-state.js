@@ -16,7 +16,7 @@ function defaultState() {
   return {
     v: 2, createdAt: now, updatedAt: 0, revision: '',
     coins: 5e6, earned: 0,
-    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false, soundType: 'chime', soundVolume: 'normal', vibrate: true, sky: 'time', hemisphere: 'auto', ambient: true },
+    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false, soundType: 'chime', soundVolume: 'normal', vibrate: true, sky: 'time', hemisphere: 'auto', ambient: true, rituals: true, challenges: true, mood: true },
     clock: { tz: currentTz(), maxSeen: now, lastDay: '' },
     activities: [
       { id: uid(), name: t('tpl.act.reading'), cat: 'esprit', min: 10 },
@@ -39,6 +39,7 @@ function defaultState() {
     draw: { pool: 'wishes', current: null, rerolls: 0, filters: { maxMin: 0, energy: 'any', place: 'any' } },
     goals: { minutes: 60, days: 3, cat: 'all', building: '' },
     personal: { name: '' }, routines: [], routineRun: null, pauses: [], achievements: {}, sets: {}, visits: {}, gifts: {}, seasons: {},
+    challenges: { week: '', swapped: -1 }, postcards: {}, rituals: { week: '', month: '', year: '' }, shareId: '',
     city: {
       size: 7,
       tiles: [
@@ -103,6 +104,8 @@ function cleanHistory(e) {
     routineRunId: str(e.routineRunId, 40), routineStep: int(e.routineStep, 0, 5, 0),
     returnPct: int(e.returnPct, 0, 50, 0),
   };
+  // Humeur notée après la séance, de 1 à 5 ; absente sinon.
+  if (Number.isInteger(e.mood) && e.mood >= 1 && e.mood <= 5) out.mood = e.mood;
   if (!out.ok) {
     out.reward = 0;
     out.reason = ['away', 'closed', 'abandon'].includes(e.reason) ? e.reason : 'abandon';
@@ -163,6 +166,8 @@ function normalize(raw) {
     sky: st.sky === 'theme' ? 'theme' : 'time',
     hemisphere: ['north', 'south'].includes(st.hemisphere) ? st.hemisphere : 'auto',
     ambient: st.ambient !== false,
+    // Rituels : bilans qui s'ouvrent d'eux-mêmes, défis de la semaine, humeur après une séance.
+    rituals: st.rituals !== false, challenges: st.challenges !== false, mood: st.mood !== false,
   };
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))
@@ -174,6 +179,12 @@ function normalize(raw) {
   s.visits = knownVisits(raw.visits);
   s.gifts = Object.fromEntries(Object.entries(obj(raw.gifts)).filter(([key, at]) => GIFT_KEY.test(key) && validTs(at)));
   s.seasons = Object.fromEntries(Object.entries(obj(raw.seasons)).filter(([season, at]) => SEASONS.includes(season) && validTs(at)));
+  // Rituels et partage : défi changé de la semaine, derniers bilans montrés d'eux-mêmes, identifiant de partage, cartes postales.
+  const ch = obj(raw.challenges), ri = obj(raw.rituals), text = (v, re) => (typeof v === 'string' && re.test(v) ? v : '');
+  s.challenges = { week: isDayKey(ch.week) ? ch.week : '', swapped: Number.isInteger(ch.swapped) && ch.swapped >= -1 && ch.swapped <= 2 ? ch.swapped : -1 };
+  s.rituals = { week: isDayKey(ri.week) ? ri.week : '', month: text(ri.month, /^\d{4}-(0[1-9]|1[0-2])$/), year: text(ri.year, /^\d{4}$/) };
+  s.shareId = text(raw.shareId, /^[0-9a-f]{12}$/);
+  s.postcards = knownPostcards(raw.postcards);
   const ck = obj(raw.clock);
   s.clock = {
     tz: validTz(ck.tz) ? ck.tz : s.clock.tz,
@@ -278,8 +289,16 @@ function normalize(raw) {
 // Une suppression gagne sur une édition concurrente. Pour un même champ édité
 // des deux côtés, le maximum JSON est un départage stable, indépendant de l'onglet.
 // Dates d'obtention (succès, ensembles) dont l'identifiant figure dans la table donnée.
-// Cadeaux : « visit:AAAA-MM-JJ » pour un visiteur, « fest:<fête>:<année> » pour une fête.
-const GIFT_KEY = new RegExp('^(visit:\\d{4}-\\d{2}-\\d{2}|fest:(' + FESTIVALS.map(f => f.id).join('|') + '):\\d{4})$');
+// Cadeaux : « visit:AAAA-MM-JJ » pour un visiteur, « fest:<fête>:<année> » pour une fête, « chal:<semaine>:<défi> » pour un défi relevé.
+const GIFT_KEY = new RegExp('^(visit:\\d{4}-\\d{2}-\\d{2}|fest:(' + FESTIVALS.map(f => f.id).join('|') + '):\\d{4}|chal:\\d{4}-\\d{2}-\\d{2}:('
+  + CHALLENGES.map(c => c.id).join('|') + '))$');
+// Cartes postales des villes amies, par identifiant de partage : code de la ville, nom, taille, nombre d'éléments et date de la visite.
+// Seules les plus récentes restent.
+function knownPostcards(raw) {
+  const cards = Object.entries(obj(raw)).filter(([id, c]) => /^[0-9a-f]{12}$/.test(id) && c && typeof c.code === 'string' && /^[A-Za-z0-9_-]{4,4000}$/.test(c.code)
+    && SIZES.includes(c.size) && validTs(c.at)).map(([id, c]) => [id, { code: c.code, name: str(c.name, 40), size: c.size, count: int(c.count, 0, 121, 0), at: c.at }]);
+  return Object.fromEntries(cards.sort((p, q) => q[1].at - p[1].at).slice(0, POSTCARDS_MAX));
+}
 function knownVisits(raw) {
   const ids = new Set(VISITORS.map(v => v.id)), out = {};
   for (const [id, v] of Object.entries(obj(raw))) {
@@ -314,6 +333,12 @@ function mergeVisits(L, R) {
     const r = out[id];
     out[id] = r ? { first: Math.min(r.first, v.first), count: Math.max(r.count, v.count), last: r.last > v.last ? r.last : v.last } : clone(v);
   }
+  return out;
+}
+// Cartes postales : réunies ; pour une même ville, la visite la plus récente gagne.
+function mergePostcards(L, R) {
+  const out = clone(obj(R));
+  for (const [id, card] of Object.entries(obj(L))) if (!out[id] || card.at > out[id].at) out[id] = clone(card);
   return out;
 }
 function mergeDates(B, L, R) {
@@ -458,6 +483,12 @@ function merge3(B, L, R) {
       M.history[M.history.findIndex(entry => entry.id === e.id)] = clone(e);
     }
   }
+  // Humeur d'une séance : celle que L a notée ou changée gagne, même pour une séance que B connaissait déjà.
+  const baseMood = new Map(B.history.map(e => [e.id, e.mood]));
+  for (const e of L.history) {
+    const twin = e.mood !== baseMood.get(e.id) && M.history.find(entry => entry.id === e.id);
+    if (twin && e.mood) twin.mood = e.mood; else if (twin) delete twin.mood;
+  }
   M.history.sort((a, b) => b.at - a.at);
   M.history = M.history.slice(0, HISTORY_MAX);
   for (const key of ['settings', 'goals', 'personal']) M[key] = mergeFields(B[key] || {}, L[key] || {}, R[key] || {}, conflicts, key);
@@ -479,6 +510,11 @@ function merge3(B, L, R) {
   M.visits = mergeVisits(L.visits, R.visits);
   M.gifts = mergeDates(B.gifts, L.gifts, R.gifts);
   M.seasons = mergeDates(B.seasons, L.seasons, R.seasons);
+  // Rituels et partage : cartes réunies, marqueurs les plus avancés, défi changé de la semaine la plus récente, identifiant gardé.
+  M.postcards = mergePostcards(L.postcards, R.postcards);
+  M.rituals = Object.fromEntries(['week', 'month', 'year'].map(k => [k, [obj(L.rituals)[k] || '', obj(R.rituals)[k] || ''].sort().pop()]));
+  M.challenges = clone([obj(L.challenges), obj(R.challenges)].sort((p, q) => String(p.week || '').localeCompare(String(q.week || '')) || (p.swapped ?? -1) - (q.swapped ?? -1)).pop());
+  M.shareId = R.shareId || L.shareId || '';
   // Un cadeau reçu dans les deux onglets à la fois ne compte qu'une fois.
   if (typeof giftAmount === 'function') {
     for (const key of Object.keys(L.gifts || {})) if (!(key in (B.gifts || {})) && key in (R.gifts || {})) M.coins -= giftAmount(key);

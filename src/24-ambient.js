@@ -84,7 +84,8 @@ function mirrorOf(id) {
 // Montant d'un cadeau d'après sa clé.
 function giftAmount(key) {
   const k = String(key);
-  return k.startsWith('visit:') ? GIFTS.visit : k.startsWith('fest:anniversaire:') ? GIFTS.birthday : k.startsWith('fest:') ? GIFTS.fest : 0;
+  return k.startsWith('visit:') ? GIFTS.visit : k.startsWith('fest:anniversaire:') ? GIFTS.birthday : k.startsWith('fest:') ? GIFTS.fest
+    : k.startsWith('chal:') ? GIFTS.challenge : 0;
 }
 // Premier jour de la fête, ce jour-là ou après.
 function nextFestival(id, day) {

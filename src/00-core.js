@@ -12,6 +12,7 @@ const LS_BACKUP_AT = 'ville-bien-etre/v1:backup-at';     // dernière sauvegarde
 const LS_REMIND = 'ville-bien-etre/v1:backup-later';     // rappel de sauvegarde reporté jusqu'à cette date
 const LS_REMINDER = 'ville-bien-etre/v1:reminder-time';   // heure du rappel quotidien (agenda), propre à l'appareil
 const LS_CARNET_SEEN = 'ville-bien-etre/v1:carnet-seen';  // succès et ensembles déjà vus dans le carnet, sur cet appareil
+const LS_MOOD_CARD = 'ville-bien-etre/v1:mood-card';      // carte des moments difficiles : quand elle a été fermée, sur cet appareil
 const BACKUP_EVERY = 14 * 86400000;                       // rappel quand la dernière sauvegarde a plus de 14 jours
 const HISTORY_MAX = 150;
 const LIST_MAX = 60;
@@ -168,8 +169,8 @@ const FESTIVALS = [
   { id: 'lumieres', north: ['12-20', '12-21', '12-22'], south: ['06-20', '06-21', '06-22'] },
   { id: 'anniversaire' },
 ];
-// Cadeaux de la ville vivante, en pièces : visiteur du jour, fête, anniversaire de la ville.
-const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6 };
+// Cadeaux en pièces : visiteur du jour, fête, anniversaire de la ville, défi de la semaine relevé.
+const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6, challenge: 5e6 };
 // Visiteurs : saisons où ils viennent, météo qu'ils aiment, neige récente, endroit où ils se placent (24-ambient.js) ;
 // plural pour un nom au pluriel (les canards), qui accorde la légende.
 const VISITORS = [
@@ -187,6 +188,20 @@ const VISITORS = [
   { id: 'artiste', seasons: ['spring', 'summer', 'autumn'], weather: ['sun', 'clouds'], spot: 'free' },
 ];
 const VISIT_ODDS = .7;               // un visiteur environ 5 jours sur 7
+// Rituels : les défis de la semaine, par famille ; chaque semaine en tire un par famille (25-challenges.js).
+const CHALLENGE_FAMILIES = ['practice', 'moment', 'discovery'];
+const CHALLENGES = [
+  { id: 'domains', family: 'practice' }, { id: 'comeback', family: 'practice' }, { id: 'long', family: 'practice' }, { id: 'twoAreas', family: 'practice' },
+  { id: 'morning', family: 'moment' }, { id: 'evening', family: 'moment' }, { id: 'weekend', family: 'moment' },
+  { id: 'draw', family: 'discovery' }, { id: 'routine', family: 'discovery' }, { id: 'visitors', family: 'discovery' }, { id: 'build', family: 'discovery' }, { id: 'focus', family: 'discovery' },
+];
+// Lien de ville : chaque élément s'y écrit par son rang dans cette liste. On ajoute toujours à la fin, sans rien retirer ni déplacer,
+// pour que les liens déjà envoyés restent lisibles.
+const SHARE_ITEMS = Object.freeze(['arbre', 'fleurs', 'chemin', 'banc', 'lampadaire', 'etang', 'maison', 'boulangerie', 'serre', 'bibliotheque', 'ecole', 'observatoire',
+  'terrain', 'piscine', 'stade', 'jardin', 'fontaine', 'pavillon', 'kiosque', 'atelier', 'theatre', 'horloge', 'lavoir', 'moulin', 'marche', 'musee', 'universite',
+  'planetarium', 'skatepark', 'escalade', 'gymnase', 'labyrinthe', 'source', 'pagode', 'galerie', 'cinema', 'chapiteau', 'haie', 'cerisier', 'livres', 'lanterne',
+  'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue', 'grandarbre', 'phare', 'granderoue']);
+const POSTCARDS_MAX = 50;            // cartes postales des villes amies gardées dans le carnet
 const SOUTH_TZ = ['Australia/', 'Antarctica/', 'America/Argentina/', 'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu',
   'Pacific/Noumea', 'Pacific/Port_Moresby', 'America/Santiago', 'America/Punta_Arenas', 'America/Sao_Paulo', 'America/Montevideo', 'America/Asuncion',
   'America/La_Paz', 'America/Lima', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Windhoek', 'Africa/Gaborone',
