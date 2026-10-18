@@ -225,6 +225,13 @@ const WISH_LIKES = {
 };
 // Ambiances sonores pendant les séances (51-ambience.js) ; « none » par défaut.
 const AMBIENCES = ['none', 'rain', 'waves', 'fire', 'wind', 'brown'];
+// Compagnon : trois animaux, dix niveaux de complicité (minutes de séances ensemble), neuf accessoires (COMPANION_WEAR[i] au
+// niveau i + 2), un nom de 20 caractères au plus ; respiration guidée des séances Calme : 5 s pour inspirer, 5 s pour expirer.
+const COMPANION_SPECIES = ['lapin', 'marmotte', 'ourson'];
+const COMPANION_LEVELS = [0, 20, 60, 120, 240, 420, 660, 960, 1320, 1800];
+const COMPANION_WEAR = ['echarpe', 'bonnet', 'lunettes', 'couronne', 'noeud', 'paille', 'sac', 'casque', 'cape'];
+const COMPANION_NAME_MAX = 20;
+const BREATH_MS = 5000;
 const SOUTH_TZ = ['Australia/', 'Antarctica/', 'America/Argentina/', 'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu',
   'Pacific/Noumea', 'Pacific/Port_Moresby', 'America/Santiago', 'America/Punta_Arenas', 'America/Sao_Paulo', 'America/Montevideo', 'America/Asuncion',
   'America/La_Paz', 'America/Lima', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Windhoek', 'Africa/Gaborone',
@@ -312,6 +319,10 @@ const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const num = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) ? clamp(v, lo, hi) : def);
 const int = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) ? clamp(Math.round(v), lo, hi) : def);
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+// Noms tapés (ville partagée, compagnon) : caractères de contrôle, de direction et invisibles retirés ; les liants des émojis
+// composés (U+200C, U+200D) restent, et un nom sans rien de visible compte comme vide.
+const HIDDEN_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g;
+const VISIBLE_CHAR = /[^\s\u200c\u200d]/;
 const idOf = v => (typeof v === 'string' && v.length > 0 && v.length <= 40 && /^[\w-]+$/.test(v) ? v : uid());
 const isDayKey = k => typeof k === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(k);
 const validTs = v => typeof v === 'number' && Number.isFinite(v) && v > 1.5e12 && v < 4.1e12;
@@ -2808,7 +2819,7 @@ function defaultState() {
     v: 2, createdAt: now, updatedAt: 0, revision: '',
     coins: 5e6, earned: 0,
     settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false, soundType: 'chime', soundVolume: 'normal', vibrate: true, sky: 'time', hemisphere: 'auto', ambient: true, rituals: true, challenges: true, mood: true,
-      ambience: 'none', ambienceVolume: 'normal', townWishes: true },
+      ambience: 'none', ambienceVolume: 'normal', townWishes: true, companionShown: true, breathing: false },
     clock: { tz: currentTz(), maxSeen: now, lastDay: '' },
     activities: [
       { id: uid(), name: t('tpl.act.reading'), cat: 'esprit', min: 10 },
@@ -2831,7 +2842,7 @@ function defaultState() {
     draw: { pool: 'wishes', current: null, rerolls: 0, filters: { maxMin: 0, energy: 'any', place: 'any' } },
     goals: { minutes: 60, days: 3, cat: 'all', building: '' },
     personal: { name: '' }, routines: [], routineRun: null, pauses: [], achievements: {}, sets: {}, visits: {}, gifts: {}, seasons: {},
-    challenges: { week: '', swapped: -1 }, postcards: {}, rituals: { week: '', month: '', year: '' }, shareId: '', townWish: null,
+    challenges: { week: '', swapped: -1 }, postcards: {}, rituals: { week: '', month: '', year: '' }, shareId: '', townWish: null, companion: null, companionLater: 0,
     city: {
       size: 7,
       tiles: [
@@ -2964,6 +2975,8 @@ function normalize(raw) {
     ambience: AMBIENCES.includes(st.ambience) ? st.ambience : 'none',
     ambienceVolume: own(SOUND_GAIN, st.ambienceVolume) ? st.ambienceVolume : 'normal',
     townWishes: st.townWishes !== false,
+    // Compagnon : affiché par défaut ; respiration guidée des séances Calme, éteinte par défaut.
+    companionShown: st.companionShown !== false, breathing: st.breathing === true,
   };
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))
@@ -2982,6 +2995,8 @@ function normalize(raw) {
   s.shareId = text(raw.shareId, /^[0-9a-f]{12}$/);
   s.postcards = knownPostcards(raw.postcards);
   s.townWish = knownTownWish(raw.townWish);
+  s.companion = knownCompanion(raw.companion);
+  s.companionLater = validTs(raw.companionLater) ? raw.companionLater : 0;
   const ck = obj(raw.clock);
   s.clock = {
     tz: validTz(ck.tz) ? ck.tz : s.clock.tz,
@@ -3098,6 +3113,34 @@ function knownTownWish(raw) {
   const w = obj(raw);
   if (!isDayKey(w.day) || typeof w.tile !== 'string' || !w.tile || w.tile.length > 40 || !Object.values(WISH_LIKES).some(list => list.includes(w.item))) return null;
   return { day: w.day, tile: w.tile, item: w.item, ...(validTs(w.done) ? { done: w.done } : {}), ...(w.skipped === true ? { skipped: true } : {}) };
+}
+// Niveau de complicité (1 à 10) : le plus haut dont le seuil de minutes ensemble est atteint.
+function companionLevelOf(minutes) {
+  let level = 1;
+  COMPANION_LEVELS.forEach((need, i) => { if (minutes >= need) level = i + 1; });
+  return level;
+}
+// Nom du compagnon : nettoyé comme un nom de ville partagée ; '' s'il est vide ou trop long (l'app montre alors le nom suggéré).
+function cleanCompanionName(raw) {
+  const name = typeof raw === 'string' ? raw.replace(HIDDEN_CHARS, '').trim() : '';
+  return VISIBLE_CHAR.test(name) && [...name].length <= COMPANION_NAME_MAX ? name : '';
+}
+// Compagnon enregistré : animal connu et date d'arrivée valide, sinon aucun ; un accessoire ne se porte qu'une fois gagné.
+function knownCompanion(raw) {
+  const c = obj(raw);
+  if (!COMPANION_SPECIES.includes(c.species) || !validTs(c.since)) return null;
+  const minutes = num(c.minutes, 0, 1e7, 0), rank = COMPANION_WEAR.indexOf(c.wear);
+  return { species: c.species, name: cleanCompanionName(c.name), since: c.since, minutes, wear: rank >= 0 && rank + 2 <= companionLevelOf(minutes) ? c.wear : '' };
+}
+// Deux onglets : un compagnon gagne sur aucun ; deux différents, le premier arrivé reste ; le même, le temps ajouté de chaque côté
+// s'additionne (le plus grand sans base commune), et l'animal, le nom ou l'accessoire changés dans cet onglet l'emportent.
+function mergeCompanion(B, L, R) {
+  if (!L || !R) return knownCompanion(L || R);
+  if (L.since !== R.since) return knownCompanion(L.since < R.since ? L : R);
+  const base = B && B.since === L.since ? B : null, M = clone(R);
+  M.minutes = base ? R.minutes + (L.minutes - base.minutes) : Math.max(L.minutes, R.minutes);
+  if (base) for (const k of ['species', 'name', 'wear']) if (L[k] !== base[k]) M[k] = L[k];
+  return knownCompanion(M);
 }
 function knownPostcards(raw) {
   const cards = Object.entries(obj(raw)).filter(([id, c]) => /^[0-9a-f]{12}$/.test(id) && c && typeof c.code === 'string' && /^[A-Za-z0-9_-]{4,4000}$/.test(c.code)
@@ -3323,6 +3366,9 @@ function merge3(B, L, R) {
   // Souhait d'habitant : celui du jour le plus récent ; le même jour, un souhait exaucé ou laissé de côté l'emporte.
   const wishRank = w => (w.done ? 2 : w.skipped ? 1 : 0);
   M.townWish = clone([L.townWish, R.townWish].filter(Boolean).sort((p, q) => String(p.day).localeCompare(String(q.day)) || wishRank(p) - wishRank(q)).pop() || null);
+  // Compagnon (voir mergeCompanion) ; invitation laissée de côté : le refus le plus récent.
+  M.companion = mergeCompanion(B.companion, L.companion, R.companion);
+  M.companionLater = Math.max(L.companionLater || 0, R.companionLater || 0);
   // Un cadeau reçu dans les deux onglets à la fois ne compte qu'une fois.
   if (typeof giftAmount === 'function') {
     for (const key of Object.keys(L.gifts || {})) if (!(key in (B.gifts || {})) && key in (R.gifts || {})) M.coins -= giftAmount(key);
@@ -4683,8 +4729,8 @@ function decodeCity(code) {
     const size = next();
     if (!SIZES.includes(size)) return null;
     // Les liants des émojis composés (U+200C, U+200D) restent ; un nom sans rien de visible compte comme vide.
-    const raw = new TextDecoder().decode(take(next())).replace(/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g, '');
-    const kept = [...raw].slice(0, SHARE_NAME_CHARS).join('').trim(), name = /[^\s\u200c\u200d]/.test(kept) ? kept : '';
+    const raw = new TextDecoder().decode(take(next())).replace(HIDDEN_CHARS, '');
+    const kept = [...raw].slice(0, SHARE_NAME_CHARS).join('').trim(), name = VISIBLE_CHAR.test(kept) ? kept : '';
     const id = [...take(6)].map(b => b.toString(16).padStart(2, '0')).join('');
     const count = next(), tiles = [], used = new Set();
     for (let k = 0; k < count; k++) {

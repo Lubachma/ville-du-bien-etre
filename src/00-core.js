@@ -220,6 +220,13 @@ const WISH_LIKES = {
 };
 // Ambiances sonores pendant les séances (51-ambience.js) ; « none » par défaut.
 const AMBIENCES = ['none', 'rain', 'waves', 'fire', 'wind', 'brown'];
+// Compagnon : trois animaux, dix niveaux de complicité (minutes de séances ensemble), neuf accessoires (COMPANION_WEAR[i] au
+// niveau i + 2), un nom de 20 caractères au plus ; respiration guidée des séances Calme : 5 s pour inspirer, 5 s pour expirer.
+const COMPANION_SPECIES = ['lapin', 'marmotte', 'ourson'];
+const COMPANION_LEVELS = [0, 20, 60, 120, 240, 420, 660, 960, 1320, 1800];
+const COMPANION_WEAR = ['echarpe', 'bonnet', 'lunettes', 'couronne', 'noeud', 'paille', 'sac', 'casque', 'cape'];
+const COMPANION_NAME_MAX = 20;
+const BREATH_MS = 5000;
 const SOUTH_TZ = ['Australia/', 'Antarctica/', 'America/Argentina/', 'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu',
   'Pacific/Noumea', 'Pacific/Port_Moresby', 'America/Santiago', 'America/Punta_Arenas', 'America/Sao_Paulo', 'America/Montevideo', 'America/Asuncion',
   'America/La_Paz', 'America/Lima', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Windhoek', 'Africa/Gaborone',
@@ -307,6 +314,10 @@ const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const num = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) ? clamp(v, lo, hi) : def);
 const int = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) ? clamp(Math.round(v), lo, hi) : def);
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+// Noms tapés (ville partagée, compagnon) : caractères de contrôle, de direction et invisibles retirés ; les liants des émojis
+// composés (U+200C, U+200D) restent, et un nom sans rien de visible compte comme vide.
+const HIDDEN_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g;
+const VISIBLE_CHAR = /[^\s\u200c\u200d]/;
 const idOf = v => (typeof v === 'string' && v.length > 0 && v.length <= 40 && /^[\w-]+$/.test(v) ? v : uid());
 const isDayKey = k => typeof k === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(k);
 const validTs = v => typeof v === 'number' && Number.isFinite(v) && v > 1.5e12 && v < 4.1e12;
