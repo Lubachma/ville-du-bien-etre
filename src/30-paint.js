@@ -145,6 +145,23 @@ function makePainter(ctx, tw, ox, oy, pal) {
     ctx.fill();
   };
   g.shadow = (cx, cy, r) => g.ell(cx + .04, cy + .06, r, 0, night ? 'rgba(0,0,0,.28)' : 'rgba(40,60,30,.16)');
+  // Échafaudage en bois autour de la case, haut de « height » px : « back » avant le bâtiment, « front » après lui.
+  g.scaffold = (x, y, height, side = 'both') => {
+    const wood = g.c('#a77b4f'), i = .1, lw = Math.max(1.2, tw * .022);
+    const pole = (u, v) => g.box(x + u - .018, y + v - .018, x + u + .018, y + v + .018, 0, height, wood);
+    const plank = (u0, v0, u1, v1) => {
+      for (let k = 1; k <= 3; k++) g.poly([P(x + u0, y + v0, height * k * .3), P(x + u1, y + v1, height * k * .3)], null, wood, lw);
+    };
+    if (side !== 'front') {
+      pole(i, i); plank(i, i, 1 - i, i); plank(i, i, i, 1 - i);
+      pole(1 - i, i); pole(i, 1 - i);
+    }
+    if (side !== 'back') {
+      plank(i, 1 - i, 1 - i, 1 - i); plank(1 - i, i, 1 - i, 1 - i);
+      g.poly([P(x + i, y + 1 - i, 0), P(x + 1 - i, y + 1 - i, height)], null, wood, lw);
+      pole(1 - i, 1 - i);
+    }
+  };
   g.glow = (sx, sy, r, alpha) => {
     const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
     grad.addColorStop(0, 'rgba(255,214,128,' + alpha + ')');

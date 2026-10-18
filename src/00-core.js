@@ -88,9 +88,9 @@ const ITEMS = {
   nichoir:     { group: 'decor', price: 2e6, reward: 'main-verte', hf: .65 },
   statue:      { group: 'decor', price: 4e6, reward: 'cent-heures', fem: true, hf: .57 },
   // Merveilles : 4 étapes [minutes totales, prix] ; price est le prix de la première étape.
-  grandarbre:  { group: 'prestige', price: 200e6, wonder: [[1500, 200e6], [1800, 250e6], [2100, 300e6], [2400, 350e6]], hf: 1.5 },
-  phare:       { group: 'prestige', price: 350e6, wonder: [[3000, 350e6], [3500, 400e6], [4000, 450e6], [4500, 500e6]], hf: 1.6 },
-  granderoue:  { group: 'prestige', price: 500e6, wonder: [[5500, 500e6], [6200, 600e6], [6900, 700e6], [7600, 800e6]], fem: true, hf: 1.5 },
+  grandarbre:  { group: 'prestige', price: 200e6, wonder: [[1500, 200e6], [1800, 250e6], [2100, 300e6], [2400, 350e6]], hf: 1.19 },
+  phare:       { group: 'prestige', price: 350e6, wonder: [[3000, 350e6], [3500, 400e6], [4000, 450e6], [4500, 500e6]], hf: 1.16 },
+  granderoue:  { group: 'prestige', price: 500e6, wonder: [[5500, 500e6], [6200, 600e6], [6900, 700e6], [7600, 800e6]], fem: true, hf: 1 },
 };
 
 // Succès : famille, condition (kind et ses paramètres) et décor offert. Les conditions sont dans 23-achievements.js.

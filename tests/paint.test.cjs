@@ -36,4 +36,10 @@ test('les 10 décors se dessinent dans leur case, de jour comme de nuit', () => 
   for (const key of DECOR) assertInTile(a, key);
 });
 
+test('les merveilles se dessinent dans leur case à chaque étape, et chaque élément a son dessin', () => {
+  const a = app(['31-paint-buildings.js', '32-paint-decor.js', '33-paint-wonders.js']);
+  for (const key of ['grandarbre', 'phare', 'granderoue']) for (const stage of [1, 2, 3, 4]) assertInTile(a, key, stage);
+  assert.deepEqual(Object.keys(a.ITEMS).filter(key => typeof a.DRAW[key] !== 'function'), []);
+});
+
 module.exports = { app, assertInTile, paint };
