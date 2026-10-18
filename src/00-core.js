@@ -93,6 +93,59 @@ const ITEMS = {
   granderoue:  { group: 'prestige', price: 500e6, wonder: [[5500, 500e6], [6200, 600e6], [6900, 700e6], [7600, 800e6]], fem: true, hf: 1.5 },
 };
 
+// Succès : famille, condition (kind et ses paramètres) et décor offert. Les conditions sont dans 23-achievements.js.
+const ACHIEVEMENTS = [
+  { id: 'premier-pas', family: 'start', kind: 'sessions', n: 1 },
+  { id: 'premiere-pierre', family: 'start', kind: 'bought', n: 1 },
+  { id: 'coup-de-pouce', family: 'start', kind: 'draw', n: 1 },
+  { id: 'bien-rode', family: 'start', kind: 'routine', n: 1 },
+  { id: 'esprit-curieux', family: 'domains', kind: 'catMinutes', cat: 'esprit', n: 60 },
+  { id: 'corps-en-mouvement', family: 'domains', kind: 'catMinutes', cat: 'corps', n: 60 },
+  { id: 'grand-calme', family: 'domains', kind: 'catMinutes', cat: 'calme', n: 60 },
+  { id: 'nid-douillet', family: 'domains', kind: 'catMinutes', cat: 'foyer', n: 60 },
+  { id: 'mains-creatives', family: 'domains', kind: 'catMinutes', cat: 'crea', n: 60 },
+  { id: 'semaine-equilibree', family: 'domains', kind: 'weekCats', n: 5, reward: 'fanions' },
+  { id: 'leve-tot', family: 'moments', kind: 'endHour', from: 5, to: 8, reward: 'cadran' },
+  { id: 'douce-soiree', family: 'moments', kind: 'endHour', from: 20, to: 23 },
+  { id: 'petit-a-petit', family: 'moments', kind: 'sessionMin', min: 5, max: 5, reward: 'pasjaponais' },
+  { id: 'plongee-profonde', family: 'moments', kind: 'sessionMin', min: 45, max: 180 },
+  { id: 'belle-journee', family: 'moments', kind: 'dayMinutes', n: 60 },
+  { id: 'journee-variee', family: 'moments', kind: 'dayCats', n: 3 },
+  { id: 'sept-jours', family: 'regular', kind: 'activeDays', n: 7 },
+  { id: 'trente-jours', family: 'regular', kind: 'activeDays', n: 30 },
+  { id: 'cent-jours', family: 'regular', kind: 'activeDays', n: 100 },
+  { id: 'sur-ta-lancee', family: 'regular', kind: 'streak', n: 7 },
+  { id: 'dix-heures', family: 'time', kind: 'totalMinutes', n: 600 },
+  { id: 'cinquante-heures', family: 'time', kind: 'totalMinutes', n: 3000 },
+  { id: 'cent-heures', family: 'time', kind: 'totalMinutes', n: 6000, reward: 'statue' },
+  { id: 'hameau', family: 'town', kind: 'tiles', n: 10 },
+  { id: 'village', family: 'town', kind: 'tiles', n: 25 },
+  { id: 'petite-ville', family: 'town', kind: 'tiles', n: 50 },
+  { id: 'grands-espaces', family: 'town', kind: 'citySize', n: 11 },
+  { id: 'main-verte', family: 'town', kind: 'nature', n: 10, reward: 'nichoir' },
+  { id: 'ca-rayonne', family: 'town', kind: 'level', n: 3 },
+  { id: 'bon-voisinage', family: 'town', kind: 'sets', n: 1 },
+  { id: 'urbaniste', family: 'town', kind: 'sets', n: 12 },
+  { id: 'premiere-merveille', family: 'town', kind: 'wonders', n: 1 },
+  { id: 'trois-merveilles', family: 'town', kind: 'wonders', n: 3 },
+];
+const NATURE_ITEMS = ['arbre', 'cerisier', 'haie', 'fleurs', 'potager'];
+// Ensembles : trois éléments dans un même carré de 3 × 3 cases.
+const SETS = [
+  { id: 'coin-lecture', items: ['bibliotheque', 'banc', 'arbre'] },
+  { id: 'cocon', items: ['maison', 'fleurs', 'haie'] },
+  { id: 'place-concert', items: ['kiosque', 'banc', 'lampadaire'] },
+  { id: 'place-marche', items: ['boulangerie', 'fontaine', 'lampadaire'] },
+  { id: 'jardin-japonais', items: ['pavillon', 'etang', 'cerisier'] },
+  { id: 'quartier-artistes', items: ['atelier', 'galerie', 'fleurs'] },
+  { id: 'parc-sportif', items: ['terrain', 'piscine', 'skatepark'] },
+  { id: 'campus', items: ['ecole', 'bibliotheque', 'universite'] },
+  { id: 'petite-ferme', items: ['serre', 'potager', 'moulin'] },
+  { id: 'oasis', items: ['source', 'fontaine', 'jardin'] },
+  { id: 'nuit-etoilee', items: ['observatoire', 'planetarium', 'lanterne'] },
+  { id: 'fete-foraine', items: ['chapiteau', 'granderoue', 'lampadaire'] },
+];
+
 /* =========================================================================
    Utilitaires
    ========================================================================= */

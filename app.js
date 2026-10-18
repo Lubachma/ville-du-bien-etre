@@ -98,6 +98,59 @@ const ITEMS = {
   granderoue:  { group: 'prestige', price: 500e6, wonder: [[5500, 500e6], [6200, 600e6], [6900, 700e6], [7600, 800e6]], fem: true, hf: 1.5 },
 };
 
+// Succès : famille, condition (kind et ses paramètres) et décor offert. Les conditions sont dans 23-achievements.js.
+const ACHIEVEMENTS = [
+  { id: 'premier-pas', family: 'start', kind: 'sessions', n: 1 },
+  { id: 'premiere-pierre', family: 'start', kind: 'bought', n: 1 },
+  { id: 'coup-de-pouce', family: 'start', kind: 'draw', n: 1 },
+  { id: 'bien-rode', family: 'start', kind: 'routine', n: 1 },
+  { id: 'esprit-curieux', family: 'domains', kind: 'catMinutes', cat: 'esprit', n: 60 },
+  { id: 'corps-en-mouvement', family: 'domains', kind: 'catMinutes', cat: 'corps', n: 60 },
+  { id: 'grand-calme', family: 'domains', kind: 'catMinutes', cat: 'calme', n: 60 },
+  { id: 'nid-douillet', family: 'domains', kind: 'catMinutes', cat: 'foyer', n: 60 },
+  { id: 'mains-creatives', family: 'domains', kind: 'catMinutes', cat: 'crea', n: 60 },
+  { id: 'semaine-equilibree', family: 'domains', kind: 'weekCats', n: 5, reward: 'fanions' },
+  { id: 'leve-tot', family: 'moments', kind: 'endHour', from: 5, to: 8, reward: 'cadran' },
+  { id: 'douce-soiree', family: 'moments', kind: 'endHour', from: 20, to: 23 },
+  { id: 'petit-a-petit', family: 'moments', kind: 'sessionMin', min: 5, max: 5, reward: 'pasjaponais' },
+  { id: 'plongee-profonde', family: 'moments', kind: 'sessionMin', min: 45, max: 180 },
+  { id: 'belle-journee', family: 'moments', kind: 'dayMinutes', n: 60 },
+  { id: 'journee-variee', family: 'moments', kind: 'dayCats', n: 3 },
+  { id: 'sept-jours', family: 'regular', kind: 'activeDays', n: 7 },
+  { id: 'trente-jours', family: 'regular', kind: 'activeDays', n: 30 },
+  { id: 'cent-jours', family: 'regular', kind: 'activeDays', n: 100 },
+  { id: 'sur-ta-lancee', family: 'regular', kind: 'streak', n: 7 },
+  { id: 'dix-heures', family: 'time', kind: 'totalMinutes', n: 600 },
+  { id: 'cinquante-heures', family: 'time', kind: 'totalMinutes', n: 3000 },
+  { id: 'cent-heures', family: 'time', kind: 'totalMinutes', n: 6000, reward: 'statue' },
+  { id: 'hameau', family: 'town', kind: 'tiles', n: 10 },
+  { id: 'village', family: 'town', kind: 'tiles', n: 25 },
+  { id: 'petite-ville', family: 'town', kind: 'tiles', n: 50 },
+  { id: 'grands-espaces', family: 'town', kind: 'citySize', n: 11 },
+  { id: 'main-verte', family: 'town', kind: 'nature', n: 10, reward: 'nichoir' },
+  { id: 'ca-rayonne', family: 'town', kind: 'level', n: 3 },
+  { id: 'bon-voisinage', family: 'town', kind: 'sets', n: 1 },
+  { id: 'urbaniste', family: 'town', kind: 'sets', n: 12 },
+  { id: 'premiere-merveille', family: 'town', kind: 'wonders', n: 1 },
+  { id: 'trois-merveilles', family: 'town', kind: 'wonders', n: 3 },
+];
+const NATURE_ITEMS = ['arbre', 'cerisier', 'haie', 'fleurs', 'potager'];
+// Ensembles : trois éléments dans un même carré de 3 × 3 cases.
+const SETS = [
+  { id: 'coin-lecture', items: ['bibliotheque', 'banc', 'arbre'] },
+  { id: 'cocon', items: ['maison', 'fleurs', 'haie'] },
+  { id: 'place-concert', items: ['kiosque', 'banc', 'lampadaire'] },
+  { id: 'place-marche', items: ['boulangerie', 'fontaine', 'lampadaire'] },
+  { id: 'jardin-japonais', items: ['pavillon', 'etang', 'cerisier'] },
+  { id: 'quartier-artistes', items: ['atelier', 'galerie', 'fleurs'] },
+  { id: 'parc-sportif', items: ['terrain', 'piscine', 'skatepark'] },
+  { id: 'campus', items: ['ecole', 'bibliotheque', 'universite'] },
+  { id: 'petite-ferme', items: ['serre', 'potager', 'moulin'] },
+  { id: 'oasis', items: ['source', 'fontaine', 'jardin'] },
+  { id: 'nuit-etoilee', items: ['observatoire', 'planetarium', 'lanterne'] },
+  { id: 'fete-foraine', items: ['chapiteau', 'granderoue', 'lampadaire'] },
+];
+
 /* =========================================================================
    Utilitaires
    ========================================================================= */
@@ -1046,6 +1099,100 @@ DICT.fr = {
 
   // Pourcentage de bonus
   'unit.bonusPct': '+{pct}\u00a0%',
+  // Succès : nom et condition
+  'ach.premier-pas.name': 'Premier pas',
+  'ach.premier-pas.desc': 'Termine ta première session.',
+  'ach.premiere-pierre.name': 'Première pierre',
+  'ach.premiere-pierre.desc': 'Construis un premier élément dans ta ville.',
+  'ach.coup-de-pouce.name': 'Coup de pouce du hasard',
+  'ach.coup-de-pouce.desc': 'Réussis une session proposée par le tirage.',
+  'ach.bien-rode.name': 'Bien rodé',
+  'ach.bien-rode.desc': 'Termine une routine du début à la fin.',
+  'ach.esprit-curieux.name': 'Esprit curieux',
+  'ach.esprit-curieux.desc': 'Passe une heure en Esprit, en une ou plusieurs fois.',
+  'ach.corps-en-mouvement.name': 'Corps en mouvement',
+  'ach.corps-en-mouvement.desc': 'Passe une heure en Corps, en une ou plusieurs fois.',
+  'ach.grand-calme.name': 'Grand calme',
+  'ach.grand-calme.desc': 'Passe une heure en Calme, en une ou plusieurs fois.',
+  'ach.nid-douillet.name': 'Nid douillet',
+  'ach.nid-douillet.desc': 'Passe une heure en Foyer, en une ou plusieurs fois.',
+  'ach.mains-creatives.name': 'Mains créatives',
+  'ach.mains-creatives.desc': 'Passe une heure en Créativité, en une ou plusieurs fois.',
+  'ach.semaine-equilibree.name': 'Semaine équilibrée',
+  'ach.semaine-equilibree.desc': "Pratique les cinq domaines au cours d'une même semaine.",
+  'ach.leve-tot.name': 'Lève-tôt',
+  'ach.leve-tot.desc': 'Termine une session entre 5\u00a0h et 8\u00a0h du matin.',
+  'ach.douce-soiree.name': 'Douce soirée',
+  'ach.douce-soiree.desc': 'Termine une session entre 20\u00a0h et 23\u00a0h.',
+  'ach.petit-a-petit.name': 'Petit à petit',
+  'ach.petit-a-petit.desc': 'Termine une session de 5 minutes : chaque pas compte.',
+  'ach.plongee-profonde.name': 'Plongée profonde',
+  'ach.plongee-profonde.desc': 'Termine une session de 45 minutes ou plus.',
+  'ach.belle-journee.name': 'Belle journée',
+  'ach.belle-journee.desc': "Cumule une heure d'activités dans la même journée.",
+  'ach.journee-variee.name': 'Journée variée',
+  'ach.journee-variee.desc': 'Pratique trois domaines dans la même journée.',
+  'ach.sept-jours.name': 'Sept jours pour soi',
+  'ach.sept-jours.desc': 'Fais des sessions sur 7 jours différents, à ton rythme.',
+  'ach.trente-jours.name': 'Trente jours pour soi',
+  'ach.trente-jours.desc': 'Fais des sessions sur 30 jours différents, à ton rythme.',
+  'ach.cent-jours.name': 'Cent jours pour soi',
+  'ach.cent-jours.desc': 'Fais des sessions sur 100 jours différents, à ton rythme.',
+  'ach.sur-ta-lancee.name': 'Sur ta lancée',
+  'ach.sur-ta-lancee.desc': 'Atteins une série de 7 jours ; les jours de repos font le pont.',
+  'ach.dix-heures.name': 'Dix heures pour soi',
+  'ach.dix-heures.desc': "Cumule 10 heures d'activités au total.",
+  'ach.cinquante-heures.name': 'Cinquante heures',
+  'ach.cinquante-heures.desc': "Cumule 50 heures d'activités au total.",
+  'ach.cent-heures.name': 'Cent heures',
+  'ach.cent-heures.desc': "Cumule 100 heures d'activités au total.",
+  'ach.hameau.name': 'Hameau',
+  'ach.hameau.desc': 'Rassemble 10 éléments dans ta ville.',
+  'ach.village.name': 'Village',
+  'ach.village.desc': 'Rassemble 25 éléments dans ta ville.',
+  'ach.petite-ville.name': 'Petite ville',
+  'ach.petite-ville.desc': 'Rassemble 50 éléments dans ta ville.',
+  'ach.grands-espaces.name': 'Grands espaces',
+  'ach.grands-espaces.desc': "Agrandis ta ville jusqu'à 11\u00a0×\u00a011 cases.",
+  'ach.main-verte.name': 'Main verte',
+  'ach.main-verte.desc': 'Plante 10 arbres, cerisiers, haies, massifs ou carrés potagers.',
+  'ach.ca-rayonne.name': 'Ça rayonne',
+  'ach.ca-rayonne.desc': 'Amène un bâtiment au niveau 3 en pratiquant son domaine.',
+  'ach.bon-voisinage.name': 'Bon voisinage',
+  'ach.bon-voisinage.desc': 'Découvre ton premier ensemble de voisinage.',
+  'ach.urbaniste.name': 'Urbaniste',
+  'ach.urbaniste.desc': 'Découvre les 12 ensembles de voisinage.',
+  'ach.premiere-merveille.name': 'Première merveille',
+  'ach.premiere-merveille.desc': 'Inaugure ta première merveille.',
+  'ach.trois-merveilles.name': 'Les trois merveilles',
+  'ach.trois-merveilles.desc': 'Inaugure les trois merveilles.',
+  'ach.sur-ta-lancee.descHidden': 'Cumule 7 jours actifs rapprochés ; les jours de repos font le pont.',
+  // Ensembles de voisinage
+  'set.coin-lecture.name': 'Coin lecture',
+  'set.cocon.name': 'Cocon',
+  'set.place-concert.name': 'Place du concert',
+  'set.place-marche.name': 'Place du marché',
+  'set.jardin-japonais.name': 'Jardin japonais',
+  'set.quartier-artistes.name': 'Quartier des artistes',
+  'set.parc-sportif.name': 'Parc sportif',
+  'set.campus.name': 'Campus',
+  'set.petite-ferme.name': 'Petite ferme',
+  'set.oasis.name': 'Oasis',
+  'set.nuit-etoilee.name': 'Nuit étoilée',
+  'set.fete-foraine.name': 'Fête foraine',
+  // Étapes des merveilles
+  'wonder.grandarbre.stage1': 'Pousse',
+  'wonder.grandarbre.stage2': 'Jeune arbre',
+  'wonder.grandarbre.stage3': 'Grand arbre',
+  'wonder.grandarbre.stage4': 'Floraison',
+  'wonder.phare.stage1': 'Fondations',
+  'wonder.phare.stage2': 'Tour',
+  'wonder.phare.stage3': 'Lanterne',
+  'wonder.phare.stage4': 'Inauguration',
+  'wonder.granderoue.stage1': 'Pylônes',
+  'wonder.granderoue.stage2': 'Roue',
+  'wonder.granderoue.stage3': 'Nacelles',
+  'wonder.granderoue.stage4': 'Inauguration',
 };
 
 
@@ -1766,6 +1913,100 @@ DICT.en = {
 
   // Bonus percentage
   'unit.bonusPct': '+{pct}%',
+  // Achievements: name and condition
+  'ach.premier-pas.name': 'First step',
+  'ach.premier-pas.desc': 'Finish your first session.',
+  'ach.premiere-pierre.name': 'First stone',
+  'ach.premiere-pierre.desc': 'Build a first item in your town.',
+  'ach.coup-de-pouce.name': 'A nudge from chance',
+  'ach.coup-de-pouce.desc': 'Complete a session suggested by the draw.',
+  'ach.bien-rode.name': 'Like clockwork',
+  'ach.bien-rode.desc': 'Finish a routine from start to end.',
+  'ach.esprit-curieux.name': 'Curious mind',
+  'ach.esprit-curieux.desc': 'Spend an hour on Mind, in one go or several.',
+  'ach.corps-en-mouvement.name': 'Body in motion',
+  'ach.corps-en-mouvement.desc': 'Spend an hour on Body, in one go or several.',
+  'ach.grand-calme.name': 'Deep calm',
+  'ach.grand-calme.desc': 'Spend an hour on Calm, in one go or several.',
+  'ach.nid-douillet.name': 'Cosy nest',
+  'ach.nid-douillet.desc': 'Spend an hour on Home, in one go or several.',
+  'ach.mains-creatives.name': 'Creative hands',
+  'ach.mains-creatives.desc': 'Spend an hour on Creativity, in one go or several.',
+  'ach.semaine-equilibree.name': 'Balanced week',
+  'ach.semaine-equilibree.desc': 'Practise all five areas within the same week.',
+  'ach.leve-tot.name': 'Early bird',
+  'ach.leve-tot.desc': 'Finish a session between 5 and 8 in the morning.',
+  'ach.douce-soiree.name': 'Quiet evening',
+  'ach.douce-soiree.desc': 'Finish a session between 8 and 11 in the evening.',
+  'ach.petit-a-petit.name': 'Little by little',
+  'ach.petit-a-petit.desc': 'Finish a 5-minute session: every step counts.',
+  'ach.plongee-profonde.name': 'Deep dive',
+  'ach.plongee-profonde.desc': 'Finish a session of 45 minutes or more.',
+  'ach.belle-journee.name': 'A good day',
+  'ach.belle-journee.desc': 'Add up an hour of activities in a single day.',
+  'ach.journee-variee.name': 'Varied day',
+  'ach.journee-variee.desc': 'Practise three areas in a single day.',
+  'ach.sept-jours.name': 'Seven days for you',
+  'ach.sept-jours.desc': 'Have sessions on 7 different days, at your own pace.',
+  'ach.trente-jours.name': 'Thirty days for you',
+  'ach.trente-jours.desc': 'Have sessions on 30 different days, at your own pace.',
+  'ach.cent-jours.name': 'A hundred days for you',
+  'ach.cent-jours.desc': 'Have sessions on 100 different days, at your own pace.',
+  'ach.sur-ta-lancee.name': 'On a roll',
+  'ach.sur-ta-lancee.desc': 'Reach a 7-day streak; rest days bridge the gaps.',
+  'ach.dix-heures.name': 'Ten hours for you',
+  'ach.dix-heures.desc': 'Add up 10 hours of activities in total.',
+  'ach.cinquante-heures.name': 'Fifty hours',
+  'ach.cinquante-heures.desc': 'Add up 50 hours of activities in total.',
+  'ach.cent-heures.name': 'A hundred hours',
+  'ach.cent-heures.desc': 'Add up 100 hours of activities in total.',
+  'ach.hameau.name': 'Hamlet',
+  'ach.hameau.desc': 'Gather 10 items in your town.',
+  'ach.village.name': 'Village',
+  'ach.village.desc': 'Gather 25 items in your town.',
+  'ach.petite-ville.name': 'Small town',
+  'ach.petite-ville.desc': 'Gather 50 items in your town.',
+  'ach.grands-espaces.name': 'Wide open spaces',
+  'ach.grands-espaces.desc': 'Expand your town to 11\u00a0×\u00a011 squares.',
+  'ach.main-verte.name': 'Green thumb',
+  'ach.main-verte.desc': 'Plant 10 trees, hedges, flower beds or vegetable patches.',
+  'ach.ca-rayonne.name': 'Shining',
+  'ach.ca-rayonne.desc': 'Raise a building to level 3 by practising its area.',
+  'ach.bon-voisinage.name': 'Good neighbours',
+  'ach.bon-voisinage.desc': 'Discover your first neighbourhood set.',
+  'ach.urbaniste.name': 'Town planner',
+  'ach.urbaniste.desc': 'Discover all 12 neighbourhood sets.',
+  'ach.premiere-merveille.name': 'First wonder',
+  'ach.premiere-merveille.desc': 'Open your first wonder.',
+  'ach.trois-merveilles.name': 'All three wonders',
+  'ach.trois-merveilles.desc': 'Open all three wonders.',
+  'ach.sur-ta-lancee.descHidden': 'Reach 7 active days close together; rest days bridge the gaps.',
+  // Neighbourhood sets
+  'set.coin-lecture.name': 'Reading nook',
+  'set.cocon.name': 'Cosy corner',
+  'set.place-concert.name': 'Concert square',
+  'set.place-marche.name': 'Market square',
+  'set.jardin-japonais.name': 'Japanese garden',
+  'set.quartier-artistes.name': "Artists' quarter",
+  'set.parc-sportif.name': 'Sports park',
+  'set.campus.name': 'Campus',
+  'set.petite-ferme.name': 'Little farm',
+  'set.oasis.name': 'Oasis',
+  'set.nuit-etoilee.name': 'Starry night',
+  'set.fete-foraine.name': 'Funfair',
+  // Wonder stages
+  'wonder.grandarbre.stage1': 'Sprout',
+  'wonder.grandarbre.stage2': 'Young tree',
+  'wonder.grandarbre.stage3': 'Tall tree',
+  'wonder.grandarbre.stage4': 'In bloom',
+  'wonder.phare.stage1': 'Foundations',
+  'wonder.phare.stage2': 'Tower',
+  'wonder.phare.stage3': 'Lantern',
+  'wonder.phare.stage4': 'Opening',
+  'wonder.granderoue.stage1': 'Pylons',
+  'wonder.granderoue.stage2': 'Wheel',
+  'wonder.granderoue.stage3': 'Cabins',
+  'wonder.granderoue.stage4': 'Opening',
 };
 
 
@@ -1810,7 +2051,7 @@ function defaultState() {
     ],
     draw: { pool: 'wishes', current: null, rerolls: 0, filters: { maxMin: 0, energy: 'any', place: 'any' } },
     goals: { minutes: 60, days: 3, cat: 'all', building: '' },
-    personal: { name: '' }, routines: [], routineRun: null, pauses: [],
+    personal: { name: '' }, routines: [], routineRun: null, pauses: [], achievements: {}, sets: {},
     city: {
       size: 7,
       tiles: [
@@ -1935,6 +2176,9 @@ function normalize(raw) {
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))
     .slice(-20).map(p => ({ from: p.from, to: p.to })) : [];
+  // Succès et ensembles obtenus : identifiants connus, dates valides.
+  s.achievements = knownDates(raw.achievements, ACHIEVEMENTS);
+  s.sets = knownDates(raw.sets, SETS);
   const ck = obj(raw.clock);
   s.clock = {
     tz: validTz(ck.tz) ? ck.tz : s.clock.tz,
@@ -1974,9 +2218,12 @@ function normalize(raw) {
       if (ids.has(id)) id = uid();
       cells.add(cell);
       ids.add(id);
-      tiles.push({ id, item: t.item, x, y, at: validTs(t.at) ? t.at : 0, paid: Math.round(num(t.paid, 0, COINS_MAX, 0)) });
+      const tile = { id, item: t.item, x, y, at: validTs(t.at) ? t.at : 0, paid: Math.round(num(t.paid, 0, COINS_MAX, 0)) };
+      // Merveille : étape de 1 à 4, pièces payées recalculées d'après l'étape.
+      if (isWonder(t.item)) { tile.stage = int(t.stage, 1, 4, 1); tile.paid = wonderPaid(t.item, tile.stage); }
+      tiles.push(tile);
     }
-    s.city = { size, tiles };
+    s.city = { size, tiles: splitWonders(tiles).kept };
   }
   const sts = obj(raw.stats), bc = obj(sts.byCat), days = obj(sts.days);
   s.stats = { byCat: {}, ok: int(sts.ok, 0, 1e7, 0), ko: int(sts.ko, 0, 1e7, 0), days: {}, dailyCats: {} };
@@ -2035,6 +2282,34 @@ function normalize(raw) {
    Les compteurs s'additionnent, les listes et la ville se fusionnent par identifiant. */
 // Une suppression gagne sur une édition concurrente. Pour un même champ édité
 // des deux côtés, le maximum JSON est un départage stable, indépendant de l'onglet.
+// Dates d'obtention (succès, ensembles) dont l'identifiant figure dans la table donnée.
+function knownDates(raw, table) {
+  const ids = new Set(table.map(x => x.id));
+  return Object.fromEntries(Object.entries(obj(raw)).filter(([id, at]) => ids.has(id) && validTs(at)));
+}
+// Une case par merveille : l'étape la plus haute, puis la plus ancienne, puis le plus petit identifiant.
+function splitWonders(tiles) {
+  const rank = (a, b) => (b.stage - a.stage) || (a.at - b.at) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const best = new Map(), dropped = [];
+  for (const tile of tiles) {
+    if (!isWonder(tile.item)) continue;
+    const cur = best.get(tile.item);
+    if (!cur) best.set(tile.item, tile);
+    else if (rank(tile, cur) < 0) { dropped.push(cur); best.set(tile.item, tile); }
+    else dropped.push(tile);
+  }
+  return { kept: tiles.filter(tile => !dropped.includes(tile)), dropped };
+}
+// Dates d'obtention : on part de l'autre version et on y ajoute ce que cet onglet a obtenu depuis la base.
+// Une date des deux côtés garde la plus ancienne ; ce qu'une remise à zéro a effacé ne revient pas.
+function mergeDates(B, L, R) {
+  const out = Object.assign({}, R || {});
+  for (const [id, at] of Object.entries(L || {})) {
+    if ((B || {})[id] === at) continue;
+    out[id] = id in out ? Math.min(out[id], at) : at;
+  }
+  return out;
+}
 function mergeFields(B, L, R, conflicts = [], label = '') {
   const out = clone(R), equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   for (const key of new Set([...Object.keys(B || {}), ...Object.keys(L || {})])) {
@@ -2070,19 +2345,29 @@ function mergeCity(B, L, R) {
   const taken = (rx, ry, except) => { for (const t of out.values()) if (t.id !== except && t.rx === rx && t.ry === ry) return true; return false; };
   const freeSpot = () => { for (let ry = -lim; ry <= lim; ry++) for (let rx = -lim; rx <= lim; rx++) if (!taken(rx, ry)) return [rx, ry]; return null; };
   for (const id of bm.keys()) if (!lm.has(id)) out.delete(id);
+  let refund = 0;
   for (const [id, lt] of lm) {
     const bt = bm.get(id), cur = out.get(id);
     if (bt && cur && (bt.rx !== lt.rx || bt.ry !== lt.ry) && inside(lt.rx, lt.ry) && !taken(lt.rx, lt.ry, id)) out.set(id, Object.assign({}, cur, { rx: lt.rx, ry: lt.ry }));
+    // Une merveille agrandie ici garde l'étape la plus haute ; une étape payée des deux côtés est rendue une fois.
+    const now = out.get(id), sb = bt ? bt.stage || 0 : 0, sl = lt.stage || 0;
+    if (bt && now && sl > sb) {
+      const sr = now.stage || 0;
+      if (sr > sb) refund += wonderPaid(lt.item, Math.min(sl, sr)) - wonderPaid(lt.item, sb);
+      out.set(id, Object.assign({}, now, { stage: Math.max(sl, sr) }));
+    }
   }
-  let refund = 0;
   for (const [id, lt] of lm) {
     if (bm.has(id) || out.has(id)) continue;
     const spot = inside(lt.rx, lt.ry) && !taken(lt.rx, lt.ry) ? [lt.rx, lt.ry] : freeSpot();
     if (spot) out.set(id, Object.assign({}, lt, { rx: spot[0], ry: spot[1] }));
     else refund += lt.paid || 0;
   }
-  const tiles = [...out.values()].map(t => ({ id: t.id, item: t.item, x: t.rx + off(N), y: t.ry + off(N), at: t.at, paid: t.paid || 0 }));
-  return { size: N, tiles, refund };
+  const tiles = [...out.values()].map(t => Object.assign({ id: t.id, item: t.item, x: t.rx + off(N), y: t.ry + off(N), at: t.at, paid: t.paid || 0 }, t.stage ? { stage: t.stage } : {}));
+  // Une même merveille commencée sur deux onglets : la plus avancée reste, l'autre est remboursée.
+  const { kept, dropped } = splitWonders(tiles);
+  for (const tile of dropped) refund += tile.paid || 0;
+  return { size: N, tiles: kept, refund };
 }
 function mergeEffort(B, L, R) {
   const out = clone(R), delta = (l, b) => (l || 0) - (b || 0);
@@ -2175,6 +2460,8 @@ function merge3(B, L, R) {
   if (JSON.stringify(L.pauses) !== JSON.stringify(B.pauses)) M.pauses = clone(L.pauses);
   const city = mergeCity(B.city, L.city, R.city);
   M.city = { size: city.size, tiles: city.tiles };
+  M.achievements = mergeDates(B.achievements, L.achievements, R.achievements);
+  M.sets = mergeDates(B.sets, L.sets, R.sets);
   M.coins = clamp(M.coins + city.refund, 0, COINS_MAX);
   const la = L.active, ba = B.active, ra = R.active;
   const ended = new Set(M.history.map(e => e.id));

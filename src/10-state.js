@@ -38,7 +38,7 @@ function defaultState() {
     ],
     draw: { pool: 'wishes', current: null, rerolls: 0, filters: { maxMin: 0, energy: 'any', place: 'any' } },
     goals: { minutes: 60, days: 3, cat: 'all', building: '' },
-    personal: { name: '' }, routines: [], routineRun: null, pauses: [],
+    personal: { name: '' }, routines: [], routineRun: null, pauses: [], achievements: {}, sets: {},
     city: {
       size: 7,
       tiles: [
@@ -163,6 +163,9 @@ function normalize(raw) {
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))
     .slice(-20).map(p => ({ from: p.from, to: p.to })) : [];
+  // Succès et ensembles obtenus : identifiants connus, dates valides.
+  s.achievements = knownDates(raw.achievements, ACHIEVEMENTS);
+  s.sets = knownDates(raw.sets, SETS);
   const ck = obj(raw.clock);
   s.clock = {
     tz: validTz(ck.tz) ? ck.tz : s.clock.tz,
@@ -202,9 +205,12 @@ function normalize(raw) {
       if (ids.has(id)) id = uid();
       cells.add(cell);
       ids.add(id);
-      tiles.push({ id, item: t.item, x, y, at: validTs(t.at) ? t.at : 0, paid: Math.round(num(t.paid, 0, COINS_MAX, 0)) });
+      const tile = { id, item: t.item, x, y, at: validTs(t.at) ? t.at : 0, paid: Math.round(num(t.paid, 0, COINS_MAX, 0)) };
+      // Merveille : étape de 1 à 4, pièces payées recalculées d'après l'étape.
+      if (isWonder(t.item)) { tile.stage = int(t.stage, 1, 4, 1); tile.paid = wonderPaid(t.item, tile.stage); }
+      tiles.push(tile);
     }
-    s.city = { size, tiles };
+    s.city = { size, tiles: splitWonders(tiles).kept };
   }
   const sts = obj(raw.stats), bc = obj(sts.byCat), days = obj(sts.days);
   s.stats = { byCat: {}, ok: int(sts.ok, 0, 1e7, 0), ko: int(sts.ko, 0, 1e7, 0), days: {}, dailyCats: {} };
@@ -263,6 +269,34 @@ function normalize(raw) {
    Les compteurs s'additionnent, les listes et la ville se fusionnent par identifiant. */
 // Une suppression gagne sur une édition concurrente. Pour un même champ édité
 // des deux côtés, le maximum JSON est un départage stable, indépendant de l'onglet.
+// Dates d'obtention (succès, ensembles) dont l'identifiant figure dans la table donnée.
+function knownDates(raw, table) {
+  const ids = new Set(table.map(x => x.id));
+  return Object.fromEntries(Object.entries(obj(raw)).filter(([id, at]) => ids.has(id) && validTs(at)));
+}
+// Une case par merveille : l'étape la plus haute, puis la plus ancienne, puis le plus petit identifiant.
+function splitWonders(tiles) {
+  const rank = (a, b) => (b.stage - a.stage) || (a.at - b.at) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const best = new Map(), dropped = [];
+  for (const tile of tiles) {
+    if (!isWonder(tile.item)) continue;
+    const cur = best.get(tile.item);
+    if (!cur) best.set(tile.item, tile);
+    else if (rank(tile, cur) < 0) { dropped.push(cur); best.set(tile.item, tile); }
+    else dropped.push(tile);
+  }
+  return { kept: tiles.filter(tile => !dropped.includes(tile)), dropped };
+}
+// Dates d'obtention : on part de l'autre version et on y ajoute ce que cet onglet a obtenu depuis la base.
+// Une date des deux côtés garde la plus ancienne ; ce qu'une remise à zéro a effacé ne revient pas.
+function mergeDates(B, L, R) {
+  const out = Object.assign({}, R || {});
+  for (const [id, at] of Object.entries(L || {})) {
+    if ((B || {})[id] === at) continue;
+    out[id] = id in out ? Math.min(out[id], at) : at;
+  }
+  return out;
+}
 function mergeFields(B, L, R, conflicts = [], label = '') {
   const out = clone(R), equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   for (const key of new Set([...Object.keys(B || {}), ...Object.keys(L || {})])) {
@@ -298,19 +332,29 @@ function mergeCity(B, L, R) {
   const taken = (rx, ry, except) => { for (const t of out.values()) if (t.id !== except && t.rx === rx && t.ry === ry) return true; return false; };
   const freeSpot = () => { for (let ry = -lim; ry <= lim; ry++) for (let rx = -lim; rx <= lim; rx++) if (!taken(rx, ry)) return [rx, ry]; return null; };
   for (const id of bm.keys()) if (!lm.has(id)) out.delete(id);
+  let refund = 0;
   for (const [id, lt] of lm) {
     const bt = bm.get(id), cur = out.get(id);
     if (bt && cur && (bt.rx !== lt.rx || bt.ry !== lt.ry) && inside(lt.rx, lt.ry) && !taken(lt.rx, lt.ry, id)) out.set(id, Object.assign({}, cur, { rx: lt.rx, ry: lt.ry }));
+    // Une merveille agrandie ici garde l'étape la plus haute ; une étape payée des deux côtés est rendue une fois.
+    const now = out.get(id), sb = bt ? bt.stage || 0 : 0, sl = lt.stage || 0;
+    if (bt && now && sl > sb) {
+      const sr = now.stage || 0;
+      if (sr > sb) refund += wonderPaid(lt.item, Math.min(sl, sr)) - wonderPaid(lt.item, sb);
+      out.set(id, Object.assign({}, now, { stage: Math.max(sl, sr) }));
+    }
   }
-  let refund = 0;
   for (const [id, lt] of lm) {
     if (bm.has(id) || out.has(id)) continue;
     const spot = inside(lt.rx, lt.ry) && !taken(lt.rx, lt.ry) ? [lt.rx, lt.ry] : freeSpot();
     if (spot) out.set(id, Object.assign({}, lt, { rx: spot[0], ry: spot[1] }));
     else refund += lt.paid || 0;
   }
-  const tiles = [...out.values()].map(t => ({ id: t.id, item: t.item, x: t.rx + off(N), y: t.ry + off(N), at: t.at, paid: t.paid || 0 }));
-  return { size: N, tiles, refund };
+  const tiles = [...out.values()].map(t => Object.assign({ id: t.id, item: t.item, x: t.rx + off(N), y: t.ry + off(N), at: t.at, paid: t.paid || 0 }, t.stage ? { stage: t.stage } : {}));
+  // Une même merveille commencée sur deux onglets : la plus avancée reste, l'autre est remboursée.
+  const { kept, dropped } = splitWonders(tiles);
+  for (const tile of dropped) refund += tile.paid || 0;
+  return { size: N, tiles: kept, refund };
 }
 function mergeEffort(B, L, R) {
   const out = clone(R), delta = (l, b) => (l || 0) - (b || 0);
@@ -403,6 +447,8 @@ function merge3(B, L, R) {
   if (JSON.stringify(L.pauses) !== JSON.stringify(B.pauses)) M.pauses = clone(L.pauses);
   const city = mergeCity(B.city, L.city, R.city);
   M.city = { size: city.size, tiles: city.tiles };
+  M.achievements = mergeDates(B.achievements, L.achievements, R.achievements);
+  M.sets = mergeDates(B.sets, L.sets, R.sets);
   M.coins = clamp(M.coins + city.refund, 0, COINS_MAX);
   const la = L.active, ba = B.active, ra = R.active;
   const ended = new Set(M.history.map(e => e.id));
