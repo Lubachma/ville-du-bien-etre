@@ -137,6 +137,70 @@ async function shoot(browser, baseURL, name, seed, { width = 560, height = 1000,
   console.log('planche :', path.relative(root, path.join(out, name)));
 }
 
+// Rituels, à une date fixée : le bilan de la semaine (mardi 27 octobre 2026), le récapitulatif d'octobre et son image partagée
+// (lundi 2 novembre), la ville d'une amie en grand, et les cartes du Journal (défis, semaine, mois, humeur).
+async function ritualBoards(browser, baseURL) {
+  const { filledWeek } = require('./rituals-browser.cjs');
+  // La semaine pleine des tests, puis trois séances de plus avec leur humeur ; les statistiques suivent les séances.
+  const withMoods = () => {
+    const seed = filledWeek(), moods = [4, 5, 3, 4, 5];
+    const extra = [['2026-10-27', 'calme', 15, 5], ['2026-10-29', 'corps', 25, 4], ['2026-10-31', 'calme', 20, 4]].map(([d, cat, min, mood]) =>
+      ({ id: 'x' + d, name: 'Pratique ' + cat, cat, min, ok: true, reward: min * 1e6, at: Date.parse(d + 'T17:00:00Z'), day: d, source: 'direct', mode: 'focus', mood }));
+    const history = [...extra.reverse(), ...seed.history.map((e, i) => ({ ...e, mood: moods[i] }))];
+    const stats = { ok: history.length, byCat: {}, days: {}, dailyCats: {} };
+    for (const e of history) {
+      stats.byCat[e.cat] = (stats.byCat[e.cat] || 0) + e.min;
+      stats.days[e.day] = (stats.days[e.day] || 0) + e.min;
+      stats.dailyCats[e.day] = { ...stats.dailyCats[e.day], [e.cat]: ((stats.dailyCats[e.day] || {})[e.cat] || 0) + e.min };
+    }
+    return { ...seed, history, stats };
+  };
+  const open = async (time, state, { height = 844, hash = '#debug', noShare = false } = {}) => {
+    const page = await browser.newPage({ viewport: { width: 390, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich', serviceWorkers: 'block' });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.clock.setFixedTime(new Date(time));
+    await page.addInitScript(([seed, shareOff]) => {
+      window.__VILLE_DEBUG__ = true;
+      localStorage.setItem('ville-bien-etre/v2', JSON.stringify(seed));
+      if (shareOff) navigator.canShare = () => false;
+    }, [state, noShare]);
+    await page.goto(baseURL + hash);
+    await page.waitForFunction(() => !!window.__ville);
+    await page.evaluate(() => { const toast = document.querySelector('#toast'); if (toast) toast.hidden = true; });
+    return { page, errors };
+  };
+  const done = async ({ page, errors }, name, image = true) => {
+    await page.close();
+    if (errors.length) throw new Error(name + ' : ' + errors.join(' | '));
+    if (image) console.log('planche :', path.relative(root, path.join(out, name)));
+  };
+  const unseen = { rituals: { week: '', month: '', year: '' } };
+  let shot = await open('2026-10-27T09:00:00Z', { ...withMoods(), ...unseen }, { height: 1500 });
+  await shot.page.locator('#sheet').screenshot({ path: path.join(out, 'bilan.png') });
+  await done(shot, 'bilan.png');
+  shot = await open('2026-11-02T09:00:00Z', { ...withMoods(), ...unseen }, { height: 1500, noShare: true });
+  await shot.page.locator('#sheet').screenshot({ path: path.join(out, 'recap.png') });
+  const [download] = await Promise.all([shot.page.waitForEvent('download'), shot.page.locator('#sheetBody').getByRole('button', { name: "Partager l'image", exact: true }).click()]);
+  await download.saveAs(path.join(out, 'recap-image.png'));
+  await done(shot, 'recap.png');
+  console.log('planche :', path.relative(root, path.join(out, 'recap-image.png')));
+  // La ville de Léa, lue dans un premier onglet, puis ouverte par son lien.
+  const friend = await open('2026-11-02T09:00:00Z', { ...town(9, lay(['grandarbre', 'bibliotheque', 'maison', 'boulangerie', 'kiosque', 'cerisier', 'fontaine', 'banc', 'arbre', 'fleurs', 'etang', 'lampadaire'], 9, 4)),
+    personal: { name: 'La ville de Léa' }, rituals: { week: '9999-12-31', month: '9999-12', year: '9999' } });
+  const code = await friend.page.evaluate(() => window.__ville.share.encode());
+  await done(friend, 'ville de Léa', false);
+  shot = await open('2026-11-02T09:00:00Z', { ...withMoods(), rituals: { week: '2026-10-26', month: '2026-10', year: '' } }, { hash: '#ville=' + code });
+  await shot.page.locator('#cityBig').waitFor();
+  await shot.page.waitForTimeout(300);
+  await shot.page.screenshot({ path: path.join(out, 'visite.png') });
+  await done(shot, 'visite.png');
+  shot = await open('2026-11-02T09:00:00Z', { ...withMoods(), rituals: { week: '2026-10-26', month: '2026-10', year: '' } }, { height: 2600 });
+  await shot.page.locator('[data-tab="journal"]').click();
+  await shot.page.locator('#view-journal').screenshot({ path: path.join(out, 'journal-rituels.png') });
+  await done(shot, 'journal-rituels.png');
+}
+
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const server = http.createServer(async (req, res) => {
@@ -162,6 +226,7 @@ async function shoot(browser, baseURL, name, seed, { width = 560, height = 1000,
     await shoot(browser, baseURL, 'ville-320.png', town(7, lay(NEW_ITEMS, 7)), { width: 320, height: 568, scale: 3 });
     await shoot(browser, baseURL, 'vignettes.png', town(7, []), { height: 2600, carnet: true });
     await lifeBoards(browser, baseURL);
+    await ritualBoards(browser, baseURL);
     await measure(browser, baseURL);
   } finally {
     await browser.close();

@@ -8,7 +8,7 @@
 
 **[▶ Try it live](https://lubachma.github.io/ville-du-bien-etre/)** — nothing to install, no account. In English or French.
 
-100 % local — your city stays on your device (browser storage). Installable on iPhone and Android, works offline. Made to be shared with friends: everyone keeps their own city.
+100 % local — your city stays on your device (browser storage). Installable on iPhone and Android, works offline. Made to be shared with friends: everyone keeps their own city, and visits the others' with a simple link.
 
 [![Deploy](https://github.com/Lubachma/ville-du-bien-etre/actions/workflows/pages.yml/badge.svg)](https://github.com/Lubachma/ville-du-bien-etre/actions/workflows/pages.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -38,8 +38,13 @@
 | 🌤️ **Living town** | The town follows its own time zone: dawn, daytime, golden hour, dusk and a starry night. Four seasons (hemisphere guessed or chosen), a weather of the day (sun, clouds, rain, snow, fog, a rainbow after the rain), chimney smoke and summer fireflies. Residents stroll around, and one of them does the same activity as you today. Tap the town to see it full screen, with zoom (up to × 3) and panning. Nothing decays when you stay away |
 | 🦔 **Visitors** | 12 visitors drop by about 5 days out of 7, depending on the season, the weather and what your town offers them (a bench, a pond, a bandstand…). Tap them to meet them and receive a small gift (2 M); the notebook keeps the ones you met and gives a hint for the others |
 | 🎉 **Festivals** | Six festivals a year, including your town's birthday: bunting, a decor for each festival and, on the first visit, a gift (5 M, 10 M for the birthday). Nothing is time-limited: festivals come back every year |
-| 📒 **Journal** | Today, streak, time done, 7-day chart, progress per domain, latest sessions |
-| 🏆 **Collection and achievements** | A notebook in the Journal: 38 achievements (first steps, domains, times of day, regularity, time, city, living town), 5 of which give a decoration; the collection of all 50 items, the sets discovered, the visitors met and the festivals celebrated. An existing city receives the achievements it already earned in one go |
+| 🗓️ **Weekly challenges** | Every week, three small challenges sized to you (practice, moments, discovery), based on your past weeks: 5 M each, and one challenge you can swap once a week. Nothing is lost if you don't make it |
+| 📬 **Weekly review** | At the start of the week, “Your week”: practice time, active days, domains, highlights, the goal and the progress on the week before, always put positively; then the challenges of the week ahead. The card stays at the top of the Journal |
+| 🙂 **Mood** | After a session, “How do you feel?” in one tap (five faces, or “Skip”). The Journal shows what makes you feel good, domain by domain, and a gentle card when the last sessions have been hard. Moods stay on the device, never in a link or a picture |
+| 💌 **A friend's town** | “Share my town” sends a link that carries the town, with no server. Your friend visits it full screen, under their own sky, and keeps its postcard in the notebook; a received link can also be pasted into the app |
+| 📅 **Recaps** | Each new month, “October 2026”: figures, domains, highlights and what happened in the town; in January, the whole year. A 1080 × 1350 picture to share, without moods |
+| 📒 **Journal** | Today, streak, reviews and recaps, weekly goal and challenges, 7-day chart, progress per domain, what makes you feel good, latest sessions |
+| 🏆 **Collection and achievements** | A notebook in the Journal: 42 achievements (first steps, domains, times of day, regularity, time, city, living town, rituals), 5 of which give a decoration; the collection of all 50 items, the sets discovered, the visitors met, the festivals celebrated and the postcards of friends' towns. An existing city receives the achievements it already earned in one go |
 | 🌱 **Kind streak** | 0 to 2 rest days per week, a pause mode, a +20 % welcome-back gift after a break, and never a guilt message. The streak can be hidden; its bonus still applies |
 | 🌍 **Languages** | English and French, following the phone or chosen in the settings. Switching is instant, without a reload; example activities you haven't renamed follow the language |
 | 💾 **Backups** | Export to a file (on iPhone: “Save to Files”) or a text, restore on another device; a reminder appears after 14 days |
@@ -50,6 +55,7 @@
 - 🔥 **Streak**: +10 % per active day, up to +50 %; rest days (2 per week by default) and pauses keep it going
 - 🌅 **Welcome back**: +20 % on the first session that starts a new streak, after at least 2 days without one
 - 🎲 **Draw**: first draw accepted +20 % (wish) or +50 % (chore) from 3 available ideas, halved on each paid re-roll
+- 🗓️ **Challenges**: 5 M per challenge completed, up to 15 M a week
 - 🧭 **5 domains** — Mind, Body, Calm, Home, Creativity (Esprit, Corps, Calme, Foyer, Créativité in French) — each unlocking its own buildings, then the Clock Tower after 1,000 minutes in total and the wonders from 1,500
 
 ## ⚙️ Settings
@@ -58,6 +64,7 @@
 - **Sessions**: grace period (5, 10 or 20 s), keep the screen on, end sound (chime, bowl or bells; soft, normal or loud), vibration.
 - **Streak**: rest days per week, pause, hide the streak.
 - **Week and reminder**: the week starts on Monday or Sunday; a daily reminder added to your calendar (`.ics` file or Google Calendar) — the app itself sends no notifications.
+- **Rituals**: reviews at the start of the week and month (turned off, they no longer open by themselves and stay in the Journal), weekly challenges, asking how you feel after a session.
 - **Appearance**: theme (auto, day, night), **town sky** (time of day or match appearance), **seasons** (automatic, northern or southern hemisphere) and **living town** (turning it off stops continuous motion to save battery).
 - **Strict mode** (Guided Access or app pinning), **backup** and **start over**.
 
@@ -72,6 +79,7 @@ Install it before you start: a city started in a browser tab doesn't move to the
 ## 🔒 Data & privacy
 
 - Progress stays in the browser's local storage. No account, no analytics, no ads; the host only receives the requests needed to download the site, never your activities.
+- **A town link** only carries your town's name, the size of the land, its items (type, place, wonder stage, level), the Great Tree's flowers and a random identifier — never your minutes, your journal or your moods. It travels in the address fragment (`#ville=…`), which browsers don't send to the host.
 - **Settings → Backup** exports a file or a text and restores it on another device. Clearing browser data or uninstalling the app can delete the city — keep a copy.
 - **VBE1** backups (first version) remain importable; **VBE2** exports also carry modes, routines and goals. A running session isn't exported.
 - Progress from the first version is copied to a separate v2 storage without deleting the original, and unreadable data is preserved before any repair.
@@ -98,9 +106,9 @@ The build is a small Node script: it concatenates `src/` into `app.js` and stamp
 |---------|------|
 | `npm run build` | Generates `app.js` and `sw.js` from `src/` |
 | `npm run check` | JavaScript syntax and manifest validation |
-| `npm test` | Unit tests (node:test): rules, streak, translations, storage, merges, sessions, backups, calendar reminder, achievements, sets, wonders, living town (time, seasons, weather, visitors, festivals), drawings |
-| `npm run test:browser` | Playwright scenarios: mobile layouts, offline under the Pages subpath, sessions, migration, updates, languages, streak, sound, reminder, notebook, wonders, shop and placement, living town (sky, light animation loop, residents, visitor, festival, settings) |
-| `npm run board` | Drawing board in `test-results/planche/`: city by day and by night, wonders by stage, a 320 px screen, notebook thumbnails, times of day, seasons, weather, visitors and festivals; drawing time of one frame with a 4× slower processor |
+| `npm test` | Unit tests (node:test): rules, streak, translations, storage, merges, sessions, backups, calendar reminder, achievements, sets, wonders, living town (time, seasons, weather, visitors, festivals), challenges, reviews and recaps, mood, town links and postcards, drawings |
+| `npm run test:browser` | Playwright scenarios: mobile layouts, offline under the Pages subpath, sessions, migration, updates, languages, streak, sound, reminder, notebook, wonders, shop and placement, living town (sky, light animation loop, residents, visitor, festival, settings), rituals (challenges, review, mood, recaps and their picture, visiting a friend's town, sharing, postcards, settings) |
+| `npm run board` | Drawing board in `test-results/planche/`: city by day and by night, wonders by stage, a 320 px screen, notebook thumbnails, times of day, seasons, weather, visitors and festivals, rituals (review, recap and its picture, visit, Journal); drawing time of one frame with a 4× slower processor |
 | `npm run serve` | Local server on port 8766 |
 | `npm run package` | Prepares the deployable `dist/` folder |
 
@@ -127,6 +135,9 @@ src/
 ├── 22-sets.js          # neighbourhood sets: detection, paving, discovery
 ├── 23-achievements.js  # achievements: conditions, progress, dates
 ├── 24-ambient.js       # living town: town time, seasons, weather, festivals, visitor of the day, residents
+├── 25-challenges.js    # weekly challenges: draw, targets, progress, reward
+├── 26-summaries.js     # reviews and recaps: summary of a period, review due, mood
+├── 27-share.js         # town link: compact code, careful reading, postcards
 ├── 30-paint.js         # isometric painter and the drawings of the first 22 items
 ├── 31-paint-buildings.js # drawings of the 15 new buildings
 ├── 32-paint-decor.js   # drawings of the 10 new decorations
@@ -144,8 +155,10 @@ src/
 ├── 48-status.js        # storage and update banners, help
 ├── 49-reminder.js      # daily reminder: .ics file and Google Calendar link
 ├── 50-session.js       # timer, focus and free modes, anti-cheat, end and placement sounds
-├── 52-carnet.js        # notebook (achievements, collection, sets, visits), celebrations, catch-up
+├── 52-carnet.js        # notebook (achievements, collection, sets, visits and friends' towns), celebrations, catch-up
 ├── 53-visits.js        # visitor of the day, festivals, seasons seen, town caption
+├── 54-rituals.js       # challenges, reviews, recaps and their picture, mood (interface)
+├── 55-share.js         # share your town, visit a friend's town, pasted link
 ├── 60-boot.js          # events and startup
 └── 70-install.js       # install prompt, offline cache, updates
 scripts/                # build, check, package, serve, service worker template

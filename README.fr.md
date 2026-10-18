@@ -8,7 +8,7 @@
 
 **[▶ Ouvrir l’app](https://lubachma.github.io/ville-du-bien-etre/)** — rien à installer, pas de compte. En français ou en anglais.
 
-100 % local — ta ville reste sur ton appareil (stockage du navigateur). Installable sur iPhone et Android, fonctionne hors connexion. Pensée pour être partagée entre amis : chacun garde sa propre ville.
+100 % local — ta ville reste sur ton appareil (stockage du navigateur). Installable sur iPhone et Android, fonctionne hors connexion. Pensée pour être partagée entre amis : chacun garde sa propre ville, et visite celle des autres par un simple lien.
 
 [![Déploiement](https://github.com/Lubachma/ville-du-bien-etre/actions/workflows/pages.yml/badge.svg)](https://github.com/Lubachma/ville-du-bien-etre/actions/workflows/pages.yml)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
@@ -38,8 +38,13 @@
 | 🌤️ **Ville vivante** | La ville suit l’heure de son fuseau : aube, journée, fin d’après-midi, crépuscule et nuit étoilée. Quatre saisons (hémisphère deviné ou choisi), une météo du jour (soleil, nuages, pluie, neige, brouillard, arc-en-ciel après la pluie), de la fumée aux cheminées et des lucioles l’été. Des habitants s’y promènent, et l’un d’eux fait la même activité que toi aujourd’hui. Un toucher sur la ville l’ouvre en grand, avec zoom (jusqu’à × 3) et glissement. Rien ne se dégrade quand tu ne viens pas |
 | 🦔 **Visiteurs** | 12 visiteurs de passage, environ 5 jours sur 7, selon la saison, la météo et ce que ta ville leur offre (un banc, un étang, un kiosque…). On les touche pour les rencontrer et recevoir un petit cadeau (2 M) ; le carnet garde ceux qu’on a rencontrés et donne un indice pour les autres |
 | 🎉 **Fêtes** | Six fêtes par an, dont l’anniversaire de ta ville : des fanions, un décor propre à chaque fête et, à la première ouverture, un cadeau (5 M, 10 M pour l’anniversaire). Aucun objet à durée limitée : les fêtes reviennent chaque année |
-| 📒 **Journal** | Aujourd’hui, série, temps effectué, graphique des 7 derniers jours, progression par domaine, dernières sessions |
-| 🏆 **Collection et succès** | Un carnet dans le Journal : 38 succès (premiers pas, domaines, moments de la journée, régularité, temps, ville, ville vivante), dont 5 qui offrent un décor ; la collection des 50 éléments, les ensembles découverts, les visiteurs rencontrés et les fêtes vécues. Une ville existante reçoit d’un coup les succès déjà mérités |
+| 🗓️ **Défis de la semaine** | Chaque semaine, trois petits défis à ta mesure (pratique, moments, découverte), calculés sur tes semaines passées : 5 M chacun, et un défi qu’on peut changer une fois par semaine. Rien n’est perdu si on n’y arrive pas |
+| 📬 **Bilan de la semaine** | Au début de la semaine, « Ta semaine » : temps de pratique, jours actifs, domaines, beaux moments, objectif et progrès sur la semaine d’avant, toujours dits en positif ; puis les défis de la semaine qui commence. La carte reste en haut du Journal |
+| 🙂 **Humeur** | Après une séance, « Comment te sens-tu ? » en un toucher (cinq visages, ou « Passer »). Le Journal montre ce qui te fait du bien, domaine par domaine, et une carte douce quand les dernières séances ont été difficiles. L’humeur reste sur l’appareil, jamais dans un lien ni dans une image |
+| 💌 **Ville d’un ami** | « Partager ma ville » envoie un lien qui contient la ville, sans serveur. L’ami la visite en grand, sous son propre ciel, et garde sa carte postale dans le carnet ; un lien reçu peut aussi se coller dans l’app |
+| 📅 **Récapitulatifs** | À chaque nouveau mois, « Octobre 2026 » : chiffres, domaines, beaux moments et ce qui est arrivé à la ville ; en janvier, toute l’année. Une image de 1080 × 1350 à partager, sans l’humeur |
+| 📒 **Journal** | Aujourd’hui, série, bilans et récapitulatifs, objectif et défis de la semaine, graphique des 7 derniers jours, progression par domaine, ce qui te fait du bien, dernières sessions |
+| 🏆 **Collection et succès** | Un carnet dans le Journal : 42 succès (premiers pas, domaines, moments de la journée, régularité, temps, ville, ville vivante, rituels), dont 5 qui offrent un décor ; la collection des 50 éléments, les ensembles découverts, les visiteurs rencontrés, les fêtes vécues et les cartes postales des villes amies. Une ville existante reçoit d’un coup les succès déjà mérités |
 | 🌱 **Série bienveillante** | 0 à 2 jours de repos par semaine, un mode pause, un cadeau de bon retour (+20 %) après une coupure, et jamais de message culpabilisant. La série peut être masquée ; son bonus continue de s’appliquer |
 | 🌍 **Langues** | Français et anglais, selon le téléphone ou au choix dans les réglages. Le changement est immédiat, sans recharger ; les exemples d’activités jamais renommés suivent la langue |
 | 💾 **Sauvegardes** | Export en fichier (sur iPhone : « Enregistrer dans Fichiers ») ou en texte, restauration sur un autre appareil ; rappel au bout de 14 jours |
@@ -50,6 +55,7 @@
 - 🔥 **Série** : +10 % par jour actif, jusqu’à +50 % ; les jours de repos (2 par semaine par défaut) et les pauses la maintiennent
 - 🌅 **Bon retour** : +20 % pour la première session qui relance une série, après au moins 2 jours sans session
 - 🎲 **Tirage** : premier tirage accepté +20 % (envie) ou +50 % (obligation) dès 3 idées disponibles, divisé par deux à chaque relance payante
+- 🗓️ **Défis** : 5 M par défi relevé, au plus 15 M par semaine
 - 🧭 **5 domaines** — Esprit, Corps, Calme, Foyer, Créativité — qui débloquent chacun leurs bâtiments, puis la Tour de l’horloge après 1 000 minutes au total et les merveilles à partir de 1 500
 
 ## ⚙️ Réglages
@@ -58,6 +64,7 @@
 - **Sessions** : tolérance de sortie (5, 10 ou 20 s), écran allumé, son de fin (carillon, bol ou clochettes ; doux, normal ou fort), vibration.
 - **Série** : jours de repos par semaine, pause, série masquée.
 - **Semaine et rappel** : la semaine commence le lundi ou le dimanche ; un rappel quotidien ajouté à ton agenda (fichier `.ics` ou Google Agenda), car l’app elle-même n’envoie pas de notification.
+- **Rituels** : bilans au début de la semaine et du mois (coupés, ils ne s’ouvrent plus d’eux-mêmes et restent dans le Journal), défis de la semaine, humeur demandée après une séance.
 - **Apparence** : thème (auto, jour, nuit), **ciel de la ville** (selon l’heure ou selon l’apparence), **saisons** (automatiques, hémisphère nord ou sud) et **ville animée** (la couper arrête les mouvements continus pour économiser la batterie).
 - **Mode strict** (Accès guidé ou épinglage d’application), **sauvegarde** et **tout recommencer**.
 
@@ -72,6 +79,7 @@ Installer avant de commencer : une ville commencée dans un onglet ne passe pas 
 ## 🔒 Données et confidentialité
 
 - La progression reste dans le stockage local du navigateur. Ni compte, ni analytics, ni publicité ; l’hébergeur reçoit les requêtes nécessaires au téléchargement du site, jamais tes activités.
+- **Un lien de ville** contient seulement le nom de ta ville, la taille du terrain, ses éléments (type, place, étape d’une merveille, niveau), les fleurs du Grand Arbre et un identifiant tiré au hasard : jamais tes minutes, ton journal ni tes humeurs. Il passe par le fragment de l’adresse (`#ville=…`), que le navigateur n’envoie pas à l’hébergeur.
 - **Réglages → Sauvegarde** exporte un fichier ou un texte et le restaure sur un autre appareil. Effacer les données du navigateur ou désinstaller l’app peut supprimer la ville : garde une copie.
 - Les sauvegardes **VBE1** (première version) restent importables ; les exports **VBE2** contiennent aussi les modes, routines et objectifs. Une session en cours n’est pas exportée.
 - La progression de la première version est copiée vers un stockage v2 distinct, sans supprimer l’original, et des données illisibles sont préservées avant toute réparation.
@@ -98,9 +106,9 @@ Le build est un petit script Node : il assemble `src/` en `app.js` et donne au s
 |----------|------|
 | `npm run build` | Génère `app.js` et `sw.js` depuis `src/` |
 | `npm run check` | Syntaxe JavaScript et manifeste |
-| `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda, succès, ensembles, merveilles, ville vivante (heure, saisons, météo, visiteurs, fêtes), dessins |
-| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son, rappel, carnet, merveilles, boutique et pose, ville vivante (ciel, animation sobre, habitants, visiteur, fête, réglages) |
-| `npm run board` | Planche des dessins dans `test-results/planche/` : ville de jour et de nuit, merveilles par étape, écran de 320 px, vignettes du carnet, moments, saisons, météo, visiteurs et fêtes ; temps de dessin d’une image, processeur ralenti 4 fois |
+| `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda, succès, ensembles, merveilles, ville vivante (heure, saisons, météo, visiteurs, fêtes), défis, bilans et récapitulatifs, humeur, lien de ville et cartes postales, dessins |
+| `npm run test:browser` | Parcours Playwright : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son, rappel, carnet, merveilles, boutique et pose, ville vivante (ciel, animation sobre, habitants, visiteur, fête, réglages), rituels (défis, bilan, humeur, récapitulatifs et leur image, visite d’une ville amie, partage, cartes postales, réglages) |
+| `npm run board` | Planche des dessins dans `test-results/planche/` : ville de jour et de nuit, merveilles par étape, écran de 320 px, vignettes du carnet, moments, saisons, météo, visiteurs et fêtes, rituels (bilan, récapitulatif et son image, visite, Journal) ; temps de dessin d’une image, processeur ralenti 4 fois |
 | `npm run serve` | Serveur local sur le port 8766 |
 | `npm run package` | Prépare le dossier publiable `dist/` |
 
@@ -127,6 +135,9 @@ src/
 ├── 22-sets.js          # ensembles de voisinage : repérage, pavage, découverte
 ├── 23-achievements.js  # succès : conditions, progression, dates
 ├── 24-ambient.js       # ville vivante : heure de la ville, saisons, météo, fêtes, visiteur du jour, habitants
+├── 25-challenges.js    # défis de la semaine : tirage, cibles, progression, récompense
+├── 26-summaries.js     # bilans et récapitulatifs : résumé d’une période, bilan dû, humeur
+├── 27-share.js         # lien de ville : code compact, lecture prudente, cartes postales
 ├── 30-paint.js         # pinceau isométrique et dessins des 22 premiers éléments
 ├── 31-paint-buildings.js # dessins des 15 nouveaux bâtiments
 ├── 32-paint-decor.js   # dessins des 10 nouveaux décors
@@ -144,8 +155,10 @@ src/
 ├── 48-status.js        # bandeaux de stockage et de mise à jour, aide
 ├── 49-reminder.js      # rappel quotidien : fichier .ics et lien Google Agenda
 ├── 50-session.js       # chrono, modes Concentration et Activité libre, anti-triche, sons de fin et de pose
-├── 52-carnet.js        # carnet (succès, collection, ensembles, visites), célébrations, rattrapage
+├── 52-carnet.js        # carnet (succès, collection, ensembles, visites et villes amies), célébrations, rattrapage
 ├── 53-visits.js        # visiteur du jour, fêtes, saisons vues, légende de la ville
+├── 54-rituals.js       # défis, bilans, récapitulatifs et leur image, humeur (interface)
+├── 55-share.js         # partager sa ville, visiter une ville amie, lien collé
 ├── 60-boot.js          # événements et démarrage
 └── 70-install.js       # installation, cache hors connexion, mises à jour
 scripts/                # build, vérification, packaging, serveur, modèle du service worker
