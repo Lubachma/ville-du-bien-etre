@@ -165,6 +165,22 @@ const FESTIVALS = [
 ];
 // Cadeaux de la ville vivante, en pièces : visiteur du jour, fête, anniversaire de la ville.
 const GIFTS = { visit: 2e6, fest: 5e6, birthday: 10e6 };
+// Visiteurs : saisons où ils viennent, météo qu'ils aiment, neige récente, endroit où ils se placent (24-ambient.js).
+const VISITORS = [
+  { id: 'chat', weather: ['sun', 'clouds', 'fog'], spot: 'bench' },
+  { id: 'herisson', seasons: ['spring', 'summer', 'autumn'], spot: 'nature' },
+  { id: 'ecureuil', seasons: ['autumn', 'winter'], spot: 'tree' },
+  { id: 'cigogne', seasons: ['spring', 'summer'], spot: 'roof' },
+  { id: 'canards', seasons: ['spring', 'summer', 'autumn'], spot: 'pond' },
+  { id: 'renard', seasons: ['autumn', 'winter'], spot: 'edge' },
+  { id: 'chouette', seasons: ['autumn', 'winter'], spot: 'tree' },
+  { id: 'montgolfiere', seasons: ['spring', 'summer', 'autumn'], weather: ['sun', 'clouds'], spot: 'sky' },
+  { id: 'bonhomme', seasons: ['winter'], snow: true, spot: 'free' },
+  { id: 'glaces', seasons: ['summer'], weather: ['sun', 'clouds'], spot: 'path' },
+  { id: 'accordeon', weather: ['sun', 'clouds', 'fog'], spot: 'kiosk' },
+  { id: 'artiste', seasons: ['spring', 'summer', 'autumn'], weather: ['sun', 'clouds'], spot: 'free' },
+];
+const VISIT_ODDS = .7;               // un visiteur environ 5 jours sur 7
 const SOUTH_TZ = ['Australia/', 'Antarctica/', 'America/Argentina/', 'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu',
   'Pacific/Noumea', 'Pacific/Port_Moresby', 'America/Santiago', 'America/Punta_Arenas', 'America/Sao_Paulo', 'America/Montevideo', 'America/Asuncion',
   'America/La_Paz', 'America/Lima', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Windhoek', 'Africa/Gaborone',

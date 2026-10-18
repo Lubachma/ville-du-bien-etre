@@ -16,7 +16,7 @@ function defaultState() {
   return {
     v: 2, createdAt: now, updatedAt: 0, revision: '',
     coins: 5e6, earned: 0,
-    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false, soundType: 'chime', soundVolume: 'normal', vibrate: true },
+    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false, soundType: 'chime', soundVolume: 'normal', vibrate: true, sky: 'time', hemisphere: 'auto', ambient: true },
     clock: { tz: currentTz(), maxSeen: now, lastDay: '' },
     activities: [
       { id: uid(), name: t('tpl.act.reading'), cat: 'esprit', min: 10 },
@@ -38,7 +38,7 @@ function defaultState() {
     ],
     draw: { pool: 'wishes', current: null, rerolls: 0, filters: { maxMin: 0, energy: 'any', place: 'any' } },
     goals: { minutes: 60, days: 3, cat: 'all', building: '' },
-    personal: { name: '' }, routines: [], routineRun: null, pauses: [], achievements: {}, sets: {},
+    personal: { name: '' }, routines: [], routineRun: null, pauses: [], achievements: {}, sets: {}, visits: {}, gifts: {}, seasons: {},
     city: {
       size: 7,
       tiles: [
@@ -159,6 +159,10 @@ function normalize(raw) {
     soundVolume: own(SOUND_GAIN, st.soundVolume) ? st.soundVolume : 'normal',
     // Avant ce réglage, la vibration suivait le son : une ville au son coupé reste silencieuse.
     vibrate: typeof st.vibrate === 'boolean' ? st.vibrate : st.sound !== false,
+    // Ville vivante : ciel selon l'heure (ou le thème), saisons de l'hémisphère, animation.
+    sky: st.sky === 'theme' ? 'theme' : 'time',
+    hemisphere: ['north', 'south'].includes(st.hemisphere) ? st.hemisphere : 'auto',
+    ambient: st.ambient !== false,
   };
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))
@@ -166,6 +170,10 @@ function normalize(raw) {
   // Succès et ensembles obtenus : identifiants connus, dates valides.
   s.achievements = knownDates(raw.achievements, ACHIEVEMENTS);
   s.sets = knownDates(raw.sets, SETS);
+  // Ville vivante : visiteurs rencontrés, cadeaux reçus (un par clé) et saisons vues.
+  s.visits = knownVisits(raw.visits);
+  s.gifts = Object.fromEntries(Object.entries(obj(raw.gifts)).filter(([key, at]) => GIFT_KEY.test(key) && validTs(at)));
+  s.seasons = Object.fromEntries(Object.entries(obj(raw.seasons)).filter(([season, at]) => SEASONS.includes(season) && validTs(at)));
   const ck = obj(raw.clock);
   s.clock = {
     tz: validTz(ck.tz) ? ck.tz : s.clock.tz,
@@ -270,6 +278,16 @@ function normalize(raw) {
 // Une suppression gagne sur une édition concurrente. Pour un même champ édité
 // des deux côtés, le maximum JSON est un départage stable, indépendant de l'onglet.
 // Dates d'obtention (succès, ensembles) dont l'identifiant figure dans la table donnée.
+// Cadeaux : « visit:AAAA-MM-JJ » pour un visiteur, « fest:<fête>:<année> » pour une fête.
+const GIFT_KEY = new RegExp('^(visit:\\d{4}-\\d{2}-\\d{2}|fest:(' + FESTIVALS.map(f => f.id).join('|') + '):\\d{4})$');
+function knownVisits(raw) {
+  const ids = new Set(VISITORS.map(v => v.id)), out = {};
+  for (const [id, v] of Object.entries(obj(raw))) {
+    const e = obj(v);
+    if (ids.has(id) && validTs(e.first) && isDayKey(e.last)) out[id] = { first: e.first, count: int(e.count, 1, 100000, 1), last: e.last };
+  }
+  return out;
+}
 function knownDates(raw, table) {
   const ids = new Set(table.map(x => x.id));
   return Object.fromEntries(Object.entries(obj(raw)).filter(([id, at]) => ids.has(id) && validTs(at)));
@@ -289,6 +307,15 @@ function splitWonders(tiles) {
 }
 // Dates d'obtention : on part de l'autre version et on y ajoute ce que cet onglet a obtenu depuis la base.
 // Une date des deux côtés garde la plus ancienne ; ce qu'une remise à zéro a effacé ne revient pas.
+// Rencontres de deux onglets : la première date la plus ancienne, le plus de jours, le dernier jour le plus récent.
+function mergeVisits(L, R) {
+  const out = clone(R || {});
+  for (const [id, v] of Object.entries(L || {})) {
+    const r = out[id];
+    out[id] = r ? { first: Math.min(r.first, v.first), count: Math.max(r.count, v.count), last: r.last > v.last ? r.last : v.last } : clone(v);
+  }
+  return out;
+}
 function mergeDates(B, L, R) {
   const out = Object.assign({}, R || {});
   for (const [id, at] of Object.entries(L || {})) {
@@ -449,6 +476,13 @@ function merge3(B, L, R) {
   M.city = { size: city.size, tiles: city.tiles };
   M.achievements = mergeDates(B.achievements, L.achievements, R.achievements);
   M.sets = mergeDates(B.sets, L.sets, R.sets);
+  M.visits = mergeVisits(L.visits, R.visits);
+  M.gifts = mergeDates(B.gifts, L.gifts, R.gifts);
+  M.seasons = mergeDates(B.seasons, L.seasons, R.seasons);
+  // Un cadeau reçu dans les deux onglets à la fois ne compte qu'une fois.
+  if (typeof giftAmount === 'function') {
+    for (const key of Object.keys(L.gifts || {})) if (!(key in (B.gifts || {})) && key in (R.gifts || {})) M.coins -= giftAmount(key);
+  }
   M.coins = clamp(M.coins + city.refund, 0, COINS_MAX);
   const la = L.active, ba = B.active, ra = R.active;
   const ended = new Set(M.history.map(e => e.id));
