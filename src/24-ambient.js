@@ -76,6 +76,11 @@ function festivalsOn(day) {
   }
   return out;
 }
+// Fête d'en face : celle qui tombe aux mêmes dates dans l'autre hémisphère (printemps et récoltes, été et lumières).
+function mirrorOf(id) {
+  const fest = FESTIVALS.find(f => f.id === id), other = fest && fest.north && FESTIVALS.find(f => f !== fest && f.south && f.south.join() === fest.north.join());
+  return other ? other.id : null;
+}
 // Montant d'un cadeau d'après sa clé.
 function giftAmount(key) {
   const k = String(key);

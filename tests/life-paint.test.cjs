@@ -48,6 +48,17 @@ test("petites vies : lucioles les nuits d'été près de l'étang, rien la nuit 
   assert.equal(draw(a, g => a.drawSeasonLife(g, { season: 'winter', moment: night, weather: 'sun' }, 1, AREA, tiles), { dark: 1 }).length, 0, 'hiver la nuit');
 });
 
+test("petites vies : la nuit est celle du dessin, même quand le ciel suit l'apparence", () => {
+  const a = app(), tiles = [{ item: 'etang', x: 0, y: 0 }], summer = name => ({ season: 'summer', moment: { name, t: .5 }, weather: 'sun' });
+  const birds = points => points.some(([, y]) => y < 60), fireflies = points => points.some(([, y]) => y > 150);
+  // Thème Nuit en pleine journée : des lucioles près de l'étang, pas d'oiseaux.
+  const dark = draw(a, g => a.drawSeasonLife(g, summer('day'), 1, AREA, tiles), { dark: 1 });
+  assert.ok(fireflies(dark) && !birds(dark), 'ville sombre');
+  // Thème Jour en pleine nuit : des oiseaux, pas de lucioles.
+  const light = draw(a, g => a.drawSeasonLife(g, summer('night'), 1, AREA, tiles), { dark: 0 });
+  assert.ok(birds(light) && !fireflies(light), 'ville claire');
+});
+
 test('habitants : chacun dessiné près de son point, promeneurs et habitants qui font comme toi', () => {
   const a = app();
   const near = (points, x0, y0, label) => {

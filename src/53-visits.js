@@ -35,7 +35,14 @@ function openVisitor() {
     const gift = S.gifts['visit:' + amb.day]
       ? h('p', { class: 'note' }, t('visit.giftDone'))
       : h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => {
-        if (!claimVisitGift(amb.day)) return;
+        if (!claimVisitGift(amb.day)) {
+          // Minuit est passé pendant que la fiche était ouverte, ou le cadeau a été reçu ailleurs : la fiche se refait pour aujourd'hui.
+          const newDay = amb.day !== today();
+          closeSheet();
+          if (newDay) toast(t('visit.newDay'));
+          openVisitor();
+          return;
+        }
         closeSheet(); commit(); bump();
         toast(t('visit.thanks', { coins: fmt(GIFTS.visit) }));
       } }, icon('sparkle'), t('visit.gift', { coins: fmt(GIFTS.visit) }));
@@ -43,10 +50,16 @@ function openVisitor() {
   });
   if (first) cheer(fresh, t('visit.new', { name: lowerFirst(name) }));
 }
+// La fête d'en face reçue ces jours-ci : changer d'hémisphère pendant une fête montre la même fête vue de l'autre côté,
+// déjà fêtée et déjà offerte.
+function mirrorGiftNear(fest, day) {
+  const mirror = mirrorOf(fest.id), at = mirror && S.gifts['fest:' + mirror + ':' + fest.key.split(':')[2]];
+  return !!at && dayOf(at) >= shiftDay(day, -3) && dayOf(at) <= day;
+}
 // Fêtes du jour, à la première ouverture : un cadeau par fête et par an, et un seul message pour toutes.
 // « Bonne {name} » ne va pas au Nouvel An : il a son propre vœu.
 function greetFestivals(day) {
-  const fresh = festivalsOn(day).filter(f => !S.gifts[f.key]);
+  const fresh = festivalsOn(day).filter(f => !S.gifts[f.key] && !mirrorGiftNear(f, day));
   if (!fresh.length) return [];
   for (const f of fresh) {
     S.gifts[f.key] = nowTs();
@@ -62,10 +75,11 @@ function greetFestivals(day) {
   cheer(progress, lead);
   return fresh.map(f => f.key);
 }
-// Saison du jour, notée la première fois que la ville la vit.
+// Saison du jour, notée la première fois que la ville la vit. Une seule saison nouvelle par jour : après un changement
+// d'hémisphère, la saison d'en face compte dès le lendemain.
 function noteSeason(day) {
   const season = seasonOf(day);
-  if (S.seasons[season]) return false;
+  if (S.seasons[season] || Object.values(S.seasons).some(at => dayOf(at) === day)) return false;
   S.seasons[season] = nowTs();
   return true;
 }

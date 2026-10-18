@@ -128,3 +128,24 @@ test('légende : un visiteur au pluriel s’accorde, en français comme en angla
   assert.equal(a.ambientCaption(amb('canards')), 'Daytime · Sunny · The ducks are passing through');
   assert.equal(a.ambientCaption(amb('herisson')), 'Daytime · Sunny · The hedgehog is passing through');
 });
+
+test("changer d'hémisphère un jour de fête : ni seconde fête ni seconde saison ce jour-là", () => {
+  const messages = [], globals = { commit: () => true, toast: m => messages.push(m) };
+  const a = loadApp(FILES, { expose: EXPOSE, now: '2027-03-21T10:00:00Z', globals });
+  a.state.clock.tz = 'Europe/Zurich'; a.state.clock.maxSeen = 0; a.state.createdAt = Date.parse('2026-05-04T10:00:00Z');
+  const coins = a.state.coins;
+  assert.equal(a.noteSeason('2027-03-21'), true);
+  assert.deepEqual(plain(a.greetFestivals('2027-03-21')), ['fest:printemps:2027']);
+  a.state.settings.hemisphere = 'south';
+  // Au sud, ces jours-là sont ceux de la Fête des récoltes : la même fête vue d'en face, déjà fêtée et déjà offerte.
+  assert.deepEqual(plain(a.greetFestivals('2027-03-21')), []);
+  assert.equal(a.noteSeason('2027-03-21'), false);
+  assert.deepEqual([a.state.coins, messages.length, plain(Object.keys(a.state.seasons))], [coins + 5e6, 1, ['spring']]);
+  // Le lendemain, la ville vit l'automne du sud.
+  assert.equal(a.noteSeason('2027-03-22'), true);
+  // Six mois plus tard, la Fête des récoltes du nord est une autre fête : elle a son cadeau.
+  const b = loadApp(FILES, { expose: EXPOSE, now: '2027-09-22T10:00:00Z', globals });
+  b.state.clock.tz = 'Europe/Zurich'; b.state.clock.maxSeen = 0; b.state.createdAt = Date.parse('2026-05-04T10:00:00Z');
+  b.state.gifts['fest:printemps:2027'] = Date.parse('2027-03-21T10:00:00Z');
+  assert.deepEqual(plain(b.greetFestivals('2027-09-22')), ['fest:recoltes:2027']);
+});

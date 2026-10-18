@@ -55,7 +55,7 @@ function setupAccessibility() {
       return;
     }
     if (e.key !== 'Tab') return;
-    const scope = !$('#sheet').hidden ? $('#sheet') : !$('#session').hidden ? $('#session') : null;
+    const scope = !$('#sheet').hidden ? $('#sheet') : !$('#session').hidden ? $('#session') : !$('#cityBig').hidden ? $('#cityBig') : null;
     if (!scope) return;
     const focusable = $$('button, input, select, textarea, a[href], [tabindex]', scope)
       .filter(el => !el.disabled && el.tabIndex >= 0 && !el.closest('[inert]') && el.getClientRects().length > 0);

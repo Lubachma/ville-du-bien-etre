@@ -89,9 +89,10 @@ function drawWeather(g, amb, t, area, alpha = 1) {
   ctx.restore();
 }
 // Petites vies : pétales au printemps et feuilles à l'automne, lucioles les nuits d'été près de l'étang et des jardins,
-// et un vol d'oiseaux qui traverse le ciel de jour toutes les 40 s, sauf sous la pluie ou la neige.
+// et un vol d'oiseaux qui traverse le ciel de jour toutes les 40 s, sauf sous la pluie ou la neige. La nuit est celle du dessin :
+// l'heure de la ville, ou le thème quand le ciel suit l'apparence.
 function drawSeasonLife(g, amb, t, area, tiles) {
-  const { w, h } = area, ctx = g.ctx, name = amb.moment.name, night = name === 'night' || (name === 'dusk' && amb.moment.t > .5);
+  const { w, h } = area, ctx = g.ctx, night = g.dark > .5;
   if (amb.season === 'spring' || amb.season === 'autumn') {
     const colors = amb.season === 'spring' ? ['#f6b3c8', '#fbe0ea'] : ['#d98a2b', '#c4572f', '#e2b33c'];
     for (let i = 0; i < 10; i++) {

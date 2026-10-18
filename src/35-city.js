@@ -172,8 +172,8 @@ const City = (() => {
     const to = clamp(z, 1, 3), k = to / big.shown;
     const pan = keepInView([px - W / 2 - (px - W / 2 - big.pan[0]) * k, py - H / 2 - (py - H / 2 - big.pan[1]) * k], to);
     big.zoom = to;
-    $('#cityBigIn').disabled = to >= 3;
-    $('#cityBigOut').disabled = to <= 1;
+    $('#cityBigIn').setAttribute('aria-disabled', String(to >= 3));
+    $('#cityBigOut').setAttribute('aria-disabled', String(to <= 1));
     if (smooth && !reducedMotion()) big.anim = { start: performance.now(), from: { z: big.shown, pan: big.pan }, to: { z: to, pan } };
     else { big.anim = null; big.shown = to; big.pan = pan; applyView(); }
     draw();
@@ -191,8 +191,8 @@ const City = (() => {
     renderCityCaption();
     canvas = bigCanvas; ctx = canvas.getContext('2d');
     layout();
-    $('#cityBigIn').disabled = false;
-    $('#cityBigOut').disabled = true;
+    $('#cityBigIn').setAttribute('aria-disabled', 'false');
+    $('#cityBigOut').setAttribute('aria-disabled', 'true');
     updateInert();
     // Le geste retour du téléphone ferme la vue sans quitter l'app.
     try { history.pushState({ cityBig: true }, ''); } catch (e) { /* historique indisponible */ }
@@ -203,6 +203,8 @@ const City = (() => {
   function closeBig(fromHistory) {
     if (!big.open) return;
     if (!fromHistory && history.state && history.state.cityBig) { history.back(); return; }
+    // La fiche du visiteur ouverte par-dessus se ferme avec la vue : le geste retour ferme tout.
+    if (!$('#sheet').hidden) closeSheet();
     big.open = false; big.anim = null; big.pointers.clear();
     $('#cityBig').hidden = true;
     canvas = small; ctx = small.getContext('2d');
@@ -216,7 +218,19 @@ const City = (() => {
   $('#cityBigClose').addEventListener('click', () => closeBig());
   $('#cityBigIn').addEventListener('click', () => zoomAt(big.zoom * 1.5, W / 2, H / 2, true));
   $('#cityBigOut').addEventListener('click', () => zoomAt(big.zoom / 1.5, W / 2, H / 2, true));
-  bigCanvas.addEventListener('wheel', e => { e.preventDefault(); zoomAt(big.zoom * Math.exp(-e.deltaY * .0015), ...point(e), false); }, { passive: false });
+  // Molette : Firefox compte en lignes (deltaMode 1), parfois en pages (2) ; ramené en pixels.
+  bigCanvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? H : 1);
+    zoomAt(big.zoom * Math.exp(-dy * .0015), ...point(e), false);
+  }, { passive: false });
+  // Au clavier, dans la vue en grand : les flèches déplacent la vue, + et − zooment.
+  $('#cityBig').addEventListener('keydown', e => {
+    const step = 48, moves = { ArrowUp: [0, step], ArrowDown: [0, -step], ArrowLeft: [step, 0], ArrowRight: [-step, 0] };
+    if (moves[e.key]) { e.preventDefault(); panBy(...moves[e.key]); }
+    else if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomAt(big.zoom * 1.5, W / 2, H / 2, true); }
+    else if (e.key === '-' || e.key === '−') { e.preventDefault(); zoomAt(big.zoom / 1.5, W / 2, H / 2, true); }
+  });
   // Un doigt glisse, deux doigts pincent ; un toucher bref ouvre le visiteur, deux touchers rapprochés zooment sur ce point.
   bigCanvas.addEventListener('pointerdown', e => {
     bigCanvas.setPointerCapture(e.pointerId);
@@ -318,6 +332,11 @@ const City = (() => {
     g.poly([[x, y - r], [x + r * .3, y - r * .3], [x + r, y], [x + r * .3, y + r * .3], [x, y + r], [x - r * .3, y + r * .3], [x - r, y], [x - r * .3, y - r * .3]], g.night ? '#ffe7a6' : '#f6c94f');
   }
 
+  // Ambiance du moment, et couches de vie dessinées à part : une donnée ou un dessin illisible (visiteur inconnu…) est sauté,
+  // la ville continue de se dessiner et de vivre.
+  function ambientSafe() { try { return typeof ambientAt === 'function' ? ambientAt() : null; } catch (e) { return null; } }
+  function layer(fn) { ctx.save(); try { fn(); } catch (e) { /* couche ignorée */ } ctx.restore(); }
+
   function draw(options) {
     const clean = options && options.clean === true;
     cancelAnimationFrame(raf);
@@ -334,7 +353,7 @@ const City = (() => {
       if (k >= 1) big.anim = null; else zooming = true;
     }
     // Ambiance du moment : saison toujours ; obscurité, ciel et teinte selon l'heure, sauf « ciel selon l'apparence ».
-    const pal = readPalette(), amb = typeof ambientAt === 'function' ? ambientAt() : null, byTime = !!amb && S.settings.sky !== 'theme';
+    const pal = readPalette(), amb = ambientSafe(), byTime = !!amb && S.settings.sky !== 'theme';
     if (amb) { pal.season = amb.season; if (byTime) pal.dark = darkness(amb.moment); }
     pal.time = performance.now() / 1000;
     pal.anim = !clean && ambientRunning();
@@ -346,7 +365,7 @@ const City = (() => {
     const night = g.night;
 
     // L'arc-en-ciel se dessine d'abord : il reste derrière l'île et ses éléments.
-    if (amb && amb.rainbow) drawRainbow(g, { w: W, h: H, ground: oy });
+    if (amb && amb.rainbow) layer(() => drawRainbow(g, { w: W, h: H, ground: oy }));
     const slab = TW * .32;
     const L = g.P(0, N), B = g.P(N, N), R = g.P(N, 0);
     g.poly([L, B, [B[0], B[1] + slab], [L[0], L[1] + slab]], night ? '#4a3c2c' : '#b89a72');
@@ -391,6 +410,8 @@ const City = (() => {
       const people = Array.from({ length: n }, (_, i) => ({ walker: i, pos: walkerPos(paths[i], i, tt) }));
       for (const d of cells.length ? doerCells(cells) : []) people.push({ doer: d.cat, cell: d.cell, pos: { x: d.cell.x + .5, y: d.cell.y + .5 } });
       lastPeople = { walkers: n, doers: people.filter(p => p.doer).map(p => p.doer) };
+      // Profondeur d'un habitant : celle de la case sous ses pieds. Les éléments occupent des cases entières, donc cet ordre reste
+      // juste partout où les dessins se chevauchent, même en pleine marche d'une case à l'autre.
       for (const p of people) list.push({ t: { id: '__person', x: Math.floor(p.pos.x) + .25, y: Math.floor(p.pos.y) + .25 }, person: p });
       // Visiteur sur une case : juste après l'élément qu'il occupe, sinon au milieu de sa case.
       const sp = amb.visitor && amb.visitor.spot;
@@ -401,13 +422,13 @@ const City = (() => {
     let animating = false;
     visitorBox = null;
     for (const { t, ghost, person, visitor } of list) {
-      if (visitor) { drawVisitor(g, amb, g.anim ? pal.time : 0); continue; }
+      if (visitor) { layer(() => drawVisitor(g, amb, g.anim ? pal.time : 0)); continue; }
       if (person) {
-        if (person.doer) drawDoer(g, person.cell.x, person.cell.y, person.doer, g.anim ? pal.time : 0);
-        else {
+        layer(() => {
+          if (person.doer) { drawDoer(g, person.cell.x, person.cell.y, person.doer, g.anim ? pal.time : 0); return; }
           const [sx, sy] = g.P(person.pos.x, person.pos.y);
           drawWalker(g, sx, sy, { color: WALKER_COLORS[person.walker % WALKER_COLORS.length], lantern: g.night, umbrella: amb.weather === 'rain', hat: amb.season === 'winter' });
-        }
+        });
         continue;
       }
       if (t.id === hiddenId || !isItem(t.item)) continue;
@@ -427,22 +448,24 @@ const City = (() => {
       if (fx && k < 1) overlay('front');
     }
     // Visiteur dans le ciel (la montgolfière), par-dessus la ville.
-    if (amb && amb.visitor && amb.visitor.spot.sky) drawVisitor(g, amb, g.anim ? pal.time : 0);
+    if (amb && amb.visitor && amb.visitor.spot.sky) layer(() => drawVisitor(g, amb, g.anim ? pal.time : 0));
     // Couche de vie : fumée des cheminées (automne, hiver, matin de la boulangerie), faisceau du phare inauguré la nuit.
     if (amb) {
       const t = g.anim ? pal.time : 0, smoky = amb.season === 'autumn' || amb.season === 'winter';
-      for (const tile of S.city.tiles) {
-        if (CHIMNEYS[tile.item] && (smoky || (tile.item === 'boulangerie' && amb.minutes < 600))) drawSmoke(g, tile.x, tile.y, t, CHIMNEYS[tile.item]);
-        if (tile.item === 'phare' && (tile.stage || 4) >= 4 && g.dark > .5) drawBeam(g, tile.x, tile.y, t);
-      }
+      layer(() => {
+        for (const tile of S.city.tiles) {
+          if (CHIMNEYS[tile.item] && (smoky || (tile.item === 'boulangerie' && amb.minutes < 600))) drawSmoke(g, tile.x, tile.y, t, CHIMNEYS[tile.item]);
+          if (tile.item === 'phare' && (tile.stage || 4) >= 4 && g.dark > .5) drawBeam(g, tile.x, tile.y, t);
+        }
+      });
     }
     // Fêtes du jour : une guirlande de fanions pour toutes, puis le décor de chacune. Les cases libres des bords avant
     // (hors celle du visiteur) reçoivent citrouilles ou lanternes, sauf pendant une pose où elles doivent rester lisibles.
     if (amb && amb.festivals.length) {
       const t = g.anim ? pal.time : 0, sp = amb.visitor && amb.visitor.spot;
       const spots = !clean && Mode.state ? [] : freeCells().filter(c => (c.x === N - 1 || c.y === N - 1) && !(sp && sp.x === c.x && sp.y === c.y));
-      drawBunting(g, N, [...new Set(amb.festivals.flatMap(f => FEST_COLORS[f.id]))], t);
-      for (const fest of amb.festivals) drawFestival(g, fest, amb, t, { w: W, h: H, ground: oy, size: N }, spots);
+      layer(() => drawBunting(g, N, [...new Set(amb.festivals.flatMap(f => FEST_COLORS[f.id]))], t));
+      for (const fest of amb.festivals) layer(() => drawFestival(g, fest, amb, t, { w: W, h: H, ground: oy, size: N }, spots));
     }
     // Teinte du moment, posée seulement sur ce qui est dessiné (l'île et ses éléments).
     const tint = byTime ? lightTint(amb) : null;
@@ -450,8 +473,8 @@ const City = (() => {
     // Petites vies et météo, par-dessus tout ; pluie et neige s'estompent pendant une pose.
     if (amb) {
       const area = { w: W, h: H, ground: oy }, t = g.anim ? pal.time : 0;
-      drawSeasonLife(g, amb, t, area, S.city.tiles);
-      drawWeather(g, { ...amb, rainbow: false }, t, area, !clean && Mode.state ? .25 : 1);
+      layer(() => drawSeasonLife(g, amb, t, area, S.city.tiles));
+      layer(() => drawWeather(g, { ...amb, rainbow: false }, t, area, !clean && Mode.state ? .25 : 1));
     }
     // Étincelles sur les cases d'un ensemble qu'on vient de découvrir.
     sparkles = clean ? sparkles : sparkles.filter(s => now - s.start < FX_TIME.sparkle);
@@ -557,6 +580,11 @@ const City = (() => {
   function effectCount() { return effects.size + sparkles.length; }
   function relayout() { layout(); draw(); }
   function point(e) { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+  // Visiteur du jour posé sur cette case (pas celui du ciel), s'il y en a un.
+  function visitorOn(x, y) {
+    const amb = ambientSafe(), v = amb && amb.visitor;
+    return v && !v.spot.sky && v.spot.x === x && v.spot.y === y ? v : null;
+  }
   function describe(x, y) {
     const tile = tileOf(x, y);
     const params = { x: x + 1, y: y + 1, item: tile ? itemName(tile.item) : '' };
@@ -564,7 +592,10 @@ const City = (() => {
       const free = !tile || (Mode.state.type === 'move' && tile.id === Mode.state.tileId);
       return free ? t('city.descFreePick', params) : t('city.descTaken', params);
     }
-    return tile ? t('city.descBuilding', params) : t('city.descFree', params);
+    // Le visiteur s'annonce sur sa case ; sur une case libre, Entrée le salue (sur un élément, Entrée ouvre l'élément).
+    const v = visitorOn(x, y), who = v && { name: t('visitor.' + v.id + '.name'), n: (VISITORS.find(d => d.id === v.id) || {}).plural ? 2 : 1 };
+    if (tile) return t('city.descBuilding', params) + (who ? ' ' + t('visit.here', who) + '.' : '');
+    return t('city.descFree', params) + (who ? ' ' + t('city.descVisitor', who) : '');
   }
 
   small.addEventListener('pointermove', e => {
@@ -604,7 +635,7 @@ const City = (() => {
         else Mode.pickTile({ x: cursor.x, y: cursor.y });
       } else {
         const t = tileOf(cursor.x, cursor.y);
-        if (t) openBuildingSheet(t); else announce(describe(cursor.x, cursor.y));
+        if (t) openBuildingSheet(t); else if (visitorOn(cursor.x, cursor.y)) openVisitor(); else announce(describe(cursor.x, cursor.y));
       }
     } else if (e.key === 'Escape' && Mode.state) {
       e.preventDefault();

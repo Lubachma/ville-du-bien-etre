@@ -238,7 +238,7 @@ async function runAmbient(browser, baseURL) {
       await page.waitForFunction(() => __ville.City.bigState().zoom > 1.5);
       for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -400);
       await page.waitForFunction(() => __ville.City.bigState().zoom === 3);
-      assert.equal(await page.locator('#cityBigIn').isDisabled(), true);
+      assert.equal(await page.locator('#cityBigIn').getAttribute('aria-disabled'), 'true');
       // Un glissement très long : le centre de l'écran reste sur l'île.
       await page.mouse.move(...mid); await page.mouse.down();
       await page.mouse.move(mid[0] + 3000, mid[1] + 3000, { steps: 6 }); await page.mouse.up();
