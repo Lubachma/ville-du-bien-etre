@@ -109,9 +109,11 @@ function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
     Chime.place('set');
   }
   const parts = [lead, ...sets.map(id => t('set.discovered', { name: setName(id) }))];
-  if (achievements.length === 1) parts.push(t('ach.toastOne', { name: achName(achievements[0]) }));
-  else if (achievements.length > 1) parts.push(t('ach.toastMany', { n: achievements.length }));
-  toast(parts.filter(Boolean).join(' · '), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') });
+  // Plusieurs succès : le message reste court, les lecteurs d'écran entendent le nom de chacun.
+  const n = achievements.length, names = achievements.map(achName).join(', ');
+  const shown = n === 1 ? t('ach.toastOne', { name: names }) : n > 1 ? t('ach.toastMany', { n }) : '';
+  const line = last => [...parts, last].filter(Boolean).join(' · ');
+  toast(line(shown), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') }, line(n > 1 ? t('ach.spokenMany', { n, names }) : shown));
 }
 // Après une pose, un déplacement, un agrandissement ou une étape : ce qui vient d'être obtenu, sans rien afficher.
 function noticeProgress() {

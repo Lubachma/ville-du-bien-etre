@@ -53,9 +53,10 @@ async function openTile(page, name) {
 
 async function runContent(browser, baseURL) {
   const scenarios = [];
-  // Merveille : commencer le chantier, construire une étape au seuil, sans bouton Démolir.
+  // Merveille choisie comme objectif : commencer le chantier, construire une étape au seuil, sans bouton Démolir, puis inaugurer.
   {
-    const { context, page, errors } = await newTown(browser, baseURL, town({ calme: 1500 }));
+    const goals = { minutes: 60, days: 3, cat: 'all', building: 'grandarbre' };
+    const { context, page, errors } = await newTown(browser, baseURL, town({ calme: 1500 }, [], { goals }));
     try {
       await page.locator('#buildBtn').click();
       await page.getByRole('button', { name: /^Commencer le chantier : Grand Arbre/ }).click();
@@ -66,13 +67,31 @@ async function runContent(browser, baseURL) {
       assert.equal(await build.isDisabled(), true);
       assert.equal(await page.getByRole('button', { name: 'Démolir', exact: true }).count(), 0);
       await page.locator('#sheetClose').click();
+      // Le chantier commencé, l'objectif devient son étape suivante, dans la Ville comme dans le Journal.
+      assert.match(await page.locator('#nextCard').innerText(), /Prochaine étape du Grand Arbre/);
+      await page.locator('[data-tab="journal"]').click();
+      assert.match(await page.locator('#goalsCard').innerText(), /Grand Arbre\s·\sétape\s2\ssur\s4/);
+      await page.locator('[data-tab="ville"]').click();
       await page.evaluate(() => { __ville.state.stats.byCat.calme = 1800; });
       await openTile(page, 'Grand Arbre');
       await build.click();
       assert.deepEqual(await page.evaluate(() => { const w = __ville.state.city.tiles.find(t => t.item === 'grandarbre'); return [w.stage, __ville.state.coins]; }), [2, 3e9 - 200e6 - 250e6]);
+      // Inauguration : la quatrième étape lance les confettis, fête le succès et la boutique la dit inaugurée.
+      await page.evaluate(() => { __ville.state.stats.byCat.calme = 2400; });
+      for (let i = 0; i < 2; i++) { await openTile(page, 'Grand Arbre'); await build.click(); }
+      assert.ok(await page.evaluate(() => __ville.City.effectCount()) > 0);
+      assert.match(await page.locator('#toast').innerText(), /Grand Arbre est inauguré\s!.*Succès\s:\sPremière merveille/);
+      assert.equal(await page.evaluate(() => !!__ville.state.achievements['premiere-merveille']), true);
+      await page.locator('[data-tab="journal"]').click();
+      assert.match(await page.locator('#goalsCard').innerText(), /Grand Arbre\s·\sinauguré/);
+      await page.locator('[data-tab="ville"]').click();
+      await page.locator('#buildBtn').click();
+      const card = page.locator('.shop-item.wonder', { hasText: 'Grand Arbre' });
+      assert.match(await card.innerText(), /Inauguré/);
+      assert.equal(await card.getByRole('button', { name: /Continuer/ }).count(), 0);
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
-    scenarios.push('Merveille : chantier et étape au seuil');
+    scenarios.push('Merveille : objectif, chantier, étape au seuil et inauguration');
   }
   // Ensemble : la troisième pièce posée forme le Coin lecture ; le déplacer ensuite ne retire pas la découverte.
   {
@@ -167,6 +186,19 @@ async function runContent(browser, baseURL) {
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Pose : succès Hameau');
+  }
+  // Deux succès d'un coup : un message court, et le nom de chacun pour les lecteurs d'écran.
+  {
+    const nine = Array.from({ length: 9 }, (_, i) => ({ id: 't' + i, item: 'arbre', x: i % 7, y: i < 7 ? 0 : 1, at: 1.75e12, paid: 2e6 }));
+    const { context, page, errors } = await newTown(browser, baseURL, town({ esprit: 5 }, nine));
+    try {
+      await placeFromShop(page, 'Arbre');
+      await page.waitForFunction(() => !!__ville.state.achievements['main-verte']);
+      assert.match(await page.locator('#toast').innerText(), /2\snouveaux\ssuccès/);
+      await page.waitForFunction(() => /Hameau.*Main verte/.test(document.querySelector('#live').textContent));
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Pose : deux succès, chaque nom annoncé');
   }
   // Ville d'avant la mise à jour : un seul message de rattrapage, puis plus rien au rechargement.
   {

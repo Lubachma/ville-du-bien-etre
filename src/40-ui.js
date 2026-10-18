@@ -54,7 +54,8 @@ function announce(msg) {
   setTimeout(() => { live.textContent = frTypo(msg); }, 40);
 }
 let toastTimer = 0;
-function toast(msg, action) {
+// « spoken » : ce que les lecteurs d'écran entendent, quand il dit plus que le message affiché.
+function toast(msg, action, spoken = msg) {
   const t = $('#toast');
   t.replaceChildren(h('span', {}, msg));
   if (action) t.append(h('button', { class: 'toast-btn', type: 'button', onclick: () => { hideToast(); action.run(); } }, action.label));
@@ -62,7 +63,7 @@ function toast(msg, action) {
   t.classList.remove('show');
   void t.offsetWidth;
   t.classList.add('show');
-  announce(msg);
+  announce(spoken);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(hideToast, action ? 6000 : 2800);
 }

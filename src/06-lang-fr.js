@@ -389,6 +389,9 @@ DICT.fr = {
   'goal.buildingLeftCat': 'Mon bâtiment : {item} · encore {time} {of}',
   'goal.buildingLeftTotal': 'Mon bâtiment : {item} · encore {time} au total',
   'goal.buildingUnlocked': 'Mon bâtiment : {item} · débloqué, à construire dans la boutique',
+  'goal.wonderStageLeft': 'Mon bâtiment : {item} · étape {stage} sur 4, encore {time} au total',
+  'goal.wonderStageReady': 'Mon bâtiment : {item} · étape {stage} sur 4 prête à construire',
+  'goal.wonderDone': { m: 'Mon bâtiment : {item} · inauguré', f: 'Mon bâtiment : {item} · inaugurée' },
   'goal.sheetTitle': 'Mon objectif de la semaine',
   'goal.letCityGuide': 'Laisser la ville me guider',
   'goal.itemUnlocked': '{item} · débloqué',
@@ -844,6 +847,7 @@ DICT.fr = {
   // Célébrations et rattrapage
   'ach.toastOne': 'Succès : {name}',
   'ach.toastMany': { one: '{n} nouveau succès', other: '{n} nouveaux succès' },
+  'ach.spokenMany': { one: '{n} nouveau succès : {names}', other: '{n} nouveaux succès : {names}' },
   'carnet.catchUp': { one: 'Ta ville a déjà {n} succès : découvre-le dans ton carnet.', other: 'Ta ville a déjà {n} succès : découvre-les dans ton carnet.' },
   'carnet.catchUpSets': { one: 'Elle a aussi formé {n} ensemble.', other: 'Elle a aussi formé {n} ensembles.' },
   'result.achievement': 'Succès : {name}',

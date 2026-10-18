@@ -389,6 +389,9 @@ DICT.en = {
   'goal.buildingLeftCat': 'My building: {item} · {time} more {of}',
   'goal.buildingLeftTotal': 'My building: {item} · {time} more in total',
   'goal.buildingUnlocked': 'My building: {item} · unlocked, ready to build in the shop',
+  'goal.wonderStageLeft': 'My building: {item} · stage {stage} of 4, {time} more in total',
+  'goal.wonderStageReady': 'My building: {item} · stage {stage} of 4 ready to build',
+  'goal.wonderDone': 'My building: {item} · inaugurated',
   'goal.sheetTitle': 'My goal for the week',
   'goal.letCityGuide': 'Let the town guide me',
   'goal.itemUnlocked': '{item} · unlocked',
@@ -844,6 +847,7 @@ DICT.en = {
   // Celebrations and catch-up
   'ach.toastOne': 'Achievement: {name}',
   'ach.toastMany': { one: '{n} new achievement', other: '{n} new achievements' },
+  'ach.spokenMany': { one: '{n} new achievement: {names}', other: '{n} new achievements: {names}' },
   'carnet.catchUp': { one: 'Your town already has {n} achievement: see it in your notebook.', other: 'Your town already has {n} achievements: see them in your notebook.' },
   'carnet.catchUpSets': { one: 'It has also formed {n} set.', other: 'It has also formed {n} sets.' },
   'result.achievement': 'Achievement: {name}',

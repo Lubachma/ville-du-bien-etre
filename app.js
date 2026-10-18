@@ -776,6 +776,9 @@ DICT.fr = {
   'goal.buildingLeftCat': 'Mon bâtiment : {item} · encore {time} {of}',
   'goal.buildingLeftTotal': 'Mon bâtiment : {item} · encore {time} au total',
   'goal.buildingUnlocked': 'Mon bâtiment : {item} · débloqué, à construire dans la boutique',
+  'goal.wonderStageLeft': 'Mon bâtiment : {item} · étape {stage} sur 4, encore {time} au total',
+  'goal.wonderStageReady': 'Mon bâtiment : {item} · étape {stage} sur 4 prête à construire',
+  'goal.wonderDone': { m: 'Mon bâtiment : {item} · inauguré', f: 'Mon bâtiment : {item} · inaugurée' },
   'goal.sheetTitle': 'Mon objectif de la semaine',
   'goal.letCityGuide': 'Laisser la ville me guider',
   'goal.itemUnlocked': '{item} · débloqué',
@@ -1231,6 +1234,7 @@ DICT.fr = {
   // Célébrations et rattrapage
   'ach.toastOne': 'Succès : {name}',
   'ach.toastMany': { one: '{n} nouveau succès', other: '{n} nouveaux succès' },
+  'ach.spokenMany': { one: '{n} nouveau succès : {names}', other: '{n} nouveaux succès : {names}' },
   'carnet.catchUp': { one: 'Ta ville a déjà {n} succès : découvre-le dans ton carnet.', other: 'Ta ville a déjà {n} succès : découvre-les dans ton carnet.' },
   'carnet.catchUpSets': { one: 'Elle a aussi formé {n} ensemble.', other: 'Elle a aussi formé {n} ensembles.' },
   'result.achievement': 'Succès : {name}',
@@ -1634,6 +1638,9 @@ DICT.en = {
   'goal.buildingLeftCat': 'My building: {item} · {time} more {of}',
   'goal.buildingLeftTotal': 'My building: {item} · {time} more in total',
   'goal.buildingUnlocked': 'My building: {item} · unlocked, ready to build in the shop',
+  'goal.wonderStageLeft': 'My building: {item} · stage {stage} of 4, {time} more in total',
+  'goal.wonderStageReady': 'My building: {item} · stage {stage} of 4 ready to build',
+  'goal.wonderDone': 'My building: {item} · inaugurated',
   'goal.sheetTitle': 'My goal for the week',
   'goal.letCityGuide': 'Let the town guide me',
   'goal.itemUnlocked': '{item} · unlocked',
@@ -2089,6 +2096,7 @@ DICT.en = {
   // Celebrations and catch-up
   'ach.toastOne': 'Achievement: {name}',
   'ach.toastMany': { one: '{n} new achievement', other: '{n} new achievements' },
+  'ach.spokenMany': { one: '{n} new achievement: {names}', other: '{n} new achievements: {names}' },
   'carnet.catchUp': { one: 'Your town already has {n} achievement: see it in your notebook.', other: 'Your town already has {n} achievements: see them in your notebook.' },
   'carnet.catchUpSets': { one: 'It has also formed {n} set.', other: 'It has also formed {n} sets.' },
   'result.achievement': 'Achievement: {name}',
@@ -3145,6 +3153,9 @@ function nextUnlock() {
   if (chosen && isItem(chosen) && !ITEMS[chosen].reward) {
     const l = lockInfo(chosen);
     if (l) return { key: chosen, rem: l.need - l.have, l };
+    // Merveille choisie dont le chantier a commencé : son étape suivante reste l'objectif.
+    const step = isWonder(chosen) && wonderTile(chosen) ? stageGoal(wonderTile(chosen)) : null;
+    if (step) return step;
   }
   let best = null;
   for (const k of Object.keys(ITEMS)) {
@@ -3153,14 +3164,18 @@ function nextUnlock() {
     const rem = l.need - l.have;
     if (!best || rem < best.rem || (rem === best.rem && ITEMS[k].price < ITEMS[best.key].price)) best = { key: k, rem, l };
   }
-  // L'étape suivante d'une merveille posée compte aussi, quand elle attend encore des minutes.
+  // L'étape suivante d'une merveille posée compte aussi.
   for (const tile of S.city.tiles) {
-    const next = isWonder(tile.item) ? wonderNext(tile) : null;
-    if (!next || next.ready) continue;
-    const rem = next.need - next.have;
-    if (!best || rem < best.rem) best = { key: tile.item, rem, l: { have: next.have, need: next.need, cat: null }, stage: next.stage };
+    const step = isWonder(tile.item) ? stageGoal(tile) : null;
+    if (step && (!best || step.rem < best.rem)) best = step;
   }
   return best;
+}
+// L'étape suivante d'une merveille posée, quand elle attend encore des minutes.
+function stageGoal(tile) {
+  const next = wonderNext(tile);
+  if (!next || next.ready) return null;
+  return { key: tile.item, rem: next.need - next.have, l: { have: next.have, need: next.need, cat: null }, stage: next.stage };
 }
 // Prochain élément à débloquer d'une rubrique : le moins de minutes restantes, puis le moins cher, puis l'ordre de la table.
 function nextInGroup(group) {
@@ -4870,7 +4885,8 @@ function announce(msg) {
   setTimeout(() => { live.textContent = frTypo(msg); }, 40);
 }
 let toastTimer = 0;
-function toast(msg, action) {
+// « spoken » : ce que les lecteurs d'écran entendent, quand il dit plus que le message affiché.
+function toast(msg, action, spoken = msg) {
   const t = $('#toast');
   t.replaceChildren(h('span', {}, msg));
   if (action) t.append(h('button', { class: 'toast-btn', type: 'button', onclick: () => { hideToast(); action.run(); } }, action.label));
@@ -4878,7 +4894,7 @@ function toast(msg, action) {
   t.classList.remove('show');
   void t.offsetWidth;
   t.classList.add('show');
-  announce(msg);
+  announce(spoken);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(hideToast, action ? 6000 : 2800);
 }
@@ -6081,10 +6097,16 @@ function renderGoals() {
     featureMeter(t('goal.minutesDone'), p.minutes, g.minutes), featureMeter(t('goal.activeDays'), p.activeDays, g.days),
     h('p', { class: 'note' }, p.done ? t('goal.doneNote') : t('goal.note')));
   if (g.building && ITEMS[g.building]) {
-    const lock = lockInfo(g.building);
-    const params = { item: h('strong', {}, itemName(g.building)), time: lock ? fmtMin(lock.need - lock.have) : '', cat: lock && lock.cat ? catName(lock.cat) : '', of: lock && lock.cat ? catOf(lock.cat) : '' };
-    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, !lock ? tParts('goal.buildingUnlocked', params) : lock.cat ? tParts('goal.buildingLeftCat', params) : tParts('goal.buildingLeftTotal', params))));
+    const lock = lockInfo(g.building), site = isWonder(g.building) ? wonderTile(g.building) : null;
+    const params = { item: h('strong', {}, itemName(g.building)), time: lock ? fmtMin(lock.need - lock.have) : '', cat: lock && lock.cat ? catName(lock.cat) : '', of: lock && lock.cat ? catOf(lock.cat) : '', g: itemGender(g.building) };
+    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, site ? wonderGoal(site, params) : !lock ? tParts('goal.buildingUnlocked', params) : lock.cat ? tParts('goal.buildingLeftCat', params) : tParts('goal.buildingLeftTotal', params))));
   }
+}
+// Merveille choisie dont le chantier a commencé : l'étape qui vient, ou l'inauguration faite.
+function wonderGoal(tile, params) {
+  const next = wonderNext(tile);
+  if (!next) return tParts('goal.wonderDone', params);
+  return tParts(next.ready ? 'goal.wonderStageReady' : 'goal.wonderStageLeft', { ...params, stage: next.stage, time: fmtMin(next.need - next.have) });
 }
 function openGoals() {
   const initial = S.goals || { minutes: 60, days: 3, cat: 'all', building: '' };
@@ -7276,9 +7298,11 @@ function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
     Chime.place('set');
   }
   const parts = [lead, ...sets.map(id => t('set.discovered', { name: setName(id) }))];
-  if (achievements.length === 1) parts.push(t('ach.toastOne', { name: achName(achievements[0]) }));
-  else if (achievements.length > 1) parts.push(t('ach.toastMany', { n: achievements.length }));
-  toast(parts.filter(Boolean).join(' · '), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') });
+  // Plusieurs succès : le message reste court, les lecteurs d'écran entendent le nom de chacun.
+  const n = achievements.length, names = achievements.map(achName).join(', ');
+  const shown = n === 1 ? t('ach.toastOne', { name: names }) : n > 1 ? t('ach.toastMany', { n }) : '';
+  const line = last => [...parts, last].filter(Boolean).join(' · ');
+  toast(line(shown), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') }, line(n > 1 ? t('ach.spokenMany', { n, names }) : shown));
 }
 // Après une pose, un déplacement, un agrandissement ou une étape : ce qui vient d'être obtenu, sans rien afficher.
 function noticeProgress() {

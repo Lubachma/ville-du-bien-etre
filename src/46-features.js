@@ -39,10 +39,16 @@ function renderGoals() {
     featureMeter(t('goal.minutesDone'), p.minutes, g.minutes), featureMeter(t('goal.activeDays'), p.activeDays, g.days),
     h('p', { class: 'note' }, p.done ? t('goal.doneNote') : t('goal.note')));
   if (g.building && ITEMS[g.building]) {
-    const lock = lockInfo(g.building);
-    const params = { item: h('strong', {}, itemName(g.building)), time: lock ? fmtMin(lock.need - lock.have) : '', cat: lock && lock.cat ? catName(lock.cat) : '', of: lock && lock.cat ? catOf(lock.cat) : '' };
-    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, !lock ? tParts('goal.buildingUnlocked', params) : lock.cat ? tParts('goal.buildingLeftCat', params) : tParts('goal.buildingLeftTotal', params))));
+    const lock = lockInfo(g.building), site = isWonder(g.building) ? wonderTile(g.building) : null;
+    const params = { item: h('strong', {}, itemName(g.building)), time: lock ? fmtMin(lock.need - lock.have) : '', cat: lock && lock.cat ? catName(lock.cat) : '', of: lock && lock.cat ? catOf(lock.cat) : '', g: itemGender(g.building) };
+    card.append(h('p', { class: 'feature-target' }, icon('build'), h('span', {}, site ? wonderGoal(site, params) : !lock ? tParts('goal.buildingUnlocked', params) : lock.cat ? tParts('goal.buildingLeftCat', params) : tParts('goal.buildingLeftTotal', params))));
   }
+}
+// Merveille choisie dont le chantier a commencé : l'étape qui vient, ou l'inauguration faite.
+function wonderGoal(tile, params) {
+  const next = wonderNext(tile);
+  if (!next) return tParts('goal.wonderDone', params);
+  return tParts(next.ready ? 'goal.wonderStageReady' : 'goal.wonderStageLeft', { ...params, stage: next.stage, time: fmtMin(next.need - next.have) });
 }
 function openGoals() {
   const initial = S.goals || { minutes: 60, days: 3, cat: 'all', building: '' };

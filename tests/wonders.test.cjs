@@ -42,6 +42,14 @@ test("prochain objectif : l'étape de merveille quand elle est la plus proche", 
   assert.deepEqual([next.key, next.stage, next.rem], ['granderoue', 4, 200]);
 });
 
+test("merveille choisie comme objectif : une fois le chantier commencé, son étape suivante reste l'objectif", () => {
+  const a = app();
+  a.state.goals.building = 'grandarbre';
+  withWonder(a, 'grandarbre', 1, 1510, 0);
+  const next = a.nextUnlock();
+  assert.deepEqual([next.key, next.stage, next.rem], ['grandarbre', 2, 290]);
+});
+
 test('Grand Arbre : les domaines pratiqués cette semaine', () => {
   const a = app();      // dimanche 18 octobre 2026, semaine du lundi 12
   a.state.stats.dailyCats = { '2026-10-11': { corps: 10 }, '2026-10-12': { esprit: 5 }, '2026-10-18': { calme: 10, crea: 0 } };

@@ -151,6 +151,9 @@ function nextUnlock() {
   if (chosen && isItem(chosen) && !ITEMS[chosen].reward) {
     const l = lockInfo(chosen);
     if (l) return { key: chosen, rem: l.need - l.have, l };
+    // Merveille choisie dont le chantier a commencé : son étape suivante reste l'objectif.
+    const step = isWonder(chosen) && wonderTile(chosen) ? stageGoal(wonderTile(chosen)) : null;
+    if (step) return step;
   }
   let best = null;
   for (const k of Object.keys(ITEMS)) {
@@ -159,14 +162,18 @@ function nextUnlock() {
     const rem = l.need - l.have;
     if (!best || rem < best.rem || (rem === best.rem && ITEMS[k].price < ITEMS[best.key].price)) best = { key: k, rem, l };
   }
-  // L'étape suivante d'une merveille posée compte aussi, quand elle attend encore des minutes.
+  // L'étape suivante d'une merveille posée compte aussi.
   for (const tile of S.city.tiles) {
-    const next = isWonder(tile.item) ? wonderNext(tile) : null;
-    if (!next || next.ready) continue;
-    const rem = next.need - next.have;
-    if (!best || rem < best.rem) best = { key: tile.item, rem, l: { have: next.have, need: next.need, cat: null }, stage: next.stage };
+    const step = isWonder(tile.item) ? stageGoal(tile) : null;
+    if (step && (!best || step.rem < best.rem)) best = step;
   }
   return best;
+}
+// L'étape suivante d'une merveille posée, quand elle attend encore des minutes.
+function stageGoal(tile) {
+  const next = wonderNext(tile);
+  if (!next || next.ready) return null;
+  return { key: tile.item, rem: next.need - next.have, l: { have: next.have, need: next.need, cat: null }, stage: next.stage };
 }
 // Prochain élément à débloquer d'une rubrique : le moins de minutes restantes, puis le moins cher, puis l'ordre de la table.
 function nextInGroup(group) {

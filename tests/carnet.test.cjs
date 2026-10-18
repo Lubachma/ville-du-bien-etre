@@ -39,6 +39,15 @@ test('rattrapage : un seul message pour tout ce que la ville avait déjà', () =
   assert.equal(calls.length, 1);
 });
 
+test("plusieurs succès d'un coup : un message court, et le nom de chacun pour les lecteurs d'écran", () => {
+  const calls = [];
+  const a = loadApp(FILES, { expose: ['celebrate'], globals: { toast: (msg, action, spoken) => calls.push([msg, spoken]) } });
+  a.celebrate({ achievements: ['hameau', 'main-verte'] });
+  assert.equal(calls.length, 1);
+  assert.match(calls[0][0], /^2\snouveaux\ssuccès$/);
+  assert.match(String(calls[0][1]), /Hameau.*Main verte/);
+});
+
 test('rattrapage rapide pour une ville très remplie', () => {
   const a = loadApp(FILES, { expose: ['catchUpCarnet'], globals: { toast() {}, commit: () => true } });
   a.state.clock.tz = 'UTC';
