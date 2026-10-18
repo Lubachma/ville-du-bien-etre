@@ -4631,6 +4631,56 @@ function claimStars(city = S.city) {
   return fresh;
 }
 
+// Souhaits : pour chaque bâtiment qui a au moins une case voisine libre (lignes, puis colonnes), chaque décor aimé de son
+// domaine, déjà débloqué et absent de ses cases voisines.
+function wishCandidates(city = S.city) {
+  const taken = new Set(city.tiles.map(tile => tile.x + ',' + tile.y)), out = [];
+  const free = tile => [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => {
+    const x = tile.x + dx, y = tile.y + dy;
+    return (dx || dy) && x >= 0 && y >= 0 && x < city.size && y < city.size && !taken.has(x + ',' + y);
+  }));
+  for (const tile of city.tiles.filter(other => isDomainItem(other.item)).sort((a, b) => a.y - b.y || a.x - b.x)) {
+    if (!free(tile)) continue;
+    const near = new Set(neighbourTiles(city, tile).map(other => other.item));
+    for (const item of WISH_LIKES[ITEMS[tile.item].group]) if (!lockInfo(item) && !near.has(item)) out.push({ tile: tile.id, item });
+  }
+  return out;
+}
+// Le bâtiment du souhait en cours (ni exaucé, ni laissé de côté), s'il existe encore ; rien quand les souhaits sont coupés.
+function townWishTile() {
+  const w = S.townWish;
+  if (S.settings.townWishes === false || !w || w.done || w.skipped) return null;
+  return S.city.tiles.find(tile => tile.id === w.tile) || null;
+}
+// Souhait du jour, tiré pour la journée (le même dans tous les onglets) quand aucun n'est en cours et que le dernier date d'un
+// jour antérieur : un seul par jour. N'enregistre pas.
+function drawTownWish(day = today()) {
+  if (S.settings.townWishes === false || townWishTile() || (S.townWish && S.townWish.day >= day)) return false;
+  const list = wishCandidates();
+  if (!list.length) return false;
+  const pick = list[Math.floor(chance(day + ':souhait') * list.length)];
+  S.townWish = { day, tile: pick.tile, item: pick.item };
+  return true;
+}
+// Souhait exaucé quand le décor voulu est dans une case voisine du bâtiment : 3 M, une seule fois. N'enregistre pas.
+function claimTownWish() {
+  const tile = townWishTile(), w = S.townWish;
+  if (!tile || !neighbourTiles(S.city, tile).some(other => other.item === w.item)) return null;
+  w.done = nowTs();
+  const key = 'wish:' + w.day;
+  if (!S.gifts[key]) {
+    S.gifts[key] = w.done;
+    S.coins = clamp(S.coins + GIFTS.townWish, 0, COINS_MAX);
+  }
+  return { tile: tile.id, item: w.item, day: w.day, building: tile.item };
+}
+// « Pas maintenant » : le souhait est rangé, sans rien de plus ; un autre viendra le lendemain. N'enregistre pas.
+function skipTownWish() {
+  if (!townWishTile()) return false;
+  S.townWish.skipped = true;
+  return true;
+}
+
 
 /* ---- 30-paint.js ---- */
 /* =========================================================================
