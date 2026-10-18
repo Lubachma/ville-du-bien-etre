@@ -295,7 +295,6 @@ DICT.fr = {
   'journal.kpiToday': "Aujourd'hui",
   'journal.kpiTodaySub': { one: '{time} réussies · {n}\u00a0session', other: '{time} réussies · {n}\u00a0sessions' },
   'journal.kpiStreak': 'Série',
-  'journal.kpiStreakKeep': "Fais une session aujourd'hui pour la garder",
   'journal.kpiStreakBonus': 'Bonus actuel +{pct}\u00a0%',
   'journal.kpiEffort': 'Temps effectué',
   'journal.kpiEffortSub': 'Dont {time} réussies',
@@ -619,4 +618,20 @@ DICT.fr = {
   // Cadeau de bon retour
   'result.welcomeBack': 'Bon retour !',
   'act.gainPreviewReturn': 'Gain à la fin : {coins} ({welcome} +{pct}\u00a0%).',
+
+  // Série : réglages, journal et bilan
+  'settings.streakTitle': 'Série',
+  'settings.restDays': 'Jours de repos par semaine',
+  'settings.restNote': 'S’applique aussi à ta série en cours.',
+  'settings.pause': 'Mettre ma série en pause',
+  'settings.resume': 'Reprendre ma série',
+  'settings.pauseNote': 'Pendant une pause, ta série t’attend. Une session réussie compte quand même.',
+  'settings.hideStreak': 'Masquer la série',
+  'streak.pausedSince': 'En pause depuis le {date}',
+  'journal.kpiWeekActive': 'Jours actifs cette semaine',
+  'journal.streakStart': 'Une session aujourd’hui lance ta série.',
+  'journal.streakNext': { one: 'Une session aujourd’hui : {n}\u00a0jour', other: 'Une session aujourd’hui : {n}\u00a0jours' },
+  'journal.restsLeft': { one: '{n}\u00a0jour de repos restant cette semaine', other: '{n}\u00a0jours de repos restants cette semaine' },
+  'result.consistency': 'Bonus de régularité',
+  'act.gainPreviewConsistency': 'Gain à la fin : {coins} (bonus de régularité +{pct}\u00a0%).',
 };

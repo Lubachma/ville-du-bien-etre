@@ -295,7 +295,6 @@ DICT.en = {
   'journal.kpiToday': 'Today',
   'journal.kpiTodaySub': { one: '{time} completed · {n}\u00a0session', other: '{time} completed · {n}\u00a0sessions' },
   'journal.kpiStreak': 'Streak',
-  'journal.kpiStreakKeep': 'Do a session today to keep it',
   'journal.kpiStreakBonus': 'Current bonus +{pct}%',
   'journal.kpiEffort': 'Time spent',
   'journal.kpiEffortSub': 'Including {time} completed',
@@ -619,4 +618,20 @@ DICT.en = {
   // Welcome-back gift
   'result.welcomeBack': 'Welcome back!',
   'act.gainPreviewReturn': 'Reward at the end: {coins} ({welcome} +{pct}%).',
+
+  // Streak: settings, journal and result
+  'settings.streakTitle': 'Streak',
+  'settings.restDays': 'Rest days per week',
+  'settings.restNote': 'Also applies to your current streak.',
+  'settings.pause': 'Pause my streak',
+  'settings.resume': 'Resume my streak',
+  'settings.pauseNote': 'During a pause, your streak waits for you. A successful session still counts.',
+  'settings.hideStreak': 'Hide the streak',
+  'streak.pausedSince': 'Paused since {date}',
+  'journal.kpiWeekActive': 'Active days this week',
+  'journal.streakStart': 'A session today starts your streak.',
+  'journal.streakNext': { one: 'A session today: {n}\u00a0day', other: 'A session today: {n}\u00a0days' },
+  'journal.restsLeft': { one: '{n}\u00a0rest day left this week', other: '{n}\u00a0rest days left this week' },
+  'result.consistency': 'Consistency bonus',
+  'act.gainPreviewConsistency': 'Reward at the end: {coins} (consistency bonus +{pct}%).',
 };

@@ -16,13 +16,27 @@ function renderJournal() {
   const kpi = (label, value, sub) => h('div', { class: 'kpi' }, h('span', { class: 'k-label' }, label), h('span', { class: 'k-value' }, value), sub ? h('span', { class: 'k-sub' }, sub) : null);
   $('#kpis').replaceChildren(
     kpi(t('journal.kpiToday'), fmtEffort(todayEffortMinutes()), t('journal.kpiTodaySub', { time: fmtMin(tm), n: todayCount })),
-    kpi(t('journal.kpiStreak'), t('unit.days', { n: st }), st && !tm ? t('journal.kpiStreakKeep') : t('journal.kpiStreakBonus', { pct: streakBonus(st) })),
+    streakKpi(kpi, st, tm, day),
     kpi(t('journal.kpiEffort'), fmtEffort(totalEffortMinutes()), S.earned ? t('journal.kpiEffortSubEarned', { time: fmtMin(totalMinutes()), coins: fmt(S.earned) }) : t('journal.kpiEffortSub', { time: fmtMin(totalMinutes()) })),
     kpi(t('journal.kpiSessions'), String(S.stats.ok), t('journal.kpiInterrupted', { n: S.stats.ko })));
   renderGoals();
   renderWeekChart();
   renderMeters();
   renderHistory();
+}
+// Carte « Série », ou « Jours actifs cette semaine » si la série est masquée. Aucun message de perte.
+function streakKpi(kpi, st, tm, day) {
+  if (S.settings.hideStreak) {
+    const start = weekStartOf(day);
+    const active = Array.from({ length: 7 }, (_, i) => shiftDay(start, i)).filter(d => d <= day && S.stats.days[d] > 0).length;
+    return kpi(t('journal.kpiWeekActive'), String(active), null);
+  }
+  const pause = pauseActive(), rests = restDaysLeft();
+  const sub = pause ? t('streak.pausedSince', { date: dayLabel(pause.from) })
+    : !st ? t('journal.streakStart')
+    : tm ? t('journal.kpiStreakBonus', { pct: streakBonus(st) })
+    : t('journal.streakNext', { n: st + 1 }) + (rests ? ' · ' + t('journal.restsLeft', { n: rests }) : '');
+  return kpi(t('journal.kpiStreak'), t('unit.days', { n: st }), sub);
 }
 function niceMax(v) { for (const c of [15, 30, 45, 60, 90, 120, 180, 240, 360, 480, 720]) if (v <= c) return c; return Math.ceil(v / 60) * 60; }
 function renderWeekChart() {

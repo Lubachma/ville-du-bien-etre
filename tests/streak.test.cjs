@@ -133,3 +133,8 @@ test('cadeau de bon retour', () => {
   assert.equal(app(day, { '2026-10-14': 10 }, { restDays: 0 }).returnBonusFor(day), 20);
   assert.equal(app(day, { '2026-10-16': 10 }).rewardFor(10, 0, day).returnPct, 0);
 });
+
+test('masquer la série garde son bonus', () => {
+  const a = app('2026-10-17', week, { hideStreak: true });
+  assert.equal(a.rewardFor(10, 0, '2026-10-17').streakPct, 30);
+});

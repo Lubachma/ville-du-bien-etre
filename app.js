@@ -590,7 +590,6 @@ DICT.fr = {
   'journal.kpiToday': "Aujourd'hui",
   'journal.kpiTodaySub': { one: '{time} réussies · {n}\u00a0session', other: '{time} réussies · {n}\u00a0sessions' },
   'journal.kpiStreak': 'Série',
-  'journal.kpiStreakKeep': "Fais une session aujourd'hui pour la garder",
   'journal.kpiStreakBonus': 'Bonus actuel +{pct}\u00a0%',
   'journal.kpiEffort': 'Temps effectué',
   'journal.kpiEffortSub': 'Dont {time} réussies',
@@ -914,6 +913,22 @@ DICT.fr = {
   // Cadeau de bon retour
   'result.welcomeBack': 'Bon retour !',
   'act.gainPreviewReturn': 'Gain à la fin : {coins} ({welcome} +{pct}\u00a0%).',
+
+  // Série : réglages, journal et bilan
+  'settings.streakTitle': 'Série',
+  'settings.restDays': 'Jours de repos par semaine',
+  'settings.restNote': 'S’applique aussi à ta série en cours.',
+  'settings.pause': 'Mettre ma série en pause',
+  'settings.resume': 'Reprendre ma série',
+  'settings.pauseNote': 'Pendant une pause, ta série t’attend. Une session réussie compte quand même.',
+  'settings.hideStreak': 'Masquer la série',
+  'streak.pausedSince': 'En pause depuis le {date}',
+  'journal.kpiWeekActive': 'Jours actifs cette semaine',
+  'journal.streakStart': 'Une session aujourd’hui lance ta série.',
+  'journal.streakNext': { one: 'Une session aujourd’hui : {n}\u00a0jour', other: 'Une session aujourd’hui : {n}\u00a0jours' },
+  'journal.restsLeft': { one: '{n}\u00a0jour de repos restant cette semaine', other: '{n}\u00a0jours de repos restants cette semaine' },
+  'result.consistency': 'Bonus de régularité',
+  'act.gainPreviewConsistency': 'Gain à la fin : {coins} (bonus de régularité +{pct}\u00a0%).',
 };
 
 
@@ -1215,7 +1230,6 @@ DICT.en = {
   'journal.kpiToday': 'Today',
   'journal.kpiTodaySub': { one: '{time} completed · {n}\u00a0session', other: '{time} completed · {n}\u00a0sessions' },
   'journal.kpiStreak': 'Streak',
-  'journal.kpiStreakKeep': 'Do a session today to keep it',
   'journal.kpiStreakBonus': 'Current bonus +{pct}%',
   'journal.kpiEffort': 'Time spent',
   'journal.kpiEffortSub': 'Including {time} completed',
@@ -1539,6 +1553,22 @@ DICT.en = {
   // Welcome-back gift
   'result.welcomeBack': 'Welcome back!',
   'act.gainPreviewReturn': 'Reward at the end: {coins} ({welcome} +{pct}%).',
+
+  // Streak: settings, journal and result
+  'settings.streakTitle': 'Streak',
+  'settings.restDays': 'Rest days per week',
+  'settings.restNote': 'Also applies to your current streak.',
+  'settings.pause': 'Pause my streak',
+  'settings.resume': 'Resume my streak',
+  'settings.pauseNote': 'During a pause, your streak waits for you. A successful session still counts.',
+  'settings.hideStreak': 'Hide the streak',
+  'streak.pausedSince': 'Paused since {date}',
+  'journal.kpiWeekActive': 'Active days this week',
+  'journal.streakStart': 'A session today starts your streak.',
+  'journal.streakNext': { one: 'A session today: {n}\u00a0day', other: 'A session today: {n}\u00a0days' },
+  'journal.restsLeft': { one: '{n}\u00a0rest day left this week', other: '{n}\u00a0rest days left this week' },
+  'result.consistency': 'Consistency bonus',
+  'act.gainPreviewConsistency': 'Reward at the end: {coins} (consistency bonus +{pct}%).',
 };
 
 
@@ -3434,9 +3464,13 @@ function applyTheme() {
 function renderHeader() {
   $('.brand-name').textContent = frTypo(cityName());
   $('#balance').textContent = fmt(S.coins);
-  const st = streak();
+  const chip = $('#streakChip');
+  chip.hidden = S.settings.hideStreak;
+  if (chip.hidden) return;
+  const st = streak(), pause = pauseActive();
   $('#streak').textContent = t('unit.streakDays', { n: st });
-  $('#streakChip').title = st ? t('header.streakTitle', { n: st }) : t('header.noStreak');
+  $('use', chip).setAttribute('href', pause ? '#i-pause' : '#i-flame');
+  chip.title = pause ? t('streak.pausedSince', { date: dayLabel(pause.from) }) : st ? t('header.streakTitle', { n: st }) : t('header.noStreak');
 }
 function renderView(tab) {
   if (tab === 'ville') renderVille();
@@ -3624,7 +3658,8 @@ function openStartSheet(act, options = {}) {
       $$('.chip', chips).forEach((c, i) => { c.setAttribute('aria-checked', String(durs[i] === min)); c.tabIndex = durs[i] === min ? 0 : -1; });
       $$('.chip', modes).forEach(c => { c.setAttribute('aria-checked', String(c.dataset.mode === mode)); c.tabIndex = c.dataset.mode === mode ? 0 : -1; });
       const r = rewardFor(min, options.drawPct || 0);
-      preview.textContent = frTypo(r.streakPct ? t('act.gainPreviewStreak', { coins: fmt(r.total), days: r.streakDays, pct: r.streakPct })
+      preview.textContent = frTypo(r.streakPct && S.settings.hideStreak ? t('act.gainPreviewConsistency', { coins: fmt(r.total), pct: r.streakPct })
+        : r.streakPct ? t('act.gainPreviewStreak', { coins: fmt(r.total), days: r.streakDays, pct: r.streakPct })
         : r.returnPct ? t('act.gainPreviewReturn', { coins: fmt(r.total), welcome: t('result.welcomeBack'), pct: r.returnPct })
         : t('act.gainPreview', { coins: fmt(r.total) }));
       modeNote.textContent = frTypo(activityModeNote(mode));
@@ -3872,13 +3907,27 @@ function renderJournal() {
   const kpi = (label, value, sub) => h('div', { class: 'kpi' }, h('span', { class: 'k-label' }, label), h('span', { class: 'k-value' }, value), sub ? h('span', { class: 'k-sub' }, sub) : null);
   $('#kpis').replaceChildren(
     kpi(t('journal.kpiToday'), fmtEffort(todayEffortMinutes()), t('journal.kpiTodaySub', { time: fmtMin(tm), n: todayCount })),
-    kpi(t('journal.kpiStreak'), t('unit.days', { n: st }), st && !tm ? t('journal.kpiStreakKeep') : t('journal.kpiStreakBonus', { pct: streakBonus(st) })),
+    streakKpi(kpi, st, tm, day),
     kpi(t('journal.kpiEffort'), fmtEffort(totalEffortMinutes()), S.earned ? t('journal.kpiEffortSubEarned', { time: fmtMin(totalMinutes()), coins: fmt(S.earned) }) : t('journal.kpiEffortSub', { time: fmtMin(totalMinutes()) })),
     kpi(t('journal.kpiSessions'), String(S.stats.ok), t('journal.kpiInterrupted', { n: S.stats.ko })));
   renderGoals();
   renderWeekChart();
   renderMeters();
   renderHistory();
+}
+// Carte « Série », ou « Jours actifs cette semaine » si la série est masquée. Aucun message de perte.
+function streakKpi(kpi, st, tm, day) {
+  if (S.settings.hideStreak) {
+    const start = weekStartOf(day);
+    const active = Array.from({ length: 7 }, (_, i) => shiftDay(start, i)).filter(d => d <= day && S.stats.days[d] > 0).length;
+    return kpi(t('journal.kpiWeekActive'), String(active), null);
+  }
+  const pause = pauseActive(), rests = restDaysLeft();
+  const sub = pause ? t('streak.pausedSince', { date: dayLabel(pause.from) })
+    : !st ? t('journal.streakStart')
+    : tm ? t('journal.kpiStreakBonus', { pct: streakBonus(st) })
+    : t('journal.streakNext', { n: st + 1 }) + (rests ? ' · ' + t('journal.restsLeft', { n: rests }) : '');
+  return kpi(t('journal.kpiStreak'), t('unit.days', { n: st }), sub);
 }
 function niceMax(v) { for (const c of [15, 30, 45, 60, 90, 120, 180, 240, 360, 480, 720]) if (v <= c) return c; return Math.ceil(v / 60) * 60; }
 function renderWeekChart() {
@@ -4252,6 +4301,39 @@ function settingsSessions() {
       h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.sound')), soundSw),
       h('p', { class: 'note' }, t('settings.soundNote'))));
 }
+// Série : repos par semaine, pause, masquage. Un changement ne redessine que cette section.
+function settingsStreak(focus) {
+  const redraw = target => { const next = settingsStreak(target); section.replaceWith(next); };
+  const restSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.restDays') });
+  for (const n of [0, 1, 2]) restSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.restDays === n), onclick: () => {
+    S.settings.restDays = n;
+    commit();
+    $$('button', restSeg).forEach((b, i) => b.setAttribute('aria-checked', String(i === n)));
+  } }, String(n)));
+  const pause = pauseActive();
+  const pauseBtn = h('button', { class: 'btn btn-secondary', type: 'button', 'data-role': 'pause', onclick: () => {
+    if (pause) endPause(); else startPause();
+    commit();
+    redraw('[data-role="pause"]');
+  } }, icon(pause ? 'play' : 'pause'), pause ? t('settings.resume') : t('settings.pause'));
+  const hideSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.hideStreak), 'aria-label': t('settings.hideStreak'), onclick: () => {
+    S.settings.hideStreak = !S.settings.hideStreak;
+    hideSw.setAttribute('aria-checked', String(S.settings.hideStreak));
+    commit();
+  } });
+  const section = settingsBlock('settingsStreak',
+    h('div', { class: 'setting' },
+      h('span', { class: 'section-title' }, t('settings.streakTitle')),
+      h('span', { class: 'setting-label' }, t('settings.restDays')),
+      h('p', { class: 'note' }, t('settings.restNote')),
+      restSeg),
+    h('div', { class: 'setting' },
+      pause ? h('p', { class: 'note' }, t('streak.pausedSince', { date: dayLabel(pause.from) })) : h('p', { class: 'note' }, t('settings.pauseNote')),
+      pauseBtn),
+    h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.hideStreak')), hideSw));
+  if (focus) setTimeout(() => { const el = $(focus, section); if (el) el.focus({ preventScroll: true }); }, 0);
+  return section;
+}
 function settingsTheme() {
   const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.theme') });
   const themeLabels = { auto: t('settings.themeAuto'), light: t('settings.themeLight'), dark: t('settings.themeDark') };
@@ -4331,7 +4413,7 @@ function settingsReset() {
 }
 function openSettings() {
   openSheet(t('nav.settings'), body => {
-    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
+    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
     sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
   });
 }
@@ -5287,7 +5369,7 @@ function showSuccess(a, total, fresh) {
     const lines = h('ul', { class: 'res-lines' },
       h('li', {}, h('span', {}, t('result.baseLine', { min: a.min })), h('span', {}, fmt(a.min * RATE))),
       a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, '+' + a.drawPct + NB + '%')) : null,
-      a.streakPct ? h('li', {}, h('span', {}, t('result.streak', { n: a.streakDays })), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
+      a.streakPct ? h('li', {}, h('span', {}, S.settings.hideStreak ? t('result.consistency') : t('result.streak', { n: a.streakDays })), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
       a.returnPct ? h('li', {}, h('span', {}, t('result.welcomeBack')), h('span', {}, '+' + a.returnPct + NB + '%')) : null,
       h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmt(S.coins))));
     const unlocks = fresh.map(k => {

@@ -130,9 +130,13 @@ function applyTheme() {
 function renderHeader() {
   $('.brand-name').textContent = frTypo(cityName());
   $('#balance').textContent = fmt(S.coins);
-  const st = streak();
+  const chip = $('#streakChip');
+  chip.hidden = S.settings.hideStreak;
+  if (chip.hidden) return;
+  const st = streak(), pause = pauseActive();
   $('#streak').textContent = t('unit.streakDays', { n: st });
-  $('#streakChip').title = st ? t('header.streakTitle', { n: st }) : t('header.noStreak');
+  $('use', chip).setAttribute('href', pause ? '#i-pause' : '#i-flame');
+  chip.title = pause ? t('streak.pausedSince', { date: dayLabel(pause.from) }) : st ? t('header.streakTitle', { n: st }) : t('header.noStreak');
 }
 function renderView(tab) {
   if (tab === 'ville') renderVille();

@@ -227,3 +227,16 @@ test('applyStaticText remplit textes et attributs marqués', () => {
   assert.equal(canvas.attrs['aria-roledescription'], 'town');
   assert.match(canvas.attrs['aria-label'], /^Your town\. /);
 });
+
+test('aucun mot de perte dans les textes', () => {
+  const { DICT } = app();
+  // Un mot entier, accent final compris (« raté » suivi d'une espace).
+  const loss = /(^|[^\p{L}])(perdue?s?|raté|lost|missed)(?![\p{L}])/iu;
+  const found = [];
+  for (const lang of ['fr', 'en']) {
+    for (const [key, value] of Object.entries(DICT[lang])) {
+      for (const text of typeof value === 'object' ? Object.values(value) : [value]) if (loss.test(text)) found.push(lang + ' ' + key + ': ' + text);
+    }
+  }
+  assert.deepEqual(found, []);
+});

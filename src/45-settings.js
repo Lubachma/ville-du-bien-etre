@@ -187,6 +187,39 @@ function settingsSessions() {
       h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.sound')), soundSw),
       h('p', { class: 'note' }, t('settings.soundNote'))));
 }
+// Série : repos par semaine, pause, masquage. Un changement ne redessine que cette section.
+function settingsStreak(focus) {
+  const redraw = target => { const next = settingsStreak(target); section.replaceWith(next); };
+  const restSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.restDays') });
+  for (const n of [0, 1, 2]) restSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.restDays === n), onclick: () => {
+    S.settings.restDays = n;
+    commit();
+    $$('button', restSeg).forEach((b, i) => b.setAttribute('aria-checked', String(i === n)));
+  } }, String(n)));
+  const pause = pauseActive();
+  const pauseBtn = h('button', { class: 'btn btn-secondary', type: 'button', 'data-role': 'pause', onclick: () => {
+    if (pause) endPause(); else startPause();
+    commit();
+    redraw('[data-role="pause"]');
+  } }, icon(pause ? 'play' : 'pause'), pause ? t('settings.resume') : t('settings.pause'));
+  const hideSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.hideStreak), 'aria-label': t('settings.hideStreak'), onclick: () => {
+    S.settings.hideStreak = !S.settings.hideStreak;
+    hideSw.setAttribute('aria-checked', String(S.settings.hideStreak));
+    commit();
+  } });
+  const section = settingsBlock('settingsStreak',
+    h('div', { class: 'setting' },
+      h('span', { class: 'section-title' }, t('settings.streakTitle')),
+      h('span', { class: 'setting-label' }, t('settings.restDays')),
+      h('p', { class: 'note' }, t('settings.restNote')),
+      restSeg),
+    h('div', { class: 'setting' },
+      pause ? h('p', { class: 'note' }, t('streak.pausedSince', { date: dayLabel(pause.from) })) : h('p', { class: 'note' }, t('settings.pauseNote')),
+      pauseBtn),
+    h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.hideStreak')), hideSw));
+  if (focus) setTimeout(() => { const el = $(focus, section); if (el) el.focus({ preventScroll: true }); }, 0);
+  return section;
+}
 function settingsTheme() {
   const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.theme') });
   const themeLabels = { auto: t('settings.themeAuto'), light: t('settings.themeLight'), dark: t('settings.themeDark') };
@@ -266,7 +299,7 @@ function settingsReset() {
 }
 function openSettings() {
   openSheet(t('nav.settings'), body => {
-    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
+    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
     sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
   });
 }
