@@ -146,7 +146,7 @@ function boot(hotData) {
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
     harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
     ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume) },
-    companion: { bounds: (look, size) => companionBounds(look, size), paint: (cv, look, size, opts) => paintCompanion(cv, look, size, opts) } };
+    companion: { state: () => S.companion, name: () => companionName(), bounds: (look, size) => companionBounds(look, size), paint: (cv, look, size, opts) => paintCompanion(cv, look, size, opts) } };
 }
 
 let booted = false;

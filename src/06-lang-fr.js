@@ -1209,4 +1209,16 @@ DICT.fr = {
   'companion.word.small6': "J'ai regardé le ciel longtemps, c'était très reposant.",
   'companion.word.small7': "J'ai compté les étoiles hier soir : au moins cent !",
   'companion.word.small8': "Un petit oiseau m'a chanté une chanson.",
+  // Étape 6 : l'arrivée du compagnon.
+  'companion.inviteTitle': 'Un compagnon pour ta ville',
+  'companion.inviteLine': "Un petit animal aimerait s'installer dans ta ville et faire tes séances avec toi.",
+  'companion.meet': 'Faire connaissance',
+  'companion.later': 'Pas maintenant',
+  'companion.choiceTitle': 'Ton compagnon',
+  'companion.choiceNote': 'Choisis un animal et donne-lui un nom. Tu pourras les changer plus tard.',
+  'companion.animal': 'Animal',
+  'companion.nameLabel': 'Son nom',
+  'companion.welcomeButton': 'Accueillir {name}',
+  'companion.welcome': 'Bienvenue à {name} !',
+  'companion.saved': 'Modifications enregistrées',
 };

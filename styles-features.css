@@ -87,3 +87,20 @@
 .harmony-star { flex: none; font-size: 22px; line-height: 1.1; color: var(--muted); }
 .harmony-row.earned .harmony-star { color: var(--coin); }
 .harmony-text { display: grid; gap: 2px; min-width: 0; }
+
+/* Compagnon : l'invitation (trois visages et une phrase), puis le choix de l'animal et du nom. */
+.companion-invite { display: grid; gap: 10px; }
+.companion-invite[hidden] { display: none; }
+.companion-invite-main { display: flex; align-items: center; gap: 12px; }
+.companion-invite-main p { margin: 0; min-width: 0; }
+.companion-faces { display: flex; flex: none; }
+.companion-faces canvas { width: 40px; height: 40px; }
+.companion-faces canvas + canvas { margin-left: -10px; }
+.companion-choice { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.companion-choice button {
+  display: grid; justify-items: center; gap: 2px; min-width: 0; padding: 8px 4px 10px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-weight: 700; font-size: 14px;
+}
+.companion-choice button[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.companion-choice canvas { width: 72px; height: 72px; }
+.companion-go { margin-top: 14px; white-space: normal; overflow-wrap: anywhere; text-align: center; }

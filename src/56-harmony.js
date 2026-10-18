@@ -17,7 +17,8 @@ function renderTownWishCard() {
   const tools = $('.city-tools');
   if (!tools) return;
   let card = $('#townWishCard');
-  if (!card) { card = h('section', { id: 'townWishCard', class: 'card wish-card', 'aria-labelledby': 'townWishTitle' }); tools.after(card); }
+  // Après l'invitation du compagnon quand elle existe : les deux cartes gardent cet ordre, quelle que soit la première créée.
+  if (!card) { card = h('section', { id: 'townWishCard', class: 'card wish-card', 'aria-labelledby': 'townWishTitle' }); ($('#companionInvite') || tools).after(card); }
   const tile = typeof townWishTile === 'function' ? townWishTile() : null;
   card.hidden = !tile;
   if (!tile) { card.replaceChildren(); return; }

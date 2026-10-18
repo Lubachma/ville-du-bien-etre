@@ -1209,4 +1209,16 @@ DICT.en = {
   'companion.word.small6': 'I watched the sky for a long time, it was very restful.',
   'companion.word.small7': 'I counted the stars last night: at least a hundred!',
   'companion.word.small8': 'A little bird sang me a song.',
+  // Step 6: the companion's arrival.
+  'companion.inviteTitle': 'A companion for your town',
+  'companion.inviteLine': 'A little animal would love to settle in your town and do your sessions with you.',
+  'companion.meet': 'Say hello',
+  'companion.later': 'Not now',
+  'companion.choiceTitle': 'Your companion',
+  'companion.choiceNote': 'Pick an animal and give it a name. You can change both later.',
+  'companion.animal': 'Animal',
+  'companion.nameLabel': 'Name',
+  'companion.welcomeButton': 'Welcome {name}',
+  'companion.welcome': 'Welcome, {name}!',
+  'companion.saved': 'Changes saved',
 };
