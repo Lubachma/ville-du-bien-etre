@@ -74,6 +74,13 @@ function pendingRitual(day = today()) {
   if (born < week && (!marks.week || marks.week < shiftDay(lastWeek, -6))) return { kind: 'week', key: lastWeek };
   return null;
 }
+// Humeur notée après une séance réussie : de 1 à 5, ou 0 pour la retirer. N'enregistre pas.
+function setMood(entryId, level) {
+  const entry = S.history.find(e => e.id === entryId && e.ok);
+  if (!entry || !Number.isInteger(level) || level < 0 || level > 5) return false;
+  if (level) entry.mood = level; else delete entry.mood;
+  return true;
+}
 // Note qu'un bilan a été montré ; l'année montrée couvre aussi son mois de décembre.
 function markRitual(kind, key) {
   S.rituals = { week: '', month: '', year: '', ...S.rituals, [kind]: key };

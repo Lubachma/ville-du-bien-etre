@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
   '25-challenges.js', '26-summaries.js', '46-features.js'];
-const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay', 'pendingRitual', 'markRitual'];
+const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay', 'pendingRitual', 'markRitual', 'setMood'];
 function app(now = '2026-10-27T12:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
   a.state.clock.tz = 'Europe/Zurich'; a.state.clock.maxSeen = 0; a.state.createdAt = Date.parse('2026-05-04T09:00:00Z');
@@ -80,4 +80,14 @@ test('bilan dû : le mois avant la semaine, l’année en janvier, rien pour un 
   assert.equal(j.state.rituals.month, '2026-12');
   const e = app('2026-12-01T12:00:00Z'); week(e); e.markRitual('week', '2026-11-23');
   assert.equal(e.pendingRitual('2026-12-01'), null);
+});
+
+test('humeur : notée sur une séance, changée, retirée ; rien pour une séance inconnue ou hors bornes', () => {
+  const a = app(); week(a);
+  const id = a.state.history[1].id;
+  assert.equal(a.setMood(id, 3), true);
+  assert.equal(a.state.history[1].mood, 3);
+  assert.equal(a.setMood(id, 0), true);
+  assert.equal('mood' in a.state.history[1], false);
+  assert.deepEqual([a.setMood('inconnue', 3), a.setMood(id, 9)], [false, false]);
 });

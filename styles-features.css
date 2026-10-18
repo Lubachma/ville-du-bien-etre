@@ -53,3 +53,12 @@
   .routine-step-actions .btn { min-width: 32px; padding: 6px; }
   .feature-between { gap: 6px; }
 }
+/* Humeur sur l'écran de fin : la question, cinq visages ronds (au moins 44 px à 320 px de large), puis « Passer » ou le nom choisi. */
+.mood { width: 100%; display: grid; gap: 8px; justify-items: center; padding: 12px 10px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+.mood-question { margin: 0; font-weight: 700; }
+.mood-faces { width: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 52px)); justify-content: center; gap: 6px; }
+.mood-face { aspect-ratio: 1; width: 100%; min-width: 0; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); cursor: pointer; }
+.mood-face .ic { width: 64%; height: 64%; stroke-width: 1.6; }
+.mood-face[aria-checked="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.mood-foot { min-height: 32px; display: grid; place-items: center; }
+.mood-chosen { color: var(--muted); font-size: 14px; font-weight: 700; }

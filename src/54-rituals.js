@@ -26,6 +26,33 @@ function renderChallengesCard() {
   card.replaceChildren(h('h3', {}, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));
 }
 
+// Humeur sur l'écran de fin : cinq visages, un toucher suffit et on peut changer d'avis. « Passer » retire la question ;
+// une fois l'humeur choisie, son nom remplace « Passer ».
+function moodPicker(entryId) {
+  const entry = S.history.find(e => e.id === entryId);
+  let chosen = (entry && entry.mood) || 0;
+  const faces = h('div', { class: 'mood-faces', role: 'radiogroup', 'aria-labelledby': 'moodQuestion' }), foot = h('div', { class: 'mood-foot' });
+  const box = h('section', { class: 'mood' }, h('p', { id: 'moodQuestion', class: 'mood-question' }, t('mood.question')), faces, foot);
+  const skip = () => {
+    let next = box.nextElementSibling;
+    box.remove();
+    while (next && !next.querySelector('button')) next = next.nextElementSibling;
+    if (next) next.querySelector('button').focus({ preventScroll: true });
+  };
+  const update = () => {
+    $$('.mood-face', faces).forEach((face, i) => face.setAttribute('aria-checked', String(i + 1 === chosen)));
+    // Le nom du visage choisi, pour les yeux : les lecteurs d'écran l'ont déjà avec le bouton coché.
+    foot.replaceChildren(chosen ? h('span', { class: 'mood-chosen', 'aria-hidden': 'true' }, t('mood.' + chosen))
+      : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: skip }, t('mood.skip')));
+  };
+  for (let n = 1; n <= 5; n++) {
+    faces.append(h('button', { class: 'mood-face', type: 'button', role: 'radio', 'aria-label': t('mood.' + n),
+      onclick: () => { if (!setMood(entryId, n)) return; chosen = n; commit({ silent: true }); update(); } }, icon('mood-' + n)));
+  }
+  update();
+  return box;
+}
+
 // Bilan ou récapitulatif dû : il s'ouvre une seule fois, sur la Ville, quand aucune fenêtre ni séance n'est ouverte.
 function maybeOpenRitual() {
   if (currentTab !== 'ville' || document.visibilityState !== 'visible' || !$('#sheet').hidden || !$('#cityBig').hidden) return false;

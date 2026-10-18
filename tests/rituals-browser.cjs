@@ -25,8 +25,8 @@ function filledWeek() {
     gifts: { 'visit:2026-10-20': at('2026-10-20T08:00:00Z'), 'visit:2026-10-23': at('2026-10-23T08:00:00Z') },
   });
 }
-// Lance une activité libre et la mène au bout, l'horloge simulée : en Concentration, un saut d'horloge passerait pour une sortie de l'app.
-async function runSession(page, name, minutes) {
+// Lance une activité libre, l'horloge simulée : en Concentration, un saut d'horloge passerait pour une sortie de l'app.
+async function startSession(page, name, minutes) {
   await page.locator('[data-tab="activites"]').click();
   await page.getByRole('button', { name: new RegExp('^' + name) }).first().click();
   await page.getByRole('radio', { name: minutes + ' min', exact: true }).click();
@@ -35,8 +35,26 @@ async function runSession(page, name, minutes) {
   const warning = page.getByRole('button', { name: "C'est réglé, commencer", exact: true });
   if (await warning.isVisible()) await warning.click();
   await page.waitForFunction(() => window.__ville.activeState() === 'mine');
+}
+// … et la mène au bout.
+async function runSession(page, name, minutes) {
+  await startSession(page, name, minutes);
   await page.clock.fastForward(minutes * 60000 + 1000);
   await page.locator('#sessResult').waitFor();
+}
+const setVisibility = (page, value) => page.evaluate(state => {
+  Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+  document.dispatchEvent(new Event('visibilitychange'));
+}, value);
+// Une ville neuve, l'horloge simulée au mercredi 21 octobre 2026, avec une activité par domaine.
+async function sessionTown(browser, settings = {}) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich' });
+  const page = await context.newPage(), errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.clock.install({ time: new Date('2026-10-21T10:00:00Z') });
+  await page.addInitScript(state => { window.__VILLE_DEBUG__ = true; if (!localStorage.getItem('ville-bien-etre/v2')) localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state)); },
+    town({ esprit: 5 }, [], { activities: activities(), settings: { lang: 'fr', sound: false, ...settings } }));
+  return { context, page, errors };
 }
 
 // Défis relevés à l'ouverture : 5 M chacun, une seule fois ; le Journal les montre relevés.
@@ -144,11 +162,52 @@ async function weekReviewOnce(browser, baseURL) {
   return 'Bilan de la semaine : une fois, puis dans le Journal';
 }
 
-const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce];
+// Humeur : demandée sur l'écran de fin, notée d'un geste et gardée ; le réglage coupé ne la demande plus.
+async function moodAfterSession(browser, baseURL) {
+  for (const mood of [true, false]) {
+    const { context, page, errors } = await sessionTown(browser, { mood });
+    try {
+      await page.goto(baseURL);
+      await page.waitForFunction(() => !!window.__ville);
+      await runSession(page, 'Pratique calme', 5);
+      const picker = page.locator('#sessResult').getByRole('radiogroup', { name: 'Comment te sens-tu ?' });
+      if (!mood) { assert.equal(await picker.count(), 0); continue; }
+      await picker.getByRole('radio', { name: 'Bien', exact: true }).click();
+      assert.equal(await picker.getByRole('radio', { name: 'Bien', exact: true }).getAttribute('aria-checked'), 'true');
+      assert.equal(await page.evaluate(() => __ville.state.history[0].mood), 4);
+      await page.reload();
+      await page.waitForFunction(() => !!window.__ville);
+      assert.equal(await page.evaluate(() => __ville.state.history[0].mood), 4);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Humeur : notée sur l’écran de fin, ou pas demandée';
+}
+
+// Activité libre finie pendant que l'app était en arrière-plan : au retour, l'humeur demandée va à cette séance-là.
+async function moodAfterReturn(browser, baseURL) {
+  const { context, page, errors } = await sessionTown(browser);
+  try {
+    await page.goto(baseURL);
+    await page.waitForFunction(() => !!window.__ville);
+    await startSession(page, 'Pratique corps', 5);
+    const id = await page.evaluate(() => __ville.state.active.id);
+    await setVisibility(page, 'hidden');
+    await page.clock.fastForward(7 * 60000);
+    await setVisibility(page, 'visible');
+    await page.locator('#sessResult').waitFor();
+    await page.locator('#sessResult').getByRole('radio', { name: 'Très bien', exact: true }).click();
+    assert.equal(await page.evaluate(entry => __ville.state.history.find(e => e.id === entry).mood, id), 5);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Humeur : au retour, sur la bonne séance';
+}
+
+const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
   return { scenarios };
 }
 
-module.exports = { runRituals, SCENARIOS, filledWeek, runSession, activities };
+module.exports = { runRituals, SCENARIOS, filledWeek, runSession, startSession, activities };

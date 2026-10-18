@@ -1449,6 +1449,13 @@ DICT.fr = {
   'review.go': "C'est parti",
   'review.card': 'Ta semaine dernière',
   'review.again': 'Revoir',
+  'mood.question': 'Comment te sens-tu ?',
+  'mood.1': 'Pas bien du tout',
+  'mood.2': 'Pas trop',
+  'mood.3': 'Comme ci, comme ça',
+  'mood.4': 'Bien',
+  'mood.5': 'Très bien',
+  'mood.skip': 'Passer',
   'city.listVisitor': 'Visiteur du jour : {name}',
   'fest.nouvel-an.name': 'Nouvel An',
   'fest.printemps.name': 'Fête du printemps',
@@ -2481,6 +2488,13 @@ DICT.en = {
   'review.go': "Let's go",
   'review.card': 'Your last week',
   'review.again': 'See again',
+  'mood.question': 'How do you feel?',
+  'mood.1': 'Not good at all',
+  'mood.2': 'Not great',
+  'mood.3': 'So-so',
+  'mood.4': 'Good',
+  'mood.5': 'Very good',
+  'mood.skip': 'Skip',
   'city.listVisitor': 'Visitor of the day: {name}',
   'fest.nouvel-an.name': 'New Year',
   'fest.printemps.name': 'Spring festival',
@@ -4270,6 +4284,13 @@ function pendingRitual(day = today()) {
   const week = weekStartOf(day), lastWeek = shiftDay(week, -7);
   if (born < week && (!marks.week || marks.week < shiftDay(lastWeek, -6))) return { kind: 'week', key: lastWeek };
   return null;
+}
+// Humeur notée après une séance réussie : de 1 à 5, ou 0 pour la retirer. N'enregistre pas.
+function setMood(entryId, level) {
+  const entry = S.history.find(e => e.id === entryId && e.ok);
+  if (!entry || !Number.isInteger(level) || level < 0 || level > 5) return false;
+  if (level) entry.mood = level; else delete entry.mood;
+  return true;
 }
 // Note qu'un bilan a été montré ; l'année montrée couvre aussi son mois de décembre.
 function markRitual(kind, key) {
@@ -9030,6 +9051,7 @@ function showSuccess(a, total, fresh, earned = [], challenges = []) {
       }),
       ...challenges.map(ch => h('div', { class: 'res-unlock' }, h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon('check')),
         h('span', {}, t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) })))),
+      ...(S.settings.mood === false ? [] : [moodPicker(a.id)]),
       h('div', { class: 'res-actions' },
         h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), t('city.build')),
         h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
@@ -9407,6 +9429,33 @@ function renderChallengesCard() {
         onclick: () => { if (swapChallenge(i)) commit(); } }, t('chal.swap')));
   });
   card.replaceChildren(h('h3', {}, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));
+}
+
+// Humeur sur l'écran de fin : cinq visages, un toucher suffit et on peut changer d'avis. « Passer » retire la question ;
+// une fois l'humeur choisie, son nom remplace « Passer ».
+function moodPicker(entryId) {
+  const entry = S.history.find(e => e.id === entryId);
+  let chosen = (entry && entry.mood) || 0;
+  const faces = h('div', { class: 'mood-faces', role: 'radiogroup', 'aria-labelledby': 'moodQuestion' }), foot = h('div', { class: 'mood-foot' });
+  const box = h('section', { class: 'mood' }, h('p', { id: 'moodQuestion', class: 'mood-question' }, t('mood.question')), faces, foot);
+  const skip = () => {
+    let next = box.nextElementSibling;
+    box.remove();
+    while (next && !next.querySelector('button')) next = next.nextElementSibling;
+    if (next) next.querySelector('button').focus({ preventScroll: true });
+  };
+  const update = () => {
+    $$('.mood-face', faces).forEach((face, i) => face.setAttribute('aria-checked', String(i + 1 === chosen)));
+    // Le nom du visage choisi, pour les yeux : les lecteurs d'écran l'ont déjà avec le bouton coché.
+    foot.replaceChildren(chosen ? h('span', { class: 'mood-chosen', 'aria-hidden': 'true' }, t('mood.' + chosen))
+      : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: skip }, t('mood.skip')));
+  };
+  for (let n = 1; n <= 5; n++) {
+    faces.append(h('button', { class: 'mood-face', type: 'button', role: 'radio', 'aria-label': t('mood.' + n),
+      onclick: () => { if (!setMood(entryId, n)) return; chosen = n; commit({ silent: true }); update(); } }, icon('mood-' + n)));
+  }
+  update();
+  return box;
 }
 
 // Bilan ou récapitulatif dû : il s'ouvre une seule fois, sur la Ville, quand aucune fenêtre ni séance n'est ouverte.

@@ -603,6 +603,7 @@ function showSuccess(a, total, fresh, earned = [], challenges = []) {
       }),
       ...challenges.map(ch => h('div', { class: 'res-unlock' }, h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon('check')),
         h('span', {}, t('chal.done', { text: challengeText(ch), coins: fmt(GIFTS.challenge) })))),
+      ...(S.settings.mood === false ? [] : [moodPicker(a.id)]),
       h('div', { class: 'res-actions' },
         h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), t('city.build')),
         h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
