@@ -64,10 +64,10 @@ const City = (() => {
   // Promeneurs : chacun suit, aller et retour, un petit chemin de 12 pas sur les cases où l'on marche, tiré une fois
   // pour toutes de son indice ; un pas toutes les 4 s (2,5 s de marche, puis une pause).
   const WALK_STEPS = 12, STEP_S = 4, MOVE_S = 2.5, WALKER_COLORS = ['#d9573b', '#3f78c4', '#e3a12f', '#3a9a7a', '#d0628f', '#7a8b6e'];
-  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] }, visitorBox = null, wishBox = null;
+  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] }, visitorBox = null, wishBox = null, companionBox = null, lastCompanion = null;
   // Boutons posés sur le canevas, en points du canevas : « Construire » et la vue en grand, ou les boutons de la vue en grand.
   function overlayBoxes() {
-    const box = canvas.getBoundingClientRect(), els = canvas === small ? [$('#buildBtn'), $('#cityExpand')] : [$('.city-big-tools')];
+    const box = canvas.getBoundingClientRect(), els = canvas === small ? [$('#buildBtn'), $('#cityExpand'), $('#companionBtn')] : [$('.city-big-tools')];
     return els.filter(el => el && el.getClientRects().length).map(el => {
       const r = el.getBoundingClientRect();
       return { x: r.left - box.left, y: r.top - box.top, w: r.width, h: r.height };
@@ -104,6 +104,23 @@ const City = (() => {
     const tw = r * 1.6, mini = makePainter(ctx, tw, bx, cy - tw / 4 + tw * (ITEMS[item].hf || .3) / 2, { ...pal, night: false, dark: 0 });
     DRAW[item](mini, 0, 0, {});
     wishBox = { x: bx - r, y: cy - r, w: r * 2, h: Math.max(r * 2, ay - (cy - r)), tile: tile.id };
+  }
+  // Compagnon : le jour, sur son chemin de promenade à demi-vitesse ; la nuit, endormi à côté de la première Cabane posée (une case
+  // voisine où marcher, sinon sa propre case), ou sans Cabane sur la case où marcher la plus proche du centre. Rien sans compagnon
+  // affiché ni case où marcher.
+  function companionSpot(cells, night, t) {
+    if (!S.companion || S.settings.companionShown === false || !cells.length) return null;
+    if (!night) { const p = walkerPos(walkPaths(cells)[5], 5, t / 2); return { x: p.x, y: p.y, pose: 'walk' }; }
+    const hut = S.city.tiles.find(tile => tile.item === 'cabane'), centre = (N - 1) / 2, far = cell => Math.abs(cell.x - centre) + Math.abs(cell.y - centre);
+    const cell = hut ? cells.find(other => Math.abs(other.x - hut.x) <= 1 && Math.abs(other.y - hut.y) <= 1) || hut : [...cells].sort((a, b) => far(a) - far(b))[0];
+    return { x: cell.x + .5, y: cell.y + .5, pose: 'sleep' };
+  }
+  // Le compagnon, un peu plus grand que les habitants, et sa zone touchable (au moins 32 points de côté).
+  function drawCompanionAt(g, spot, time) {
+    const c = S.companion, [sx, sy] = g.P(spot.x, spot.y), u = g.tw * .22 * 1.35, w = Math.max(32, u * 1.1), hgt = Math.max(32, u * 1.3);
+    drawCompanion(g, sx, sy, { species: c.species, wear: c.wear, pose: spot.pose, scale: 1.35 }, time);
+    companionBox = { x: sx - w / 2, y: sy - hgt + u * .1, w, h: hgt };
+    lastCompanion = { pose: spot.pose, x: Math.floor(spot.x), y: Math.floor(spot.y) };
   }
   // Point sous le visiteur : sol, assise du banc, branche, toit, eau, ou ciel (qui dérive doucement).
   function visitorAnchor(g, spot, t) {
@@ -283,6 +300,13 @@ const City = (() => {
     return true;
   }
   // Un toucher sur la bulle du souhait ouvre la fiche du bâtiment qui souhaite.
+  // Toucher le compagnon ouvre sa fiche.
+  function openCompanionAt(px, py) {
+    const cb = companionBox;
+    if (!cb || px < cb.x || px > cb.x + cb.w || py < cb.y || py > cb.y + cb.h || typeof openCompanionSheet !== 'function') return false;
+    openCompanionSheet();
+    return true;
+  }
   function openWishAt(px, py) {
     const wb = wishBox, tile = wb && px >= wb.x && px <= wb.x + wb.w && py >= wb.y && py <= wb.y + wb.h && S.city.tiles.find(other => other.id === wb.tile);
     if (!tile) return false;
@@ -336,6 +360,7 @@ const City = (() => {
     if (!at || e.type === 'pointercancel' || big.pointers.size || big.moved > 8) return;
     const vb = visitorBox;
     if (vb && at[0] >= vb.x && at[0] <= vb.x + vb.w && at[1] >= vb.y && at[1] <= vb.y + vb.h) { big.lastTap = null; openVisitor(); return; }
+    if (openCompanionAt(at[0], at[1])) { big.lastTap = null; return; }
     if (openWishAt(at[0], at[1])) { big.lastTap = null; return; }
     const prev = big.lastTap, time = performance.now();
     big.lastTap = { at, time };
@@ -485,13 +510,16 @@ const City = (() => {
       // Visiteur sur une case : juste après l'élément qu'il occupe, sinon au milieu de sa case.
       const sp = amb.visitor && amb.visitor.spot;
       if (sp && !sp.sky) list.push({ t: { id: '__visitor', x: sp.x + (sp.on ? .05 : .3), y: sp.y + (sp.on ? .05 : .3) }, visitor: true });
+      const pet = companionSpot(cells, g.night, tt);
+      if (pet) list.push({ t: { id: '__companion', x: Math.floor(pet.x) + .25, y: Math.floor(pet.y) + .25 }, companion: pet });
     }
     list.sort((p, q) => (p.t.x + p.t.y) - (q.t.x + q.t.y) || p.t.x - q.t.x);
     const now = performance.now();
     let animating = false;
-    visitorBox = null;
-    for (const { t, ghost, person, visitor } of list) {
+    visitorBox = null; companionBox = null; lastCompanion = null;
+    for (const { t, ghost, person, visitor, companion } of list) {
       if (visitor) { layer(() => drawVisitor(g, amb, g.anim ? pal.time : 0)); continue; }
+      if (companion) { layer(() => drawCompanionAt(g, companion, g.anim ? pal.time : 0)); continue; }
       if (person) {
         layer(() => {
           if (person.doer) { drawDoer(g, person.cell.x, person.cell.y, person.doer, g.anim ? pal.time : 0); return; }
@@ -712,6 +740,7 @@ const City = (() => {
     if (Mode.state) { Mode.pickTile(tileAt(px, py)); return; }
     const vb = visitorBox;
     if (vb && px >= vb.x && px <= vb.x + vb.w && py >= vb.y && py <= vb.y + vb.h) { openVisitor(); return; }
+    if (openCompanionAt(px, py)) return;
     if (openWishAt(px, py)) return;
     const b = pickBuilding(px, py);
     if (b) openBuildingSheet(b); else openBig();
@@ -745,7 +774,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, townThumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, wishBox: () => wishBox, visitorThumb,
+  return { layout, draw, relayout, thumb, townThumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, wishBox: () => wishBox, companionBox: () => companionBox, companionSpot: () => lastCompanion, visitorThumb,
     focus: () => { keyboard = true; small.focus(); draw(); }, openBig, closeBig, openVisit,
     // Pour les tests : état de la vue en grand (et la case sous le centre de l'écran), centre d'une case sur le canevas dessiné.
     bigState: () => ({ open: big.open, zoom: big.zoom, visit: !!visit, focus: big.open && big.base ? cellUnder(W / 2, H / 2, big.shown, big.pan) : null }),
@@ -826,6 +855,7 @@ const Mode = {
     const st = this.state;
     bar.hidden = !st;
     $('#cityExpand').hidden = $('#shareCity').hidden = !!st;
+    if (typeof renderCompanionButton === 'function') renderCompanionButton();
     if (!st) return;
     if (st.type === 'place') {
       txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : t('city.tapToPlace', { item: itemName(st.item), price: fmt(priceOf(st.item)) }));

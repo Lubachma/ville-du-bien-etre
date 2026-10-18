@@ -1221,4 +1221,6 @@ DICT.en = {
   'companion.welcomeButton': 'Welcome {name}',
   'companion.welcome': 'Welcome, {name}!',
   'companion.saved': 'Changes saved',
+  // Step 6: the companion in the town.
+  'companion.buttonLabel': '{name}, your companion',
 };

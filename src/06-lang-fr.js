@@ -1221,4 +1221,6 @@ DICT.fr = {
   'companion.welcomeButton': 'Accueillir {name}',
   'companion.welcome': 'Bienvenue à {name} !',
   'companion.saved': 'Modifications enregistrées',
+  // Étape 6 : le compagnon dans la ville.
+  'companion.buttonLabel': '{name}, ton compagnon',
 };

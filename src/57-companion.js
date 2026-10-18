@@ -73,3 +73,25 @@ function openCompanionChoice({ edit = false } = {}) {
       h('div', { class: 'field' }, h('label', { for: 'companionName' }, t('companion.nameLabel')), input), go);
   });
 }
+
+// Bouton rond du compagnon, posé en bas à gauche de la ville : son visage, et son nom pour les lecteurs d'écran. Caché sans
+// compagnon affiché, et pendant une pose.
+function renderCompanionButton() {
+  const btn = $('#companionBtn'), c = S.companion;
+  if (!btn) return;
+  btn.hidden = !c || S.settings.companionShown === false || !!Mode.state;
+  if (btn.hidden) return;
+  paintCompanion(btn.firstElementChild, { species: c.species, wear: c.wear, pose: 'idle', face: true }, 34);
+  btn.setAttribute('aria-label', frTypo(t('companion.buttonLabel', { name: companionName() })));
+  btn.onclick = () => openCompanionSheet();
+}
+// Fiche du compagnon (à son nom).
+function openCompanionSheet() {
+  const c = S.companion;
+  if (!c) return;
+  openSheet(companionName(), body => {
+    const cv = h('canvas', { class: 'companion-big', 'aria-hidden': 'true' });
+    paintCompanion(cv, { species: c.species, wear: c.wear, pose: 'idle' }, 132);
+    body.append(cv);
+  });
+}

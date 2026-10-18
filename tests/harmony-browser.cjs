@@ -162,12 +162,14 @@ async function wishBubble(browser, baseURL) {
 // ni au-dessus du haut de la ville : elle reste entière, et un toucher ouvre la fiche du bâtiment.
 async function wishBubbleClear(browser, baseURL) {
   for (const [item, x, y, name] of [['maison', 0, 2, 'Maison'], ['moulin', 0, 0, 'Moulin']]) {
-    const { context, page, errors } = await cityAt(browser, baseURL, seed([tile(item, x, y)]), NOW, { viewport: { width: 320, height: 568 } });
+    // Avec un compagnon : son bouton, en bas à gauche, compte aussi.
+    const companion = { species: 'lapin', name: 'Pompon', since: at('2026-10-01T09:00:00Z'), minutes: 0, wear: '' };
+    const { context, page, errors } = await cityAt(browser, baseURL, seed([tile(item, x, y)], { companion }), NOW, { viewport: { width: 320, height: 568 } });
     try {
       const { box, zones, width } = await page.evaluate(() => {
         const cv = document.querySelector('#city').getBoundingClientRect();
         const rel = el => { const r = el.getBoundingClientRect(); return { x: r.left - cv.left, y: r.top - cv.top, w: r.width, h: r.height }; };
-        return { box: __ville.City.wishBox(), zones: ['#buildBtn', '#cityExpand'].map(sel => rel(document.querySelector(sel))), width: cv.width };
+        return { box: __ville.City.wishBox(), zones: ['#buildBtn', '#cityExpand', '#companionBtn'].map(sel => document.querySelector(sel)).filter(Boolean).map(rel), width: cv.width };
       });
       assert.ok(box, item + ' : bulle');
       const bubble = { x: box.x, y: box.y, w: box.w, h: box.w };   // le rond, sans sa pointe

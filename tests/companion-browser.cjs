@@ -8,6 +8,8 @@ const NOW = '2026-10-21T10:00:00Z';
 const tile = (item, x, y, extra = {}) => ({ id: item + x + y, item, x, y, at: at('2026-10-01T09:00:00Z'), paid: 1e6, ...extra });
 // Une ville amorcée à date de création fixe ; « extra » peut y ajouter un compagnon, des séances, des réglages.
 const seed = (tiles, extra = {}) => town({ esprit: 5 }, tiles, { createdAt: at('2026-05-04T09:00:00Z'), ...extra });
+// Un compagnon déjà accueilli (le 1er octobre), avec ce qui change d'un scénario à l'autre.
+const pet = (extra = {}) => ({ species: 'lapin', name: 'Pompon', since: at('2026-10-01T09:00:00Z'), minutes: 0, wear: '', ...extra });
 const SPECIES = ['lapin', 'marmotte', 'ourson'];
 const POSES = ['idle', 'walk', 'sleep', 'read', 'stretch', 'meditate', 'water', 'paint', 'cheer'];
 const WEAR = ['', 'echarpe', 'bonnet', 'lunettes', 'couronne', 'noeud', 'paille', 'sac', 'casque', 'cape'];
@@ -137,7 +139,70 @@ async function suggestedNameFollowsLanguage(browser, baseURL) {
   return 'Compagnon : le nom suggéré suit la langue';
 }
 
-const SCENARIOS = [paintAll, inviteAfterFirstSession, adoptDefault, adoptLongName, suggestedNameFollowsLanguage];
+// Dans la ville : il se promène le jour (10 h) et dort la nuit (23 h 30), sur une case du terrain.
+async function townDayNight(browser, baseURL) {
+  for (const [time, pose] of [['2026-10-21T08:00:00Z', 'walk'], ['2026-10-21T21:30:00Z', 'sleep']]) {
+    const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { companion: pet() }), time);
+    try {
+      await page.waitForFunction(() => !!__ville.companion.spot());
+      const spot = await page.evaluate(() => __ville.companion.spot());
+      assert.equal(spot.pose, pose, time);
+      assert.ok(spot.x >= 0 && spot.x < 7 && spot.y >= 0 && spot.y < 7, JSON.stringify(spot));
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Compagnon : il se promène le jour et dort la nuit';
+}
+
+// Le bouton du compagnon, et le compagnon lui-même, ouvrent sa fiche, sur la petite carte comme dans la vue en grand.
+async function townTapAndButton(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { companion: pet(), settings: { lang: 'fr', ambient: false } }), NOW);
+  try {
+    await page.getByRole('button', { name: 'Pompon, ton compagnon', exact: true }).click();
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Pompon');
+    await page.locator('#sheetClose').click();
+    const tapBox = async canvas => {
+      const box = await page.evaluate(() => __ville.companion.box());
+      assert.ok(box, canvas);
+      await page.locator(canvas).click({ position: { x: box.x + box.w / 2, y: box.y + box.h / 2 } });
+      await page.locator('#sheet').waitFor();
+      assert.equal(await page.locator('#sheetTitle').innerText(), 'Pompon', canvas);
+      await page.locator('#sheetClose').click();
+    };
+    await tapBox('#city');
+    await page.locator('#cityExpand').click();
+    await page.locator('#cityBig').waitFor();
+    await tapBox('#cityBigCanvas');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Compagnon : son bouton et lui-même ouvrent sa fiche';
+}
+
+// Masqué : ni bouton ni compagnon ; en visite (même de sa propre ville) : pas de compagnon.
+async function townHiddenAndVisit(browser, baseURL) {
+  {
+    const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { companion: pet(), settings: { lang: 'fr', companionShown: false } }), NOW);
+    try {
+      await page.waitForTimeout(300);
+      assert.equal(await page.locator('#companionBtn').isVisible(), false);
+      assert.equal(await page.evaluate(() => __ville.companion.spot()), null);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)], { companion: pet() }), NOW);
+  try {
+    await page.waitForFunction(() => !!__ville.companion.spot());
+    await page.evaluate(() => __ville.share.open(__ville.share.encode()));
+    await page.locator('#cityBig').waitFor();
+    await page.waitForFunction(() => __ville.companion.spot() === null);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Compagnon : masqué, ou en visite, il ne se montre pas';
+}
+
+const SCENARIOS = [paintAll, inviteAfterFirstSession, adoptDefault, adoptLongName, suggestedNameFollowsLanguage, townDayNight, townTapAndButton,
+  townHiddenAndVisit];
 async function runCompanion(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

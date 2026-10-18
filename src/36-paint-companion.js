@@ -11,9 +11,10 @@ const COMPANION_LOOKS = {
 const COMPANION_STANDING = ['walk', 'stretch', 'water', 'paint', 'cheer'];
 const CROWN_FLOWERS = ['#e87ba4', '#f2c14e', '#7fb3e0', '#ffffff', '#e87ba4', '#f2c14e', '#a8d38a'];
 
-// look = { species, wear, pose, face } ; face ne dessine que la tête (bouton du compagnon). t (secondes) choisit l'image.
+// look = { species, wear, pose, face, scale } ; face ne dessine que la tête (bouton du compagnon), scale l'agrandit (dans la
+// ville). t (secondes) choisit l'image.
 function drawCompanion(g, sx, sy, look = {}, t = 0) {
-  const u = g.tw * .22, kind = COMPANION_LOOKS[look.species] || COMPANION_LOOKS.lapin, pose = look.pose || 'idle', wear = look.wear || '';
+  const u = g.tw * .22 * (look.scale || 1), kind = COMPANION_LOOKS[look.species] || COMPANION_LOOKS.lapin, pose = look.pose || 'idle', wear = look.wear || '';
   const ctx = g.ctx, X = x => sx + x * u, Y = y => sy - y * u, c = hex => g.c(hex), fur = c(kind.fur), arm = c(shade(kind.fur, -.1));
   const oval = (x, y, rx, ry, fill, rot = 0) => ellipseFill(g, X(x), Y(y), rx * u, ry * u, fill, rot);
   const dot = (x, y, r, fill) => g.circle(X(x), Y(y), r * u, fill);

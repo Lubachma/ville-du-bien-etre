@@ -104,3 +104,7 @@
 .companion-choice button[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 .companion-choice canvas { width: 72px; height: 72px; }
 .companion-go { margin-top: 14px; white-space: normal; overflow-wrap: anywhere; text-align: center; }
+/* Bouton du compagnon : en bas à gauche de la ville, son visage dans un rond. */
+.companion-btn { position: absolute; z-index: 2; left: 10px; bottom: 10px; padding: 0; background: var(--surface); border-color: var(--line); box-shadow: var(--shadow); }
+.companion-btn canvas { width: 34px; height: 34px; }
+.companion-big { display: block; width: 132px; height: 132px; margin: 0 auto; }
