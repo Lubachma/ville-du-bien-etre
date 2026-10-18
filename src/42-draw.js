@@ -1,6 +1,6 @@
 /* ---------- Tirage contextualisé ---------- */
 const ACT_DRAW_TIMES = [0, 5, 10, 15, 20, 30, 60, 180];
-const drawEnergies = () => [['any', t('draw.energyAny')], ['low', t('draw.energyLow')], ['medium', t('draw.energyMedium')], ['high', t('draw.energyHigh')]];
+const drawEnergies = () => [choiceOf('any', 'draw.energyAny'), choiceOf('low', 'draw.energyLow'), choiceOf('medium', 'draw.energyMedium'), choiceOf('high', 'draw.energyHigh')];
 let drawAnim = null;
 let drawBusyUntil = 0;
 function drawFilters() {
@@ -61,8 +61,8 @@ function renderDrawFilters() {
   $('#drawEnergy').value = f.energy;
   $('#drawPlace').value = f.place;
   const active = [f.maxMin ? t('draw.summaryMax', { n: f.maxMin }) : '',
-    f.energy !== 'any' ? t('draw.summaryEnergy', { energy: drawEnergies().find(([value]) => value === f.energy)[1].toLowerCase() }) : '',
-    f.place !== 'any' ? actPlaces().find(([value]) => value === f.place)[1].toLowerCase() : ''].filter(Boolean);
+    f.energy !== 'any' ? t('draw.summaryEnergy', { energy: drawEnergies().find(([value]) => value === f.energy)[2] }) : '',
+    f.place !== 'any' ? actPlaces().find(([value]) => value === f.place)[2] : ''].filter(Boolean);
   $('#drawFilterSummary').textContent = frTypo((active.length ? active.join(' · ') : t('draw.summaryDefault')) + ' · ' + t('draw.ideas', { n: count }));
   $('#drawFilterCount').textContent = frTypo(t('draw.ideasAvailable', { n: count }));
   $('#drawFilterNote').textContent = frTypo(S.draw.current ? t('draw.filtersNoteCurrent') : t('draw.filtersNote', { min: DRAW_MIN_POOL }));
@@ -167,7 +167,7 @@ function renderList(key, ul) {
     ul.append(h('li', { class: available ? null : 'task-waiting' },
       h('div', { class: 'row-main' }, h('span', { class: 'row-title' }, name),
         h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · ' + t('draw.example') : '')),
-        h('span', { class: 'task-status' }, t('draw.modeEnergy', { mode: activityModeLabel(it.mode), energy: (energies.find(([value]) => value === (it.energy || 'medium')) || energies[1])[1].toLowerCase() })),
+        h('span', { class: 'task-status' }, t('draw.modeEnergy', { mode: activityModeLabel(it.mode), energy: (energies.find(([value]) => value === (it.energy || 'medium')) || energies[1])[2] })),
         status ? h('span', { class: 'task-status' }, status) : null,
         !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': t('act.makeAvailableNamed', { name }), onclick: () => resetTask(key, it.id) }, t('act.makeAvailable')) : null),
       h('div', { class: 'task-actions' },

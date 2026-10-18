@@ -79,9 +79,10 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const clone = v => (v == null ? v : JSON.parse(JSON.stringify(v)));
 const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const NB = ' ';
-// Langue affichée ('fr' ou 'en'), fixée par setLang() (05-i18n.js).
+// Langue affichée et sa règle typographique ('fr' : espaces insécables du français), fixées par setLang() (05-i18n.js).
 let LANG = 'fr';
-const frTypo = t => (LANG === 'fr' ? String(t).replace(/ ([:;!?»])/g, ' $1').replace(/« /g, '« ') : String(t));
+let TYPO = 'fr';
+const frTypo = t => (TYPO === 'fr' ? String(t).replace(/ ([:;!?»])/g, ' $1').replace(/« /g, '« ') : String(t));
 
 function h(tag, props, ...kids) {
   const el = document.createElement(tag);
@@ -118,28 +119,26 @@ function dec1(x) {
   const r = Math.round(x * 10) / 10;
   if (Math.abs(r) >= 100) return String(Math.round(x));
   const s = Number.isInteger(r) ? String(r) : r.toFixed(1);
-  return LANG === 'fr' ? s.replace('.', ',') : s;
+  return s.replace('.', t('fmt.decimal'));
 }
 function fmt(n) {
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);
-  if (a >= 1e9) return dec1(n / 1e9) + NB + (LANG === 'fr' ? 'Md' : 'B');
-  if (a >= 1e6) return dec1(n / 1e6) + NB + 'M';
-  if (a >= 1e3) return Math.round(n / 1e3) + NB + 'k';
+  if (a >= 1e9) return dec1(n / 1e9) + NB + t('fmt.billion');
+  if (a >= 1e6) return dec1(n / 1e6) + NB + t('fmt.million');
+  if (a >= 1e3) return Math.round(n / 1e3) + NB + t('fmt.thousand');
   return String(Math.round(n));
 }
 function fmtMin(m) {
   m = Math.round(m);
-  if (m < 60) return m + NB + 'min';
+  if (m < 60) return t('fmt.min', { n: m });
   const hh = Math.floor(m / 60), mm = m % 60;
-  return hh + NB + 'h' + (mm ? NB + String(mm).padStart(2, '0') + (LANG === 'fr' ? '' : NB + 'min') : '');
+  return mm ? t('fmt.hoursMinutes', { h: hh, mm: pad2(mm) }) : t('fmt.hours', { h: hh });
 }
 function fmtAway(ms) {
   const s = Math.max(1, Math.round(ms / 1000));
   return s >= 60 ? fmtMin(s / 60) : s + NB + 's';
 }
-// Le français met 0 et 1 au singulier, l'anglais seulement 1.
-function plural(n, one, many) { return n + NB + ((LANG === 'fr' ? n <= 1 : n === 1) ? one : many); }
 function pad2(n) { return String(n).padStart(2, '0'); }
 function dbg(msg) { if (window.__ville && window.__ville.log) window.__ville.log.push((Date.now() % 100000) + ' ' + msg); }
 function rnd(a, b) { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); }
@@ -200,31 +199,34 @@ function cssVar(name) { return getComputedStyle(document.documentElement).getPro
    Une entrée est un texte ({nom} à remplacer), des pluriels { one, other }
    ou un accord { m, f } choisi par le paramètre g.
    ========================================================================= */
-const LANGS = ['fr', 'en'];
 const DICT = {};
-const LOCALES = { fr: 'fr-CH', en: 'en-GB' };
 const pluralRules = new Map();
 let tplIndex = null;
 
-function locale() { return LOCALES[LANG] || LOCALES.fr; }
+// Les langues connues sont celles dont le dictionnaire est chargé : en ajouter une, c'est ajouter un fichier.
+function langs() { return Object.keys(DICT); }
+// Choix du réglage Langue : « Automatique », puis chaque langue écrite dans sa propre langue.
+function langChoices() { return [['auto', t('lang.auto')], ...langs().map(code => [code, DICT[code]['lang.self'] || code])]; }
+function locale() { return (DICT[LANG] && DICT[LANG]['lang.locale']) || 'fr-CH'; }
 
 // 'auto' : la première langue du navigateur que l'app connaît, sinon l'anglais.
-function resolveLang(pref, langs) {
-  if (LANGS.includes(pref)) return pref;
-  let list = langs;
+function resolveLang(pref, preferred) {
+  if (langs().includes(pref)) return pref;
+  let list = preferred;
   if (!list) {
     const nav = typeof navigator !== 'undefined' ? navigator : {};
     list = nav.languages && nav.languages.length ? nav.languages : [nav.language];
   }
   for (const entry of list) {
     const code = String(entry || '').toLowerCase().slice(0, 2);
-    if (LANGS.includes(code)) return code;
+    if (langs().includes(code)) return code;
   }
   return 'en';
 }
 
 function setLang(pref) {
   LANG = resolveLang(pref);
+  TYPO = (DICT[LANG] && DICT[LANG]['lang.typo']) || '';
   if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = LANG;
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
     window.dispatchEvent(new CustomEvent('ville:lang'));
@@ -270,7 +272,7 @@ function applyStaticText(root) {
 function displayName(name) {
   if (!tplIndex) {
     tplIndex = new Map();
-    for (const lang of LANGS) {
+    for (const lang of langs()) {
       for (const [key, value] of Object.entries(DICT[lang] || {})) if (key.startsWith('tpl.') && typeof value === 'string') tplIndex.set(value, key);
     }
   }
@@ -299,8 +301,17 @@ if (typeof window !== 'undefined') window.VilleI18n = Object.freeze({ t: (key, p
 /* Textes français (langue d'origine du jeu). Les clés sont partagées avec 07-lang-en.js. */
 DICT.fr = {
   'lang.auto': 'Automatique',
-  'lang.fr': 'Français',
-  'lang.en': 'English',
+  'lang.self': 'Français',
+  'lang.locale': 'fr-CH',
+  'lang.typo': 'fr',
+  // Nombres et durées : séparateur décimal, abréviations, heures et minutes
+  'fmt.decimal': ',',
+  'fmt.thousand': 'k',
+  'fmt.million': 'M',
+  'fmt.billion': 'Md',
+  'fmt.min': '{n}\u00a0min',
+  'fmt.hours': '{h}\u00a0h',
+  'fmt.hoursMinutes': '{h}\u00a0h\u00a0{mm}',
   'city.defaultName': 'Ma ville',
   'when.today': "aujourd'hui, {time}",
   'when.yesterday': 'hier, {time}',
@@ -490,15 +501,25 @@ DICT.fr = {
   // Activités : choix, fiches et formulaires
   'common.save': 'Enregistrer',
   'act.energyLow': 'Douce',
+  'act.energyLow.inline': 'douce',
   'act.energyMedium': 'Modérée',
+  'act.energyMedium.inline': 'modérée',
   'act.energyHigh': 'Soutenue',
+  'act.energyHigh.inline': 'soutenue',
   'act.placeAny': 'Peu importe',
+  'act.placeAny.inline': 'peu importe',
   'act.placeInside': 'À l’intérieur',
+  'act.placeInside.inline': 'à l’intérieur',
   'act.placeOutside': 'À l’extérieur',
+  'act.placeOutside.inline': 'à l’extérieur',
   'act.repeatAlways': 'Toujours disponible',
+  'act.repeatAlways.inline': 'toujours disponible',
   'act.repeatOnce': 'Une seule fois',
+  'act.repeatOnce.inline': 'une seule fois',
   'act.repeatDaily': 'Chaque jour',
+  'act.repeatDaily.inline': 'chaque jour',
   'act.repeatWeekly': 'Tous les 7 jours',
+  'act.repeatWeekly.inline': 'tous les 7 jours',
   'act.modeFree': 'Activité libre',
   'act.modeFocus': 'Concentration',
   'act.modeFreeNote': 'Marche, sport, musique… le chrono continue avec l’écran verrouillé ou une autre app. Reviens ici pour retrouver la fin de la session.',
@@ -538,9 +559,13 @@ DICT.fr = {
 
   // Tirage au sort : filtres, carte et listes
   'draw.energyAny': 'Peu importe',
+  'draw.energyAny.inline': 'peu importe',
   'draw.energyLow': 'Basse',
+  'draw.energyLow.inline': 'basse',
   'draw.energyMedium': 'Moyenne',
+  'draw.energyMedium.inline': 'moyenne',
   'draw.energyHigh': 'Haute',
+  'draw.energyHigh.inline': 'haute',
   'draw.filtersSavedKeep': 'Filtres enregistrés pour le prochain tirage. Le tirage actuel est conservé.',
   'draw.filtersUpdated': 'Filtres mis à jour.',
   'draw.filtersTitle': 'Ce qui me convient maintenant',
@@ -967,8 +992,17 @@ DICT.fr = {
 /* English texts. Same keys as 06-lang-fr.js; friendly "you", never a word about losing. */
 DICT.en = {
   'lang.auto': 'Automatic',
-  'lang.fr': 'Français',
-  'lang.en': 'English',
+  'lang.self': 'English',
+  'lang.locale': 'en-GB',
+  'lang.typo': '',
+  // Numbers and durations: decimal separator, abbreviations, hours and minutes
+  'fmt.decimal': '.',
+  'fmt.thousand': 'k',
+  'fmt.million': 'M',
+  'fmt.billion': 'B',
+  'fmt.min': '{n}\u00a0min',
+  'fmt.hours': '{h}\u00a0h',
+  'fmt.hoursMinutes': '{h}\u00a0h\u00a0{mm}\u00a0min',
   'city.defaultName': 'My town',
   'when.today': 'today, {time}',
   'when.yesterday': 'yesterday, {time}',
@@ -1158,15 +1192,25 @@ DICT.en = {
   // Activities: choices, sheets and forms
   'common.save': 'Save',
   'act.energyLow': 'Gentle',
+  'act.energyLow.inline': 'gentle',
   'act.energyMedium': 'Moderate',
+  'act.energyMedium.inline': 'moderate',
   'act.energyHigh': 'Vigorous',
+  'act.energyHigh.inline': 'vigorous',
   'act.placeAny': 'Anywhere',
+  'act.placeAny.inline': 'anywhere',
   'act.placeInside': 'Indoors',
+  'act.placeInside.inline': 'indoors',
   'act.placeOutside': 'Outdoors',
+  'act.placeOutside.inline': 'outdoors',
   'act.repeatAlways': 'Always available',
+  'act.repeatAlways.inline': 'always available',
   'act.repeatOnce': 'Just once',
+  'act.repeatOnce.inline': 'just once',
   'act.repeatDaily': 'Every day',
+  'act.repeatDaily.inline': 'every day',
   'act.repeatWeekly': 'Every 7 days',
+  'act.repeatWeekly.inline': 'every 7 days',
   'act.modeFree': 'Free activity',
   'act.modeFocus': 'Focus',
   'act.modeFreeNote': 'Walking, sport, music… the timer keeps running with the screen locked or in another app. Come back here to see the end of the session.',
@@ -1206,9 +1250,13 @@ DICT.en = {
 
   // Random draw: filters, card and lists
   'draw.energyAny': 'Any',
+  'draw.energyAny.inline': 'any',
   'draw.energyLow': 'Low',
+  'draw.energyLow.inline': 'low',
   'draw.energyMedium': 'Medium',
+  'draw.energyMedium.inline': 'medium',
   'draw.energyHigh': 'High',
+  'draw.energyHigh.inline': 'high',
   'draw.filtersSavedKeep': 'Filters saved for the next draw. The current draw is kept.',
   'draw.filtersUpdated': 'Filters updated.',
   'draw.filtersTitle': 'What suits me right now',
@@ -1784,7 +1832,7 @@ function normalize(raw) {
     grace: GRACE_CHOICES.includes(st.grace) ? st.grace : 10, keepAwake: st.keepAwake !== false,
     sound: st.sound !== false, theme: THEMES.includes(st.theme) ? st.theme : 'auto',
     // Une ville d'avant la traduction reste en français ; une ville neuve suit le téléphone.
-    lang: ['auto', 'fr', 'en'].includes(st.lang) ? st.lang : 'fr',
+    lang: ['auto', ...langs()].includes(st.lang) ? st.lang : 'fr',
     // Série : 2 jours de repos par semaine, semaine du lundi, série visible.
     restDays: [0, 1, 2].includes(st.restDays) ? st.restDays : 2,
     weekStart: st.weekStart === 'sun' ? 'sun' : 'mon',
@@ -3588,9 +3636,11 @@ function renderVille() {
 /* ---- 41-activities.js ---- */
 /* ---------- Activités, modes et disponibilité ---------- */
 // Choix proposés, [valeur, libellé] dans la langue affichée.
-const actEnergies = () => [['low', t('act.energyLow')], ['medium', t('act.energyMedium')], ['high', t('act.energyHigh')]];
-const actPlaces = () => [['any', t('act.placeAny')], ['inside', t('act.placeInside')], ['outside', t('act.placeOutside')]];
-const actRepeats = () => [['always', t('act.repeatAlways')], ['once', t('act.repeatOnce')], ['daily', t('act.repeatDaily')], ['weekly', t('act.repeatWeekly')]];
+// Un choix : sa valeur, son libellé, et sa forme dans une phrase (le dictionnaire la donne : en allemand, les noms gardent leur majuscule).
+const choiceOf = (value, key) => [value, t(key), t(key + '.inline')];
+const actEnergies = () => [choiceOf('low', 'act.energyLow'), choiceOf('medium', 'act.energyMedium'), choiceOf('high', 'act.energyHigh')];
+const actPlaces = () => [choiceOf('any', 'act.placeAny'), choiceOf('inside', 'act.placeInside'), choiceOf('outside', 'act.placeOutside')];
+const actRepeats = () => [choiceOf('always', 'act.repeatAlways'), choiceOf('once', 'act.repeatOnce'), choiceOf('daily', 'act.repeatDaily'), choiceOf('weekly', 'act.repeatWeekly')];
 function activityOptions(choices, value) { return choices.map(([v, label]) => h('option', { value: v, selected: v === value ? true : null }, label)); }
 function activityModeLabel(mode) { return mode === 'free' ? t('act.modeFree') : t('act.modeFocus'); }
 function activityModeNote(mode) {
@@ -3612,7 +3662,7 @@ function taskStatus(it) {
     return next ? t('act.statusWaiting', { day: dayLabel(next) }) : t('act.statusDoneOnce');
   }
   const repeat = actRepeats().find(([value]) => value === it.repeat);
-  return repeat && it.repeat !== 'always' ? t('act.statusRepeat', { repeat: repeat[1].toLowerCase() }) : '';
+  return repeat && it.repeat !== 'always' ? t('act.statusRepeat', { repeat: repeat[2] }) : '';
 }
 // Appelée uniquement à la réussite d’une session, avant le commit de la récompense.
 function completeTask(a) {
@@ -3774,7 +3824,7 @@ function openEditSheet(key, id) {
 /* ---- 42-draw.js ---- */
 /* ---------- Tirage contextualisé ---------- */
 const ACT_DRAW_TIMES = [0, 5, 10, 15, 20, 30, 60, 180];
-const drawEnergies = () => [['any', t('draw.energyAny')], ['low', t('draw.energyLow')], ['medium', t('draw.energyMedium')], ['high', t('draw.energyHigh')]];
+const drawEnergies = () => [choiceOf('any', 'draw.energyAny'), choiceOf('low', 'draw.energyLow'), choiceOf('medium', 'draw.energyMedium'), choiceOf('high', 'draw.energyHigh')];
 let drawAnim = null;
 let drawBusyUntil = 0;
 function drawFilters() {
@@ -3835,8 +3885,8 @@ function renderDrawFilters() {
   $('#drawEnergy').value = f.energy;
   $('#drawPlace').value = f.place;
   const active = [f.maxMin ? t('draw.summaryMax', { n: f.maxMin }) : '',
-    f.energy !== 'any' ? t('draw.summaryEnergy', { energy: drawEnergies().find(([value]) => value === f.energy)[1].toLowerCase() }) : '',
-    f.place !== 'any' ? actPlaces().find(([value]) => value === f.place)[1].toLowerCase() : ''].filter(Boolean);
+    f.energy !== 'any' ? t('draw.summaryEnergy', { energy: drawEnergies().find(([value]) => value === f.energy)[2] }) : '',
+    f.place !== 'any' ? actPlaces().find(([value]) => value === f.place)[2] : ''].filter(Boolean);
   $('#drawFilterSummary').textContent = frTypo((active.length ? active.join(' · ') : t('draw.summaryDefault')) + ' · ' + t('draw.ideas', { n: count }));
   $('#drawFilterCount').textContent = frTypo(t('draw.ideasAvailable', { n: count }));
   $('#drawFilterNote').textContent = frTypo(S.draw.current ? t('draw.filtersNoteCurrent') : t('draw.filtersNote', { min: DRAW_MIN_POOL }));
@@ -3941,7 +3991,7 @@ function renderList(key, ul) {
     ul.append(h('li', { class: available ? null : 'task-waiting' },
       h('div', { class: 'row-main' }, h('span', { class: 'row-title' }, name),
         h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · ' + t('draw.example') : '')),
-        h('span', { class: 'task-status' }, t('draw.modeEnergy', { mode: activityModeLabel(it.mode), energy: (energies.find(([value]) => value === (it.energy || 'medium')) || energies[1])[1].toLowerCase() })),
+        h('span', { class: 'task-status' }, t('draw.modeEnergy', { mode: activityModeLabel(it.mode), energy: (energies.find(([value]) => value === (it.energy || 'medium')) || energies[1])[2] })),
         status ? h('span', { class: 'task-status' }, status) : null,
         !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': t('act.makeAvailableNamed', { name }), onclick: () => resetTask(key, it.id) }, t('act.makeAvailable')) : null),
       h('div', { class: 'task-actions' },
@@ -4319,7 +4369,7 @@ function refreshLang() {
   storageStatusSignature = '';
 }
 function changeLang(pref) {
-  if (!['auto', 'fr', 'en'].includes(pref)) return;
+  if (!['auto', ...langs()].includes(pref)) return;
   S.settings.lang = pref;
   commit({ silent: true });
   refreshLang();
@@ -4339,10 +4389,9 @@ function settingsStart() {
     } }, t('pwa.checkButton'))));
 }
 function settingsLang() {
-  const labels = { auto: t('lang.auto'), fr: t('lang.fr'), en: t('lang.en') };
   const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.lang') });
   // Les noms des langues gardent leur propre langue, pour la lecture vocale.
-  for (const v of ['auto', 'fr', 'en']) seg.append(h('button', { type: 'button', role: 'radio', lang: v === 'auto' ? null : v, 'aria-checked': String(S.settings.lang === v), onclick: () => { if (S.settings.lang !== v) changeLang(v); } }, labels[v]));
+  for (const [v, label] of langChoices()) seg.append(h('button', { type: 'button', role: 'radio', lang: v === 'auto' ? null : v, 'aria-checked': String(S.settings.lang === v), onclick: () => { if (S.settings.lang !== v) changeLang(v); } }, label));
   return settingsBlock('settingsLang', h('div', { class: 'setting' },
     h('span', { class: 'section-title' }, t('settings.lang')), h('p', { class: 'note' }, t('settings.langNote')), seg));
 }

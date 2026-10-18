@@ -142,7 +142,7 @@ function refreshLang() {
   storageStatusSignature = '';
 }
 function changeLang(pref) {
-  if (!['auto', 'fr', 'en'].includes(pref)) return;
+  if (!['auto', ...langs()].includes(pref)) return;
   S.settings.lang = pref;
   commit({ silent: true });
   refreshLang();
@@ -162,10 +162,9 @@ function settingsStart() {
     } }, t('pwa.checkButton'))));
 }
 function settingsLang() {
-  const labels = { auto: t('lang.auto'), fr: t('lang.fr'), en: t('lang.en') };
   const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.lang') });
   // Les noms des langues gardent leur propre langue, pour la lecture vocale.
-  for (const v of ['auto', 'fr', 'en']) seg.append(h('button', { type: 'button', role: 'radio', lang: v === 'auto' ? null : v, 'aria-checked': String(S.settings.lang === v), onclick: () => { if (S.settings.lang !== v) changeLang(v); } }, labels[v]));
+  for (const [v, label] of langChoices()) seg.append(h('button', { type: 'button', role: 'radio', lang: v === 'auto' ? null : v, 'aria-checked': String(S.settings.lang === v), onclick: () => { if (S.settings.lang !== v) changeLang(v); } }, label));
   return settingsBlock('settingsLang', h('div', { class: 'setting' },
     h('span', { class: 'section-title' }, t('settings.lang')), h('p', { class: 'note' }, t('settings.langNote')), seg));
 }

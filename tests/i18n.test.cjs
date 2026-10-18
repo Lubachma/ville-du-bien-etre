@@ -12,15 +12,15 @@ function app() {
     window: {}, document: { documentElement: {} }, navigator: { languages: ['fr-CH'] } });
   const source = ['00-core.js', '05-i18n.js', ...DICTIONARIES, '10-state.js', '20-rules.js']
     .map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
-  vm.runInContext(source + `\nthis.api = { DICT, t, setLang, resolveLang, fmt, fmtMin, frTypo, normalize, defaultState,
+  vm.runInContext(source + `\nthis.api = { DICT, t, setLang, resolveLang, langs, langChoices, locale, fmt, fmtMin, frTypo, normalize, defaultState,
     displayName, cityName, tParts, applyStaticText, ITEMS, CAT_ORDER, itemName, itemGender, catName, catOf, catHint, groupName,
     get state() { return S; }, set state(v) { S = v; } };`, context);
   return context.api;
 }
 
-test('les deux dictionnaires ont exactement les mêmes clés', () => {
+test('tous les dictionnaires ont les mêmes clés', () => {
   const { DICT } = app();
-  assert.deepEqual(Object.keys(DICT.fr).sort(), Object.keys(DICT.en).sort());
+  for (const lang of Object.keys(DICT)) assert.deepEqual(Object.keys(DICT[lang]).sort(), Object.keys(DICT.fr).sort(), lang);
 });
 
 test('chaque clé utilisée existe dans les deux langues', () => {
@@ -233,7 +233,7 @@ test('aucun mot de perte dans les textes', () => {
   // Un mot entier, accent final compris (« raté » suivi d'une espace).
   const loss = /(^|[^\p{L}])(perdue?s?|raté|lost|missed)(?![\p{L}])/iu;
   const found = [];
-  for (const lang of ['fr', 'en']) {
+  for (const lang of Object.keys(DICT)) {
     for (const [key, value] of Object.entries(DICT[lang])) {
       for (const text of typeof value === 'object' ? Object.values(value) : [value]) if (loss.test(text)) found.push(lang + ' ' + key + ': ' + text);
     }
@@ -253,4 +253,42 @@ test('les règles de gain décrivent le bon retour comme le début d’une nouve
   const { DICT } = app();
   assert.match(DICT.fr['settings.rules'], /bon retour \+20 % pour la première session qui relance une série, après au moins 2 jours sans session/);
   assert.match(DICT.en['settings.rules'], /welcome back \+20% on the first session that starts a new streak, after at least 2 days without one/);
+});
+
+test('une troisième langue ne demande que son dictionnaire', () => {
+  const a = app();
+  a.DICT.xx = Object.assign({}, a.DICT.en, { 'lang.self': 'Xxx', 'lang.locale': 'de-CH', 'lang.typo': '', 'fmt.decimal': ',',
+    'fmt.million': 'Mio', 'fmt.billion': 'Mrd', 'fmt.hoursMinutes': '{h} Std. {mm}', 'nav.city': 'Xstadt' });
+  assert.ok(a.langs().includes('xx'));
+  assert.deepEqual([...a.langChoices().at(-1)], ['xx', 'Xxx']);
+  assert.equal(a.resolveLang('auto', ['xx-CH']), 'xx');
+  a.setLang('xx');
+  assert.equal(a.t('nav.city'), 'Xstadt');
+  assert.equal(a.locale(), 'de-CH');
+  assert.equal(a.fmt(1.5e9), '1,5 Mrd');
+  assert.equal(a.fmt(2.5e6), '2,5 Mio');
+  assert.equal(a.fmtMin(75), '1 Std. 15');
+  assert.equal(a.frTypo('a : b'), 'a : b');
+  assert.equal(a.normalize({ settings: { lang: 'xx' } }).settings.lang, 'xx');
+});
+
+test('français et anglais gardent leurs formats', () => {
+  const a = app();
+  a.setLang('fr');
+  assert.deepEqual(Array.from(a.langChoices(), choice => [...choice]), [['auto', 'Automatique'], ['fr', 'Français'], ['en', 'English']]);
+  assert.deepEqual([a.fmt(1.5e9), a.fmt(2.5e6), a.fmt(1500), a.locale()], ['1,5 Md', '2,5 M', '2 k', 'fr-CH']);
+  assert.deepEqual([a.fmtMin(45), a.fmtMin(90), a.fmtMin(120)], ['45 min', '1 h 30', '2 h']);
+  assert.equal(a.frTypo('a : b « c »'), 'a : b « c »');
+  a.setLang('en');
+  assert.deepEqual([a.fmt(1.5e9), a.fmtMin(90), a.locale()], ['1.5 B', '1 h 30 min', 'en-GB']);
+  assert.equal(a.frTypo('a : b'), 'a : b');
+});
+
+test('les libellés dans la phrase viennent du dictionnaire', () => {
+  const { DICT } = app();
+  const keys = ['act.energyLow', 'act.energyMedium', 'act.energyHigh', 'act.placeAny', 'act.placeInside', 'act.placeOutside',
+    'act.repeatAlways', 'act.repeatOnce', 'act.repeatDaily', 'act.repeatWeekly', 'draw.energyAny', 'draw.energyLow', 'draw.energyMedium', 'draw.energyHigh'];
+  for (const lang of ['fr', 'en']) for (const k of keys) assert.equal(DICT[lang][k + '.inline'], DICT[lang][k].toLowerCase(), lang + ' ' + k);
+  for (const file of ['41-activities.js', '42-draw.js']) assert.doesNotMatch(fs.readFileSync(path.join(root, 'src', file), 'utf8'), /toLowerCase\(\)/, file);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'src', '00-core.js'), 'utf8'), /function plural\(/);
 });

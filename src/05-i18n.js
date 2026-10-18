@@ -4,31 +4,34 @@
    Une entrée est un texte ({nom} à remplacer), des pluriels { one, other }
    ou un accord { m, f } choisi par le paramètre g.
    ========================================================================= */
-const LANGS = ['fr', 'en'];
 const DICT = {};
-const LOCALES = { fr: 'fr-CH', en: 'en-GB' };
 const pluralRules = new Map();
 let tplIndex = null;
 
-function locale() { return LOCALES[LANG] || LOCALES.fr; }
+// Les langues connues sont celles dont le dictionnaire est chargé : en ajouter une, c'est ajouter un fichier.
+function langs() { return Object.keys(DICT); }
+// Choix du réglage Langue : « Automatique », puis chaque langue écrite dans sa propre langue.
+function langChoices() { return [['auto', t('lang.auto')], ...langs().map(code => [code, DICT[code]['lang.self'] || code])]; }
+function locale() { return (DICT[LANG] && DICT[LANG]['lang.locale']) || 'fr-CH'; }
 
 // 'auto' : la première langue du navigateur que l'app connaît, sinon l'anglais.
-function resolveLang(pref, langs) {
-  if (LANGS.includes(pref)) return pref;
-  let list = langs;
+function resolveLang(pref, preferred) {
+  if (langs().includes(pref)) return pref;
+  let list = preferred;
   if (!list) {
     const nav = typeof navigator !== 'undefined' ? navigator : {};
     list = nav.languages && nav.languages.length ? nav.languages : [nav.language];
   }
   for (const entry of list) {
     const code = String(entry || '').toLowerCase().slice(0, 2);
-    if (LANGS.includes(code)) return code;
+    if (langs().includes(code)) return code;
   }
   return 'en';
 }
 
 function setLang(pref) {
   LANG = resolveLang(pref);
+  TYPO = (DICT[LANG] && DICT[LANG]['lang.typo']) || '';
   if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = LANG;
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
     window.dispatchEvent(new CustomEvent('ville:lang'));
@@ -74,7 +77,7 @@ function applyStaticText(root) {
 function displayName(name) {
   if (!tplIndex) {
     tplIndex = new Map();
-    for (const lang of LANGS) {
+    for (const lang of langs()) {
       for (const [key, value] of Object.entries(DICT[lang] || {})) if (key.startsWith('tpl.') && typeof value === 'string') tplIndex.set(value, key);
     }
   }

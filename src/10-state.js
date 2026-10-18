@@ -150,7 +150,7 @@ function normalize(raw) {
     grace: GRACE_CHOICES.includes(st.grace) ? st.grace : 10, keepAwake: st.keepAwake !== false,
     sound: st.sound !== false, theme: THEMES.includes(st.theme) ? st.theme : 'auto',
     // Une ville d'avant la traduction reste en français ; une ville neuve suit le téléphone.
-    lang: ['auto', 'fr', 'en'].includes(st.lang) ? st.lang : 'fr',
+    lang: ['auto', ...langs()].includes(st.lang) ? st.lang : 'fr',
     // Série : 2 jours de repos par semaine, semaine du lundi, série visible.
     restDays: [0, 1, 2].includes(st.restDays) ? st.restDays : 2,
     weekStart: st.weekStart === 'sun' ? 'sun' : 'mon',

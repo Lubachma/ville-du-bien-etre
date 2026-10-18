@@ -1,8 +1,10 @@
 /* ---------- Activités, modes et disponibilité ---------- */
 // Choix proposés, [valeur, libellé] dans la langue affichée.
-const actEnergies = () => [['low', t('act.energyLow')], ['medium', t('act.energyMedium')], ['high', t('act.energyHigh')]];
-const actPlaces = () => [['any', t('act.placeAny')], ['inside', t('act.placeInside')], ['outside', t('act.placeOutside')]];
-const actRepeats = () => [['always', t('act.repeatAlways')], ['once', t('act.repeatOnce')], ['daily', t('act.repeatDaily')], ['weekly', t('act.repeatWeekly')]];
+// Un choix : sa valeur, son libellé, et sa forme dans une phrase (le dictionnaire la donne : en allemand, les noms gardent leur majuscule).
+const choiceOf = (value, key) => [value, t(key), t(key + '.inline')];
+const actEnergies = () => [choiceOf('low', 'act.energyLow'), choiceOf('medium', 'act.energyMedium'), choiceOf('high', 'act.energyHigh')];
+const actPlaces = () => [choiceOf('any', 'act.placeAny'), choiceOf('inside', 'act.placeInside'), choiceOf('outside', 'act.placeOutside')];
+const actRepeats = () => [choiceOf('always', 'act.repeatAlways'), choiceOf('once', 'act.repeatOnce'), choiceOf('daily', 'act.repeatDaily'), choiceOf('weekly', 'act.repeatWeekly')];
 function activityOptions(choices, value) { return choices.map(([v, label]) => h('option', { value: v, selected: v === value ? true : null }, label)); }
 function activityModeLabel(mode) { return mode === 'free' ? t('act.modeFree') : t('act.modeFocus'); }
 function activityModeNote(mode) {
@@ -24,7 +26,7 @@ function taskStatus(it) {
     return next ? t('act.statusWaiting', { day: dayLabel(next) }) : t('act.statusDoneOnce');
   }
   const repeat = actRepeats().find(([value]) => value === it.repeat);
-  return repeat && it.repeat !== 'always' ? t('act.statusRepeat', { repeat: repeat[1].toLowerCase() }) : '';
+  return repeat && it.repeat !== 'always' ? t('act.statusRepeat', { repeat: repeat[2] }) : '';
 }
 // Appelée uniquement à la réussite d’une session, avant le commit de la récompense.
 function completeTask(a) {
