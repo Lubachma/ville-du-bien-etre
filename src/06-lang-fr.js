@@ -229,6 +229,9 @@ DICT.fr = {
 
   // Activités : choix, fiches et formulaires
   'common.save': 'Enregistrer',
+  'form.required': 'Ce champ est à remplir.',
+  'form.range': 'Choisis un nombre entre {min} et {max}.',
+  'form.check': 'Vérifie cette valeur.',
   'act.energyLow': 'Douce',
   'act.energyLow.inline': 'douce',
   'act.energyMedium': 'Modérée',

@@ -66,7 +66,16 @@ async function runFeatures(browser, baseURL = process.env.BASE_URL || 'http://12
 
     await page.locator('[data-tab="journal"]').click();
     await page.locator('#goalsCard').getByRole('button', { name: 'Modifier' }).click();
+    // Valeur hors limites : un message sous le champ, qui revient sous les yeux. Sur iPhone, la bulle du navigateur
+    // n'apparaît pas toujours, et « Enregistrer » semblait ne rien faire.
+    await page.locator('#goalMinutes').fill('1500');
+    await page.locator('#sheet').getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    const goalError = page.locator('#sheet [role="alert"]');
+    assert.equal(await goalError.count(), 1);
+    assert.match(await goalError.innerText(), /entre 5 et 1260\./);
+    assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'goalMinutes');
     await page.locator('#goalMinutes').fill('5');
+    assert.equal(await goalError.count(), 0);
     await page.locator('#goalDays').selectOption('1');
     await page.locator('#goalCat').selectOption('all');
     await page.locator('#goalBuilding').selectOption('ecole');
@@ -82,6 +91,9 @@ async function runFeatures(browser, baseURL = process.env.BASE_URL || 'http://12
 
     await page.locator('[data-tab="ville"]').click();
     await page.locator('#personalizeCity').click();
+    await page.locator('#cityName').fill('');
+    await page.getByRole('button', { name: 'Enregistrer le nom', exact: true }).click();
+    assert.equal(await page.locator('#sheet [role="alert"]').innerText(), 'Ce champ est à remplir.');
     await page.locator('#cityName').fill('Le jardin tranquille');
     await page.getByRole('button', { name: 'Enregistrer le nom', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__ville.state.personal.name), 'Le jardin tranquille');

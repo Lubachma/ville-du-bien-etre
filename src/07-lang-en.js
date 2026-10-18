@@ -229,6 +229,9 @@ DICT.en = {
 
   // Activities: choices, sheets and forms
   'common.save': 'Save',
+  'form.required': 'This field is required.',
+  'form.range': 'Choose a number between {min} and {max}.',
+  'form.check': 'Please check this value.',
   'act.energyLow': 'Gentle',
   'act.energyLow.inline': 'gentle',
   'act.energyMedium': 'Moderate',
