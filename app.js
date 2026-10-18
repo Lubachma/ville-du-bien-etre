@@ -5732,6 +5732,9 @@ const City = (() => {
     draw();
   }
   function panBy(dx, dy) {
+    // Pendant un zoom en douceur, le glissement s'ajoute aux deux bouts de la transition, qui sinon l'écraserait.
+    const a = big.anim;
+    if (a) { a.from.pan = [a.from.pan[0] + dx, a.from.pan[1] + dy]; a.to.pan = keepInView([a.to.pan[0] + dx, a.to.pan[1] + dy], a.to.z); }
     big.pan = keepInView([big.pan[0] + dx, big.pan[1] + dy], big.shown);
     applyView();
     if (!raf) { clearTimeout(ambientTimer); ambientTimer = 0; raf = requestAnimationFrame(draw); }

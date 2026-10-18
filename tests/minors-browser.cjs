@@ -70,12 +70,14 @@ async function bigKeyboard(browser, baseURL) {
     await page.locator('#cityBig').waitFor();
     await page.keyboard.press('Tab');
     assert.equal(await focused(), 'cityBigOut', 'Tab sort de la vue en grand');
-    await page.keyboard.press('+');
-    assert.equal((await state()).zoom, 1.5);
+    // « + » puis une flèche aussitôt, pendant le zoom en douceur : les deux comptent.
     const before = (await state()).focus;
+    await page.keyboard.press('+');
     await page.keyboard.press('ArrowRight');
-    const after = (await state()).focus;
-    assert.ok(after[0] - after[1] > before[0] - before[1] + .1, 'la flèche droite ne déplace pas la vue vers la droite');
+    await page.waitForTimeout(400);
+    const after = await state();
+    assert.equal(after.zoom, 1.5);
+    assert.ok(after.focus[0] - after.focus[1] > before[0] - before[1] + .1, 'la flèche droite ne déplace pas la vue vers la droite');
     await page.locator('#cityBigIn').focus();
     for (let i = 0; i < 4; i++) await page.keyboard.press('Enter');
     assert.equal((await state()).zoom, 3);
