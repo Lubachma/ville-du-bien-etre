@@ -117,8 +117,10 @@ function openWonderSheet(tile) {
         next.ready && !next.affordable ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(next.price - S.coins) })) : null,
         h('button', { class: 'btn btn-primary btn-block', type: 'button', disabled: next.ready && next.affordable ? null : true, onclick: () => {
           if (!buildWonderStage(tile)) return;
-          const fresh = noticeProgress();
+          const fresh = noticeProgress(), kind = tile.stage >= ITEMS[key].wonder.length ? 'inaugurate' : 'stage';
           closeSheet();
+          City.effect(tile.id, kind);
+          Chime.place(kind);
           commit();
           bump();
           const params = { item: itemName(key), stage: tile.stage, g: itemGender(key) };

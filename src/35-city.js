@@ -9,7 +9,10 @@ const City = (() => {
   let raf = 0;
   let keyboard = false;
   const cursor = { x: 3, y: 3 };
-  const pops = new Map();
+  // Effets de pose : chantier, déplacement, étape, inauguration (par case), étincelles d'un ensemble découvert.
+  const effects = new Map();
+  let sparkles = [];
+  const FX_TIME = { build: 1000, stage: 1000, move: 600, inaugurate: 1400, sparkle: 900 };
 
   function layout() {
     const rect = canvas.getBoundingClientRect();
@@ -47,7 +50,49 @@ const City = (() => {
     return null;
   }
   function hexA(hex, a) { const { r, g, b } = hexToRgb(hex); return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'; }
-  function easeOutBack(k) { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); }
+  // L'élément sort du sol (chantier, étape) puis rebondit ; un déplacement ou une inauguration rebondit tout de suite.
+  function effectTransform(g, t, kind, k) {
+    const [cx, cy] = g.P(t.x + .5, t.y + .5);
+    let sx = 1, sy = 1;
+    if (kind === 'build' || kind === 'stage') sy = k < .15 ? 0 : k < .8 ? 1 - Math.pow(1 - (k - .15) / .65, 3) : 1;
+    const [from, span] = kind === 'move' ? [0, 1] : kind === 'inaugurate' ? [0, .4] : [.8, .2];
+    if (k >= from) { const b = Math.sin(Math.PI * Math.min(1, (k - from) / span)); sx *= 1 + .06 * b; sy *= 1 - .06 * b; }
+    ctx.translate(cx, cy); ctx.scale(sx, Math.max(sy, .001)); ctx.translate(-cx, -cy);
+  }
+  // Échafaudage et poussière de part et d'autre de l'élément (« back » avant lui, « front » après lui), confettis devant.
+  function effectOverlay(g, t, kind, k, layer) {
+    if ((kind === 'build' || kind === 'stage') && k < .8) {
+      ctx.globalAlpha = k < .35 ? k / .35 : k > .65 ? (.8 - k) / .15 : 1;
+      g.scaffold(t.x, t.y, g.tw * .5, layer);
+    }
+    const dust = kind === 'move' ? k : (kind === 'build' || kind === 'stage') && k >= .5 ? (k - .5) / .5 : -1;
+    if (dust >= 0) {
+      ctx.globalAlpha = .9 * (1 - dust);
+      for (let i = 0; i < 7; i++) {
+        const a = i / 7 * Math.PI * 2 + .4, u = Math.cos(a), v = Math.sin(a), r = .32 + .24 * dust;
+        if ((u + v < 0) !== (layer === 'back')) continue;
+        const [px, py] = g.P(t.x + .5 + u * r, t.y + .5 + v * r, g.tw * .05 * dust);
+        g.circle(px, py, g.tw * (.05 + .03 * dust), g.night ? '#8b8070' : '#f1e7d3');
+      }
+    }
+    if (kind === 'inaugurate' && layer === 'front') {
+      const cols = CAT_ORDER.map(c => g.cat(c)), top = g.tw * (ITEMS[t.item].hf + .3);
+      for (let i = 0; i < 16; i++) {
+        const q = clamp((k - rnd(i, 9) * .3) / .7, 0, 1);
+        if (!q) continue;
+        const [px, py] = g.P(t.x + .5 + (rnd(i, 3) - .5) * .9, t.y + .5 + (rnd(7, i) - .5) * .9, top * (1 - q * q));
+        ctx.globalAlpha = 1 - Math.max(0, q - .7) / .3;
+        ctx.fillStyle = cols[i % cols.length];
+        ctx.fillRect(px - g.tw * .015, py - g.tw * .025, g.tw * .03, g.tw * .05);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  // Étoile à quatre branches, pour les étincelles d'un ensemble.
+  function star(g, x, y, r) {
+    if (r <= 0) return;
+    g.poly([[x, y - r], [x + r * .3, y - r * .3], [x + r, y], [x + r * .3, y + r * .3], [x, y + r], [x - r * .3, y + r * .3], [x - r, y], [x - r * .3, y - r * .3]], g.night ? '#ffe7a6' : '#f6c94f');
+  }
 
   function draw(options) {
     const clean = options && options.clean === true;
@@ -105,21 +150,32 @@ const City = (() => {
     let animating = false;
     for (const { t, ghost } of list) {
       if (t.id === hiddenId || !isItem(t.item)) continue;
+      const fx = clean ? null : effects.get(t.id);
+      const k = fx ? clamp((now - fx.start) / FX_TIME[fx.kind], 0, 1) : 1;
+      if (fx) { if (k >= 1) effects.delete(t.id); else animating = true; }
+      const overlay = layer => { ctx.save(); try { effectOverlay(g, t, fx.kind, k, layer); } catch (e) { /* effet ignoré */ } ctx.restore(); };
+      if (fx && k < 1) overlay('back');
       ctx.save();
       try {
         if (ghost) ctx.globalAlpha = .62;
-        const start = clean ? null : pops.get(t.id);
-        if (start != null) {
-          const k = clamp((now - start) / 360, 0, 1);
-          if (k >= 1) pops.delete(t.id); else animating = true;
-          const s = easeOutBack(k);
-          const [cx, cy] = g.P(t.x + .5, t.y + .5);
-          ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
-        }
+        if (fx) effectTransform(g, t, fx.kind, k);
         DRAW[t.item](g, t.x, t.y, t);
         drawGrowth(g, t.item, t.x, t.y);
       } catch (e) { /* un bâtiment illisible ne bloque pas le reste de la ville */ }
       ctx.restore();
+      if (fx && k < 1) overlay('front');
+    }
+    // Étincelles sur les cases d'un ensemble qu'on vient de découvrir.
+    sparkles = clean ? sparkles : sparkles.filter(s => now - s.start < FX_TIME.sparkle);
+    for (const s of clean ? [] : sparkles) {
+      const q = (now - s.start) / FX_TIME.sparkle;
+      animating = true;
+      for (const tl of S.city.tiles.filter(tile => s.ids.includes(tile.id))) {
+        for (let i = 0; i < 3; i++) {
+          const [px, py] = g.P(tl.x + .25 + rnd(i, tl.x) * .5, tl.y + .25 + rnd(tl.y, i) * .5, g.tw * (.25 + rnd(i * 5, 7) * .5));
+          star(g, px, py, g.tw * .06 * Math.sin(Math.PI * clamp(q * 1.4 - i * .15, 0, 1)));
+        }
+      }
     }
     if (!clean && keyboard && document.activeElement === canvas) {
       g.tile(cursor.x, cursor.y, 0, null, night ? '#ffffff' : '#1d2721', 2.5);
@@ -190,7 +246,10 @@ const City = (() => {
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.drawImage(off, 0, 0);
   }
-  function pop(id) { if (!reducedMotion()) pops.set(id, performance.now()); }
+  // Aucun effet quand le système demande de réduire les animations.
+  function effect(id, kind) { if (reducedMotion()) return; effects.set(id, { kind, start: performance.now() }); draw(); }
+  function sparkle(ids) { if (reducedMotion() || !ids.length) return; sparkles.push({ ids, start: performance.now() }); draw(); }
+  function effectCount() { return effects.size + sparkles.length; }
   function relayout() { layout(); draw(); }
   function point(e) { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
   function describe(x, y) {
@@ -246,7 +305,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, pop, tileOf, snapshot, focus: () => { keyboard = true; canvas.focus(); draw(); } };
+  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, focus: () => { keyboard = true; canvas.focus(); draw(); } };
 })();
 
 /* Placement / déplacement de bâtiments */
@@ -297,7 +356,8 @@ const Mode = {
       S.city.tiles.push(tile);
       const fresh = noticeProgress();
       this.state = null;
-      City.pop(tile.id);
+      City.effect(tile.id, 'build');
+      Chime.place('build');
       commit();
       bump();
       // Un ensemble ou un succès : le message de fête remplace celui de la pose.
@@ -310,7 +370,8 @@ const Mode = {
       tile.x = st.target.x;
       tile.y = st.target.y;
       const fresh = noticeProgress();
-      City.pop(tile.id);
+      City.effect(tile.id, 'move');
+      Chime.place('move');
       commit();
       if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.moved'));
     }

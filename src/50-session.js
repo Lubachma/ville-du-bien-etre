@@ -159,6 +159,43 @@ const Chime = {
       }
     } catch (e) { /* pas de son ici */ }
   },
+  // Pose dans la ville : un « plop » doux, puis une note qui monte quand on enchaîne les poses (gamme pentatonique).
+  placeStep: 0,
+  placeAt: 0,
+  place(kind = 'build') {
+    const building = kind === 'build' || kind === 'stage';
+    try { if (S.settings.vibrate && (building || kind === 'inaugurate') && typeof navigator.vibrate === 'function') navigator.vibrate(15); } catch (e) { /* pas de vibreur */ }
+    if (!S.settings.sound) return;
+    if (building) {
+      const now = Date.now();
+      this.placeStep = now - this.placeAt < 20000 ? Math.min(this.placeStep + 1, PENTATONIC.length - 1) : 0;
+      this.placeAt = now;
+    }
+    this.unlock();
+    const c = this.ctx, gain = SOUND_GAIN[S.settings.soundVolume] || 1;
+    if (!c) return;
+    try {
+      const t0 = c.currentTime + .02;
+      const tone = (freq, start, dur, vol, endFreq) => {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, t0 + start);
+        if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t0 + start + dur);
+        g.gain.setValueAtTime(.0001, t0 + start);
+        g.gain.exponentialRampToValueAtTime(vol * gain, t0 + start + .012);
+        g.gain.exponentialRampToValueAtTime(.0001, t0 + start + dur);
+        o.connect(g);
+        g.connect(c.destination);
+        o.start(t0 + start);
+        o.stop(t0 + start + dur + .05);
+      };
+      if (building || kind === 'move') tone(330, 0, .14, .22, 150);
+      if (building) tone(PENTATONIC[this.placeStep], .08, .5, .12);
+      if (kind === 'inaugurate') [2, 4, 6].forEach((n, i) => tone(PENTATONIC[n], i * .12, .7, .12));
+      if (kind === 'set') [5, 7].forEach((n, i) => tone(PENTATONIC[n], i * .1, .6, .1));
+    } catch (e) { /* pas de son ici */ }
+    this.rest(3000);
+  },
   // Hors session, le son est mis en veille (batterie) ; le prochain tap le réveille.
   rest(delay) {
     clearTimeout(this.idle);

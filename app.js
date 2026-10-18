@@ -28,6 +28,7 @@ const GRACE_CHOICES = [5, 10, 20];
 const THEMES = ['auto', 'light', 'dark'];
 const SOUND_TYPES = ['chime', 'bowl', 'bells'];                 // sons de fin proposés
 const SOUND_GAIN = { soft: .5, normal: 1, loud: 1.6 };          // volume : multiplicateur du son
+const PENTATONIC = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51];  // notes des poses enchaînées (Hz)
 const SIZES = [7, 9, 11];
 const EXPAND_PRICE = { 9: 120e6, 11: 400e6 };
 const DUP_STEP = 0.5;                             // chaque exemplaire supplémentaire coûte 50 % de plus
@@ -4424,7 +4425,10 @@ const City = (() => {
   let raf = 0;
   let keyboard = false;
   const cursor = { x: 3, y: 3 };
-  const pops = new Map();
+  // Effets de pose : chantier, déplacement, étape, inauguration (par case), étincelles d'un ensemble découvert.
+  const effects = new Map();
+  let sparkles = [];
+  const FX_TIME = { build: 1000, stage: 1000, move: 600, inaugurate: 1400, sparkle: 900 };
 
   function layout() {
     const rect = canvas.getBoundingClientRect();
@@ -4462,7 +4466,49 @@ const City = (() => {
     return null;
   }
   function hexA(hex, a) { const { r, g, b } = hexToRgb(hex); return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'; }
-  function easeOutBack(k) { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); }
+  // L'élément sort du sol (chantier, étape) puis rebondit ; un déplacement ou une inauguration rebondit tout de suite.
+  function effectTransform(g, t, kind, k) {
+    const [cx, cy] = g.P(t.x + .5, t.y + .5);
+    let sx = 1, sy = 1;
+    if (kind === 'build' || kind === 'stage') sy = k < .15 ? 0 : k < .8 ? 1 - Math.pow(1 - (k - .15) / .65, 3) : 1;
+    const [from, span] = kind === 'move' ? [0, 1] : kind === 'inaugurate' ? [0, .4] : [.8, .2];
+    if (k >= from) { const b = Math.sin(Math.PI * Math.min(1, (k - from) / span)); sx *= 1 + .06 * b; sy *= 1 - .06 * b; }
+    ctx.translate(cx, cy); ctx.scale(sx, Math.max(sy, .001)); ctx.translate(-cx, -cy);
+  }
+  // Échafaudage et poussière de part et d'autre de l'élément (« back » avant lui, « front » après lui), confettis devant.
+  function effectOverlay(g, t, kind, k, layer) {
+    if ((kind === 'build' || kind === 'stage') && k < .8) {
+      ctx.globalAlpha = k < .35 ? k / .35 : k > .65 ? (.8 - k) / .15 : 1;
+      g.scaffold(t.x, t.y, g.tw * .5, layer);
+    }
+    const dust = kind === 'move' ? k : (kind === 'build' || kind === 'stage') && k >= .5 ? (k - .5) / .5 : -1;
+    if (dust >= 0) {
+      ctx.globalAlpha = .9 * (1 - dust);
+      for (let i = 0; i < 7; i++) {
+        const a = i / 7 * Math.PI * 2 + .4, u = Math.cos(a), v = Math.sin(a), r = .32 + .24 * dust;
+        if ((u + v < 0) !== (layer === 'back')) continue;
+        const [px, py] = g.P(t.x + .5 + u * r, t.y + .5 + v * r, g.tw * .05 * dust);
+        g.circle(px, py, g.tw * (.05 + .03 * dust), g.night ? '#8b8070' : '#f1e7d3');
+      }
+    }
+    if (kind === 'inaugurate' && layer === 'front') {
+      const cols = CAT_ORDER.map(c => g.cat(c)), top = g.tw * (ITEMS[t.item].hf + .3);
+      for (let i = 0; i < 16; i++) {
+        const q = clamp((k - rnd(i, 9) * .3) / .7, 0, 1);
+        if (!q) continue;
+        const [px, py] = g.P(t.x + .5 + (rnd(i, 3) - .5) * .9, t.y + .5 + (rnd(7, i) - .5) * .9, top * (1 - q * q));
+        ctx.globalAlpha = 1 - Math.max(0, q - .7) / .3;
+        ctx.fillStyle = cols[i % cols.length];
+        ctx.fillRect(px - g.tw * .015, py - g.tw * .025, g.tw * .03, g.tw * .05);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  // Étoile à quatre branches, pour les étincelles d'un ensemble.
+  function star(g, x, y, r) {
+    if (r <= 0) return;
+    g.poly([[x, y - r], [x + r * .3, y - r * .3], [x + r, y], [x + r * .3, y + r * .3], [x, y + r], [x - r * .3, y + r * .3], [x - r, y], [x - r * .3, y - r * .3]], g.night ? '#ffe7a6' : '#f6c94f');
+  }
 
   function draw(options) {
     const clean = options && options.clean === true;
@@ -4520,21 +4566,32 @@ const City = (() => {
     let animating = false;
     for (const { t, ghost } of list) {
       if (t.id === hiddenId || !isItem(t.item)) continue;
+      const fx = clean ? null : effects.get(t.id);
+      const k = fx ? clamp((now - fx.start) / FX_TIME[fx.kind], 0, 1) : 1;
+      if (fx) { if (k >= 1) effects.delete(t.id); else animating = true; }
+      const overlay = layer => { ctx.save(); try { effectOverlay(g, t, fx.kind, k, layer); } catch (e) { /* effet ignoré */ } ctx.restore(); };
+      if (fx && k < 1) overlay('back');
       ctx.save();
       try {
         if (ghost) ctx.globalAlpha = .62;
-        const start = clean ? null : pops.get(t.id);
-        if (start != null) {
-          const k = clamp((now - start) / 360, 0, 1);
-          if (k >= 1) pops.delete(t.id); else animating = true;
-          const s = easeOutBack(k);
-          const [cx, cy] = g.P(t.x + .5, t.y + .5);
-          ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
-        }
+        if (fx) effectTransform(g, t, fx.kind, k);
         DRAW[t.item](g, t.x, t.y, t);
         drawGrowth(g, t.item, t.x, t.y);
       } catch (e) { /* un bâtiment illisible ne bloque pas le reste de la ville */ }
       ctx.restore();
+      if (fx && k < 1) overlay('front');
+    }
+    // Étincelles sur les cases d'un ensemble qu'on vient de découvrir.
+    sparkles = clean ? sparkles : sparkles.filter(s => now - s.start < FX_TIME.sparkle);
+    for (const s of clean ? [] : sparkles) {
+      const q = (now - s.start) / FX_TIME.sparkle;
+      animating = true;
+      for (const tl of S.city.tiles.filter(tile => s.ids.includes(tile.id))) {
+        for (let i = 0; i < 3; i++) {
+          const [px, py] = g.P(tl.x + .25 + rnd(i, tl.x) * .5, tl.y + .25 + rnd(tl.y, i) * .5, g.tw * (.25 + rnd(i * 5, 7) * .5));
+          star(g, px, py, g.tw * .06 * Math.sin(Math.PI * clamp(q * 1.4 - i * .15, 0, 1)));
+        }
+      }
     }
     if (!clean && keyboard && document.activeElement === canvas) {
       g.tile(cursor.x, cursor.y, 0, null, night ? '#ffffff' : '#1d2721', 2.5);
@@ -4605,7 +4662,10 @@ const City = (() => {
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.drawImage(off, 0, 0);
   }
-  function pop(id) { if (!reducedMotion()) pops.set(id, performance.now()); }
+  // Aucun effet quand le système demande de réduire les animations.
+  function effect(id, kind) { if (reducedMotion()) return; effects.set(id, { kind, start: performance.now() }); draw(); }
+  function sparkle(ids) { if (reducedMotion() || !ids.length) return; sparkles.push({ ids, start: performance.now() }); draw(); }
+  function effectCount() { return effects.size + sparkles.length; }
   function relayout() { layout(); draw(); }
   function point(e) { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
   function describe(x, y) {
@@ -4661,7 +4721,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, pop, tileOf, snapshot, focus: () => { keyboard = true; canvas.focus(); draw(); } };
+  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, focus: () => { keyboard = true; canvas.focus(); draw(); } };
 })();
 
 /* Placement / déplacement de bâtiments */
@@ -4712,7 +4772,8 @@ const Mode = {
       S.city.tiles.push(tile);
       const fresh = noticeProgress();
       this.state = null;
-      City.pop(tile.id);
+      City.effect(tile.id, 'build');
+      Chime.place('build');
       commit();
       bump();
       // Un ensemble ou un succès : le message de fête remplace celui de la pose.
@@ -4725,7 +4786,8 @@ const Mode = {
       tile.x = st.target.x;
       tile.y = st.target.y;
       const fresh = noticeProgress();
-      City.pop(tile.id);
+      City.effect(tile.id, 'move');
+      Chime.place('move');
       commit();
       if (fresh.sets.length || fresh.achievements.length) celebrate(fresh); else toast(t('city.moved'));
     }
@@ -5568,8 +5630,10 @@ function openWonderSheet(tile) {
         next.ready && !next.affordable ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(next.price - S.coins) })) : null,
         h('button', { class: 'btn btn-primary btn-block', type: 'button', disabled: next.ready && next.affordable ? null : true, onclick: () => {
           if (!buildWonderStage(tile)) return;
-          const fresh = noticeProgress();
+          const fresh = noticeProgress(), kind = tile.stage >= ITEMS[key].wonder.length ? 'inaugurate' : 'stage';
           closeSheet();
+          City.effect(tile.id, kind);
+          Chime.place(kind);
           commit();
           bump();
           const params = { item: itemName(key), stage: tile.stage, g: itemGender(key) };
@@ -6615,6 +6679,43 @@ const Chime = {
       }
     } catch (e) { /* pas de son ici */ }
   },
+  // Pose dans la ville : un « plop » doux, puis une note qui monte quand on enchaîne les poses (gamme pentatonique).
+  placeStep: 0,
+  placeAt: 0,
+  place(kind = 'build') {
+    const building = kind === 'build' || kind === 'stage';
+    try { if (S.settings.vibrate && (building || kind === 'inaugurate') && typeof navigator.vibrate === 'function') navigator.vibrate(15); } catch (e) { /* pas de vibreur */ }
+    if (!S.settings.sound) return;
+    if (building) {
+      const now = Date.now();
+      this.placeStep = now - this.placeAt < 20000 ? Math.min(this.placeStep + 1, PENTATONIC.length - 1) : 0;
+      this.placeAt = now;
+    }
+    this.unlock();
+    const c = this.ctx, gain = SOUND_GAIN[S.settings.soundVolume] || 1;
+    if (!c) return;
+    try {
+      const t0 = c.currentTime + .02;
+      const tone = (freq, start, dur, vol, endFreq) => {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, t0 + start);
+        if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t0 + start + dur);
+        g.gain.setValueAtTime(.0001, t0 + start);
+        g.gain.exponentialRampToValueAtTime(vol * gain, t0 + start + .012);
+        g.gain.exponentialRampToValueAtTime(.0001, t0 + start + dur);
+        o.connect(g);
+        g.connect(c.destination);
+        o.start(t0 + start);
+        o.stop(t0 + start + dur + .05);
+      };
+      if (building || kind === 'move') tone(330, 0, .14, .22, 150);
+      if (building) tone(PENTATONIC[this.placeStep], .08, .5, .12);
+      if (kind === 'inaugurate') [2, 4, 6].forEach((n, i) => tone(PENTATONIC[n], i * .12, .7, .12));
+      if (kind === 'set') [5, 7].forEach((n, i) => tone(PENTATONIC[n], i * .1, .6, .1));
+    } catch (e) { /* pas de son ici */ }
+    this.rest(3000);
+  },
   // Hors session, le son est mis en veille (batterie) ; le prochain tap le réveille.
   rest(delay) {
     clearTimeout(this.idle);
@@ -7168,6 +7269,12 @@ function carnetSets() {
 // Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.
 function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
   if (!achievements.length && !sets.length) { if (lead) toast(lead); return; }
+  if (sets.length) {
+    // Étincelles sur les cases des ensembles découverts, et deux notes claires.
+    const found = formedSets();
+    City.sparkle(sets.flatMap(id => found.get(id) || []));
+    Chime.place('set');
+  }
   const parts = [lead, ...sets.map(id => t('set.discovered', { name: setName(id) }))];
   if (achievements.length === 1) parts.push(t('ach.toastOne', { name: achName(achievements[0]) }));
   else if (achievements.length > 1) parts.push(t('ach.toastMany', { n: achievements.length }));

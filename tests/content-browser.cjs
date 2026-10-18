@@ -28,6 +28,24 @@ async function newTown(browser, baseURL, seed, options = {}) {
 }
 const town = (byCat, tiles = [], extra = {}) => ({ v: 2, coins: 3e9, settings: { lang: 'fr' }, stats: { ok: 1, byCat, days: { '2026-10-16': 10 } },
   city: { size: 7, tiles }, clock: { tz: 'Europe/Zurich', maxSeen: 0, lastDay: '2026-10-16' }, ...extra });
+// Espions installés avant le chargement : oscillateurs créés, valeurs réglées (fréquences, volumes) et vibrations.
+function audioSpies() {
+  window.__audio = { oscillators: 0, values: [] };
+  window.__vibrations = [];
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const create = AC.prototype.createOscillator;
+  AC.prototype.createOscillator = function () { window.__audio.oscillators++; return create.call(this); };
+  const set = AudioParam.prototype.setValueAtTime;
+  AudioParam.prototype.setValueAtTime = function (value, time) { window.__audio.values.push(value); return set.call(this, value, time); };
+  Navigator.prototype.vibrate = function (pattern) { window.__vibrations.push(pattern); return true; };
+}
+async function placeFromShop(page, name, moves = []) {
+  await page.locator('#buildBtn').click();
+  await page.getByRole('button', { name: new RegExp('^Placer ' + name + ' pour') }).click();
+  for (const key of moves) await page.locator('#city').press(key);
+  await page.locator('#city').press('Enter');
+  await page.locator('#placeConfirm').click();
+}
 async function openTile(page, name) {
   if (!(await page.locator('.city-list').evaluate(el => el.open))) await page.locator('.city-list summary').click();
   await page.locator('#cityList').getByRole('button', { name: new RegExp('^' + name) }).click();
@@ -215,6 +233,48 @@ async function runContent(browser, baseURL) {
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Boutique : raccourcis, silhouettes et décor offert');
+  }
+  // Pose vivante : chantier animé, son et vibration ; la note monte quand on enchaîne ; rien ne sonne son coupé.
+  {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich' });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    try {
+      await page.addInitScript(audioSpies);
+      await page.addInitScript(state => {
+        if (sessionStorage.getItem('seeded')) return;
+        sessionStorage.setItem('seeded', '1');
+        localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state));
+      }, town({ esprit: 5 }));
+      await page.goto(baseURL);
+      await page.waitForFunction(() => !!window.__ville);
+      const highest = () => page.evaluate(() => Math.max(...window.__audio.values.filter(v => v > 20)));
+      await placeFromShop(page, 'Arbre');
+      assert.ok(await page.evaluate(() => __ville.City.effectCount()) > 0, 'aucun effet de chantier');
+      assert.ok(await page.evaluate(() => window.__audio.oscillators) > 0, 'aucun son de pose');
+      assert.deepEqual(await page.evaluate(() => window.__vibrations), [15]);
+      const first = await highest();
+      await page.waitForTimeout(1300);
+      assert.equal(await page.evaluate(() => __ville.City.effectCount()), 0);
+      await page.evaluate(() => { window.__audio.values = []; });
+      await placeFromShop(page, 'Arbre', ['ArrowRight']);
+      assert.ok(await highest() > first, 'la deuxième note ne monte pas');
+      await page.evaluate(() => { __ville.state.settings.sound = false; window.__audio.oscillators = 0; });
+      await placeFromShop(page, 'Arbre', ['ArrowRight']);
+      assert.equal(await page.evaluate(() => window.__audio.oscillators), 0);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  // Animations réduites : la pose ne lance aucun effet.
+  {
+    const { context, page, errors } = await newTown(browser, baseURL, town({ esprit: 5 }), { reducedMotion: 'reduce' });
+    try {
+      await placeFromShop(page, 'Arbre');
+      assert.equal(await page.evaluate(() => __ville.City.effectCount()), 0);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Pose vivante : chantier, son, note qui monte, animations réduites');
   }
   return { scenarios };
 }

@@ -23,6 +23,7 @@ const GRACE_CHOICES = [5, 10, 20];
 const THEMES = ['auto', 'light', 'dark'];
 const SOUND_TYPES = ['chime', 'bowl', 'bells'];                 // sons de fin proposés
 const SOUND_GAIN = { soft: .5, normal: 1, loud: 1.6 };          // volume : multiplicateur du son
+const PENTATONIC = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51];  // notes des poses enchaînées (Hz)
 const SIZES = [7, 9, 11];
 const EXPAND_PRICE = { 9: 120e6, 11: 400e6 };
 const DUP_STEP = 0.5;                             // chaque exemplaire supplémentaire coûte 50 % de plus

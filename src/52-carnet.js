@@ -102,6 +102,12 @@ function carnetSets() {
 // Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.
 function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
   if (!achievements.length && !sets.length) { if (lead) toast(lead); return; }
+  if (sets.length) {
+    // Étincelles sur les cases des ensembles découverts, et deux notes claires.
+    const found = formedSets();
+    City.sparkle(sets.flatMap(id => found.get(id) || []));
+    Chime.place('set');
+  }
   const parts = [lead, ...sets.map(id => t('set.discovered', { name: setName(id) }))];
   if (achievements.length === 1) parts.push(t('ach.toastOne', { name: achName(achievements[0]) }));
   else if (achievements.length > 1) parts.push(t('ach.toastMany', { n: achievements.length }));
