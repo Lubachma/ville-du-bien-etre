@@ -862,7 +862,7 @@ DICT.fr = {
   'settings.resetFinishSession': 'Termine la session en cours avant de recommencer.',
   'settings.resetDone': 'Nouvelle ville créée.',
   'settings.helpButton': 'Bien démarrer et installer l’app',
-  'settings.rules': 'Gains : 1\u00a0M par minute. Bonus : premier tirage accepté +20\u00a0% (envie) ou +50\u00a0% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10\u00a0% par jour (max +50\u00a0%), que tes jours de repos n’interrompent pas ; bon retour +20\u00a0% pour la première session après au moins 2 jours sans session.',
+  'settings.rules': 'Gains : 1\u00a0M par minute. Bonus : premier tirage accepté +20\u00a0% (envie) ou +50\u00a0% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10\u00a0% par jour (max +50\u00a0%), que tes jours de repos n’interrompent pas ; bon retour +20\u00a0% pour la première session qui relance une série, après au moins 2 jours sans session.',
 
   // État du stockage, mode hors connexion, aide et installation
   'storage.export': 'Exporter ma progression',
@@ -1530,7 +1530,7 @@ DICT.en = {
   'settings.resetFinishSession': 'Finish the current session before starting over.',
   'settings.resetDone': 'New town created.',
   'settings.helpButton': 'Getting started and installing the app',
-  'settings.rules': "Earnings: 1\u00a0M per minute. Bonuses: first accepted draw +20% (wish) or +50% (chore) from 3 ideas, halved with each redraw; daily streak +10% per day (max +50%), which your rest days don't interrupt; welcome back +20% for the first session after at least 2 days without one.",
+  'settings.rules': "Earnings: 1\u00a0M per minute. Bonuses: first accepted draw +20% (wish) or +50% (chore) from 3 ideas, halved with each redraw; daily streak +10% per day (max +50%), which your rest days don't interrupt; welcome back +20% on the first session that starts a new streak, after at least 2 days without one.",
 
   // Storage status, offline mode, help and install
   'storage.export': 'Export my progress',
@@ -1791,7 +1791,8 @@ function normalize(raw) {
     hideStreak: st.hideStreak === true,
     soundType: SOUND_TYPES.includes(st.soundType) ? st.soundType : 'chime',
     soundVolume: own(SOUND_GAIN, st.soundVolume) ? st.soundVolume : 'normal',
-    vibrate: st.vibrate !== false,
+    // Avant ce réglage, la vibration suivait le son : une ville au son coupé reste silencieuse.
+    vibrate: typeof st.vibrate === 'boolean' ? st.vibrate : st.sound !== false,
   };
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))

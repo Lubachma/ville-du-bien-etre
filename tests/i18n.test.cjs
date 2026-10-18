@@ -248,3 +248,9 @@ test('pourcentage de bonus selon la langue', () => {
   setLang('en');
   assert.equal(t('unit.bonusPct', { pct: 20 }), '+20%');
 });
+
+test('les règles de gain décrivent le bon retour comme le début d’une nouvelle série', () => {
+  const { DICT } = app();
+  assert.match(DICT.fr['settings.rules'], /bon retour \+20 % pour la première session qui relance une série, après au moins 2 jours sans session/);
+  assert.match(DICT.en['settings.rules'], /welcome back \+20% on the first session that starts a new streak, after at least 2 days without one/);
+});

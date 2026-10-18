@@ -41,7 +41,7 @@
 
 - 💰 **1 M coins** per completed minute
 - 🔥 **Streak**: +10 % per active day in a row, up to +50 %; rest days (2 per week by default) and pauses keep it going
-- 🌅 **Welcome back**: +20 % on the first session after at least 2 days without one
+- 🌅 **Welcome back**: +20 % on the first session that starts a new streak, after at least 2 days without one
 - 🎲 **Draw**: first draw accepted +20 % (wish) or +50 % (chore) from 3 available ideas, halved on each paid re-roll
 - 🧭 **5 domains** — Mind, Body, Calm, Home, Creativity (Esprit, Corps, Calme, Foyer, Créativité in French) — each unlocking its own buildings, then the Clock Tower after 1,000 minutes in total
 

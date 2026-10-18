@@ -41,7 +41,7 @@
 
 - 💰 **1 M de pièces** par minute terminée
 - 🔥 **Série** : +10 % par jour actif d’affilée, jusqu’à +50 % ; les jours de repos (2 par semaine par défaut) et les pauses la maintiennent
-- 🌅 **Bon retour** : +20 % pour la première session après au moins 2 jours sans session
+- 🌅 **Bon retour** : +20 % pour la première session qui relance une série, après au moins 2 jours sans session
 - 🎲 **Tirage** : premier tirage accepté +20 % (envie) ou +50 % (obligation) dès 3 idées disponibles, divisé par deux à chaque relance payante
 - 🧭 **5 domaines** — Esprit, Corps, Calme, Foyer, Créativité — qui débloquent chacun leurs bâtiments, puis la Tour de l’horloge après 1 000 minutes au total
 

@@ -157,7 +157,8 @@ function normalize(raw) {
     hideStreak: st.hideStreak === true,
     soundType: SOUND_TYPES.includes(st.soundType) ? st.soundType : 'chime',
     soundVolume: own(SOUND_GAIN, st.soundVolume) ? st.soundVolume : 'normal',
-    vibrate: st.vibrate !== false,
+    // Avant ce réglage, la vibration suivait le son : une ville au son coupé reste silencieuse.
+    vibrate: typeof st.vibrate === 'boolean' ? st.vibrate : st.sound !== false,
   };
   s.pauses = Array.isArray(raw.pauses) ? raw.pauses
     .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))

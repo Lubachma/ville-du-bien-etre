@@ -138,3 +138,12 @@ test('masquer la série garde son bonus', () => {
   const a = app('2026-10-17', week, { hideStreak: true });
   assert.equal(a.rewardFor(10, 0, '2026-10-17').streakPct, 30);
 });
+
+test('une ville au son coupé ne se met pas à vibrer après la mise à jour', () => {
+  const a = app('2026-10-17');
+  assert.equal(a.normalize({ settings: { sound: false } }).settings.vibrate, false);
+  assert.equal(a.normalize({ settings: { sound: true } }).settings.vibrate, true);
+  assert.equal(a.normalize({ settings: { sound: false, vibrate: true } }).settings.vibrate, true);
+  assert.equal(a.normalize({ settings: { vibrate: false } }).settings.vibrate, false);
+  assert.equal(a.defaultState().settings.vibrate, true);
+});

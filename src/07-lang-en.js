@@ -564,7 +564,7 @@ DICT.en = {
   'settings.resetFinishSession': 'Finish the current session before starting over.',
   'settings.resetDone': 'New town created.',
   'settings.helpButton': 'Getting started and installing the app',
-  'settings.rules': "Earnings: 1\u00a0M per minute. Bonuses: first accepted draw +20% (wish) or +50% (chore) from 3 ideas, halved with each redraw; daily streak +10% per day (max +50%), which your rest days don't interrupt; welcome back +20% for the first session after at least 2 days without one.",
+  'settings.rules': "Earnings: 1\u00a0M per minute. Bonuses: first accepted draw +20% (wish) or +50% (chore) from 3 ideas, halved with each redraw; daily streak +10% per day (max +50%), which your rest days don't interrupt; welcome back +20% on the first session that starts a new streak, after at least 2 days without one.",
 
   // Storage status, offline mode, help and install
   'storage.export': 'Export my progress',

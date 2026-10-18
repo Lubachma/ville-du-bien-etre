@@ -564,7 +564,7 @@ DICT.fr = {
   'settings.resetFinishSession': 'Termine la session en cours avant de recommencer.',
   'settings.resetDone': 'Nouvelle ville créée.',
   'settings.helpButton': 'Bien démarrer et installer l’app',
-  'settings.rules': 'Gains : 1\u00a0M par minute. Bonus : premier tirage accepté +20\u00a0% (envie) ou +50\u00a0% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10\u00a0% par jour (max +50\u00a0%), que tes jours de repos n’interrompent pas ; bon retour +20\u00a0% pour la première session après au moins 2 jours sans session.',
+  'settings.rules': 'Gains : 1\u00a0M par minute. Bonus : premier tirage accepté +20\u00a0% (envie) ou +50\u00a0% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10\u00a0% par jour (max +50\u00a0%), que tes jours de repos n’interrompent pas ; bon retour +20\u00a0% pour la première session qui relance une série, après au moins 2 jours sans session.',
 
   // État du stockage, mode hors connexion, aide et installation
   'storage.export': 'Exporter ma progression',
