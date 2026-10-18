@@ -64,7 +64,25 @@ const City = (() => {
   // Promeneurs : chacun suit, aller et retour, un petit chemin de 12 pas sur les cases où l'on marche, tiré une fois
   // pour toutes de son indice ; un pas toutes les 4 s (2,5 s de marche, puis une pause).
   const WALK_STEPS = 12, STEP_S = 4, MOVE_S = 2.5, WALKER_COLORS = ['#d9573b', '#3f78c4', '#e3a12f', '#3a9a7a', '#d0628f', '#7a8b6e'];
-  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] }, visitorBox = null;
+  let walkCache = { key: '', paths: [] }, lastPeople = { walkers: 0, doers: [] }, visitorBox = null, wishBox = null;
+  // Souhait d'habitant : une bulle blanche au-dessus du bâtiment, le décor souhaité dessiné en petit dedans. Sa zone (wishBox)
+  // ouvre la fiche du bâtiment, comme la case du visiteur.
+  function drawWishBubble(g, pal) {
+    const tile = typeof townWishTile === 'function' ? townWishTile() : null, item = tile && S.townWish.item;
+    if (!tile || !isItem(item)) return;
+    const r = Math.max(13, g.tw * .32), [bx, by] = g.P(tile.x + .5, tile.y + .5, g.tw * ((ITEMS[tile.item].hf || .5) + .28)), cy = by - r * 1.25;
+    const ctx = g.ctx;
+    ctx.beginPath();
+    ctx.arc(bx, cy, r, 0, Math.PI * 2);
+    ctx.moveTo(bx - r * .32, cy + r * .9); ctx.lineTo(bx, by); ctx.lineTo(bx + r * .32, cy + r * .9);
+    ctx.fillStyle = g.night ? 'rgba(236,242,236,.92)' : 'rgba(255,255,255,.95)';
+    ctx.strokeStyle = 'rgba(30,50,40,.25)'; ctx.lineWidth = 1;
+    ctx.fill(); ctx.stroke();
+    // Le décor, en couleurs de jour, centré sur le milieu de son dessin (du sol de sa case jusqu'à son sommet).
+    const tw = r * 1.6, mini = makePainter(ctx, tw, bx, cy - tw / 4 + tw * (ITEMS[item].hf || .3) / 2, { ...pal, night: false, dark: 0 });
+    DRAW[item](mini, 0, 0, {});
+    wishBox = { x: bx - r, y: cy - r, w: r * 2, h: by - (cy - r), tile: tile.id };
+  }
   // Point sous le visiteur : sol, assise du banc, branche, toit, eau, ou ciel (qui dérive doucement).
   function visitorAnchor(g, spot, t) {
     if (spot.sky) return [W * .26 + Math.sin(t * .05) * W * .04, H * .36];
@@ -242,6 +260,13 @@ const City = (() => {
     $('#cityBigCanvas').setAttribute('aria-label', frTypo(name + ' · ' + meta));
     return true;
   }
+  // Un toucher sur la bulle du souhait ouvre la fiche du bâtiment qui souhaite.
+  function openWishAt(px, py) {
+    const wb = wishBox, tile = wb && px >= wb.x && px <= wb.x + wb.w && py >= wb.y && py <= wb.y + wb.h && S.city.tiles.find(other => other.id === wb.tile);
+    if (!tile) return false;
+    openBuildingSheet(tile);
+    return true;
+  }
   window.addEventListener('popstate', () => { if (big.open) closeBig(true); });
   window.addEventListener('resize', () => { if (big.open) { layout(); draw(); } });
   $('#cityExpand').addEventListener('click', openBig);
@@ -289,6 +314,7 @@ const City = (() => {
     if (!at || e.type === 'pointercancel' || big.pointers.size || big.moved > 8) return;
     const vb = visitorBox;
     if (vb && at[0] >= vb.x && at[0] <= vb.x + vb.w && at[1] >= vb.y && at[1] <= vb.y + vb.h) { big.lastTap = null; openVisitor(); return; }
+    if (openWishAt(at[0], at[1])) { big.lastTap = null; return; }
     const prev = big.lastTap, time = performance.now();
     big.lastTap = { at, time };
     if (prev && time - prev.time < 320 && Math.hypot(at[0] - prev.at[0], at[1] - prev.at[1]) < 30) {
@@ -509,6 +535,9 @@ const City = (() => {
         }
       }
     }
+    // Bulle du souhait du jour, par-dessus tout (jamais en visite ni dans une image).
+    wishBox = null;
+    if (!clean && !visit) layer(() => drawWishBubble(g, pal));
     if (!clean && keyboard && document.activeElement === canvas) {
       g.tile(cursor.x, cursor.y, 0, null, night ? '#ffffff' : '#1d2721', 2.5);
     }
@@ -661,6 +690,7 @@ const City = (() => {
     if (Mode.state) { Mode.pickTile(tileAt(px, py)); return; }
     const vb = visitorBox;
     if (vb && px >= vb.x && px <= vb.x + vb.w && py >= vb.y && py <= vb.y + vb.h) { openVisitor(); return; }
+    if (openWishAt(px, py)) return;
     const b = pickBuilding(px, py);
     if (b) openBuildingSheet(b); else openBig();
   });
@@ -693,7 +723,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, townThumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb,
+  return { layout, draw, relayout, thumb, townThumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, wishBox: () => wishBox, visitorThumb,
     focus: () => { keyboard = true; small.focus(); draw(); }, openBig, closeBig, openVisit,
     // Pour les tests : état de la vue en grand (et la case sous le centre de l'écran), centre d'une case sur le canevas dessiné.
     bigState: () => ({ open: big.open, zoom: big.zoom, visit: !!visit, focus: big.open && big.base ? cellUnder(W / 2, H / 2, big.shown, big.pan) : null }),

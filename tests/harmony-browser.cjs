@@ -114,7 +114,48 @@ async function wishCardPoorAndOff(browser, baseURL) {
   return 'Souhait du jour : trop cher sans pression, ou coupé';
 }
 
-const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff];
+// Touche le centre de la bulle du souhait, sur le canevas donné.
+async function tapBubble(page, canvas) {
+  const box = await page.evaluate(() => __ville.City.wishBox());
+  assert.ok(box, 'bulle du souhait');
+  await page.locator(canvas).click({ position: { x: box.x + box.w / 2, y: box.y + box.h / 3 } });
+}
+
+// La bulle du souhait : au-dessus du bâtiment qui souhaite, elle ouvre sa fiche (petite ville et vue en grand) ; elle suit le
+// bâtiment déplacé ; aucune bulle dans une visite.
+async function wishBubble(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, seed([tile('maison', 3, 3)]), NOW);
+  try {
+    assert.equal((await page.evaluate(() => __ville.City.wishBox())).tile, await page.evaluate(() => __ville.harmony.wish().tile));
+    await tapBubble(page, '#city');
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Maison');
+    await page.locator('#sheetClose').click();
+    await page.locator('#cityExpand').click();
+    await page.locator('#cityBig').waitFor();
+    await tapBubble(page, '#cityBigCanvas');
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Maison');
+    await page.locator('#sheetClose').click();
+    await page.locator('#cityBigClose').click();
+    await page.locator('#cityBig').waitFor({ state: 'hidden' });
+    // La maison déplacée en (3, 5) : la bulle la suit.
+    await tapCell(page, 3, 3);
+    await page.locator('#sheetBody').getByRole('button', { name: /Déplacer/ }).click();
+    for (const key of ['ArrowDown', 'ArrowDown', 'Enter']) await page.locator('#city').press(key);
+    await page.locator('#placeConfirm').click();
+    const [box, cell] = await page.evaluate(() => [__ville.City.wishBox(), __ville.City.cellPoint(3, 5)]);
+    assert.ok(Math.abs(box.x + box.w / 2 - cell[0]) < 4 && box.y + box.h < cell[1], JSON.stringify([box, cell]));
+    // Visite de sa propre ville : pas de bulle.
+    await page.evaluate(() => __ville.share.open(__ville.share.encode()));
+    await page.locator('#cityBig').waitFor();
+    assert.equal(await page.evaluate(() => __ville.City.wishBox()), null);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Souhait : la bulle au-dessus du bâtiment, qui ouvre sa fiche et le suit';
+}
+
+const SCENARIOS = [wishGrantedOnBuild, starsAtFirstOpen, wishCard, wishCardPoorAndOff, wishBubble];
 async function runHarmony(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
