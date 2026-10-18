@@ -1321,6 +1321,9 @@ DICT.fr = {
   'carnet.tabVisits': 'Visites',
   'carnet.visitorsHead': 'Visiteurs',
   'carnet.festsHead': 'Fêtes',
+  'carnet.friendsHead': 'Villes amies',
+  'carnet.visitedOn': 'Visitée le {date}',
+  'carnet.friendsEmpty': 'Les villes de tes amis apparaîtront ici.',
   'carnet.metSince': 'Première rencontre le {date}',
   'carnet.visitorUnknown': 'Visiteur à découvrir',
   'set.unknown': 'Ensemble à découvrir',
@@ -2406,6 +2409,9 @@ DICT.en = {
   'carnet.tabVisits': 'Visits',
   'carnet.visitorsHead': 'Visitors',
   'carnet.festsHead': 'Festivals',
+  'carnet.friendsHead': "Friends' towns",
+  'carnet.visitedOn': 'Visited on {date}',
+  'carnet.friendsEmpty': "Your friends' towns will appear here.",
   'carnet.metSince': 'First met on {date}',
   'carnet.visitorUnknown': 'Visitor to discover',
   'set.unknown': 'Set to discover',
@@ -6511,19 +6517,7 @@ const City = (() => {
 
     // L'arc-en-ciel se dessine d'abord : il reste derrière l'île et ses éléments.
     if (amb && amb.rainbow) layer(() => drawRainbow(g, { w: W, h: H, ground: oy }));
-    const slab = TW * .32;
-    const L = g.P(0, N), B = g.P(N, N), R = g.P(N, 0);
-    g.poly([L, B, [B[0], B[1] + slab], [L[0], L[1] + slab]], night ? '#4a3c2c' : '#b89a72');
-    g.poly([B, R, [R[0], R[1] + slab], [B[0], B[1] + slab]], night ? '#3b2f22' : '#9f835d');
-    g.poly([[L[0], L[1] + slab * .28], [B[0], B[1] + slab * .28], B, L], night ? '#2f4a36' : '#86b26c');
-    g.poly([[B[0], B[1] + slab * .28], [R[0], R[1] + slab * .28], R, B], night ? '#283f2e' : '#78a35f');
-    const ground = groundColors(amb ? amb.season : 'spring', g.dark);
-    for (let x = 0; x < N; x++) {
-      for (let y = 0; y < N; y++) g.tile(x, y, 0, ground[(x + y) % 2], night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
-    }
-    // Ensembles formés : un pavage commun sous leurs éléments.
-    const paved = pavedTileIds(city);
-    for (const tl of city.tiles) if (paved.has(tl.id)) g.paving(tl.x, tl.y);
+    drawIsland(g, city, amb ? amb.season : 'spring');
     if (!clean && Mode.state) {
       for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
         const occ = tileOf(x, y);
@@ -6640,6 +6634,36 @@ const City = (() => {
     schedule(animating || zooming);
   }
 
+  // L'île d'une ville : son socle, son sol en damier, puis le pavage commun des ensembles formés (la vue et les vignettes).
+  function drawIsland(g, city, season) {
+    const n = city.size, night = g.night, slab = g.tw * .32;
+    const L = g.P(0, n), B = g.P(n, n), R = g.P(n, 0);
+    g.poly([L, B, [B[0], B[1] + slab], [L[0], L[1] + slab]], night ? '#4a3c2c' : '#b89a72');
+    g.poly([B, R, [R[0], R[1] + slab], [B[0], B[1] + slab]], night ? '#3b2f22' : '#9f835d');
+    g.poly([[L[0], L[1] + slab * .28], [B[0], B[1] + slab * .28], B, L], night ? '#2f4a36' : '#86b26c');
+    g.poly([[B[0], B[1] + slab * .28], [R[0], R[1] + slab * .28], R, B], night ? '#283f2e' : '#78a35f');
+    const ground = groundColors(season, g.dark);
+    for (let x = 0; x < n; x++) {
+      for (let y = 0; y < n; y++) g.tile(x, y, 0, ground[(x + y) % 2], night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
+    }
+    const paved = pavedTileIds(city);
+    for (const tl of city.tiles) if (paved.has(tl.id)) g.paving(tl.x, tl.y);
+  }
+  // Vignette d'une ville entière (cartes postales) : son île et ses éléments en profondeur, sans ambiance. La place au-dessus
+  // de l'île laisse dépasser les éléments du fond.
+  function townThumb(cv, city, size = 48) {
+    const d = Math.min(3, window.devicePixelRatio || 1);
+    cv.width = size * d; cv.height = size * d;
+    const c = cv.getContext('2d');
+    c.setTransform(d, 0, 0, d, 0, 0);
+    c.clearRect(0, 0, size, size);
+    const n = city.size, tw = (size - 4) / n, above = tw * 1.2;
+    const g = makePainter(c, tw, size / 2, above + (size - above - n * tw / 2 - tw * .32) / 2, readPalette());
+    drawIsland(g, city, 'spring');
+    for (const tile of [...city.tiles].sort((p, q) => (p.x + p.y) - (q.x + q.y) || p.x - q.x)) {
+      try { if (isItem(tile.item)) DRAW[tile.item](g, tile.x, tile.y, tile); } catch (e) { /* un élément illisible est sauté */ }
+    }
+  }
   // Practice adds planters, then a golden pennant to buildings in that domain. En visite, le niveau vient du lien.
   function drawGrowth(g, key, x, y, level) {
     if (level < 2) return;
@@ -6787,7 +6811,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb,
+  return { layout, draw, relayout, thumb, townThumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb,
     focus: () => { keyboard = true; small.focus(); draw(); }, openBig, closeBig, openVisit,
     // Pour les tests : état de la vue en grand (et la case sous le centre de l'écran), centre d'une case sur le canevas dessiné.
     bigState: () => ({ open: big.open, zoom: big.zoom, visit: !!visit, focus: big.open && big.base ? cellUnder(W / 2, H / 2, big.shown, big.pan) : null }),
@@ -9477,12 +9501,22 @@ function carnetVisits() {
         years.length ? h('span', { class: 'note' }, t('fest.lived', { years: years.join(', ') })) : null,
         next ? h('span', { class: 'note' }, t('fest.next', { date: dayFmt('long').format(keyToUTC(next)) })) : null));
   };
+  // Villes amies : une carte postale par ville visitée, la plus récente d'abord ; la toucher rouvre la ville.
+  const postcard = ([, card]) => {
+    const cv = h('canvas', { 'aria-hidden': 'true' }), city = decodeCity(card.code);
+    if (city) City.townThumb(cv, city, 48);
+    return h('li', {}, h('button', { class: 'carnet-row carnet-postcard earned', type: 'button', onclick: () => openVisitFromCode(card.code) }, cv,
+      h('span', { class: 'carnet-text' }, h('strong', {}, card.name || t('visit.friendCity')), h('span', { class: 'note' }, t('carnet.visitedOn', { date: carnetDate(card.at) })))));
+  };
   const met = VISITORS.filter(v => visits[v.id]).sort((a, b) => visits[a.id].first - visits[b.id].first);
+  const cards = Object.entries(S.postcards || {}).sort((a, b) => b[1].at - a[1].at);
   return h('div', { class: 'carnet-visits' },
     h('h4', {}, t('carnet.visitorsHead')),
     h('ul', { class: 'carnet-list' }, ...met.map(visitor), ...VISITORS.filter(v => !visits[v.id]).map(visitor)),
     h('h4', {}, t('carnet.festsHead')),
-    h('ul', { class: 'carnet-list' }, ...FESTIVALS.map(fest)));
+    h('ul', { class: 'carnet-list' }, ...FESTIVALS.map(fest)),
+    h('h4', {}, t('carnet.friendsHead')),
+    cards.length ? h('ul', { class: 'carnet-list' }, ...cards.map(postcard)) : h('p', { class: 'note' }, t('carnet.friendsEmpty')));
 }
 
 // Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.

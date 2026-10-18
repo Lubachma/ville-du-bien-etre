@@ -399,19 +399,7 @@ const City = (() => {
 
     // L'arc-en-ciel se dessine d'abord : il reste derrière l'île et ses éléments.
     if (amb && amb.rainbow) layer(() => drawRainbow(g, { w: W, h: H, ground: oy }));
-    const slab = TW * .32;
-    const L = g.P(0, N), B = g.P(N, N), R = g.P(N, 0);
-    g.poly([L, B, [B[0], B[1] + slab], [L[0], L[1] + slab]], night ? '#4a3c2c' : '#b89a72');
-    g.poly([B, R, [R[0], R[1] + slab], [B[0], B[1] + slab]], night ? '#3b2f22' : '#9f835d');
-    g.poly([[L[0], L[1] + slab * .28], [B[0], B[1] + slab * .28], B, L], night ? '#2f4a36' : '#86b26c');
-    g.poly([[B[0], B[1] + slab * .28], [R[0], R[1] + slab * .28], R, B], night ? '#283f2e' : '#78a35f');
-    const ground = groundColors(amb ? amb.season : 'spring', g.dark);
-    for (let x = 0; x < N; x++) {
-      for (let y = 0; y < N; y++) g.tile(x, y, 0, ground[(x + y) % 2], night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
-    }
-    // Ensembles formés : un pavage commun sous leurs éléments.
-    const paved = pavedTileIds(city);
-    for (const tl of city.tiles) if (paved.has(tl.id)) g.paving(tl.x, tl.y);
+    drawIsland(g, city, amb ? amb.season : 'spring');
     if (!clean && Mode.state) {
       for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
         const occ = tileOf(x, y);
@@ -528,6 +516,36 @@ const City = (() => {
     schedule(animating || zooming);
   }
 
+  // L'île d'une ville : son socle, son sol en damier, puis le pavage commun des ensembles formés (la vue et les vignettes).
+  function drawIsland(g, city, season) {
+    const n = city.size, night = g.night, slab = g.tw * .32;
+    const L = g.P(0, n), B = g.P(n, n), R = g.P(n, 0);
+    g.poly([L, B, [B[0], B[1] + slab], [L[0], L[1] + slab]], night ? '#4a3c2c' : '#b89a72');
+    g.poly([B, R, [R[0], R[1] + slab], [B[0], B[1] + slab]], night ? '#3b2f22' : '#9f835d');
+    g.poly([[L[0], L[1] + slab * .28], [B[0], B[1] + slab * .28], B, L], night ? '#2f4a36' : '#86b26c');
+    g.poly([[B[0], B[1] + slab * .28], [R[0], R[1] + slab * .28], R, B], night ? '#283f2e' : '#78a35f');
+    const ground = groundColors(season, g.dark);
+    for (let x = 0; x < n; x++) {
+      for (let y = 0; y < n; y++) g.tile(x, y, 0, ground[(x + y) % 2], night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
+    }
+    const paved = pavedTileIds(city);
+    for (const tl of city.tiles) if (paved.has(tl.id)) g.paving(tl.x, tl.y);
+  }
+  // Vignette d'une ville entière (cartes postales) : son île et ses éléments en profondeur, sans ambiance. La place au-dessus
+  // de l'île laisse dépasser les éléments du fond.
+  function townThumb(cv, city, size = 48) {
+    const d = Math.min(3, window.devicePixelRatio || 1);
+    cv.width = size * d; cv.height = size * d;
+    const c = cv.getContext('2d');
+    c.setTransform(d, 0, 0, d, 0, 0);
+    c.clearRect(0, 0, size, size);
+    const n = city.size, tw = (size - 4) / n, above = tw * 1.2;
+    const g = makePainter(c, tw, size / 2, above + (size - above - n * tw / 2 - tw * .32) / 2, readPalette());
+    drawIsland(g, city, 'spring');
+    for (const tile of [...city.tiles].sort((p, q) => (p.x + p.y) - (q.x + q.y) || p.x - q.x)) {
+      try { if (isItem(tile.item)) DRAW[tile.item](g, tile.x, tile.y, tile); } catch (e) { /* un élément illisible est sauté */ }
+    }
+  }
   // Practice adds planters, then a golden pennant to buildings in that domain. En visite, le niveau vient du lien.
   function drawGrowth(g, key, x, y, level) {
     if (level < 2) return;
@@ -675,7 +693,7 @@ const City = (() => {
     }
   });
 
-  return { layout, draw, relayout, thumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb,
+  return { layout, draw, relayout, thumb, townThumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, visitorThumb,
     focus: () => { keyboard = true; small.focus(); draw(); }, openBig, closeBig, openVisit,
     // Pour les tests : état de la vue en grand (et la case sous le centre de l'écran), centre d'une case sur le canevas dessiné.
     bigState: () => ({ open: big.open, zoom: big.zoom, visit: !!visit, focus: big.open && big.base ? cellUnder(W / 2, H / 2, big.shown, big.pan) : null }),

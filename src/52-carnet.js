@@ -131,12 +131,22 @@ function carnetVisits() {
         years.length ? h('span', { class: 'note' }, t('fest.lived', { years: years.join(', ') })) : null,
         next ? h('span', { class: 'note' }, t('fest.next', { date: dayFmt('long').format(keyToUTC(next)) })) : null));
   };
+  // Villes amies : une carte postale par ville visitée, la plus récente d'abord ; la toucher rouvre la ville.
+  const postcard = ([, card]) => {
+    const cv = h('canvas', { 'aria-hidden': 'true' }), city = decodeCity(card.code);
+    if (city) City.townThumb(cv, city, 48);
+    return h('li', {}, h('button', { class: 'carnet-row carnet-postcard earned', type: 'button', onclick: () => openVisitFromCode(card.code) }, cv,
+      h('span', { class: 'carnet-text' }, h('strong', {}, card.name || t('visit.friendCity')), h('span', { class: 'note' }, t('carnet.visitedOn', { date: carnetDate(card.at) })))));
+  };
   const met = VISITORS.filter(v => visits[v.id]).sort((a, b) => visits[a.id].first - visits[b.id].first);
+  const cards = Object.entries(S.postcards || {}).sort((a, b) => b[1].at - a[1].at);
   return h('div', { class: 'carnet-visits' },
     h('h4', {}, t('carnet.visitorsHead')),
     h('ul', { class: 'carnet-list' }, ...met.map(visitor), ...VISITORS.filter(v => !visits[v.id]).map(visitor)),
     h('h4', {}, t('carnet.festsHead')),
-    h('ul', { class: 'carnet-list' }, ...FESTIVALS.map(fest)));
+    h('ul', { class: 'carnet-list' }, ...FESTIVALS.map(fest)),
+    h('h4', {}, t('carnet.friendsHead')),
+    cards.length ? h('ul', { class: 'carnet-list' }, ...cards.map(postcard)) : h('p', { class: 'note' }, t('carnet.friendsEmpty')));
 }
 
 // Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.

@@ -553,6 +553,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
 .carnet-visitor canvas { width: 48px; height: 48px; }
 .carnet-visits h4 { margin: 0 0 8px; }
 .carnet-visits .carnet-list + h4 { margin-top: 18px; }
+/* Carte postale d'une ville amie : toute la ligne se touche pour rouvrir la ville. */
+.carnet-postcard { width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.carnet-postcard canvas { width: 48px; height: 48px; }
 .carnet-text { display: grid; gap: 2px; min-width: 0; flex: 1 1 160px; }
 .carnet-text strong { overflow-wrap: anywhere; }
 .carnet-pieces { display: flex; gap: 6px; }

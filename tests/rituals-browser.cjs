@@ -435,7 +435,70 @@ async function shareCity(browser, baseURL) {
   return 'Partager ma ville, et visiter en collant un lien';
 }
 
-const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage, visitFriend, shareCity];
+// Deux codes de la ville de Léa : le premier, puis le même après un banc de plus (même identifiant).
+async function leaCodes(browser, baseURL) {
+  const seed = town({ esprit: 300, calme: 40 }, LEA_TILES, { personal: { name: 'Léa' }, stats: { ok: 3, byCat: { esprit: 300, calme: 40 }, days: {}, dailyCats: {} } });
+  const { context, page } = await cityAt(browser, baseURL, seed, '2026-10-21T10:00:00Z');
+  try {
+    return await page.evaluate(() => {
+      const first = __ville.share.encode();
+      __ville.state.city.tiles.push({ id: 'l9', item: 'banc', x: 6, y: 6, at: Date.now(), paid: 1e6 });
+      return [first, __ville.share.encode()];
+    });
+  } finally { await context.close(); }
+}
+async function openVisits(page) {
+  await page.locator('[data-tab="journal"]').click();
+  await page.locator('#carnetCard').getByRole('button', { name: 'Ouvrir le carnet', exact: true }).click();
+  await page.locator('#sheetBody').getByRole('radio', { name: 'Visites', exact: true }).click();
+  return page.locator('#sheetBody .carnet-postcard');
+}
+
+// Cartes postales : gardée pendant la visite, la carte de Léa est dans le carnet (Visites, « Villes amies »), avec une
+// vignette ; la toucher rouvre sa ville. Revisiter sa ville avec un code plus récent garde une seule carte, mise à jour. Le
+// lien de sa propre ville se montre « telle que tes amis la voient », sans carte à garder. À 320 px, rien ne déborde.
+async function postcardsInCarnet(browser, baseURL) {
+  const [first, second] = await leaCodes(browser, baseURL);
+  const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }), '2026-10-21T10:00:00Z', { viewport: { width: 320, height: 640 } });
+  try {
+    let cards = await openVisits(page);
+    assert.match(await page.locator('#sheetBody').innerText(), /Villes amies[\s\S]*Les villes de tes amis apparaîtront ici\./);
+    await page.locator('#sheetClose').click();
+    await page.locator('[data-tab="ville"]').click();
+    for (const [code, items] of [[first, 6], [second, 7]]) {
+      await page.evaluate(c => { location.hash = '#ville=' + c; }, code);
+      await page.locator('#cityBig').waitFor();
+      await page.locator('#visitKeep').click();
+      await page.locator('#toast').getByText('Carte postale gardée dans ton carnet').waitFor();
+      await page.locator('#cityBigClose').click();
+      await page.locator('#cityBig').waitFor({ state: 'hidden' });
+      cards = await openVisits(page);
+      assert.equal(await cards.count(), 1);
+      assert.match(await cards.first().innerText(), /Léa[\s\S]*Visitée le/);
+      assert.equal(await cards.first().locator('canvas').count(), 1);
+      assert.equal(await page.evaluate(() => Object.values(__ville.state.postcards)[0].count), items);
+      const w = await page.evaluate(() => ({ body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth, doc: document.documentElement.scrollWidth }));
+      assert.ok(w.body <= w.client + 1 && w.doc <= 320, 'le carnet déborde à 320 px : ' + JSON.stringify(w));
+      await cards.first().click();
+      await page.locator('#cityBig').waitFor();
+      assert.match(await page.locator('#cityVisitHead').innerText(), /Léa[\s\S]*éléments/);
+      await page.locator('#cityBigClose').click();
+      await page.locator('#cityBig').waitFor({ state: 'hidden' });
+      await page.locator('[data-tab="ville"]').click();
+    }
+    // Sa propre ville : vue comme les amis la voient, sans carte postale à garder.
+    const own = await page.evaluate(() => __ville.share.encode());
+    await page.evaluate(c => { location.hash = '#ville=' + c; }, own);
+    await page.locator('#cityBig').waitFor();
+    assert.match(await page.locator('#cityVisitHead').innerText(), /Ta ville, telle que tes amis la voient/);
+    assert.equal(await page.locator('#visitKeep').isHidden(), true);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Cartes postales des villes amies';
+}
+
+const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage, visitFriend, shareCity,
+  postcardsInCarnet];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
