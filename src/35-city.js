@@ -162,6 +162,8 @@ const City = (() => {
     const g = makePainter(ctx, TW, ox, oy, pal);
     const night = g.night;
 
+    // L'arc-en-ciel se dessine d'abord : il reste derrière l'île et ses éléments.
+    if (amb && amb.rainbow) drawRainbow(g, { w: W, h: H, ground: oy });
     const slab = TW * .32;
     const L = g.P(0, N), B = g.P(N, N), R = g.P(N, 0);
     g.poly([L, B, [B[0], B[1] + slab], [L[0], L[1] + slab]], night ? '#4a3c2c' : '#b89a72');
@@ -231,6 +233,12 @@ const City = (() => {
     // Teinte du moment, posée seulement sur ce qui est dessiné (l'île et ses éléments).
     const tint = byTime ? lightTint(amb) : null;
     if (tint) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+    // Petites vies et météo, par-dessus tout ; pluie et neige s'estompent pendant une pose.
+    if (amb) {
+      const area = { w: W, h: H, ground: oy }, t = g.anim ? pal.time : 0;
+      drawSeasonLife(g, amb, t, area, S.city.tiles);
+      drawWeather(g, { ...amb, rainbow: false }, t, area, !clean && Mode.state ? .25 : 1);
+    }
     // Étincelles sur les cases d'un ensemble qu'on vient de découvrir.
     sparkles = clean ? sparkles : sparkles.filter(s => now - s.start < FX_TIME.sparkle);
     for (const s of clean ? [] : sparkles) {
