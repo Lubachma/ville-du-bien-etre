@@ -40,3 +40,22 @@ function momentOf(day, minutes) {
   for (const [name, from, to] of windows) if (minutes >= from && minutes < to) return { name, t: (minutes - from) / (to - from) };
   return { name: 'night', t: 0 };
 }
+
+// Tirage reproductible dans [0, 1[ : le même jour donne la même ville partout, propre à chaque ville (sa date de création).
+function chance(key) { return parseInt(hash53(key + '|' + S.createdAt), 36) / 2 ** 53; }
+// Météo tirée pour la journée, brouillard compris.
+function dayWeather(day) {
+  const odds = WEATHER_ODDS[seasonOf(day)], roll = chance(day + ':weather') * 100;
+  let sum = 0;
+  for (let i = 0; i < WEATHERS.length; i++) { sum += odds[i]; if (roll < sum) return WEATHERS[i]; }
+  return WEATHERS[0];
+}
+// Météo à une heure donnée : le brouillard se lève à 11 h et laisse des nuages.
+function weatherOf(day, minutes) {
+  const weather = dayWeather(day);
+  return weather === 'fog' && minutes >= 660 ? 'clouds' : weather;
+}
+// Arc-en-ciel : le matin ensoleillé qui suit un jour de pluie, une fois sur trois, jusqu'à midi.
+function rainbowOn(day, minutes) {
+  return minutes < 720 && dayWeather(day) === 'sun' && dayWeather(shiftDay(day, -1)) === 'rain' && chance(day + ':rainbow') < 1 / 3;
+}

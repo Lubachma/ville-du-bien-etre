@@ -151,6 +151,9 @@ const SETS = [
 // Ville vivante : saisons, moments de la journée et fuseaux de l'hémisphère sud (préfixes terminés par « / »).
 const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
 const MOMENTS = ['night', 'dawn', 'day', 'golden', 'dusk'];
+// Météo du jour : probabilités (sur 100) par saison, dans l'ordre de WEATHERS.
+const WEATHERS = ['sun', 'clouds', 'rain', 'snow', 'fog'];
+const WEATHER_ODDS = { spring: [45, 30, 25, 0, 0], summer: [60, 25, 15, 0, 0], autumn: [35, 30, 25, 0, 10], winter: [30, 30, 10, 20, 10] };
 const SOUTH_TZ = ['Australia/', 'Antarctica/', 'America/Argentina/', 'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu',
   'Pacific/Noumea', 'Pacific/Port_Moresby', 'America/Santiago', 'America/Punta_Arenas', 'America/Sao_Paulo', 'America/Montevideo', 'America/Asuncion',
   'America/La_Paz', 'America/Lima', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Windhoek', 'Africa/Gaborone',

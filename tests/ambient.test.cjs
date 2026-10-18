@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js'];
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf'];
+const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf', 'chance', 'dayWeather', 'weatherOf', 'rainbowOn', 'shiftDay', 'WEATHER_ODDS'];
 function app(tz = 'Europe/Zurich', createdAt = Date.parse('2026-01-15T09:00:00Z')) {
   const a = loadApp(FILES, { expose: EXPOSE });
   a.state.clock.tz = tz; a.state.createdAt = createdAt; a.state.clock.maxSeen = 0;
@@ -55,4 +55,48 @@ test('moments de la journée aux bornes', () => {
     ['night', 'dawn', 'dawn', 'day', 'day', 'golden', 'golden', 'dusk', 'dusk', 'night']);
   const half = a.momentOf('2026-06-21', set + 22.5).t;
   assert.ok(half > .45 && half < .55, String(half));
+});
+
+test('météo du jour : reproductible, propre à chaque ville', () => {
+  const a = app(), b = app(), c = app('Europe/Zurich', Date.parse('2025-05-05T05:05:00Z'));
+  const days = Array.from({ length: 60 }, (_, i) => a.shiftDay('2026-01-01', i));
+  assert.deepEqual(days.map(a.dayWeather), days.map(b.dayWeather));
+  assert.notDeepEqual(days.map(a.dayWeather), days.map(c.dayWeather));
+});
+
+test('météo selon la saison : proportions du tableau sur quatre ans', () => {
+  const a = app(), count = {}, weathers = ['sun', 'clouds', 'rain', 'snow', 'fog'];
+  for (let i = 0; i < 1461; i++) {
+    const day = a.shiftDay('2026-01-01', i), season = a.seasonOf(day), weather = a.dayWeather(day);
+    count[season] = count[season] || { n: 0 };
+    count[season][weather] = (count[season][weather] || 0) + 1;
+    count[season].n++;
+  }
+  for (const [season, odds] of Object.entries(plain(a.WEATHER_ODDS))) {
+    weathers.forEach((weather, i) => {
+      const share = 100 * (count[season][weather] || 0) / count[season].n;
+      if (odds[i] === 0) assert.equal(share, 0, `${season} ${weather}`);
+      else assert.ok(Math.abs(share - odds[i]) <= 6, `${season} ${weather} : ${share.toFixed(1)} %`);
+    });
+  }
+});
+
+test('brouillard le matin seulement, puis des nuages', () => {
+  const a = app();
+  const day = Array.from({ length: 400 }, (_, i) => a.shiftDay('2026-01-01', i)).find(d => a.dayWeather(d) === 'fog');
+  assert.ok(day);
+  assert.deepEqual([a.weatherOf(day, 659), a.weatherOf(day, 660)], ['fog', 'clouds']);
+});
+
+test("arc-en-ciel : le matin ensoleillé qui suit un jour de pluie, environ une fois sur trois", () => {
+  const a = app();
+  let eligible = 0, shown = 0;
+  for (let i = 1; i < 1461; i++) {
+    const day = a.shiftDay('2026-01-01', i);
+    if (a.dayWeather(day) !== 'sun' || a.dayWeather(a.shiftDay(day, -1)) !== 'rain') { assert.equal(a.rainbowOn(day, 600), false, day); continue; }
+    eligible++;
+    if (a.rainbowOn(day, 600)) { shown++; assert.equal(a.rainbowOn(day, 720), false, 'après midi'); }
+  }
+  assert.ok(eligible > 50, String(eligible));
+  assert.ok(Math.abs(shown / eligible - 1 / 3) < .12, String(shown / eligible));
 });

@@ -156,6 +156,9 @@ const SETS = [
 // Ville vivante : saisons, moments de la journée et fuseaux de l'hémisphère sud (préfixes terminés par « / »).
 const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
 const MOMENTS = ['night', 'dawn', 'day', 'golden', 'dusk'];
+// Météo du jour : probabilités (sur 100) par saison, dans l'ordre de WEATHERS.
+const WEATHERS = ['sun', 'clouds', 'rain', 'snow', 'fog'];
+const WEATHER_ODDS = { spring: [45, 30, 25, 0, 0], summer: [60, 25, 15, 0, 0], autumn: [35, 30, 25, 0, 10], winter: [30, 30, 10, 20, 10] };
 const SOUTH_TZ = ['Australia/', 'Antarctica/', 'America/Argentina/', 'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu',
   'Pacific/Noumea', 'Pacific/Port_Moresby', 'America/Santiago', 'America/Punta_Arenas', 'America/Sao_Paulo', 'America/Montevideo', 'America/Asuncion',
   'America/La_Paz', 'America/Lima', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Windhoek', 'Africa/Gaborone',
@@ -3458,6 +3461,25 @@ function momentOf(day, minutes) {
   const windows = [['dawn', rise - 30, rise + 45], ['day', rise + 45, set - 60], ['golden', set - 60, set], ['dusk', set, set + 45]];
   for (const [name, from, to] of windows) if (minutes >= from && minutes < to) return { name, t: (minutes - from) / (to - from) };
   return { name: 'night', t: 0 };
+}
+
+// Tirage reproductible dans [0, 1[ : le même jour donne la même ville partout, propre à chaque ville (sa date de création).
+function chance(key) { return parseInt(hash53(key + '|' + S.createdAt), 36) / 2 ** 53; }
+// Météo tirée pour la journée, brouillard compris.
+function dayWeather(day) {
+  const odds = WEATHER_ODDS[seasonOf(day)], roll = chance(day + ':weather') * 100;
+  let sum = 0;
+  for (let i = 0; i < WEATHERS.length; i++) { sum += odds[i]; if (roll < sum) return WEATHERS[i]; }
+  return WEATHERS[0];
+}
+// Météo à une heure donnée : le brouillard se lève à 11 h et laisse des nuages.
+function weatherOf(day, minutes) {
+  const weather = dayWeather(day);
+  return weather === 'fog' && minutes >= 660 ? 'clouds' : weather;
+}
+// Arc-en-ciel : le matin ensoleillé qui suit un jour de pluie, une fois sur trois, jusqu'à midi.
+function rainbowOn(day, minutes) {
+  return minutes < 720 && dayWeather(day) === 'sun' && dayWeather(shiftDay(day, -1)) === 'rain' && chance(day + ':rainbow') < 1 / 3;
 }
 
 
