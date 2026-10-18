@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js'];
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf', 'chance', 'dayWeather', 'weatherOf', 'rainbowOn', 'shiftDay', 'WEATHER_ODDS', 'festivalsOn', 'giftAmount', 'nextFestival', 'visitorSpot', 'visitorOf', 'VISITORS', 'keyToUTC'];
+const EXPOSE = ['cityClock', 'southern', 'seasonOf', 'sunTimes', 'momentOf', 'chance', 'dayWeather', 'weatherOf', 'rainbowOn', 'shiftDay', 'WEATHER_ODDS', 'festivalsOn', 'giftAmount', 'nextFestival', 'visitorSpot', 'visitorOf', 'VISITORS', 'keyToUTC', 'ambientAt', 'darkness'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 const place = (a, tiles, size = 7) => { a.state.city = { size, tiles: tiles.map(([item, x, y], i) => ({ id: 't' + i, item, x, y, at: T0, paid: 0 })) }; };
 const visitor = (a, id) => a.VISITORS.find(v => v.id === id);
@@ -185,4 +185,25 @@ test('rencontrer le visiteur du jour ne le change pas', () => {
   const v = plain(a.visitorOf(day));
   a.state.visits[v.id] = { first: a.keyToUTC(day), count: 1, last: day };
   assert.deepEqual(plain(a.visitorOf(day)), v);
+});
+
+test('ambiance à un instant : jour, moment, saison, météo, fêtes et visiteur', () => {
+  const a = app(), amb = a.ambientAt(Date.parse('2026-03-21T11:00:00Z'));
+  assert.deepEqual(plain([amb.day, amb.minutes, amb.season, amb.moment.name, amb.weather, amb.festivals.map(f => f.id)]),
+    ['2026-03-21', 720, 'spring', 'day', a.weatherOf('2026-03-21', 720), ['printemps']]);
+  assert.deepEqual(plain(amb.visitor), plain(a.visitorOf('2026-03-21')));
+});
+
+test('à minuit, la ville passe à la météo et au visiteur du lendemain', () => {
+  const a = app(), before = a.ambientAt(Date.parse('2026-07-01T21:59:00Z')), after = a.ambientAt(Date.parse('2026-07-01T22:01:00Z'));
+  assert.deepEqual([before.day, after.day], ['2026-07-01', '2026-07-02']);
+  assert.equal(after.weather, a.weatherOf('2026-07-02', 1));
+  assert.deepEqual(plain(after.visitor), plain(a.visitorOf('2026-07-02')));
+});
+
+test('obscurité : nuit 1, journée 0, aube et crépuscule progressifs', () => {
+  const a = app();
+  assert.deepEqual([a.darkness({ name: 'night', t: 0 }), a.darkness({ name: 'day', t: .5 })], [1, 0]);
+  assert.ok(a.darkness({ name: 'dusk', t: .2 }) < a.darkness({ name: 'dusk', t: .8 }));
+  assert.ok(a.darkness({ name: 'dawn', t: .2 }) > a.darkness({ name: 'dawn', t: .8 }));
 });

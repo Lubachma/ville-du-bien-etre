@@ -1,6 +1,39 @@
 /* =========================================================================
    Ville : rendu, pointeur, clavier
    ========================================================================= */
+/* Ciel et lumière de la ville selon le moment de la journée et la météo. */
+const SKY = { night: ['#0b1424', '#1a2b37'], dawn: ['#f2b8a2', '#f8e4d2'], day: ['#bcdff1', '#eef6ef'], golden: ['#f4c98c', '#fbe9c8'], dusk: ['#6f5f9e', '#ee9f7a'] };
+// Passages en douceur : nuit, aube puis journée le matin ; journée, fin d'après-midi, crépuscule puis nuit le soir.
+function skyPair(moment) {
+  const t = moment.t || 0, lerp = (a, b, k) => [mix(a[0], b[0], k), mix(a[1], b[1], k)];
+  switch (moment.name) {
+    case 'dawn': return t < .5 ? lerp(SKY.night, SKY.dawn, t * 2) : lerp(SKY.dawn, SKY.day, t * 2 - 1);
+    case 'golden': return lerp(SKY.day, SKY.golden, t);
+    case 'dusk': return t < .5 ? lerp(SKY.golden, SKY.dusk, t * 2) : lerp(SKY.dusk, SKY.night, t * 2 - 1);
+    default: return SKY[moment.name] || SKY.day;
+  }
+}
+// Couleurs du ciel : grisé par les nuages, le brouillard, la pluie ou la neige (un gris qui s'assombrit la nuit), étoiles la nuit.
+function skyColors(amb) {
+  const dark = darkness(amb.moment), grey = mix('#9aa5ad', '#252b33', dark), k = { clouds: .25, fog: .25, rain: .45, snow: .45 }[amb.weather] || 0;
+  const [top, bottom] = skyPair(amb.moment);
+  return { top: k ? mix(top, grey, k) : top, bottom: k ? mix(bottom, grey, k) : bottom, stars: Math.max(0, dark - .6) / .4 * (amb.weather === 'sun' ? 1 : .3) };
+}
+// Teinte posée sur la ville : rosée à l'aube, chaude en fin d'après-midi, violette au crépuscule.
+function lightTint(amb) {
+  return { dawn: 'rgba(255,170,150,.14)', golden: 'rgba(255,190,110,.14)', dusk: 'rgba(130,100,190,.16)' }[amb.moment.name] || null;
+}
+// Ciel « selon l'heure » posé sur la carte de la ville ; « selon l'apparence », celui du thème.
+function applySky(amb, byTime) {
+  const sky = $('#sky');
+  if (!sky) return;
+  if (!byTime) { for (const name of ['--sky-top', '--sky-bottom', '--star-opacity']) sky.style.removeProperty(name); return; }
+  const c = skyColors(amb);
+  sky.style.setProperty('--sky-top', c.top);
+  sky.style.setProperty('--sky-bottom', c.bottom);
+  sky.style.setProperty('--star-opacity', c.stars.toFixed(2));
+}
+
 const City = (() => {
   const canvas = $('#city');
   const ctx = canvas.getContext('2d');
@@ -99,11 +132,14 @@ const City = (() => {
     cancelAnimationFrame(raf);
     raf = 0;
     if (!W) layout();
-    const pal = readPalette();
+    // Ambiance du moment : saison toujours ; obscurité, ciel et teinte selon l'heure, sauf « ciel selon l'apparence ».
+    const pal = readPalette(), amb = typeof ambientAt === 'function' ? ambientAt() : null, byTime = !!amb && S.settings.sky !== 'theme';
+    if (amb) { pal.season = amb.season; if (byTime) pal.dark = darkness(amb.moment); }
+    applySky(amb, byTime);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const g = makePainter(ctx, TW, ox, oy, pal);
-    const night = pal.night;
+    const night = g.night;
 
     const slab = TW * .32;
     const L = g.P(0, N), B = g.P(N, N), R = g.P(N, 0);
@@ -111,7 +147,7 @@ const City = (() => {
     g.poly([B, R, [R[0], R[1] + slab], [B[0], B[1] + slab]], night ? '#3b2f22' : '#9f835d');
     g.poly([[L[0], L[1] + slab * .28], [B[0], B[1] + slab * .28], B, L], night ? '#2f4a36' : '#86b26c');
     g.poly([[B[0], B[1] + slab * .28], [R[0], R[1] + slab * .28], R, B], night ? '#283f2e' : '#78a35f');
-    const ground = groundColors('spring', night ? 1 : 0);
+    const ground = groundColors(amb ? amb.season : 'spring', g.dark);
     for (let x = 0; x < N; x++) {
       for (let y = 0; y < N; y++) g.tile(x, y, 0, ground[(x + y) % 2], night ? 'rgba(0,0,0,.12)' : 'rgba(40,70,30,.06)', 1);
     }
@@ -163,6 +199,9 @@ const City = (() => {
       ctx.restore();
       if (fx && k < 1) overlay('front');
     }
+    // Teinte du moment, posée seulement sur ce qui est dessiné (l'île et ses éléments).
+    const tint = byTime ? lightTint(amb) : null;
+    if (tint) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); ctx.restore(); }
     // Étincelles sur les cases d'un ensemble qu'on vient de découvrir.
     sparkles = clean ? sparkles : sparkles.filter(s => now - s.start < FX_TIME.sparkle);
     for (const s of clean ? [] : sparkles) {

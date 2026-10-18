@@ -133,3 +133,24 @@ function visitorOf(day) {
   for (const c of list) { roll -= weight(c); if (roll < 0) return c; }
   return list[list.length - 1];
 }
+
+// L'ambiance de la ville à un instant : jour, minutes, saison, moment, météo, arc-en-ciel, fêtes et visiteur.
+// ambientForce impose certains champs, pour les tests et la planche.
+let ambientForce = null;
+function ambientAt(ts = nowTs()) {
+  const { day, minutes } = cityClock(ts);
+  const amb = { day, minutes, season: seasonOf(day), moment: momentOf(day, minutes), weather: weatherOf(day, minutes),
+    rainbow: rainbowOn(day, minutes), festivals: festivalsOn(day), visitor: visitorOf(day) };
+  return ambientForce ? Object.assign(amb, ambientForce) : amb;
+}
+// Obscurité de la ville (0 en journée, 1 la nuit), progressive à l'aube, en fin d'après-midi et au crépuscule.
+function darkness(moment) {
+  const t = moment.t || 0;
+  switch (moment.name) {
+    case 'night': return 1;
+    case 'dawn': return 1 - t;
+    case 'golden': return .15 * t;
+    case 'dusk': return .15 + .85 * t;
+    default: return 0;
+  }
+}
