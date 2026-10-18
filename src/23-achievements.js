@@ -26,6 +26,10 @@ const natureCount = () => S.city.tiles.filter(tile => NATURE_ITEMS.includes(tile
 // Construction de la n-ième case encore posée : à cette date, la ville en comptait déjà n ; 0 sinon.
 const nthBuilt = (tiles, n) => tiles.map(tile => tile.at).filter(validTs).sort((a, b) => a - b)[n - 1] || 0;
 const wondersDone = () => S.city.tiles.filter(tile => isWonder(tile.item) && tile.stage >= ITEMS[tile.item].wonder.length).length;
+// Ville vivante : visiteurs rencontrés, fêtes vécues (leurs cadeaux) et saisons vues.
+const visitorsMet = () => Object.keys(S.visits || {}).length;
+const festivalsLived = () => Object.keys(S.gifts || {}).filter(key => key.startsWith('fest:')).length;
+const seasonsSeen = () => Object.keys(S.seasons || {}).length;
 // Premier jour (dans l'ordre) où la série atteint n ; null sinon.
 function streakDay(n) { return activeDays().find(d => streakDetail(d).days >= n) || null; }
 // Premier jour où, semaine par semaine, n domaines ont été pratiqués ; null sinon.
@@ -59,6 +63,9 @@ function achievementMet(def) {
     case 'level': return S.city.tiles.some(tile => buildingLevelInfo(tile.item).level >= def.n);
     case 'sets': return Object.keys(S.sets || {}).length >= def.n;
     case 'wonders': return wondersDone() >= def.n;
+    case 'visitors': return visitorsMet() >= def.n;
+    case 'festivals': return festivalsLived() >= def.n;
+    case 'seasons': return seasonsSeen() >= def.n;
     default: return false;
   }
 }
@@ -69,6 +76,7 @@ function achievementProgress(def) {
     catMinutes: () => S.stats.byCat[def.cat] || 0, totalMinutes: () => totalMinutes(),
     activeDays: () => activeDays().length, tiles: () => S.city.tiles.length, nature: natureCount,
     sets: () => Object.keys(S.sets || {}).length, wonders: wondersDone,
+    visitors: visitorsMet, festivals: festivalsLived, seasons: seasonsSeen,
   }[def.kind];
   if (!have) return null;
   return { have: Math.min(have(), def.n), need: def.n, unit: def.kind === 'catMinutes' || def.kind === 'totalMinutes' ? 'min' : 'n' };

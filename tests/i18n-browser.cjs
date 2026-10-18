@@ -77,10 +77,10 @@ async function runI18n(browser, baseURL) {
         assert.ok(widths.body <= widths.client + 1, `la fenêtre déborde à ${width} px`);
         await page.locator('#sheetClose').click();
       }
-      // Le carnet tient lui aussi, sur ses trois onglets.
+      // Le carnet tient lui aussi, sur ses quatre onglets.
       await page.locator('[data-tab="journal"]').click();
       await page.getByRole('button', { name: 'Open the notebook', exact: true }).click();
-      for (const tab of ['Achievements', 'Collection', 'Sets']) {
+      for (const tab of ['Achievements', 'Collection', 'Sets', 'Visits']) {
         await page.locator('#sheetBody').getByRole('radio', { name: tab, exact: true }).click();
         const widths = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, inner: innerWidth,
           body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth }));

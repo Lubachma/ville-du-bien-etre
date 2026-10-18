@@ -1,12 +1,13 @@
 /* =========================================================================
-   Carnet : succès, collection et ensembles, avec leurs compteurs dans le Journal.
+   Carnet : succès, collection, ensembles et visites, avec leurs compteurs dans le Journal.
    ========================================================================= */
-const CARNET_TABS = [['achievements', 'carnet.tabAchievements'], ['collection', 'carnet.tabCollection'], ['sets', 'carnet.tabSets']];
+const CARNET_TABS = [['achievements', 'carnet.tabAchievements'], ['collection', 'carnet.tabCollection'], ['sets', 'carnet.tabSets'], ['visits', 'carnet.tabVisits']];
 function carnetCounts() {
   return {
     achievements: { have: Object.keys(S.achievements || {}).length, total: ACHIEVEMENTS.length },
     collection: collectionCount(),
     sets: { have: Object.keys(S.sets || {}).length, total: SETS.length },
+    visits: { have: Object.keys(S.visits || {}).length, total: VISITORS.length },
   };
 }
 // Succès et ensembles obtenus, avec leur date : « a:id » pour un succès, « s:id » pour un ensemble.
@@ -41,16 +42,17 @@ function renderCarnetCard() {
     h('div', { class: 'feature-between' },
       h('h3', {}, t('carnet.title'), hasNewInCarnet() ? h('span', { class: 'badge-new' }, t('carnet.new')) : null),
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => openCarnet() }, t('carnet.open'))),
-    row('carnet.tabAchievements', counts.achievements), row('carnet.tabCollection', counts.collection), row('carnet.tabSets', counts.sets));
+    row('carnet.tabAchievements', counts.achievements), row('carnet.tabCollection', counts.collection), row('carnet.tabSets', counts.sets),
+    row('carnet.tabVisits', counts.visits));
 }
 
 function openCarnet(tab = 'achievements') {
   markCarnetSeen();
   openSheet(t('carnet.title'), body => {
-    const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('carnet.title') }), panel = h('div', { class: 'carnet-panel' });
+    const seg = h('div', { class: 'seg seg-4', role: 'radiogroup', 'aria-label': t('carnet.title') }), panel = h('div', { class: 'carnet-panel' });
     const show = name => {
       $$('button', seg).forEach((button, i) => button.setAttribute('aria-checked', String(CARNET_TABS[i][0] === name)));
-      panel.replaceChildren(name === 'collection' ? carnetCollection() : name === 'sets' ? carnetSets() : carnetAchievements());
+      panel.replaceChildren(name === 'collection' ? carnetCollection() : name === 'sets' ? carnetSets() : name === 'visits' ? carnetVisits() : carnetAchievements());
     };
     for (const [name, key] of CARNET_TABS) seg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', onclick: () => show(name) }, t(key)));
     body.append(seg, panel);
@@ -108,10 +110,44 @@ function carnetSets() {
   };
   return h('ul', { class: 'carnet-list' }, ...SETS.filter(set => got[set.id]).map(row), ...SETS.filter(set => !got[set.id]).map(row));
 }
+// Visites : les visiteurs rencontrés (du plus ancien au plus récent), puis les autres en silhouette avec un indice ;
+// ensuite les six fêtes, avec les années où la ville les a vécues et leur prochain retour.
+function carnetVisits() {
+  const visits = S.visits || {}, day = today();
+  const visitor = v => {
+    const met = visits[v.id], cv = h('canvas', { 'aria-hidden': 'true' });
+    City.visitorThumb(cv, v.id, 48, { silhouette: !met });
+    return h('li', { class: 'carnet-row carnet-visitor' + (met ? ' earned' : '') }, cv,
+      h('div', { class: 'carnet-text' }, h('strong', {}, met ? t('visitor.' + v.id + '.name') : t('carnet.visitorUnknown')),
+        h('span', { class: 'note' }, met ? t('visit.count', { n: met.count }) : t('visitor.' + v.id + '.hint')),
+        met ? h('span', { class: 'note' }, t('carnet.metSince', { date: carnetDate(met.first) })) : null));
+  };
+  const fest = f => {
+    const years = Object.keys(S.gifts || {}).filter(key => key.startsWith('fest:' + f.id + ':')).map(key => key.split(':')[2]).sort();
+    const next = nextFestival(f.id, day);
+    return h('li', { class: 'carnet-row carnet-fest' + (years.length ? ' earned' : '') },
+      h('span', { class: 'ach-badge', 'aria-hidden': 'true' }, icon(years.length ? 'sparkle' : 'sun')),
+      h('div', { class: 'carnet-text' }, h('strong', {}, t('fest.' + f.id + '.name')),
+        years.length ? h('span', { class: 'note' }, t('fest.lived', { years: years.join(', ') })) : null,
+        next ? h('span', { class: 'note' }, t('fest.next', { date: dayFmt('long').format(keyToUTC(next)) })) : null));
+  };
+  const met = VISITORS.filter(v => visits[v.id]).sort((a, b) => visits[a.id].first - visits[b.id].first);
+  return h('div', { class: 'carnet-visits' },
+    h('h4', {}, t('carnet.visitorsHead')),
+    h('ul', { class: 'carnet-list' }, ...met.map(visitor), ...VISITORS.filter(v => !visits[v.id]).map(visitor)),
+    h('h4', {}, t('carnet.festsHead')),
+    h('ul', { class: 'carnet-list' }, ...FESTIVALS.map(fest)));
+}
 
 // Un seul message pour ce qui vient d'être obtenu : un texte d'ouverture éventuel, les ensembles, puis les succès.
 function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
-  if (!achievements.length && !sets.length) { if (lead) toast(lead); return; }
+  // Au démarrage, le message de rattrapage en attente rejoint ce message-ci.
+  const note = lead || achievements.length || sets.length ? takeCarnetNote() : '';
+  if (!achievements.length && !sets.length) {
+    if (note) toast([lead, note].filter(Boolean).join(' · '), { label: t('carnet.open'), run: () => openCarnet() });
+    else if (lead) toast(lead);
+    return;
+  }
   if (sets.length) {
     // Étincelles sur les cases des ensembles découverts, et deux notes claires.
     const found = formedSets();
@@ -122,7 +158,7 @@ function celebrate({ achievements = [], sets = [] } = {}, lead = '') {
   // Plusieurs succès : le message reste court, les lecteurs d'écran entendent le nom de chacun.
   const n = achievements.length, names = achievements.map(achName).join(', ');
   const shown = n === 1 ? t('ach.toastOne', { name: names }) : n > 1 ? t('ach.toastMany', { n }) : '';
-  const line = last => [...parts, last].filter(Boolean).join(' · ');
+  const line = last => [...parts, last, note].filter(Boolean).join(' · ');
   toast(line(shown), { label: t('carnet.open'), run: () => openCarnet(sets.length ? 'sets' : 'achievements') }, line(n > 1 ? t('ach.spokenMany', { n, names }) : shown));
 }
 // Après une pose, un déplacement, un agrandissement ou une étape : ce qui vient d'être obtenu, sans rien afficher.
@@ -131,11 +167,16 @@ function noticeProgress() {
   return { sets, achievements: checkAchievements() };
 }
 // Ville d'avant la mise à jour ou sauvegarde restaurée : tout ce qui était déjà mérité, en un seul message.
-function catchUpCarnet() {
+// Au démarrage (defer), le message attend : il rejoint le premier message de la ville (une fête), sinon flushCarnetNote l'affiche.
+let carnetNote = '';
+function catchUpCarnet({ defer = false } = {}) {
   const now = Date.now(), sets = discoverSets(now), achievements = checkAchievements(now, { retro: true });
   if (!sets.length && !achievements.length) return { achievements, sets };
-  commit();       // affiché tout de suite, même si le Journal est ouvert (restauration)
   const text = t('carnet.catchUp', { n: achievements.length }) + (sets.length ? ' ' + t('carnet.catchUpSets', { n: sets.length }) : '');
+  if (defer) { commit({ silent: true }); carnetNote = text; return { achievements, sets }; }
+  commit();       // affiché tout de suite, même si le Journal est ouvert (restauration)
   toast(text, { label: t('carnet.open'), run: () => openCarnet() });
   return { achievements, sets };
 }
+function takeCarnetNote() { const note = carnetNote; carnetNote = ''; return note; }
+function flushCarnetNote() { const note = takeCarnetNote(); if (note) toast(note, { label: t('carnet.open'), run: () => openCarnet() }); }

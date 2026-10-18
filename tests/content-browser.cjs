@@ -125,7 +125,7 @@ async function runContent(browser, baseURL) {
       // Le rattrapage au démarrage ajoute « Bon voisinage » : la ville a déjà un ensemble.
       const have = await page.evaluate(() => Object.keys(__ville.state.achievements).length);
       assert.equal(have, 3);
-      assert.match(text, /3 sur 33/);
+      assert.match(text, /3 sur 38/);
       assert.match(text, /1 sur 12/);
       await card.getByRole('button', { name: 'Ouvrir le carnet', exact: true }).click();
       const body = page.locator('#sheetBody');
@@ -144,7 +144,7 @@ async function runContent(browser, baseURL) {
       const sets = await body.locator('.carnet-row strong').allInnerTexts();
       assert.equal(sets[0], 'Cocon');
       assert.equal(sets.filter(name => name === 'Ensemble à découvrir').length, 11);
-      for (const tab of ['Succès', 'Collection', 'Ensembles']) {
+      for (const tab of ['Succès', 'Collection', 'Ensembles', 'Visites']) {
         await body.getByRole('radio', { name: tab, exact: true }).click();
         const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, inner: innerWidth, body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth }));
         assert.ok(w.doc <= w.inner && w.body <= w.client + 1, `le carnet déborde à 320 px (${tab})`);
@@ -156,7 +156,7 @@ async function runContent(browser, baseURL) {
       await page.getByRole('button', { name: 'Tout recommencer', exact: true }).click();
       await page.getByRole('button', { name: /^Confirmer\s:\stout effacer/ }).click();
       await page.waitForFunction(() => !Object.keys(__ville.state.achievements).length && !Object.keys(__ville.state.sets).length);
-      assert.match(await card.innerText(), /0\ssur\s33/);
+      assert.match(await card.innerText(), /0\ssur\s38/);
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Carnet : compteurs, onglets et repère Nouveau');
@@ -249,7 +249,7 @@ async function runContent(browser, baseURL) {
       assert.equal(await page.evaluate(() => !!__ville.state.achievements['grand-calme']), true);
       // Restaurée depuis le Journal : la carte Carnet compte déjà les succès recalculés.
       const have = await page.evaluate(() => Object.keys(__ville.state.achievements).length);
-      assert.match(await page.locator('#carnetCard').innerText(), new RegExp(have + '\\ssur\\s33'));
+      assert.match(await page.locator('#carnetCard').innerText(), new RegExp(have + '\\ssur\\s38'));
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Restauration : succès recalculés');

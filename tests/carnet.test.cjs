@@ -10,7 +10,9 @@ test('compteurs du carnet', () => {
   const a = app();
   a.state.achievements = { 'premier-pas': T0, hameau: T0 };
   a.state.sets = { cocon: T0 };
-  assert.deepEqual(plain(a.carnetCounts()), { achievements: { have: 2, total: 33 }, collection: { have: 7, total: 50 }, sets: { have: 1, total: 12 } });
+  assert.deepEqual(plain(a.carnetCounts()), { achievements: { have: 2, total: 38 }, collection: { have: 7, total: 50 }, sets: { have: 1, total: 12 }, visits: { have: 0, total: 12 } });
+  a.state.visits = { chat: { first: T0, count: 2, last: '2026-10-18' } };
+  assert.deepEqual(plain(a.carnetCounts().visits), { have: 1, total: 12 });
 });
 
 test("repère Nouveau : ce qui n'a pas encore été vu sur cet appareil", () => {
@@ -75,3 +77,27 @@ test('rattrapage rapide pour une ville très remplie', () => {
 });
 
 module.exports = { FILES, T0 };
+
+test("rattrapage au démarrage : son message attend, puis rejoint le premier message de la ville ou s'affiche seul", () => {
+  const calls = [], globals = { toast: (msg, action) => calls.push([msg, !!action]), commit: () => true };
+  const old = a => { a.state.clock.tz = 'Europe/Zurich'; Object.assign(a.state.stats, { ok: 1, days: { '2026-10-01': 30 } }); };
+  const a = loadApp(FILES, { expose: ['catchUpCarnet', 'celebrate', 'flushCarnetNote'], globals });
+  old(a);
+  a.catchUpCarnet({ defer: true });
+  assert.equal(calls.length, 0);
+  a.celebrate({}, 'Bonne Fête du printemps ! Cadeau : 5 M');
+  assert.equal(calls.length, 1);
+  assert.match(calls[0][0], /^Bonne Fête du printemps ! Cadeau : 5 M · Ta ville a déjà 1 succès/);
+  assert.equal(calls[0][1], true);
+  a.flushCarnetNote();
+  assert.equal(calls.length, 1);
+  // Sans autre message, il s'affiche seul après le premier affichage.
+  const b = loadApp(FILES, { expose: ['catchUpCarnet', 'celebrate', 'flushCarnetNote'], globals });
+  old(b);
+  b.catchUpCarnet({ defer: true });
+  b.celebrate({}, '');
+  assert.equal(calls.length, 1);
+  b.flushCarnetNote();
+  assert.equal(calls.length, 2);
+  assert.match(calls[1][0], /^Ta ville a déjà 1 succès/);
+});

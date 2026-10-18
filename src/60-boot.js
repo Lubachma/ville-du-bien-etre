@@ -114,9 +114,11 @@ function boot(hotData) {
   window.addEventListener('ville:pwa', renderPwaStatus);
   bindEvents();
   City.layout();
+  // Ville d'avant la mise à jour : ses succès et ses ensembles déjà mérités, datés, avant le premier affichage de la Ville
+  // (qui note la saison et les donnerait sinon à la date du jour). Leur message rejoint celui d'une fête, ou s'affiche seul.
+  catchUpCarnet({ defer: true });
   renderAll();
-  // Ville d'avant la mise à jour : ses succès et ses ensembles déjà mérités, en un seul message.
-  catchUpCarnet();
+  flushCarnetNote();
   const hotRun = hotData && hotData.run;
   if (S.active && hotRun && hotRun.id === S.active.id) startSession(null, hotRun);
   else checkActive();

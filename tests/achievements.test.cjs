@@ -13,6 +13,8 @@ function app(tz = 'Europe/Zurich') {
 const entry = (at, extra = {}) => ({ id: 'h' + at, name: 'x', cat: 'esprit', min: 10, ok: true, reward: 1, at, source: 'direct', mode: 'focus', ...extra });
 const days = n => Object.fromEntries(Array.from({ length: n }, (_, i) => [new Date(Date.UTC(2026, 6, 1 + i, 12)).toISOString().slice(0, 10), 10]));
 const tiles = (item, n, extra = {}) => Array.from({ length: n }, (_, i) => ({ id: item + i, item, x: i % 11, y: Math.floor(i / 11), at: T0, paid: 0, ...extra }));
+const met = { first: T0, count: 1, last: '2026-10-18' };
+const VISITOR_IDS = ['chat', 'herisson', 'ecureuil', 'cigogne', 'canards', 'renard', 'chouette', 'montgolfiere', 'bonhomme', 'glaces', 'accordeon', 'artiste'];
 // Chaque cas prépare la ville juste avant le seuil (at = false) ou au seuil (at = true).
 const CASES = {
   'premier-pas': (s, at) => { s.stats.ok = at ? 1 : 0; },
@@ -48,6 +50,11 @@ const CASES = {
   'urbaniste': (s, at, a) => { s.sets = Object.fromEntries(a.SETS.slice(0, at ? 12 : 11).map(x => [x.id, T0])); },
   'premiere-merveille': (s, at) => { s.city.tiles = [{ id: 'w', item: 'phare', x: 0, y: 0, at: T0, paid: 0, stage: at ? 4 : 3 }]; },
   'trois-merveilles': (s, at) => { s.city.tiles = ['grandarbre', 'phare', 'granderoue'].map((item, i) => ({ id: item, item, x: i, y: 0, at: T0, paid: 0, stage: i === 2 && !at ? 3 : 4 })); },
+  'premiere-visite': (s, at) => { s.visits = at ? { chat: met } : {}; s.gifts = { 'visit:2026-10-18': T0 }; },
+  'bon-accueil': (s, at) => { s.visits = Object.fromEntries(['chat', 'herisson', 'ecureuil', 'cigogne', 'canards', 'renard'].slice(0, at ? 6 : 5).map(id => [id, met])); },
+  'ville-hospitaliere': (s, at) => { s.visits = Object.fromEntries(VISITOR_IDS.slice(0, at ? 12 : 11).map(id => [id, met])); },
+  'jour-de-fete': (s, at) => { s.gifts = at ? { 'visit:2026-10-18': T0, 'fest:printemps:2027': T0 } : { 'visit:2026-10-18': T0 }; },
+  'quatre-saisons': (s, at) => { s.seasons = Object.fromEntries(['spring', 'summer', 'autumn', 'winter'].slice(0, at ? 4 : 3).map(k => [k, T0])); },
 };
 
 test('chaque succès est faux juste avant son seuil et vrai au seuil', () => {

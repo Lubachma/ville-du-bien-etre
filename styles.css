@@ -404,6 +404,9 @@ main {
   border: 1px solid var(--line);
 }
 .seg.seg-2 { grid-template-columns: repeat(2, 1fr); }
+/* Quatre choix : deux par ligne sur un téléphone, une seule ligne dès qu'il y a la place. */
+.seg.seg-4 { grid-template-columns: repeat(2, 1fr); border-radius: 26px; }
+@media (min-width: 480px) { .seg.seg-4 { grid-template-columns: repeat(4, 1fr); border-radius: 999px; } }
 a.btn { text-decoration: none; }
 .seg button {
   min-height: 44px; border: 0; border-radius: 999px;
@@ -515,6 +518,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
 .carnet-row.earned { background: var(--surface); }
 .carnet-row canvas { width: 40px; height: 40px; flex: none; }
 .carnet-set { flex-wrap: wrap; }
+.carnet-visitor canvas { width: 48px; height: 48px; }
+.carnet-visits h4 { margin: 0 0 8px; }
+.carnet-visits .carnet-list + h4 { margin-top: 18px; }
 .carnet-text { display: grid; gap: 2px; min-width: 0; flex: 1 1 160px; }
 .carnet-text strong { overflow-wrap: anywhere; }
 .carnet-pieces { display: flex; gap: 6px; }

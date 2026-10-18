@@ -148,10 +148,11 @@ function renderView(tab) {
 }
 
 function renderVille() {
-  // Jour de fête : son cadeau et son message à la première ouverture (et au passage de minuit, l'appli ouverte).
-  greetFestivals(today());
+  // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).
+  liveTick();
   const n = S.city.tiles.length, N = S.city.size;
-  const parts = [t('city.captionBuildings', { n }), t('city.captionLand', { size: N })];
+  // La légende commence par ce qui se passe dans la ville : moment, météo, visiteur, fête.
+  const parts = [ambientCaption(ambientAt()), t('city.captionBuildings', { n }), t('city.captionLand', { size: N })];
   if (todayMinutes() > 0) parts.push(t('city.captionToday', { time: fmtMin(todayMinutes()) }));
   $('#cityCaption').textContent = frTypo(parts.join(' · '));
   const ew = $('#elsewhere');

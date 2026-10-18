@@ -141,6 +141,36 @@ async function runAmbient(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Fête');
   }
+  // Carnet des visites : quatre onglets, douze visiteurs dont onze à découvrir, six fêtes, rien ne déborde à 320 px ;
+  // la carte du Journal compte les visites et la légende de la ville commence par le moment.
+  {
+    const met = Date.parse('2026-06-20T09:00:00Z');
+    const seed = town({ esprit: 5 }, [], { createdAt: Date.parse('2026-05-04T10:00:00Z'), visits: { chat: { first: met, count: 3, last: '2026-06-28' } }, gifts: { 'fest:ete:2026': met } });
+    const { context, page, errors } = await cityAt(browser, baseURL, seed, '2026-07-01T10:00:00Z', { viewport: { width: 320, height: 640 } });
+    try {
+      assert.match(await page.locator('#cityCaption').innerText(), /^Journée\s·\s/);
+      await page.locator('[data-tab="journal"]').click();
+      const card = page.locator('#carnetCard');
+      assert.match(await card.innerText(), /Visites\s+1\ssur\s12/);
+      await card.getByRole('button', { name: 'Ouvrir le carnet', exact: true }).click();
+      const body = page.locator('#sheetBody');
+      assert.equal(await body.getByRole('radio').count(), 4);
+      await body.getByRole('radio', { name: 'Visites', exact: true }).click();
+      const visitors = await body.locator('.carnet-visitor strong').allInnerTexts();
+      assert.equal(visitors.length, 12);
+      assert.equal(visitors[0], 'Le chat voyageur');
+      assert.equal(visitors.filter(name => name === 'Visiteur à découvrir').length, 11);
+      assert.match(await body.locator('.carnet-visitor').first().innerText(), /3\srencontres/);
+      const fests = await body.locator('.carnet-fest').allInnerTexts();
+      assert.equal(fests.length, 6);
+      assert.match(fests.find(text => /Fête de l'été/.test(text)), /2026/);
+      assert.match(fests.find(text => /Nouvel An/.test(text)), /Revient le/);
+      const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, inner: innerWidth, body: document.querySelector('#sheetBody').scrollWidth, client: document.querySelector('#sheetBody').clientWidth }));
+      assert.ok(w.doc <= w.inner && w.body <= w.client + 1, 'le carnet déborde à 320 px (Visites)');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Carnet des visites');
+  }
   return { scenarios };
 }
 

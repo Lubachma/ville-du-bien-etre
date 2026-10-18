@@ -130,6 +130,11 @@ const ACHIEVEMENTS = [
   { id: 'urbaniste', family: 'town', kind: 'sets', n: 12 },
   { id: 'premiere-merveille', family: 'town', kind: 'wonders', n: 1 },
   { id: 'trois-merveilles', family: 'town', kind: 'wonders', n: 3 },
+  { id: 'premiere-visite', family: 'life', kind: 'visitors', n: 1 },
+  { id: 'bon-accueil', family: 'life', kind: 'visitors', n: 6 },
+  { id: 'ville-hospitaliere', family: 'life', kind: 'visitors', n: 12 },
+  { id: 'jour-de-fete', family: 'life', kind: 'festivals', n: 1 },
+  { id: 'quatre-saisons', family: 'life', kind: 'seasons', n: 4 },
 ];
 const NATURE_ITEMS = ['arbre', 'cerisier', 'haie', 'fleurs', 'potager'];
 // Ensembles : trois éléments dans un même carré de 3 × 3 cases.
