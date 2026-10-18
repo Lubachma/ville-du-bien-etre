@@ -1234,6 +1234,10 @@ DICT.fr = {
   'carnet.catchUpSets': { one: 'Elle a aussi formé {n} ensemble.', other: 'Elle a aussi formé {n} ensembles.' },
   'result.achievement': 'Succès : {name}',
   'result.gift': 'Cadeau : {item}',
+  // Boutique rangée
+  'shop.nav': 'Rubriques',
+  'shop.free': 'Offert',
+  'shop.placeFree': 'Placer {item}, offert',
 };
 
 
@@ -2088,6 +2092,10 @@ DICT.en = {
   'carnet.catchUpSets': { one: 'It has also formed {n} set.', other: 'It has also formed {n} sets.' },
   'result.achievement': 'Achievement: {name}',
   'result.gift': 'Gift: {item}',
+  // Organised shop
+  'shop.nav': 'Sections',
+  'shop.free': 'Free',
+  'shop.placeFree': 'Place {item}, free',
 };
 
 
@@ -3164,6 +3172,12 @@ function nextInGroup(group) {
     if (!best || rem < best.rem || (rem === best.rem && ITEMS[k].price < ITEMS[best.key].price)) best = { key: k, rem };
   }
   return best ? best.key : null;
+}
+// Rubrique de la boutique : les éléments débloqués, puis les verrouillés dévoilés (le prochain, puis l'objectif), puis les autres.
+function groupView(group) {
+  const keys = Object.keys(ITEMS).filter(k => ITEMS[k].group === group), locked = keys.filter(k => lockInfo(k));
+  const revealed = [nextInGroup(group), S.goals && S.goals.building].filter((k, i, list) => k && locked.includes(k) && list.indexOf(k) === i);
+  return { open: keys.filter(k => !locked.includes(k)), revealed, hidden: locked.filter(k => !revealed.includes(k)) };
 }
 // Un élément dévoilé se montre en couleur : débloqué, prochain de sa rubrique, ou objectif choisi.
 function isRevealed(key) { return !lockInfo(key) || nextInGroup(ITEMS[key].group) === key || (S.goals && S.goals.building) === key; }
@@ -5438,31 +5452,20 @@ function renderHistory() {
 function openShop() {
   openSheet(t('shop.title'), body => {
     body.append(h('p', { class: 'note' }, t('shop.intro', { coins: fmt(S.coins) })));
+    // Raccourcis vers les rubriques, sur une ligne qui défile
+    const nav = h('div', { class: 'chips shop-nav', role: 'navigation', 'aria-label': t('shop.nav') });
     for (const gk of GROUPS) {
-      const sec = h('section', { class: 'shop-group' }, h('h3', {}, isCat(gk) ? catDot(gk) : null, isCat(gk) ? catName(gk) : groupName(gk)));
-      for (const key of Object.keys(ITEMS).filter(k => ITEMS[k].group === gk)) {
-        const it = ITEMS[key];
-        const lock = lockInfo(key);
-        const price = priceOf(key);
-        const owned = ownedCount(key);
-        const cv = h('canvas', { 'aria-hidden': 'true' });
-        City.thumb(cv, key);
-        const sub = h('div', { class: 'si-sub' });
-        let action;
-        if (lock) {
-          sub.append(h('span', {}, icon('lock'), ' ', lock.text));
-          if (lock.need > 1) sub.append(h('div', { class: 'meter', vars: { '--c': lock.cat ? catVar(lock.cat) : 'var(--cat-prestige)' } }, h('span', { style: 'width:' + clamp(lock.have / lock.need * 100, 0, 100) + '%' })));
-          action = h('span', { class: 'pill' }, fmt(price));
-        } else if (isWonder(key)) {
-          action = wonderShopAction(key, sub);
-        } else {
-          const short = price > S.coins;
-          const extra = owned && it.group !== 'decor' ? ' · ' + t('shop.owned', { n: owned, pct: Math.round(DUP_STEP * 100 * owned) }) : '';
-          sub.append(h('span', {}, (short ? t('shop.missing', { coins: fmt(price - S.coins) }) : t('shop.available')) + extra));
-          action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': t('shop.placeFor', { item: itemName(key), price: fmt(price) }), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
-        }
-        sec.append(h('div', { class: 'shop-item' + (lock ? ' locked' : '') + (isWonder(key) && !lock ? ' wonder' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, itemName(key)), sub), action));
-      }
+      nav.append(h('button', { class: 'chip', type: 'button', onclick: () => {
+        const sec = $('#shop-' + gk);
+        if (sec) sec.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
+      } }, isCat(gk) ? catName(gk) : groupName(gk)));
+    }
+    body.append(nav);
+    for (const gk of GROUPS) {
+      const sec = h('section', { class: 'shop-group', id: 'shop-' + gk }, h('h3', {}, isCat(gk) ? catDot(gk) : null, isCat(gk) ? catName(gk) : groupName(gk)));
+      const view = groupView(gk);
+      for (const key of [...view.open, ...view.revealed]) sec.append(shopItem(key));
+      for (const key of view.hidden) sec.append(shopMystery(key));
       body.append(sec);
     }
     const ns = nextSize();
@@ -5479,6 +5482,38 @@ function openShop() {
     }
     body.append(land);
   });
+}
+// Un élément de la boutique : débloqué (avec son bouton), ou verrouillé mais dévoilé (sa condition et sa jauge).
+function shopItem(key) {
+  const it = ITEMS[key], lock = lockInfo(key), price = priceOf(key), owned = ownedCount(key);
+  const cv = h('canvas', { 'aria-hidden': 'true' });
+  City.thumb(cv, key);
+  const sub = h('div', { class: 'si-sub' });
+  let action;
+  if (lock) {
+    sub.append(h('span', {}, icon('lock'), ' ', lock.text));
+    if (lock.need > 1) sub.append(h('div', { class: 'meter', vars: { '--c': lock.cat ? catVar(lock.cat) : 'var(--cat-prestige)' } }, h('span', { style: 'width:' + clamp(lock.have / lock.need * 100, 0, 100) + '%' })));
+    action = h('span', { class: 'pill' }, fmt(price));
+  } else if (isWonder(key)) {
+    action = wonderShopAction(key, sub);
+  } else if (!price) {
+    // Décor offert par un succès : le premier exemplaire ne coûte rien.
+    sub.append(h('span', {}, t('shop.available')));
+    action = h('button', { class: 'btn btn-primary btn-sm', type: 'button', 'aria-label': t('shop.placeFree', { item: itemName(key) }), onclick: () => { closeSheet(); Mode.startPlace(key); } }, t('shop.free'));
+  } else {
+    const short = price > S.coins;
+    const extra = owned && it.group !== 'decor' ? ' · ' + t('shop.owned', { n: owned, pct: Math.round(DUP_STEP * 100 * owned) }) : '';
+    sub.append(h('span', {}, (short ? t('shop.missing', { coins: fmt(price - S.coins) }) : t('shop.available')) + extra));
+    action = h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, 'aria-label': t('shop.placeFor', { item: itemName(key), price: fmt(price) }), onclick: () => { closeSheet(); Mode.startPlace(key); } }, fmt(price));
+  }
+  return h('div', { class: 'shop-item' + (lock ? ' locked' : '') + (isWonder(key) && !lock ? ' wonder' : '') }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, itemName(key)), sub), action);
+}
+// Élément encore à découvrir : une ligne compacte, sa silhouette et sa condition.
+function shopMystery(key) {
+  const cv = h('canvas', { 'aria-hidden': 'true' });
+  City.thumb(cv, key, 40, { silhouette: true });
+  return h('div', { class: 'shop-item hidden' }, cv, h('div', { class: 'si-text' }, h('span', { class: 'si-name' }, t('carnet.mystery')),
+    h('div', { class: 'si-sub' }, h('span', {}, icon('lock'), ' ', lockInfo(key).text))));
 }
 // Calculé à partir de l'état actuel : une fenêtre ouverte avant une synchronisation ne peut pas faire payer pour rien.
 function expandCity() {

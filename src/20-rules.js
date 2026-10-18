@@ -180,6 +180,12 @@ function nextInGroup(group) {
   }
   return best ? best.key : null;
 }
+// Rubrique de la boutique : les éléments débloqués, puis les verrouillés dévoilés (le prochain, puis l'objectif), puis les autres.
+function groupView(group) {
+  const keys = Object.keys(ITEMS).filter(k => ITEMS[k].group === group), locked = keys.filter(k => lockInfo(k));
+  const revealed = [nextInGroup(group), S.goals && S.goals.building].filter((k, i, list) => k && locked.includes(k) && list.indexOf(k) === i);
+  return { open: keys.filter(k => !locked.includes(k)), revealed, hidden: locked.filter(k => !revealed.includes(k)) };
+}
 // Un élément dévoilé se montre en couleur : débloqué, prochain de sa rubrique, ou objectif choisi.
 function isRevealed(key) { return !lockInfo(key) || nextInGroup(ITEMS[key].group) === key || (S.goals && S.goals.building) === key; }
 function ownedCount(key) { return S.city.tiles.filter(t => t.item === key).length; }

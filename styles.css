@@ -530,7 +530,13 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
 /* Merveille : le bouton, plus long, passe sous le texte */
 .shop-item.wonder > .btn, .shop-item.wonder > .pill { grid-column: 2 / -1; justify-self: start; }
 .shop-item canvas { width: 64px; height: 64px; display: block; }
-.shop-item.locked canvas { filter: grayscale(1); opacity: .55; }
+/* Le prochain élément à débloquer reste en couleur ; les autres sont des silhouettes compactes */
+.shop-item.hidden { grid-template-columns: 40px minmax(0, 1fr); padding: 6px 10px 6px 6px; background: var(--surface-2); }
+.shop-item.hidden canvas { width: 40px; height: 40px; }
+/* Dans la grille de la fenêtre, une rangée qui défile se tasserait sans hauteur minimale */
+.shop-nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 2px; min-height: 48px; }
+.shop-nav::-webkit-scrollbar { display: none; }
+.shop-nav .chip { flex: none; }
 .shop-item .si-name { font-weight: 700; overflow-wrap: anywhere; }
 .shop-item .si-sub { font-size: 12.5px; color: var(--muted); display: grid; gap: 5px; }
 .shop-item .meter { height: 6px; max-width: 160px; }

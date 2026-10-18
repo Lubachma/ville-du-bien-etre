@@ -848,4 +848,8 @@ DICT.fr = {
   'carnet.catchUpSets': { one: 'Elle a aussi formé {n} ensemble.', other: 'Elle a aussi formé {n} ensembles.' },
   'result.achievement': 'Succès : {name}',
   'result.gift': 'Cadeau : {item}',
+  // Boutique rangée
+  'shop.nav': 'Rubriques',
+  'shop.free': 'Offert',
+  'shop.placeFree': 'Placer {item}, offert',
 };

@@ -848,4 +848,8 @@ DICT.en = {
   'carnet.catchUpSets': { one: 'It has also formed {n} set.', other: 'It has also formed {n} sets.' },
   'result.achievement': 'Achievement: {name}',
   'result.gift': 'Gift: {item}',
+  // Organised shop
+  'shop.nav': 'Sections',
+  'shop.free': 'Free',
+  'shop.placeFree': 'Place {item}, free',
 };

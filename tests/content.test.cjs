@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '46-features.js'];
 const app = () => loadApp(FILES, { expose: ['ITEMS', 'lockInfo', 'priceOf', 'nextUnlock', 'collectionCount', 'nextInGroup', 'isRevealed',
-  'isWonder', 'wonderPaid', 'buildingLevelInfo', 'setLang', 'itemName', 'itemGender'] });
+  'isWonder', 'wonderPaid', 'buildingLevelInfo', 'setLang', 'itemName', 'itemGender', 'groupView'] });
 const practice = (a, byCat) => Object.assign(a.state.stats.byCat, byCat);
 const ORIGINAL = { arbre: [2e6], fleurs: [1e6], chemin: [5e5], banc: [2e6], lampadaire: [3e6], etang: [6e6], maison: [5e6, 0],
   boulangerie: [15e6, 1], serre: [180e6, 120], bibliotheque: [10e6, 1], ecole: [90e6, 60], observatoire: [450e6, 300], terrain: [10e6, 1],
@@ -99,4 +99,14 @@ test('noms en français et en anglais', () => {
   assert.deepEqual([a.itemName('source'), a.itemGender('source'), a.itemName('granderoue'), a.itemGender('moulin')], ['Source chaude', 'f', 'Grande Roue', 'm']);
   a.setLang('en');
   assert.deepEqual([a.itemName('chapiteau'), a.itemName('granderoue'), a.itemName('lavoir')], ['Big top', 'Big Wheel', 'Wash house']);
+});
+
+test('boutique : débloqués, puis dévoilés, puis silhouettes', () => {
+  const a = app();
+  assert.deepEqual(plain(a.groupView('decor')), { open: ['arbre', 'fleurs', 'chemin', 'banc', 'lampadaire', 'etang'], revealed: ['haie'],
+    hidden: ['cerisier', 'livres', 'lanterne', 'potager', 'cadran', 'pasjaponais', 'fanions', 'nichoir', 'statue'] });
+  a.state.achievements = { 'leve-tot': Date.now() };
+  assert.ok(a.groupView('decor').open.includes('cadran'));
+  a.state.goals.building = 'stade';
+  assert.deepEqual(plain(a.groupView('corps')), { open: [], revealed: ['terrain', 'stade'], hidden: ['piscine', 'skatepark', 'escalade', 'gymnase'] });
 });

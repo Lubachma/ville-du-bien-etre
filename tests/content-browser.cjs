@@ -187,6 +187,35 @@ async function runContent(browser, baseURL) {
     } finally { await context.close(); }
     scenarios.push('Restauration : succès recalculés');
   }
+  // Boutique : raccourcis, prochain élément dévoilé, silhouettes, décor offert.
+  {
+    const { context, page, errors } = await newTown(browser, baseURL, null);
+    try {
+      await page.locator('#buildBtn').click();
+      const nav = page.getByRole('navigation', { name: 'Rubriques' });
+      assert.equal(await nav.getByRole('button').count(), 7);
+      await nav.getByRole('button', { name: 'Prestige', exact: true }).click();
+      await page.waitForFunction(() => { const r = document.querySelector('#shop-prestige').getBoundingClientRect(); return r.top >= 0 && r.top < innerHeight; });
+      const decor = page.locator('#shop-decor');
+      assert.equal(await decor.getByRole('button', { name: /^Placer .+ pour / }).count(), 6);
+      assert.match(await decor.innerText(), /Haie/);
+      assert.equal(await decor.locator('.shop-item.hidden').count(), 9);
+      assert.match(await decor.innerText(), /Récompense du succès «\sLève-tôt\s»/);
+      await page.locator('#sheetClose').click();
+      await page.evaluate(() => { __ville.state.achievements['leve-tot'] = Date.now(); });
+      await page.locator('#buildBtn').click();
+      const free = page.getByRole('button', { name: 'Placer Cadran solaire, offert', exact: true });
+      assert.equal(await free.innerText(), 'Offert');
+      const coins = await page.evaluate(() => __ville.state.coins);
+      await free.click();
+      for (let i = 0; i < 3; i++) await page.locator('#city').press('ArrowLeft');      // case (0, 3), libre dans une ville neuve
+      await page.locator('#city').press('Enter'); await page.locator('#placeConfirm').click();
+      await page.waitForFunction(() => __ville.state.city.tiles.some(t => t.item === 'cadran'));
+      assert.equal(await page.evaluate(() => __ville.state.coins), coins);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+    scenarios.push('Boutique : raccourcis, silhouettes et décor offert');
+  }
   return { scenarios };
 }
 module.exports = { runContent, newTown, town, openTile };
