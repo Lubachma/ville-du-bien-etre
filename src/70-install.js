@@ -77,35 +77,52 @@
 
   const hidden = () => { try { return localStorage.getItem(HINT_KEY) === '1'; } catch { return false; } };
   const hideForGood = () => { try { localStorage.setItem(HINT_KEY, '1'); } catch { /* pas de stockage */ } };
-  let deferred = null, card = null;
+  // Textes de l'app (05-i18n.js) : la carte suit la langue affichée.
+  const t = (key, params) => (window.VilleI18n ? window.VilleI18n.t(key, params) : key);
+  const node = (tag, attrs, text) => {
+    const el = document.createElement(tag);
+    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
+    if (text != null) el.textContent = text;
+    return el;
+  };
+  let deferred = null, card = null, kind = '', installHidden = false, helpShown = false;
+  // Bouton « Installer » masqué et aide affichée survivent à un changement de langue.
+  function applyState() {
+    const button = card.querySelector('[data-act="install"]');
+    if (button) button.hidden = installHidden;
+    let help = card.querySelector('.install-help');
+    if (helpShown && !help) { help = node('p', { class: 'note install-help' }); card.querySelector('.install-main').append(help); }
+    if (help) help.textContent = t('install.help');
+  }
+  function fill() {
+    const actions = node('div', { class: 'install-actions' });
+    if (kind === 'prompt') actions.append(node('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-act': 'install' }, t('install.install')));
+    actions.append(node('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-act': 'hide' }, t('install.hide')));
+    const main = node('div', { class: 'install-main' });
+    main.append(node('h3', { id: 'installTitle' }, t('install.title')),
+      node('p', {}, kind === 'ios' ? t('install.ios') : t('install.prompt')),
+      node('p', { class: 'note' }, t('install.personal')), actions);
+    card.replaceChildren(node('img', { src: 'icons/icon-192.png', alt: '', width: '48', height: '48' }), main);
+    applyState();
+  }
   function installHelp() {
     if (!card) return;
-    const button = card.querySelector('[data-act="install"]');
-    if (button) button.hidden = true;
-    let help = card.querySelector('.install-help');
-    if (!help) { help = document.createElement('p'); help.className = 'note install-help'; card.querySelector('.install-main').append(help); }
-    help.textContent = 'Tu peux aussi utiliser le menu de ton navigateur → Installer l’application ou Ajouter à l’écran d’accueil. L’app reste utilisable ici.';
+    installHidden = true; helpShown = true;
+    applyState();
   }
-  function show(kind) {
+  function show(variant) {
     if (standalone || hidden()) return;
     if (card) {
-      if (kind === 'prompt') { const button = card.querySelector('[data-act="install"]'); if (button) button.hidden = false; }
+      if (variant === 'prompt') { installHidden = false; applyState(); }
       return;
     }
     const view = document.getElementById('view-ville');
     if (!view) return;
+    kind = variant; installHidden = false; helpShown = false;
     card = document.createElement('div');
     card.className = 'card install-card'; card.id = 'installCard';
     card.setAttribute('role', 'region'); card.setAttribute('aria-labelledby', 'installTitle');
-    card.innerHTML = '<img src="icons/icon-192.png" alt="" width="48" height="48"><div class="install-main">'
-      + '<h3 id="installTitle">Ta ville sur ton téléphone</h3>'
-      + (kind === 'ios'
-        ? '<p>Dans Safari, ouvre Partager, puis « Sur l’écran d’accueil » et « Ajouter ».</p>'
-        : '<p>Installe l’app pour la retrouver sur ton écran d’accueil.</p>')
-      + '<p class="note">Ta ville est personnelle et reste sur cet appareil. Pour la transférer : Réglages → Sauvegarde.</p>'
-      + '<div class="install-actions">'
-      + (kind === 'prompt' ? '<button class="btn btn-primary btn-sm" type="button" data-act="install">Installer</button>' : '')
-      + '<button class="btn btn-ghost btn-sm" type="button" data-act="hide">Ne plus afficher</button></div></div>';
+    fill();
     card.addEventListener('click', async e => {
       const button = e.target.closest('button[data-act]');
       if (!button) return;
@@ -135,4 +152,5 @@
     });
     window.addEventListener('appinstalled', () => { deferred = null; remove(); });
   }
+  window.addEventListener('ville:lang', () => { if (card) fill(); });
 })();

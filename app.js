@@ -22,7 +22,7 @@ const DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
 const DRAW_BONUS = { wishes: 20, chores: 50 };   // bonus en % quand on accepte le premier tirage
 const DRAW_MIN_POOL = 3;                          // idées minimum pour qu'un tirage donne un bonus
 const GRACE_CHOICES = [5, 10, 20];
-const THEMES = [['auto', 'Auto'], ['light', 'Jour'], ['dark', 'Nuit']];
+const THEMES = ['auto', 'light', 'dark'];
 const SIZES = [7, 9, 11];
 const EXPAND_PRICE = { 9: 120e6, 11: 400e6 };
 const DUP_STEP = 0.5;                             // chaque exemplaire supplémentaire coûte 50 % de plus
@@ -285,7 +285,7 @@ function groupName(g) { return t('group.' + g); }
 // « Ma ville » était le nom par défaut avant la traduction : il reste traité comme tel.
 function cityName() {
   const name = S.personal && S.personal.name;
-  return name && name !== 'Ma ville' ? name : t('city.defaultName');
+  return name && name !== DICT.fr['city.defaultName'] ? name : t('city.defaultName');
 }
 
 if (typeof window !== 'undefined') window.VilleI18n = Object.freeze({ t: (key, params) => t(key, params), lang: () => LANG });
@@ -786,6 +786,125 @@ DICT.fr = {
   'result.noCoinsDraw': 'Aucune pièce cette fois. Ton temps effectué reste dans le journal. Tu peux recommencer cette même activité sans frais.',
   'result.noCoins': 'Aucune pièce cette fois. Ton temps effectué reste enregistré dans ton journal et tes objectifs.',
   'result.restart': 'Recommencer',
+
+  // Mode strict et état de la sauvegarde
+  'common.later': 'Plus tard',
+  'strict.title': 'Mode strict',
+  'strict.button': "Bloquer le téléphone sur l'app",
+  'strict.intro': "Une web app ne peut pas t'empêcher de quitter l'écran. Ton téléphone, si : active une fois ce réglage, puis lance-le au début d'une session.",
+  'strict.iphoneText': "Réglages → Accessibilité → Accès guidé. Dans ses options, règle aussi « Verrouillage auto » sur « Jamais ». Pendant une session, appuie trois fois sur le bouton latéral (ou sur le bouton principal) : l'iPhone reste bloqué sur l'app jusqu'à ton code.",
+  'strict.androidText': "Paramètres → Sécurité → Épinglage d'application (sur Samsung : « Épingler des fenêtres »). Épingle l'app depuis l'écran des apps récentes.",
+  'strict.warn': "N'appuie pas une seule fois sur le bouton latéral : verrouiller l'écran compte comme une sortie et la session serait interrompue.",
+  'strict.note': "Sans mode strict, l'app détecte quand même quand elle n'est plus à l'écran : au-delà de {grace}\u00a0s, la session est interrompue.",
+  'sync.localError': "Attention : les derniers changements ne sont pas enregistrés sur cet appareil. Exporte une sauvegarde avant de fermer l'app.",
+  'sync.connecting': 'Connexion à ton compte Claude…',
+  'sync.cloudOk': 'Ta progression est enregistrée sur ton compte Claude (privée) et dans ce navigateur.',
+  'sync.retrying': "L'enregistrement sur ton compte Claude échoue pour l'instant ; nouvel essai automatique. Ta progression reste dans ce navigateur.",
+  'sync.error': "L'enregistrement sur ton compte Claude n'est pas possible. Ta progression reste dans ce navigateur : copie une sauvegarde de temps en temps.",
+  'sync.standalone': "Ta progression est enregistrée sur ce téléphone, dans l'app installée. Copie une sauvegarde de temps en temps.",
+  'sync.browser': 'Ta progression est enregistrée dans ce navigateur. Copie une sauvegarde de temps en temps.',
+
+  // Sauvegarde : export, rappel et restauration
+  'backup.title': 'Sauvegarde',
+  'backup.notBackupText': "Ce texte n'est pas une sauvegarde de la Ville du bien-être.",
+  'backup.tampered': 'Cette sauvegarde a été modifiée ou abîmée : impossible de la restaurer.',
+  'backup.unreadable': "Cette sauvegarde n'est pas lisible.",
+  'backup.noSession': 'aucune session',
+  'backup.summary': '{coins} · {buildings} · {sessions} · dernière : {last}',
+  'backup.sessionsOk': { one: '{n}\u00a0session réussie', other: '{n}\u00a0sessions réussies' },
+  'backup.finishSessionFirst': 'Termine la session en cours avant de restaurer une sauvegarde.',
+  'backup.restored': 'Sauvegarde restaurée et enregistrée.',
+  'backup.restoredNotSaved': "Sauvegarde chargée, mais l'enregistrement sur cet appareil a échoué. Garde ton fichier de sauvegarde.",
+  'backup.agoToday': "aujourd'hui",
+  'backup.agoYesterday': 'hier',
+  'backup.agoDays': { one: 'il y a {n}\u00a0jour', other: 'il y a {n}\u00a0jours' },
+  'backup.lastExport': 'Dernier export depuis cet appareil : {ago}. Vérifie que tu as conservé le fichier ou le texte.',
+  'backup.noExport': 'Aucun export fait depuis cet appareil pour le moment.',
+  'backup.remindTitle': 'Pense à sauvegarder ta ville',
+  'backup.remindLast': 'Dernière sauvegarde : {ago}. Tout reste sur cet appareil : une copie récente évite de tout perdre.',
+  'backup.remindNone': "Aucune sauvegarde pour l'instant. Tout reste sur cet appareil : une copie récente évite de tout perdre.",
+  'backup.save': 'Sauvegarder',
+  'backup.shared': 'Partage terminé. Vérifie que tu as conservé la sauvegarde.',
+  'backup.downloaded': 'Téléchargement demandé. Conserve le fichier de sauvegarde.',
+  'backup.exportArea': 'Sauvegarde à copier',
+  'backup.importPlaceholder': 'Ou colle ici une sauvegarde copiée plus tôt',
+  'backup.importArea': 'Sauvegarde à restaurer',
+  'backup.replace': 'Remplacer ma ville par cette sauvegarde',
+  'backup.replaceConfirm': 'Confirmer le remplacement',
+  'backup.thisBackup': 'Cette sauvegarde : ',
+  'backup.currentCity': 'Ta ville actuelle : ',
+  'backup.notBackupFile': "Ce fichier n'est pas une sauvegarde de la Ville du bien-être.",
+  'backup.fileUnreadable': "Ce fichier n'a pas pu être lu.",
+  'backup.saveFile': 'Enregistrer dans un fichier',
+  'backup.copied': 'Sauvegarde copiée.',
+  'backup.selectAndCopy': 'Sélectionne le texte et copie-le.',
+  'backup.copy': 'Copier ma sauvegarde',
+  'backup.restoreTitle': 'Restaurer une sauvegarde',
+  'backup.openFile': 'Ouvrir un fichier de sauvegarde',
+  'backup.verify': 'Vérifier la sauvegarde',
+
+  // Réglages
+  'settings.grace': 'Tolérance de sortie',
+  'settings.graceNote': "En mode Concentration uniquement : durée pendant laquelle l'app peut quitter l'écran sans que la session soit interrompue.",
+  'settings.keepAwake': "Garder l'écran allumé pendant une session",
+  'settings.sound': "Sonner à la fin d'une session",
+  'settings.soundNote': 'Un carillon discret, qui suit le mode silencieux du téléphone.',
+  'settings.theme': 'Apparence',
+  'settings.themeNote': "Auto suit le réglage du téléphone. La nuit, les fenêtres de la ville s'allument.",
+  'settings.themeAuto': 'Auto',
+  'settings.themeLight': 'Jour',
+  'settings.themeDark': 'Nuit',
+  'settings.reset': 'Tout recommencer',
+  'settings.resetConfirm': 'Confirmer : tout effacer',
+  'settings.resetFinishSession': 'Termine la session en cours avant de recommencer.',
+  'settings.resetDone': 'Nouvelle ville créée.',
+  'settings.helpButton': 'Bien démarrer et installer l’app',
+  'settings.earnings': 'Gains : 1\u00a0M par minute. Bonus : premier tirage accepté +20\u00a0% (envie) ou +50\u00a0% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10\u00a0% par jour (max +50\u00a0%).',
+
+  // État du stockage, mode hors connexion, aide et installation
+  'storage.export': 'Exporter ma progression',
+  'storage.rawSaved': 'Copie des données originales préparée. Conserve ce fichier pour une récupération.',
+  'storage.keepRaw': 'Conserver les données originales',
+  'storage.repaired': 'La progression actuelle est maintenant enregistrée.',
+  'storage.retryAfterSession': 'Termine ou abandonne la session dans l’ancienne fenêtre, puis réessaie.',
+  'storage.retryNoSpace': 'Libère de l’espace ou réactive le stockage puis réessaie. Tu peux aussi exporter ta progression.',
+  'storage.stillFailing': "L'enregistrement reste impossible. Exporte ta progression avant de fermer.",
+  'storage.resumeAfterSession': 'Reprendre après la session',
+  'storage.retryCopy': 'Réessayer la copie',
+  'storage.retrySave': "Réessayer l'enregistrement",
+  'storage.protectTitle': 'Ta progression doit être protégée',
+  'storage.recoveredTitle': 'Données récupérées',
+  'pwa.loading': 'Préparation du mode hors connexion…',
+  'pwa.ready': 'Disponible hors connexion.',
+  'pwa.readyVersion': 'Disponible hors connexion · version {version}.',
+  'pwa.error': "Le mode hors connexion n'a pas pu être préparé. Vérifie ta connexion puis rouvre l'app.",
+  'pwa.unavailable': "Pour l'installation et le mode hors connexion, ouvre le lien HTTPS de l'app dans ton navigateur.",
+  'pwa.updateTitle': 'Une nouvelle version est prête',
+  'pwa.updateAfterSession': 'Tu pourras la charger après ta session.',
+  'pwa.updateKeeps': 'Ta progression sera conservée.',
+  'pwa.updateFinishSession': 'Termine ta session avant de mettre à jour.',
+  'pwa.updateButton': 'Mettre à jour',
+  'pwa.checked': 'Recherche de mise à jour effectuée.',
+  'pwa.checkFailed': 'La recherche a échoué. Vérifie ta connexion.',
+  'pwa.checkButton': 'Rechercher une mise à jour',
+  'help.title': 'Bien démarrer',
+  'help.intro': 'Choisis une activité, prends un moment pour toi, puis utilise tes pièces pour construire ta ville.',
+  'help.modesTitle': 'Deux façons de pratiquer',
+  'help.modesText': 'Concentration : garde cette app affichée pendant le chrono. Activité libre : tu peux verrouiller le téléphone ou utiliser une autre app. Le bilan apparaît à ton retour.',
+  'help.installTitle': 'Installer sur ton téléphone',
+  'help.installText': 'iPhone : ouvre le lien dans Safari, puis Partager → Sur l’écran d’accueil → Ajouter. Android : ouvre le menu de Chrome, puis Installer l’application ou Ajouter à l’écran d’accueil. Les libellés peuvent varier.',
+  'help.installFirst': 'Installe l’app avant de commencer. Si ta ville est déjà dans un autre navigateur, exporte-la puis restaure-la dans l’app installée.',
+  'help.personalTitle': 'Ta ville reste personnelle',
+  'help.personalText': 'Sur ce site, chaque personne a sa propre ville, enregistrée sur son appareil. Elle ne se synchronise pas entre téléphones. Effacer les données du navigateur peut la supprimer : garde une copie dans Réglages → Sauvegarde.',
+  'help.offlineTitle': 'Hors connexion',
+  'help.offlineText': 'En activité libre, le téléphone peut suspendre la page : le chrono est retrouvé à ton retour, mais le son de fin n’est pas garanti quand l’app est fermée.',
+  'install.title': 'Ta ville sur ton téléphone',
+  'install.ios': 'Dans Safari, ouvre Partager, puis « Sur l’écran d’accueil » et « Ajouter ».',
+  'install.prompt': 'Installe l’app pour la retrouver sur ton écran d’accueil.',
+  'install.personal': 'Ta ville est personnelle et reste sur cet appareil. Pour la transférer : Réglages → Sauvegarde.',
+  'install.install': 'Installer',
+  'install.hide': 'Ne plus afficher',
+  'install.help': 'Tu peux aussi utiliser le menu de ton navigateur → Installer l’application ou Ajouter à l’écran d’accueil. L’app reste utilisable ici.',
 };
 
 
@@ -1284,6 +1403,125 @@ DICT.en = {
   'result.noCoinsDraw': 'No coins this time. The time you did stays in the journal. You can restart this same activity for free.',
   'result.noCoins': 'No coins this time. The time you did stays recorded in your journal and goals.',
   'result.restart': 'Try again',
+
+  // Strict mode and backup status
+  'common.later': 'Later',
+  'strict.title': 'Strict mode',
+  'strict.button': 'Lock the phone to the app',
+  'strict.intro': "A web app can't stop you from leaving the screen. Your phone can: turn this setting on once, then start it at the beginning of a session.",
+  'strict.iphoneText': 'Settings → Accessibility → Guided Access. In its options, also set “Display Auto-Lock” to “Never”. During a session, triple-click the side button (or the Home button): the iPhone stays locked to the app until you enter your passcode.',
+  'strict.androidText': 'Settings → Security → App pinning (on Samsung: “Pin windows”). Pin the app from the recent apps screen.',
+  'strict.warn': "Don't press the side button just once: locking the screen counts as leaving and the session would be interrupted.",
+  'strict.note': 'Even without strict mode, the app notices when it is off screen: after {grace}\u00a0s, the session is interrupted.',
+  'sync.localError': 'Careful: the latest changes are not saved on this device. Export a backup before closing the app.',
+  'sync.connecting': 'Connecting to your Claude account…',
+  'sync.cloudOk': 'Your progress is saved to your Claude account (private) and in this browser.',
+  'sync.retrying': 'Saving to your Claude account is failing for now; it will retry automatically. Your progress stays in this browser.',
+  'sync.error': "Saving to your Claude account isn't possible. Your progress stays in this browser: copy a backup now and then.",
+  'sync.standalone': 'Your progress is saved on this phone, in the installed app. Copy a backup now and then.',
+  'sync.browser': 'Your progress is saved in this browser. Copy a backup now and then.',
+
+  // Backup: export, reminder and restore
+  'backup.title': 'Backup',
+  'backup.notBackupText': 'This text is not a Ville du bien-être backup.',
+  'backup.tampered': 'This backup was changed or damaged: it cannot be restored.',
+  'backup.unreadable': 'This backup cannot be read.',
+  'backup.noSession': 'no session',
+  'backup.summary': '{coins} · {buildings} · {sessions} · last: {last}',
+  'backup.sessionsOk': { one: '{n}\u00a0completed session', other: '{n}\u00a0completed sessions' },
+  'backup.finishSessionFirst': 'Finish the current session before restoring a backup.',
+  'backup.restored': 'Backup restored and saved.',
+  'backup.restoredNotSaved': 'Backup loaded, but saving on this device failed. Keep your backup file.',
+  'backup.agoToday': 'today',
+  'backup.agoYesterday': 'yesterday',
+  'backup.agoDays': { one: '{n}\u00a0day ago', other: '{n}\u00a0days ago' },
+  'backup.lastExport': 'Last export from this device: {ago}. Check that you kept the file or the text.',
+  'backup.noExport': 'No export from this device yet.',
+  'backup.remindTitle': 'Remember to back up your town',
+  'backup.remindLast': 'Last backup: {ago}. Everything stays on this device: a recent copy keeps it all safe.',
+  'backup.remindNone': 'No backup yet. Everything stays on this device: a recent copy keeps it all safe.',
+  'backup.save': 'Back up',
+  'backup.shared': 'Sharing done. Check that you kept the backup.',
+  'backup.downloaded': 'Download requested. Keep the backup file.',
+  'backup.exportArea': 'Backup to copy',
+  'backup.importPlaceholder': 'Or paste a backup you copied earlier',
+  'backup.importArea': 'Backup to restore',
+  'backup.replace': 'Replace my town with this backup',
+  'backup.replaceConfirm': 'Confirm replacement',
+  'backup.thisBackup': 'This backup: ',
+  'backup.currentCity': 'Your current town: ',
+  'backup.notBackupFile': 'This file is not a Ville du bien-être backup.',
+  'backup.fileUnreadable': "This file couldn't be read.",
+  'backup.saveFile': 'Save to a file',
+  'backup.copied': 'Backup copied.',
+  'backup.selectAndCopy': 'Select the text and copy it.',
+  'backup.copy': 'Copy my backup',
+  'backup.restoreTitle': 'Restore a backup',
+  'backup.openFile': 'Open a backup file',
+  'backup.verify': 'Check the backup',
+
+  // Settings
+  'settings.grace': 'Grace period',
+  'settings.graceNote': 'Focus mode only: how long the app can leave the screen without the session being interrupted.',
+  'settings.keepAwake': 'Keep the screen on during a session',
+  'settings.sound': 'Play a sound at the end of a session',
+  'settings.soundNote': "A gentle chime that follows the phone's silent mode.",
+  'settings.theme': 'Appearance',
+  'settings.themeNote': "Auto follows the phone's setting. At night, the town's windows light up.",
+  'settings.themeAuto': 'Auto',
+  'settings.themeLight': 'Day',
+  'settings.themeDark': 'Night',
+  'settings.reset': 'Start over',
+  'settings.resetConfirm': 'Confirm: erase everything',
+  'settings.resetFinishSession': 'Finish the current session before starting over.',
+  'settings.resetDone': 'New town created.',
+  'settings.helpButton': 'Getting started and installing the app',
+  'settings.earnings': 'Earnings: 1\u00a0M per minute. Bonuses: first accepted draw +20% (wish) or +50% (chore) from 3 ideas, halved with each redraw; daily streak +10% per day (max +50%).',
+
+  // Storage status, offline mode, help and install
+  'storage.export': 'Export my progress',
+  'storage.rawSaved': 'Copy of the original data ready. Keep this file for recovery.',
+  'storage.keepRaw': 'Keep the original data',
+  'storage.repaired': 'Your current progress is now saved.',
+  'storage.retryAfterSession': 'Finish or stop the session in the old window, then try again.',
+  'storage.retryNoSpace': 'Free up space or re-enable storage, then try again. You can also export your progress.',
+  'storage.stillFailing': 'Saving is still impossible. Export your progress before closing.',
+  'storage.resumeAfterSession': 'Continue after the session',
+  'storage.retryCopy': 'Retry the copy',
+  'storage.retrySave': 'Retry saving',
+  'storage.protectTitle': 'Your progress needs protecting',
+  'storage.recoveredTitle': 'Data recovered',
+  'pwa.loading': 'Preparing offline mode…',
+  'pwa.ready': 'Available offline.',
+  'pwa.readyVersion': 'Available offline · version {version}.',
+  'pwa.error': "Offline mode couldn't be prepared. Check your connection, then reopen the app.",
+  'pwa.unavailable': "For installation and offline mode, open the app's HTTPS link in your browser.",
+  'pwa.updateTitle': 'A new version is ready',
+  'pwa.updateAfterSession': 'You can load it after your session.',
+  'pwa.updateKeeps': 'Your progress will be kept.',
+  'pwa.updateFinishSession': 'Finish your session before updating.',
+  'pwa.updateButton': 'Update',
+  'pwa.checked': 'Update check done.',
+  'pwa.checkFailed': 'The check failed. Check your connection.',
+  'pwa.checkButton': 'Check for an update',
+  'help.title': 'Getting started',
+  'help.intro': 'Pick an activity, take a moment for yourself, then use your coins to build your town.',
+  'help.modesTitle': 'Two ways to practise',
+  'help.modesText': 'Focus: keep this app on screen during the timer. Free activity: you can lock the phone or use another app. The summary appears when you come back.',
+  'help.installTitle': 'Install it on your phone',
+  'help.installText': 'iPhone: open the link in Safari, then Share → Add to Home Screen → Add. Android: open the Chrome menu, then Install app or Add to Home screen. The labels may vary.',
+  'help.installFirst': 'Install the app before you start. If your town is already in another browser, export it, then restore it in the installed app.',
+  'help.personalTitle': 'Your town stays personal',
+  'help.personalText': 'On this site, each person has their own town, saved on their device. It does not sync between phones. Clearing the browser data can delete it: keep a copy in Settings → Backup.',
+  'help.offlineTitle': 'Offline',
+  'help.offlineText': 'In a free activity, the phone may suspend the page: the timer is found again when you come back, but the end sound is not guaranteed while the app is closed.',
+  'install.title': 'Your town on your phone',
+  'install.ios': 'In Safari, open Share, then “Add to Home Screen” and “Add”.',
+  'install.prompt': 'Install the app to find it on your home screen.',
+  'install.personal': 'Your town is personal and stays on this device. To move it: Settings → Backup.',
+  'install.install': 'Install',
+  'install.hide': "Don't show again",
+  'install.help': "You can also use your browser's menu → Install app or Add to Home screen. The app keeps working here.",
 };
 
 
@@ -1436,7 +1674,7 @@ function normalize(raw) {
   const st = obj(raw.settings);
   s.settings = {
     grace: GRACE_CHOICES.includes(st.grace) ? st.grace : 10, keepAwake: st.keepAwake !== false,
-    sound: st.sound !== false, theme: THEMES.some(t => t[0] === st.theme) ? st.theme : 'auto',
+    sound: st.sound !== false, theme: THEMES.includes(st.theme) ? st.theme : 'auto',
     // Une ville d'avant la traduction reste en français ; une ville neuve suit le téléphone.
     lang: ['auto', 'fr', 'en'].includes(st.lang) ? st.lang : 'fr',
   };
@@ -3745,24 +3983,24 @@ function openBuildingSheet(tile) {
 /* ---- 45-settings.js ---- */
 function strictContent(body) {
   body.append(
-    h('p', {}, "Une web app ne peut pas t'empêcher de quitter l'écran. Ton téléphone, si : active une fois ce réglage, puis lance-le au début d'une session."),
+    h('p', {}, t('strict.intro')),
     h('ul', { class: 'info-list' },
-      h('li', {}, icon('lock'), h('span', {}, h('strong', {}, 'iPhone : '), "Réglages → Accessibilité → Accès guidé. Dans ses options, règle aussi « Verrouillage auto » sur « Jamais ». Pendant une session, appuie trois fois sur le bouton latéral (ou sur le bouton principal) : l'iPhone reste bloqué sur l'app jusqu'à ton code.")),
-      h('li', {}, icon('lock'), h('span', {}, h('strong', {}, 'Android : '), "Paramètres → Sécurité → Épinglage d'application (sur Samsung : « Épingler des fenêtres »). Épingle l'app depuis l'écran des apps récentes.")),
-      h('li', { class: 'warn' }, icon('alert'), h('span', {}, "N'appuie pas une seule fois sur le bouton latéral : verrouiller l'écran compte comme une sortie et la session serait interrompue."))),
-    h('p', { class: 'note' }, "Sans mode strict, l'app détecte quand même quand elle n'est plus à l'écran : au-delà de " + S.settings.grace + NB + 's, la session est interrompue.'));
+      h('li', {}, icon('lock'), h('span', {}, h('strong', {}, t('wake.iphoneLabel')), t('strict.iphoneText'))),
+      h('li', {}, icon('lock'), h('span', {}, h('strong', {}, t('wake.androidLabel')), t('strict.androidText'))),
+      h('li', { class: 'warn' }, icon('alert'), h('span', {}, t('strict.warn')))),
+    h('p', { class: 'note' }, t('strict.note', { grace: S.settings.grace })));
 }
-function openStrict() { openSheet('Mode strict', strictContent, { keep: true }); }
+function openStrict() { openSheet(t('strict.title'), strictContent, { keep: true }); }
 
 function syncText() {
-  if (Store.localError) return "Attention : les derniers changements ne sont pas enregistrés sur cet appareil. Exporte une sauvegarde avant de fermer l'app.";
+  if (Store.localError) return t('sync.localError');
   if (Store.localWarning) return Store.localWarning;
-  if (Store.status === 'connecting') return 'Connexion à ton compte Claude…';
-  if (Store.mode === 'cloud' && Store.status === 'ok') return 'Ta progression est enregistrée sur ton compte Claude (privée) et dans ce navigateur.';
-  if (Store.status === 'retrying') return "L'enregistrement sur ton compte Claude échoue pour l'instant ; nouvel essai automatique. Ta progression reste dans ce navigateur.";
-  if (Store.status === 'error') return "L'enregistrement sur ton compte Claude n'est pas possible. Ta progression reste dans ce navigateur : copie une sauvegarde de temps en temps.";
-  if (isStandalone()) return "Ta progression est enregistrée sur ce téléphone, dans l'app installée. Copie une sauvegarde de temps en temps.";
-  return 'Ta progression est enregistrée dans ce navigateur. Copie une sauvegarde de temps en temps.';
+  if (Store.status === 'connecting') return t('sync.connecting');
+  if (Store.mode === 'cloud' && Store.status === 'ok') return t('sync.cloudOk');
+  if (Store.status === 'retrying') return t('sync.retrying');
+  if (Store.status === 'error') return t('sync.error');
+  if (isStandalone()) return t('sync.standalone');
+  return t('sync.browser');
 }
 function isStandalone() {
   try { return navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches; } catch (e) { return false; }
@@ -3780,20 +4018,20 @@ function exportBackup() {
 }
 function readBackup(text) {
   const m = String(text || '').trim().match(/^VBE([12])\.([A-Za-z0-9_-]+)\.([0-9a-z]+)$/);
-  if (!m) return { error: "Ce texte n'est pas une sauvegarde de la Ville du bien-être." };
-  if (hash53(BACKUP_SALT + m[2]) !== m[3]) return { error: 'Cette sauvegarde a été modifiée ou abîmée : impossible de la restaurer.' };
+  if (!m) return { error: t('backup.notBackupText') };
+  if (hash53(BACKUP_SALT + m[2]) !== m[3]) return { error: t('backup.tampered') };
   try {
     const raw = JSON.parse(b64decode(m[2]));
-    if (!raw || raw.v !== Number(m[1])) return { error: "Cette sauvegarde n'est pas lisible." };
+    if (!raw || raw.v !== Number(m[1])) return { error: t('backup.unreadable') };
     return { state: normalize(raw) };
-  } catch (e) { return { error: "Cette sauvegarde n'est pas lisible." }; }
+  } catch (e) { return { error: t('backup.unreadable') }; }
 }
 function summary(st) {
-  const last = st.history.length ? whenLabel(st.history[0].at) : 'aucune session';
-  return fmt(st.coins) + ' · ' + plural(st.city.tiles.length, 'construction', 'constructions') + ' · ' + plural(st.stats.ok, 'session réussie', 'sessions réussies') + ' · dernière : ' + last;
+  const last = st.history.length ? whenLabel(st.history[0].at) : t('backup.noSession');
+  return t('backup.summary', { coins: fmt(st.coins), buildings: t('city.captionBuildings', { n: st.city.tiles.length }), sessions: t('backup.sessionsOk', { n: st.stats.ok }), last });
 }
 function restoreBackup(st) {
-  if (S.active || run) { toast('Termine la session en cours avant de restaurer une sauvegarde.'); return; }
+  if (S.active || run) { toast(t('backup.finishSessionFirst')); return; }
   const clock = S.clock;
   S = st;
   S.active = null;
@@ -3802,21 +4040,21 @@ function restoreBackup(st) {
   closeSheet();
   const saved = commit({ flush: true });
   City.relayout();
-  toast(saved ? 'Sauvegarde restaurée et enregistrée.' : "Sauvegarde chargée, mais l'enregistrement sur cet appareil a échoué. Garde ton fichier de sauvegarde.");
+  toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
 }
 
 /* Sauvegarde dans un fichier, et rappel quand la dernière date un peu (gardé par appareil). */
 function lsNum(key) { try { return Number(localStorage.getItem(key)) || 0; } catch (e) { return 0; } }
 function lsSet(key, v) { try { localStorage.setItem(key, String(v)); } catch (e) { /* ignore */ } }
 function agoText(ts) {
-  const k = dayOf(ts), t = today();
-  if (k >= t) return "aujourd'hui";
-  if (k === shiftDay(t, -1)) return 'hier';
-  return 'il y a ' + plural(Math.round((keyToUTC(t) - keyToUTC(k)) / 86400000), 'jour', 'jours');
+  const k = dayOf(ts), now = today();
+  if (k >= now) return t('backup.agoToday');
+  if (k === shiftDay(now, -1)) return t('backup.agoYesterday');
+  return t('backup.agoDays', { n: Math.round((keyToUTC(now) - keyToUTC(k)) / 86400000) });
 }
 function lastBackupText() {
   const at = lsNum(LS_BACKUP_AT);
-  return at ? 'Dernier export depuis cet appareil : ' + agoText(at) + '. Vérifie que tu as conservé le fichier ou le texte.' : 'Aucun export fait depuis cet appareil pour le moment.';
+  return at ? t('backup.lastExport', { ago: agoText(at) }) : t('backup.noExport');
 }
 function markBackup() {
   lsSet(LS_BACKUP_AT, Date.now());
@@ -3838,11 +4076,11 @@ function renderRemind() {
   if (rm.hidden) return;
   const at = lsNum(LS_BACKUP_AT);
   rm.append(icon('shield'), h('div', { class: 'remind-main' },
-    h('p', {}, h('strong', {}, 'Pense à sauvegarder ta ville')),
-    h('p', { class: 'note' }, (at ? 'Dernière sauvegarde : ' + agoText(at) + '. ' : "Aucune sauvegarde pour l'instant. ") + 'Tout reste sur cet appareil : une copie récente évite de tout perdre.'),
+    h('p', {}, h('strong', {}, t('backup.remindTitle'))),
+    h('p', { class: 'note' }, at ? t('backup.remindLast', { ago: agoText(at) }) : t('backup.remindNone')),
     h('div', { class: 'remind-actions' },
-      h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => saveBackupFile() }, icon('download'), 'Sauvegarder'),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => { lsSet(LS_REMIND, Date.now() + 7 * 86400000); renderVille(); } }, 'Plus tard'))));
+      h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => saveBackupFile() }, icon('download'), t('backup.save')),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => { lsSet(LS_REMIND, Date.now() + 7 * 86400000); renderVille(); } }, t('common.later')))));
 }
 function isIOS() {
   return /iPhone|iPad|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -3856,7 +4094,7 @@ async function saveBackupFile() {
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file] });
         markBackup();
-        toast('Partage terminé. Vérifie que tu as conservé la sauvegarde.');
+        toast(t('backup.shared'));
         return;
       }
     } catch (e) {
@@ -3870,24 +4108,25 @@ async function saveBackupFile() {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
   markBackup();
-  toast('Téléchargement demandé. Conserve le fichier de sauvegarde.');
+  toast(t('backup.downloaded'));
 }
 
 function openSettings() {
-  openSheet('Réglages', body => {
-    const graceSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Tolérance de sortie' });
+  openSheet(t('nav.settings'), body => {
+    const graceSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.grace') });
     for (const g of GRACE_CHOICES) graceSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.grace === g), onclick: () => { S.settings.grace = g; commit({ silent: true }); $$('button', graceSeg).forEach((b, i) => b.setAttribute('aria-checked', String(GRACE_CHOICES[i] === g))); } }, g + NB + 's'));
-    const sw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.keepAwake), 'aria-label': "Garder l'écran allumé pendant une session", onclick: () => { S.settings.keepAwake = !S.settings.keepAwake; sw.setAttribute('aria-checked', String(S.settings.keepAwake)); commit({ silent: true }); } });
-    const soundSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.sound), 'aria-label': "Sonner à la fin d'une session", onclick: () => {
+    const sw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.keepAwake), 'aria-label': t('settings.keepAwake'), onclick: () => { S.settings.keepAwake = !S.settings.keepAwake; sw.setAttribute('aria-checked', String(S.settings.keepAwake)); commit({ silent: true }); } });
+    const soundSw = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(S.settings.sound), 'aria-label': t('settings.sound'), onclick: () => {
       S.settings.sound = !S.settings.sound;
       soundSw.setAttribute('aria-checked', String(S.settings.sound));
       commit({ silent: true });
       if (S.settings.sound) { Chime.unlock(); Chime.play(); }   // pour l'entendre une fois
     } });
-    const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Apparence' });
-    for (const [v, label] of THEMES) themeSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.theme === v), onclick: () => { S.settings.theme = v; commit({ silent: true }); applyTheme(); $$('button', themeSeg).forEach((b, i) => b.setAttribute('aria-checked', String(THEMES[i][0] === v))); } }, label));
-    const exportArea = h('textarea', { class: 'textarea', id: 'exportArea', readonly: true, hidden: true, 'aria-label': 'Sauvegarde à copier' });
-    const importArea = h('textarea', { class: 'textarea', id: 'importArea', placeholder: 'Ou colle ici une sauvegarde copiée plus tôt', 'aria-label': 'Sauvegarde à restaurer' });
+    const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.theme') });
+    const themeLabels = { auto: t('settings.themeAuto'), light: t('settings.themeLight'), dark: t('settings.themeDark') };
+    for (const v of THEMES) themeSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.theme === v), onclick: () => { S.settings.theme = v; commit({ silent: true }); applyTheme(); $$('button', themeSeg).forEach((b, i) => b.setAttribute('aria-checked', String(THEMES[i] === v))); } }, themeLabels[v]));
+    const exportArea = h('textarea', { class: 'textarea', id: 'exportArea', readonly: true, hidden: true, 'aria-label': t('backup.exportArea') });
+    const importArea = h('textarea', { class: 'textarea', id: 'importArea', placeholder: t('backup.importPlaceholder'), 'aria-label': t('backup.importArea') });
     const preview = h('div', { class: 'restore-preview', hidden: true });
     const fail = msg => { preview.replaceChildren(h('p', { class: 'note warn-text', role: 'alert' }, msg)); preview.hidden = false; };
     const verify = () => {
@@ -3895,24 +4134,24 @@ function openSettings() {
       if (res.error) { fail(res.error); return; }
       preview.replaceChildren();
       preview.hidden = false;
-      const go = h('button', { class: 'btn btn-secondary', type: 'button' }, 'Remplacer ma ville par cette sauvegarde');
-      twoStep(go, 'Remplacer ma ville par cette sauvegarde', 'Confirmer le remplacement', () => restoreBackup(res.state));
+      const replace = h('button', { class: 'btn btn-secondary', type: 'button' }, t('backup.replace'));
+      twoStep(replace, t('backup.replace'), t('backup.replaceConfirm'), () => restoreBackup(res.state));
       preview.append(
-        h('p', {}, h('strong', {}, 'Cette sauvegarde : '), summary(res.state)),
-        h('p', {}, h('strong', {}, 'Ta ville actuelle : '), summary(S)),
-        go);
+        h('p', {}, h('strong', {}, t('backup.thisBackup')), summary(res.state)),
+        h('p', {}, h('strong', {}, t('backup.currentCity')), summary(S)),
+        replace);
     };
     const fileInput = h('input', { type: 'file', accept: '.txt,text/plain', hidden: true, tabindex: '-1', 'aria-hidden': 'true' });
     fileInput.addEventListener('change', () => {
       const f = fileInput.files && fileInput.files[0];
       if (!f) return;
       const clear = () => { fileInput.value = ''; };
-      if (f.size > 4e6) { clear(); fail("Ce fichier n'est pas une sauvegarde de la Ville du bien-être."); return; }
-      f.text().then(t => { clear(); importArea.value = t.trim(); verify(); }, () => { clear(); fail("Ce fichier n'a pas pu être lu."); });
+      if (f.size > 4e6) { clear(); fail(t('backup.notBackupFile')); return; }
+      f.text().then(text => { clear(); importArea.value = text.trim(); verify(); }, () => { clear(); fail(t('backup.fileUnreadable')); });
     });
-    const reset = h('button', { class: 'btn btn-ghost', type: 'button' }, 'Tout recommencer');
-    twoStep(reset, 'Tout recommencer', 'Confirmer : tout effacer', () => {
-      if (S.active || run) { toast('Termine la session en cours avant de recommencer.'); return; }
+    const reset = h('button', { class: 'btn btn-ghost', type: 'button' }, t('settings.reset'));
+    twoStep(reset, t('settings.reset'), t('settings.resetConfirm'), () => {
+      if (S.active || run) { toast(t('settings.resetFinishSession')); return; }
       const clock = S.clock;
       S = defaultState();
       S.clock = { tz: clock.tz, maxSeen: clock.maxSeen, lastDay: clock.lastDay };
@@ -3920,56 +4159,56 @@ function openSettings() {
       Mode.state = null;
       commit({ flush: true });
       City.relayout();
-      toast('Nouvelle ville créée.');
+      toast(t('settings.resetDone'));
     });
     body.append(
       h('div', { class: 'setting' },
-        h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: openHelp }, icon('info'), 'Bien démarrer et installer l’app'),
+        h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: openHelp }, icon('info'), t('settings.helpButton')),
         h('p', { class: 'note', id: 'pwaStatus', role: 'status' }, pwaText()),
         h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
-          if (window.VillePWA) window.VillePWA.check().then(() => { renderPwaStatus(); toast('Recherche de mise à jour effectuée.'); }, () => toast('La recherche a échoué. Vérifie ta connexion.'));
-        } }, 'Rechercher une mise à jour')),
+          if (window.VillePWA) window.VillePWA.check().then(() => { renderPwaStatus(); toast(t('pwa.checked')); }, () => toast(t('pwa.checkFailed')));
+        } }, t('pwa.checkButton'))),
       h('hr', { class: 'divider' }),
       h('div', { class: 'setting' },
-        h('span', { class: 'section-title' }, 'Tolérance de sortie'),
-        h('p', { class: 'note' }, "En mode Concentration uniquement : durée pendant laquelle l'app peut quitter l'écran sans que la session soit interrompue."),
+        h('span', { class: 'section-title' }, t('settings.grace')),
+        h('p', { class: 'note' }, t('settings.graceNote')),
         graceSeg),
-      h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, "Garder l'écran allumé pendant une session"), sw),
+      h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.keepAwake')), sw),
       h('div', { class: 'setting' },
-        h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, "Sonner à la fin d'une session"), soundSw),
-        h('p', { class: 'note' }, 'Un carillon discret, qui suit le mode silencieux du téléphone.')),
+        h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, t('settings.sound')), soundSw),
+        h('p', { class: 'note' }, t('settings.soundNote'))),
       h('hr', { class: 'divider' }),
       h('div', { class: 'setting' },
-        h('span', { class: 'section-title' }, 'Apparence'),
-        h('p', { class: 'note' }, "Auto suit le réglage du téléphone. La nuit, les fenêtres de la ville s'allument."),
+        h('span', { class: 'section-title' }, t('settings.theme')),
+        h('p', { class: 'note' }, t('settings.themeNote')),
         themeSeg),
       h('hr', { class: 'divider' }),
-      h('div', { class: 'setting' }, h('span', { class: 'section-title' }, 'Mode strict'), h('button', { class: 'btn btn-secondary', type: 'button', onclick: openStrict }, icon('lock'), "Bloquer le téléphone sur l'app")),
+      h('div', { class: 'setting' }, h('span', { class: 'section-title' }, t('strict.title')), h('button', { class: 'btn btn-secondary', type: 'button', onclick: openStrict }, icon('lock'), t('strict.button'))),
       h('hr', { class: 'divider' }),
       h('div', { class: 'setting' },
-        h('span', { class: 'section-title' }, 'Sauvegarde'),
+        h('span', { class: 'section-title' }, t('backup.title')),
         h('p', { class: 'note', id: 'syncStatus', role: 'status' }, syncText()),
         h('p', { class: 'note', id: 'backupLast' }, lastBackupText()),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => saveBackupFile() }, icon('download'), 'Enregistrer dans un fichier'),
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => saveBackupFile() }, icon('download'), t('backup.saveFile')),
         h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => {
           const text = exportBackup();
           exportArea.value = text;
           exportArea.hidden = false;
-          const done = () => { markBackup(); toast('Sauvegarde copiée.'); };
-          const fallback = () => { exportArea.focus(); exportArea.select(); toast('Sélectionne le texte et copie-le.'); };
+          const done = () => { markBackup(); toast(t('backup.copied')); };
+          const fallback = () => { exportArea.focus(); exportArea.select(); toast(t('backup.selectAndCopy')); };
           try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
-        } }, icon('copy'), 'Copier ma sauvegarde'),
+        } }, icon('copy'), t('backup.copy')),
         exportArea),
       h('div', { class: 'setting' },
-        h('span', { class: 'setting-label' }, 'Restaurer une sauvegarde'),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => fileInput.click() }, icon('upload'), 'Ouvrir un fichier de sauvegarde'),
+        h('span', { class: 'setting-label' }, t('backup.restoreTitle')),
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => fileInput.click() }, icon('upload'), t('backup.openFile')),
         fileInput,
         importArea,
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: verify }, 'Vérifier la sauvegarde'),
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: verify }, t('backup.verify')),
         preview),
       h('hr', { class: 'divider' }),
       reset,
-      h('p', { class: 'note' }, 'Gains : 1' + NB + 'M par minute. Bonus : premier tirage accepté +20' + NB + '% (envie) ou +50' + NB + '% (obligation) à partir de 3 idées, divisé par deux à chaque relance ; série de jours +10' + NB + '% par jour (max +50' + NB + '%).'));
+      h('p', { class: 'note' }, t('settings.earnings')));
   });
 }
 
@@ -4345,25 +4584,25 @@ function renderStorageStatus() {
   banner.replaceChildren();
   if (banner.hidden) return;
   const actions = h('div', { class: 'status-actions' });
-  actions.append(h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: saveBackupFile }, 'Exporter ma progression'));
+  actions.append(h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: saveBackupFile }, t('storage.export')));
   if (Store.recoveryRaw) actions.append(h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => {
     downloadText(Store.recoveryRaw, 'ville-donnees-a-recuperer-' + today() + '.txt');
-    toast('Copie des données originales préparée. Conserve ce fichier pour une récupération.');
-  } }, 'Conserver les données originales'));
+    toast(t('storage.rawSaved'));
+  } }, t('storage.keepRaw')));
   if (error) actions.append(h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => {
     const saved = Store.migrationPending ? Store.retryMigration() : Store.repairLocal();
     renderStorageStatus(); renderSyncStatus();
-    toast(saved ? 'La progression actuelle est maintenant enregistrée.' : Store.migrationPending && Store.migrationReason === 'session' ? 'Termine ou abandonne la session dans l’ancienne fenêtre, puis réessaie.' : Store.migrationPending ? 'Libère de l’espace ou réactive le stockage puis réessaie. Tu peux aussi exporter ta progression.' : "L'enregistrement reste impossible. Exporte ta progression avant de fermer.");
-  } }, migrating ? Store.migrationReason === 'session' ? 'Reprendre après la session' : 'Réessayer la copie' : "Réessayer l'enregistrement"));
-  banner.append(h('strong', {}, error ? 'Ta progression doit être protégée' : 'Données récupérées'), h('p', { class: 'note' }, error || warning), actions);
+    toast(saved ? t('storage.repaired') : Store.migrationPending && Store.migrationReason === 'session' ? t('storage.retryAfterSession') : Store.migrationPending ? t('storage.retryNoSpace') : t('storage.stillFailing'));
+  } }, migrating ? Store.migrationReason === 'session' ? t('storage.resumeAfterSession') : t('storage.retryCopy') : t('storage.retrySave')));
+  banner.append(h('strong', {}, error ? t('storage.protectTitle') : t('storage.recoveredTitle')), h('p', { class: 'note' }, error || warning), actions);
 }
 
 function pwaText() {
   const pwa = window.VillePWA;
-  if (!pwa || pwa.state === 'loading') return 'Préparation du mode hors connexion…';
-  if (pwa.state === 'ready') return 'Disponible hors connexion' + (pwa.version ? ' · version ' + pwa.version : '') + '.';
-  if (pwa.state === 'error') return "Le mode hors connexion n'a pas pu être préparé. Vérifie ta connexion puis rouvre l'app.";
-  return "Pour l'installation et le mode hors connexion, ouvre le lien HTTPS de l'app dans ton navigateur.";
+  if (!pwa || pwa.state === 'loading') return t('pwa.loading');
+  if (pwa.state === 'ready') return pwa.version ? t('pwa.readyVersion', { version: pwa.version }) : t('pwa.ready');
+  if (pwa.state === 'error') return t('pwa.error');
+  return t('pwa.unavailable');
 }
 function renderPwaStatus() {
   const status = $('#pwaStatus');
@@ -4374,28 +4613,28 @@ function renderPwaStatus() {
   banner.hidden = !pwa || !pwa.update;
   banner.replaceChildren();
   if (banner.hidden) return;
-  banner.append(h('strong', {}, 'Une nouvelle version est prête'),
-    h('p', { class: 'note' }, S.active ? 'Tu pourras la charger après ta session.' : 'Ta progression sera conservée.'),
+  banner.append(h('strong', {}, t('pwa.updateTitle')),
+    h('p', { class: 'note' }, S.active ? t('pwa.updateAfterSession') : t('pwa.updateKeeps')),
     h('button', { class: 'btn btn-secondary btn-sm', type: 'button', disabled: !!S.active, onclick: () => {
-      if (S.active || run) { toast('Termine ta session avant de mettre à jour.'); return; }
+      if (S.active || run) { toast(t('pwa.updateFinishSession')); return; }
       pwa.activate();
-    } }, 'Mettre à jour'));
+    } }, t('pwa.updateButton')));
 }
 
 function openHelp() {
-  openSheet('Bien démarrer', body => {
+  openSheet(t('help.title'), body => {
     body.append(
-      h('p', {}, 'Choisis une activité, prends un moment pour toi, puis utilise tes pièces pour construire ta ville.'),
-      h('div', { class: 'setting' }, h('h3', {}, 'Deux façons de pratiquer'),
-        h('p', { class: 'note' }, 'Concentration : garde cette app affichée pendant le chrono. Activité libre : tu peux verrouiller le téléphone ou utiliser une autre app. Le bilan apparaît à ton retour.')),
-      h('div', { class: 'setting' }, h('h3', {}, 'Installer sur ton téléphone'),
-        h('p', { class: 'note' }, 'iPhone : ouvre le lien dans Safari, puis Partager → Sur l’écran d’accueil → Ajouter. Android : ouvre le menu de Chrome, puis Installer l’application ou Ajouter à l’écran d’accueil. Les libellés peuvent varier.'),
-        h('p', { class: 'note' }, 'Installe l’app avant de commencer. Si ta ville est déjà dans un autre navigateur, exporte-la puis restaure-la dans l’app installée.')),
-      h('div', { class: 'setting' }, h('h3', {}, 'Ta ville reste personnelle'),
-        h('p', { class: 'note' }, 'Sur ce site, chaque personne a sa propre ville, enregistrée sur son appareil. Elle ne se synchronise pas entre téléphones. Effacer les données du navigateur peut la supprimer : garde une copie dans Réglages → Sauvegarde.')),
-      h('div', { class: 'setting' }, h('h3', {}, 'Hors connexion'),
+      h('p', {}, t('help.intro')),
+      h('div', { class: 'setting' }, h('h3', {}, t('help.modesTitle')),
+        h('p', { class: 'note' }, t('help.modesText'))),
+      h('div', { class: 'setting' }, h('h3', {}, t('help.installTitle')),
+        h('p', { class: 'note' }, t('help.installText')),
+        h('p', { class: 'note' }, t('help.installFirst'))),
+      h('div', { class: 'setting' }, h('h3', {}, t('help.personalTitle')),
+        h('p', { class: 'note' }, t('help.personalText'))),
+      h('div', { class: 'setting' }, h('h3', {}, t('help.offlineTitle')),
         h('p', { class: 'note' }, pwaText()),
-        h('p', { class: 'note' }, 'En activité libre, le téléphone peut suspendre la page : le chrono est retrouvé à ton retour, mais le son de fin n’est pas garanti quand l’app est fermée.'))
+        h('p', { class: 'note' }, t('help.offlineText')))
     );
   });
 }
@@ -5207,35 +5446,52 @@ setTimeout(() => bootOnce({}), 1500);
 
   const hidden = () => { try { return localStorage.getItem(HINT_KEY) === '1'; } catch { return false; } };
   const hideForGood = () => { try { localStorage.setItem(HINT_KEY, '1'); } catch { /* pas de stockage */ } };
-  let deferred = null, card = null;
+  // Textes de l'app (05-i18n.js) : la carte suit la langue affichée.
+  const t = (key, params) => (window.VilleI18n ? window.VilleI18n.t(key, params) : key);
+  const node = (tag, attrs, text) => {
+    const el = document.createElement(tag);
+    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
+    if (text != null) el.textContent = text;
+    return el;
+  };
+  let deferred = null, card = null, kind = '', installHidden = false, helpShown = false;
+  // Bouton « Installer » masqué et aide affichée survivent à un changement de langue.
+  function applyState() {
+    const button = card.querySelector('[data-act="install"]');
+    if (button) button.hidden = installHidden;
+    let help = card.querySelector('.install-help');
+    if (helpShown && !help) { help = node('p', { class: 'note install-help' }); card.querySelector('.install-main').append(help); }
+    if (help) help.textContent = t('install.help');
+  }
+  function fill() {
+    const actions = node('div', { class: 'install-actions' });
+    if (kind === 'prompt') actions.append(node('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-act': 'install' }, t('install.install')));
+    actions.append(node('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-act': 'hide' }, t('install.hide')));
+    const main = node('div', { class: 'install-main' });
+    main.append(node('h3', { id: 'installTitle' }, t('install.title')),
+      node('p', {}, kind === 'ios' ? t('install.ios') : t('install.prompt')),
+      node('p', { class: 'note' }, t('install.personal')), actions);
+    card.replaceChildren(node('img', { src: 'icons/icon-192.png', alt: '', width: '48', height: '48' }), main);
+    applyState();
+  }
   function installHelp() {
     if (!card) return;
-    const button = card.querySelector('[data-act="install"]');
-    if (button) button.hidden = true;
-    let help = card.querySelector('.install-help');
-    if (!help) { help = document.createElement('p'); help.className = 'note install-help'; card.querySelector('.install-main').append(help); }
-    help.textContent = 'Tu peux aussi utiliser le menu de ton navigateur → Installer l’application ou Ajouter à l’écran d’accueil. L’app reste utilisable ici.';
+    installHidden = true; helpShown = true;
+    applyState();
   }
-  function show(kind) {
+  function show(variant) {
     if (standalone || hidden()) return;
     if (card) {
-      if (kind === 'prompt') { const button = card.querySelector('[data-act="install"]'); if (button) button.hidden = false; }
+      if (variant === 'prompt') { installHidden = false; applyState(); }
       return;
     }
     const view = document.getElementById('view-ville');
     if (!view) return;
+    kind = variant; installHidden = false; helpShown = false;
     card = document.createElement('div');
     card.className = 'card install-card'; card.id = 'installCard';
     card.setAttribute('role', 'region'); card.setAttribute('aria-labelledby', 'installTitle');
-    card.innerHTML = '<img src="icons/icon-192.png" alt="" width="48" height="48"><div class="install-main">'
-      + '<h3 id="installTitle">Ta ville sur ton téléphone</h3>'
-      + (kind === 'ios'
-        ? '<p>Dans Safari, ouvre Partager, puis « Sur l’écran d’accueil » et « Ajouter ».</p>'
-        : '<p>Installe l’app pour la retrouver sur ton écran d’accueil.</p>')
-      + '<p class="note">Ta ville est personnelle et reste sur cet appareil. Pour la transférer : Réglages → Sauvegarde.</p>'
-      + '<div class="install-actions">'
-      + (kind === 'prompt' ? '<button class="btn btn-primary btn-sm" type="button" data-act="install">Installer</button>' : '')
-      + '<button class="btn btn-ghost btn-sm" type="button" data-act="hide">Ne plus afficher</button></div></div>';
+    fill();
     card.addEventListener('click', async e => {
       const button = e.target.closest('button[data-act]');
       if (!button) return;
@@ -5265,4 +5521,5 @@ setTimeout(() => bootOnce({}), 1500);
     });
     window.addEventListener('appinstalled', () => { deferred = null; remove(); });
   }
+  window.addEventListener('ville:lang', () => { if (card) fill(); });
 })();

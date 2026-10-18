@@ -20,25 +20,25 @@ function renderStorageStatus() {
   banner.replaceChildren();
   if (banner.hidden) return;
   const actions = h('div', { class: 'status-actions' });
-  actions.append(h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: saveBackupFile }, 'Exporter ma progression'));
+  actions.append(h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: saveBackupFile }, t('storage.export')));
   if (Store.recoveryRaw) actions.append(h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => {
     downloadText(Store.recoveryRaw, 'ville-donnees-a-recuperer-' + today() + '.txt');
-    toast('Copie des données originales préparée. Conserve ce fichier pour une récupération.');
-  } }, 'Conserver les données originales'));
+    toast(t('storage.rawSaved'));
+  } }, t('storage.keepRaw')));
   if (error) actions.append(h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => {
     const saved = Store.migrationPending ? Store.retryMigration() : Store.repairLocal();
     renderStorageStatus(); renderSyncStatus();
-    toast(saved ? 'La progression actuelle est maintenant enregistrée.' : Store.migrationPending && Store.migrationReason === 'session' ? 'Termine ou abandonne la session dans l’ancienne fenêtre, puis réessaie.' : Store.migrationPending ? 'Libère de l’espace ou réactive le stockage puis réessaie. Tu peux aussi exporter ta progression.' : "L'enregistrement reste impossible. Exporte ta progression avant de fermer.");
-  } }, migrating ? Store.migrationReason === 'session' ? 'Reprendre après la session' : 'Réessayer la copie' : "Réessayer l'enregistrement"));
-  banner.append(h('strong', {}, error ? 'Ta progression doit être protégée' : 'Données récupérées'), h('p', { class: 'note' }, error || warning), actions);
+    toast(saved ? t('storage.repaired') : Store.migrationPending && Store.migrationReason === 'session' ? t('storage.retryAfterSession') : Store.migrationPending ? t('storage.retryNoSpace') : t('storage.stillFailing'));
+  } }, migrating ? Store.migrationReason === 'session' ? t('storage.resumeAfterSession') : t('storage.retryCopy') : t('storage.retrySave')));
+  banner.append(h('strong', {}, error ? t('storage.protectTitle') : t('storage.recoveredTitle')), h('p', { class: 'note' }, error || warning), actions);
 }
 
 function pwaText() {
   const pwa = window.VillePWA;
-  if (!pwa || pwa.state === 'loading') return 'Préparation du mode hors connexion…';
-  if (pwa.state === 'ready') return 'Disponible hors connexion' + (pwa.version ? ' · version ' + pwa.version : '') + '.';
-  if (pwa.state === 'error') return "Le mode hors connexion n'a pas pu être préparé. Vérifie ta connexion puis rouvre l'app.";
-  return "Pour l'installation et le mode hors connexion, ouvre le lien HTTPS de l'app dans ton navigateur.";
+  if (!pwa || pwa.state === 'loading') return t('pwa.loading');
+  if (pwa.state === 'ready') return pwa.version ? t('pwa.readyVersion', { version: pwa.version }) : t('pwa.ready');
+  if (pwa.state === 'error') return t('pwa.error');
+  return t('pwa.unavailable');
 }
 function renderPwaStatus() {
   const status = $('#pwaStatus');
@@ -49,28 +49,28 @@ function renderPwaStatus() {
   banner.hidden = !pwa || !pwa.update;
   banner.replaceChildren();
   if (banner.hidden) return;
-  banner.append(h('strong', {}, 'Une nouvelle version est prête'),
-    h('p', { class: 'note' }, S.active ? 'Tu pourras la charger après ta session.' : 'Ta progression sera conservée.'),
+  banner.append(h('strong', {}, t('pwa.updateTitle')),
+    h('p', { class: 'note' }, S.active ? t('pwa.updateAfterSession') : t('pwa.updateKeeps')),
     h('button', { class: 'btn btn-secondary btn-sm', type: 'button', disabled: !!S.active, onclick: () => {
-      if (S.active || run) { toast('Termine ta session avant de mettre à jour.'); return; }
+      if (S.active || run) { toast(t('pwa.updateFinishSession')); return; }
       pwa.activate();
-    } }, 'Mettre à jour'));
+    } }, t('pwa.updateButton')));
 }
 
 function openHelp() {
-  openSheet('Bien démarrer', body => {
+  openSheet(t('help.title'), body => {
     body.append(
-      h('p', {}, 'Choisis une activité, prends un moment pour toi, puis utilise tes pièces pour construire ta ville.'),
-      h('div', { class: 'setting' }, h('h3', {}, 'Deux façons de pratiquer'),
-        h('p', { class: 'note' }, 'Concentration : garde cette app affichée pendant le chrono. Activité libre : tu peux verrouiller le téléphone ou utiliser une autre app. Le bilan apparaît à ton retour.')),
-      h('div', { class: 'setting' }, h('h3', {}, 'Installer sur ton téléphone'),
-        h('p', { class: 'note' }, 'iPhone : ouvre le lien dans Safari, puis Partager → Sur l’écran d’accueil → Ajouter. Android : ouvre le menu de Chrome, puis Installer l’application ou Ajouter à l’écran d’accueil. Les libellés peuvent varier.'),
-        h('p', { class: 'note' }, 'Installe l’app avant de commencer. Si ta ville est déjà dans un autre navigateur, exporte-la puis restaure-la dans l’app installée.')),
-      h('div', { class: 'setting' }, h('h3', {}, 'Ta ville reste personnelle'),
-        h('p', { class: 'note' }, 'Sur ce site, chaque personne a sa propre ville, enregistrée sur son appareil. Elle ne se synchronise pas entre téléphones. Effacer les données du navigateur peut la supprimer : garde une copie dans Réglages → Sauvegarde.')),
-      h('div', { class: 'setting' }, h('h3', {}, 'Hors connexion'),
+      h('p', {}, t('help.intro')),
+      h('div', { class: 'setting' }, h('h3', {}, t('help.modesTitle')),
+        h('p', { class: 'note' }, t('help.modesText'))),
+      h('div', { class: 'setting' }, h('h3', {}, t('help.installTitle')),
+        h('p', { class: 'note' }, t('help.installText')),
+        h('p', { class: 'note' }, t('help.installFirst'))),
+      h('div', { class: 'setting' }, h('h3', {}, t('help.personalTitle')),
+        h('p', { class: 'note' }, t('help.personalText'))),
+      h('div', { class: 'setting' }, h('h3', {}, t('help.offlineTitle')),
         h('p', { class: 'note' }, pwaText()),
-        h('p', { class: 'note' }, 'En activité libre, le téléphone peut suspendre la page : le chrono est retrouvé à ton retour, mais le son de fin n’est pas garanti quand l’app est fermée.'))
+        h('p', { class: 'note' }, t('help.offlineText')))
     );
   });
 }

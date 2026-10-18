@@ -146,7 +146,7 @@ function normalize(raw) {
   const st = obj(raw.settings);
   s.settings = {
     grace: GRACE_CHOICES.includes(st.grace) ? st.grace : 10, keepAwake: st.keepAwake !== false,
-    sound: st.sound !== false, theme: THEMES.some(t => t[0] === st.theme) ? st.theme : 'auto',
+    sound: st.sound !== false, theme: THEMES.includes(st.theme) ? st.theme : 'auto',
     // Une ville d'avant la traduction reste en français ; une ville neuve suit le téléphone.
     lang: ['auto', 'fr', 'en'].includes(st.lang) ? st.lang : 'fr',
   };
