@@ -1473,6 +1473,19 @@ DICT.fr = {
   'recap.cardMonth': 'Ton mois',
   'recap.cardYear': 'Ton année',
   'recap.open': 'Voir',
+  'share.button': 'Partager ma ville',
+  'share.title': 'Partager ma ville',
+  'share.privacy': "Ton ami verra ta ville telle qu'elle est : son nom et ses éléments, sans tes minutes, ton journal ni tes humeurs.",
+  'share.unnamed': 'Ta ville porte encore son nom par défaut. Donne-lui un nom pour que tes amis la reconnaissent.',
+  'share.link': 'Lien de ta ville',
+  'share.text': 'Viens voir ma ville du bien-être !',
+  'share.send': 'Envoyer',
+  'share.copy': 'Copier le lien',
+  'share.copied': 'Lien copié',
+  'share.copyFallback': "Le lien est sélectionné : copie-le pour l'envoyer.",
+  'share.visitTitle': 'Visiter une ville amie',
+  'share.visitHint': 'Colle ici le lien reçu',
+  'share.visit': 'Visiter',
   'visit.cityMeta': { one: '{n} élément · terrain {size}×{size}', other: '{n} éléments · terrain {size}×{size}' },
   'visit.friendCity': 'Une ville amie',
   'visit.ownCity': 'Ta ville, telle que tes amis la voient',
@@ -2545,6 +2558,19 @@ DICT.en = {
   'recap.cardMonth': 'Your month',
   'recap.cardYear': 'Your year',
   'recap.open': 'View',
+  'share.button': 'Share my town',
+  'share.title': 'Share my town',
+  'share.privacy': 'Your friend will see your town as it is: its name and its items, without your minutes, your journal or your moods.',
+  'share.unnamed': 'Your town still has its default name. Give it a name so your friends recognise it.',
+  'share.link': 'Link to your town',
+  'share.text': 'Come and see my wellbeing town!',
+  'share.send': 'Send',
+  'share.copy': 'Copy the link',
+  'share.copied': 'Link copied',
+  'share.copyFallback': 'The link is selected: copy it to send it.',
+  'share.visitTitle': "Visit a friend's town",
+  'share.visitHint': 'Paste the link you received here',
+  'share.visit': 'Visit',
   'visit.cityMeta': { one: '{n} item · {size}×{size} land', other: '{n} items · {size}×{size} land' },
   'visit.friendCity': "A friend's town",
   'visit.ownCity': 'Your town, as your friends see it',
@@ -6841,7 +6867,7 @@ const Mode = {
     const bar = $('#placebar'), txt = $('#placeText'), ok = $('#placeConfirm');
     const st = this.state;
     bar.hidden = !st;
-    $('#cityExpand').hidden = !!st;
+    $('#cityExpand').hidden = $('#shareCity').hidden = !!st;
     if (!st) return;
     if (st.type === 'place') {
       txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : t('city.tapToPlace', { item: itemName(st.item), price: fmt(priceOf(st.item)) }));
@@ -9801,7 +9827,7 @@ function openRecap(kind, key) {
         if (sharing) return;   // une image à la fois
         sharing = true;
         try { await shareRecapImage(r); } finally { sharing = false; }
-      } }, icon('upload'), t('recap.share')),
+      } }, icon('share'), t('recap.share')),
       h('button', { class: 'btn btn-primary', type: 'button', onclick: closeSheet }, t('common.close'))));
   }, { keep: true });   // une lecture, comme le bilan de la semaine
 }
@@ -9930,8 +9956,34 @@ function handleVisitHash() {
   try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) { /* adresse gardée */ }
   return openVisitFromCode(code);
 }
+// Fenêtre « Partager ma ville » : ce que l'ami verra, le lien (par le partage du téléphone, ou copié), puis « Visiter une
+// ville amie » : dans l'app installée sur iPhone, un lien reçu s'ouvre dans le navigateur, d'où l'on vient le coller ici.
+function openShareSheet() {
+  const unnamed = cityName() === t('city.defaultName'), link = shareLink(encodeCity());
+  commit({ silent: true });   // l'identifiant de partage vient peut-être d'être créé
+  openSheet(t('share.title'), body => {
+    const field = h('input', { id: 'shareLinkField', class: 'input', type: 'text', readonly: true, value: link, 'aria-label': t('share.link'), onfocus: e => e.target.select() });
+    const copy = () => {
+      const fallback = () => { field.focus(); field.select(); toast(t('share.copyFallback')); };
+      try { navigator.clipboard.writeText(link).then(() => toast(t('share.copied')), fallback); } catch (e) { fallback(); }
+    };
+    const send = () => navigator.share({ title: cityName(), text: t('share.text'), url: link }).catch(e => { if (!e || e.name !== 'AbortError') copy(); });
+    const visitField = h('input', { id: 'visitLinkField', class: 'input', type: 'text', inputmode: 'url', autocomplete: 'off', placeholder: t('share.visitHint'), 'aria-label': t('share.visitHint') });
+    body.append(h('p', {}, t('share.privacy')));
+    if (unnamed) {
+      body.append(h('div', { class: 'feature-between share-unnamed' }, h('p', { class: 'note' }, t('share.unnamed')),
+        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openCityPersonalization }, icon('pencil'), t('city.personalize'))));
+    }
+    body.append(field, h('div', { class: 'share-actions' },
+      typeof navigator.share === 'function' ? h('button', { class: 'btn btn-primary', type: 'button', onclick: send }, icon('share'), t('share.send')) : null,
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: copy }, icon('copy'), t('share.copy'))),
+    h('section', { class: 'recap-part share-visit' }, h('h3', { class: 'section-title' }, t('share.visitTitle')), visitField,
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => openVisitFromCode(codeFromText(visitField.value)) }, t('share.visit'))));
+  });
+}
 function bindShare() {
   window.addEventListener('hashchange', handleVisitHash);
+  $('#shareCity').addEventListener('click', openShareSheet);
   $('#visitKeep').addEventListener('click', e => {
     if (!visiting || e.currentTarget.getAttribute('aria-disabled') === 'true' || !keepPostcard(visiting.snapshot, visiting.code)) return;
     commit();
@@ -9939,7 +9991,7 @@ function bindShare() {
     e.currentTarget.textContent = frTypo(t('visit.keptShort'));
     e.currentTarget.setAttribute('aria-disabled', 'true');
   });
-  $('#visitShare').addEventListener('click', () => { if (typeof openShareCity === 'function') openShareCity(); });
+  $('#visitShare').addEventListener('click', openShareSheet);
 }
 
 

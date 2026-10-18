@@ -37,8 +37,34 @@ function handleVisitHash() {
   try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) { /* adresse gardée */ }
   return openVisitFromCode(code);
 }
+// Fenêtre « Partager ma ville » : ce que l'ami verra, le lien (par le partage du téléphone, ou copié), puis « Visiter une
+// ville amie » : dans l'app installée sur iPhone, un lien reçu s'ouvre dans le navigateur, d'où l'on vient le coller ici.
+function openShareSheet() {
+  const unnamed = cityName() === t('city.defaultName'), link = shareLink(encodeCity());
+  commit({ silent: true });   // l'identifiant de partage vient peut-être d'être créé
+  openSheet(t('share.title'), body => {
+    const field = h('input', { id: 'shareLinkField', class: 'input', type: 'text', readonly: true, value: link, 'aria-label': t('share.link'), onfocus: e => e.target.select() });
+    const copy = () => {
+      const fallback = () => { field.focus(); field.select(); toast(t('share.copyFallback')); };
+      try { navigator.clipboard.writeText(link).then(() => toast(t('share.copied')), fallback); } catch (e) { fallback(); }
+    };
+    const send = () => navigator.share({ title: cityName(), text: t('share.text'), url: link }).catch(e => { if (!e || e.name !== 'AbortError') copy(); });
+    const visitField = h('input', { id: 'visitLinkField', class: 'input', type: 'text', inputmode: 'url', autocomplete: 'off', placeholder: t('share.visitHint'), 'aria-label': t('share.visitHint') });
+    body.append(h('p', {}, t('share.privacy')));
+    if (unnamed) {
+      body.append(h('div', { class: 'feature-between share-unnamed' }, h('p', { class: 'note' }, t('share.unnamed')),
+        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openCityPersonalization }, icon('pencil'), t('city.personalize'))));
+    }
+    body.append(field, h('div', { class: 'share-actions' },
+      typeof navigator.share === 'function' ? h('button', { class: 'btn btn-primary', type: 'button', onclick: send }, icon('share'), t('share.send')) : null,
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: copy }, icon('copy'), t('share.copy'))),
+    h('section', { class: 'recap-part share-visit' }, h('h3', { class: 'section-title' }, t('share.visitTitle')), visitField,
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => openVisitFromCode(codeFromText(visitField.value)) }, t('share.visit'))));
+  });
+}
 function bindShare() {
   window.addEventListener('hashchange', handleVisitHash);
+  $('#shareCity').addEventListener('click', openShareSheet);
   $('#visitKeep').addEventListener('click', e => {
     if (!visiting || e.currentTarget.getAttribute('aria-disabled') === 'true' || !keepPostcard(visiting.snapshot, visiting.code)) return;
     commit();
@@ -46,5 +72,5 @@ function bindShare() {
     e.currentTarget.textContent = frTypo(t('visit.keptShort'));
     e.currentTarget.setAttribute('aria-disabled', 'true');
   });
-  $('#visitShare').addEventListener('click', () => { if (typeof openShareCity === 'function') openShareCity(); });
+  $('#visitShare').addEventListener('click', openShareSheet);
 }

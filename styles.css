@@ -742,7 +742,13 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .storage-status, .update-notice { display: grid; gap: 8px; margin-bottom: 16px; }
 .storage-status { border-color: var(--danger); background: var(--danger-soft); }
 .status-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.city-tools { display: flex; justify-content: center; margin-top: -16px; }
+.city-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; margin-top: -16px; }
+.city-tools .btn[hidden] { display: none; }
+/* Partager ma ville : le lien dans un champ qu'on peut sélectionner, ses deux boutons l'un sous l'autre, puis la partie
+   « Visiter une ville amie ». */
+.share-unnamed { margin: 10px 0; flex-wrap: wrap; }
+.share-unnamed .note { margin: 0; }
+.share-actions { display: grid; gap: 8px; margin: 10px 0 16px; }
 .goal-choice { justify-self: start; margin-left: -14px; text-align: left; white-space: normal; }
 .pwa-status { display: grid; gap: 8px; }
 .status-note { color: var(--muted); font-size: 13px; }

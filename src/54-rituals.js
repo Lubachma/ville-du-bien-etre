@@ -179,7 +179,7 @@ function openRecap(kind, key) {
         if (sharing) return;   // une image à la fois
         sharing = true;
         try { await shareRecapImage(r); } finally { sharing = false; }
-      } }, icon('upload'), t('recap.share')),
+      } }, icon('share'), t('recap.share')),
       h('button', { class: 'btn btn-primary', type: 'button', onclick: closeSheet }, t('common.close'))));
   }, { keep: true });   // une lecture, comme le bilan de la semaine
 }

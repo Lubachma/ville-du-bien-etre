@@ -755,7 +755,7 @@ const Mode = {
     const bar = $('#placebar'), txt = $('#placeText'), ok = $('#placeConfirm');
     const st = this.state;
     bar.hidden = !st;
-    $('#cityExpand').hidden = !!st;
+    $('#cityExpand').hidden = $('#shareCity').hidden = !!st;
     if (!st) return;
     if (st.type === 'place') {
       txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : t('city.tapToPlace', { item: itemName(st.item), price: fmt(priceOf(st.item)) }));

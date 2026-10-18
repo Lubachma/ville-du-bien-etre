@@ -383,7 +383,59 @@ async function visitFriend(browser, baseURL) {
   return "Visite d'une ville amie";
 }
 
-const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage, visitFriend];
+// Partager ma ville : « Envoyer » passe par le partage du téléphone avec le lien ; sans lui, « Copier le lien » le copie.
+// « Visiter une ville amie » ouvre un lien collé, et « Partager ma ville en retour » rouvre la fenêtre. À 320 px, la fenêtre
+// tient, en français et en anglais.
+async function shareCity(browser, baseURL) {
+  const code = await leaCode(browser, baseURL), origin = baseURL.replace(/#.*$/, '');
+  for (const canShare of [true, false]) {
+    const context = await browser.newContext({ viewport: { width: 320, height: 640 }, isMobile: true, hasTouch: true, locale: 'fr-FR', timezoneId: 'Europe/Zurich' });
+    const page = await context.newPage(), errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    try {
+      await page.clock.setFixedTime(new Date('2026-10-21T10:00:00Z'));
+      await page.addInitScript(([state, share]) => {
+        window.__VILLE_DEBUG__ = true;
+        if (!localStorage.getItem('ville-bien-etre/v2')) localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state));
+        if (share) navigator.share = async data => { window.__shared = data; };
+        else { delete Navigator.prototype.share; delete Navigator.prototype.canShare; }
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.__copied = text; } }, configurable: true });
+      }, [town({ esprit: 5 }, [{ id: 'b', item: 'banc', x: 0, y: 0, at: at('2026-10-20T09:00:00Z'), paid: 1e6 }]), canShare]);
+      await page.goto(origin);
+      await page.waitForFunction(() => !!window.__ville);
+      await page.locator('#shareCity').click();
+      const sheet = page.locator('#sheetBody');
+      assert.match(await sheet.innerText(), /Ton ami verra ta ville telle qu'elle est[\s\S]*nom par défaut/);
+      const link = await page.locator('#shareLinkField').inputValue();
+      assert.ok(link.startsWith(origin + '#ville='), link);
+      if (canShare) {
+        await sheet.getByRole('button', { name: 'Envoyer', exact: true }).click();
+        await page.waitForFunction(() => !!window.__shared);
+        assert.equal(await page.evaluate(() => window.__shared.url), link);
+        await fitsSheet(page, 'le partage (fr)');
+      } else {
+        assert.equal(await sheet.getByRole('button', { name: 'Envoyer', exact: true }).count(), 0);
+        await sheet.getByRole('button', { name: 'Copier le lien', exact: true }).click();
+        await page.locator('#toast').getByText('Lien copié').waitFor();
+        assert.equal(await page.evaluate(() => window.__copied), link);
+        await page.locator('#sheetClose').click();
+        await toEnglish(page);
+        await page.locator('#shareCity').click();
+        await fitsSheet(page, 'le partage (en)');
+        await page.locator('#visitLinkField').fill('Look at my town ' + origin + '#ville=' + code + ' !');
+        await sheet.getByRole('button', { name: 'Visit', exact: true }).click();
+        await page.locator('#cityBig').waitFor();
+        assert.match(await page.locator('#cityVisitHead').innerText(), /Léa/);
+        await page.locator('#visitShare').click();
+        assert.equal(await page.locator('#sheetTitle').innerText(), 'Share my town');
+      }
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Partager ma ville, et visiter en collant un lien';
+}
+
+const SCENARIOS = [challengesAtOpening, challengeSwap, challengeOnResult, weekReviewOnce, moodAfterSession, moodAfterReturn, moodCards, recapsOnce, recapImage, visitFriend, shareCity];
 async function runRituals(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
