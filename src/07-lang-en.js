@@ -645,4 +645,18 @@ DICT.en = {
   'settings.volumeNormal': 'Normal',
   'settings.volumeLoud': 'Loud',
   'settings.vibrate': 'Vibrate at the end of a session',
+
+  // Week and daily reminder
+  'settings.weekTitle': 'Week and reminder',
+  'settings.weekStart': 'The week starts on',
+  'settings.weekMon': 'Monday',
+  'settings.weekSun': 'Sunday',
+  'goal.introSun': 'A target from Sunday to Saturday, to fit your week. Every minute done fills this goal, even if you interrupt a session. An active day counts from 1 minute.',
+  'reminder.time': 'Reminder time',
+  'reminder.add': 'Add to my calendar',
+  'reminder.google': 'Add to Google Calendar',
+  'reminder.note': "The app can't send you notifications: the reminder lives in your calendar.",
+  'reminder.downloaded': 'Calendar file downloaded: open it to add the reminder.',
+  'reminder.summary': 'Ville du bien-être: a moment for you',
+  'reminder.description': 'Open Ville du bien-être from your home screen icon.',
 };

@@ -645,4 +645,18 @@ DICT.fr = {
   'settings.volumeNormal': 'Normal',
   'settings.volumeLoud': 'Fort',
   'settings.vibrate': "Vibrer à la fin d'une session",
+
+  // Semaine et rappel quotidien
+  'settings.weekTitle': 'Semaine et rappel',
+  'settings.weekStart': 'La semaine commence le',
+  'settings.weekMon': 'Lundi',
+  'settings.weekSun': 'Dimanche',
+  'goal.introSun': 'Un cap du dimanche au samedi, à adapter à ta semaine. Chaque minute effectuée remplit cet objectif, même si tu interromps une session. Un jour actif compte dès 1 minute.',
+  'reminder.time': 'Heure du rappel',
+  'reminder.add': 'Ajouter à mon agenda',
+  'reminder.google': 'Ajouter à Google Agenda',
+  'reminder.note': "L'app ne peut pas t'envoyer de notification : le rappel vit dans ton agenda.",
+  'reminder.downloaded': "Fichier d'agenda téléchargé : ouvre-le pour ajouter le rappel.",
+  'reminder.summary': 'Ville du bien-être : un moment pour toi',
+  'reminder.description': "Ouvre la Ville du bien-être depuis l'icône de ton écran d'accueil.",
 };

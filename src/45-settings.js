@@ -103,30 +103,32 @@ function renderRemind() {
 function isIOS() {
   return /iPhone|iPad|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
-// Sur iPhone : feuille de partage (« Enregistrer dans Fichiers »). Ailleurs : téléchargement.
-async function saveBackupFile() {
-  const text = exportBackup(), name = 'ville-du-bien-etre-' + today() + '.txt';
+// Sur iPhone : feuille de partage (« Enregistrer dans Fichiers »…). Ailleurs : téléchargement.
+async function shareOrDownload(text, filename, mime) {
   if (isIOS() && typeof File === 'function') {
     try {
-      const file = new File([text], name, { type: 'text/plain' });
+      const file = new File([text], filename, { type: mime });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file] });
-        markBackup();
-        toast(t('backup.shared'));
-        return;
+        return 'shared';
       }
     } catch (e) {
-      if (e && e.name === 'AbortError') return;   // partage annulé
+      if (e && e.name === 'AbortError') return 'cancelled';
     }
   }
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-  const a = h('a', { href: url, download: name, hidden: true });
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const a = h('a', { href: url, download: filename, hidden: true });
   document.body.append(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return 'downloaded';
+}
+async function saveBackupFile() {
+  const result = await shareOrDownload(exportBackup(), 'ville-du-bien-etre-' + today() + '.txt', 'text/plain');
+  if (result === 'cancelled') return;
   markBackup();
-  toast(t('backup.downloaded'));
+  toast(result === 'shared' ? t('backup.shared') : t('backup.downloaded'));
 }
 
 // Remet toute l'interface dans la langue de la ville : réglage, sauvegarde restaurée, autre onglet.
@@ -243,6 +245,35 @@ function settingsStreak(focus) {
   if (focus) setTimeout(() => { const el = $(focus, section); if (el) el.focus({ preventScroll: true }); }, 0);
   return section;
 }
+// Semaine et rappel : début de semaine (série et objectif), rappel quotidien ajouté à l'agenda.
+function settingsWeek() {
+  const starts = ['mon', 'sun'], labels = { mon: t('settings.weekMon'), sun: t('settings.weekSun') };
+  const weekSeg = h('div', { class: 'seg seg-2', role: 'radiogroup', 'aria-label': t('settings.weekStart') });
+  for (const v of starts) weekSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.weekStart === v), onclick: () => {
+    S.settings.weekStart = v;
+    commit();
+    $$('button', weekSeg).forEach((b, i) => b.setAttribute('aria-checked', String(starts[i] === v)));
+  } }, labels[v]));
+  const time = h('input', { class: 'input', type: 'time', id: 'reminderTime', value: reminderTime(), required: true });
+  const google = h('a', { class: 'btn btn-ghost', href: googleCalendarUrl(reminderTime(), new Date()), target: '_blank', rel: 'noopener' }, t('reminder.google'));
+  const update = () => { if (isClockTime(time.value)) { setReminderTime(time.value); google.href = googleCalendarUrl(time.value, new Date()); } };
+  time.addEventListener('input', update);
+  time.addEventListener('change', update);
+  const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: async () => {
+    update();
+    const result = await shareOrDownload(buildReminderIcs(reminderTime(), new Date()), 'ville-du-bien-etre-rappel.ics', 'text/calendar');
+    if (result === 'downloaded') toast(t('reminder.downloaded'));
+  } }, icon('download'), t('reminder.add'));
+  return settingsBlock('settingsWeek',
+    h('div', { class: 'setting' },
+      h('span', { class: 'section-title' }, t('settings.weekTitle')),
+      h('span', { class: 'setting-label' }, t('settings.weekStart')),
+      weekSeg),
+    h('div', { class: 'setting' },
+      h('label', { class: 'setting-label', for: 'reminderTime' }, t('reminder.time')),
+      time, add, google,
+      h('p', { class: 'note' }, t('reminder.note'))));
+}
 function settingsTheme() {
   const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.theme') });
   const themeLabels = { auto: t('settings.themeAuto'), light: t('settings.themeLight'), dark: t('settings.themeDark') };
@@ -322,7 +353,7 @@ function settingsReset() {
 }
 function openSettings() {
   openSheet(t('nav.settings'), body => {
-    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
+    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsWeek(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
     sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
   });
 }

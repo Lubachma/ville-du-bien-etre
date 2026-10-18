@@ -403,6 +403,8 @@ main {
   background: var(--surface-2);
   border: 1px solid var(--line);
 }
+.seg.seg-2 { grid-template-columns: repeat(2, 1fr); }
+a.btn { text-decoration: none; }
 .seg button {
   min-height: 44px; border: 0; border-radius: 999px;
   background: transparent; color: var(--ink-2); font-weight: 700; font-size: 14px;

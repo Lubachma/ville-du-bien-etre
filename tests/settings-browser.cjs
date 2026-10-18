@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
 
 // Espions installés avant le chargement : oscillateurs créés, gains demandés, vibrations.
 function spies(vibrate) {
@@ -74,6 +75,41 @@ async function runSettings(browser, baseURL) {
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
   }
-  return { scenarios: ['Son de fin : type, volume et vibration'] };
+  // Rappel dans l'agenda et début de semaine, conservés après rechargement.
+  {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR', acceptDownloads: true });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    try {
+      await page.goto(baseURL);
+      await page.waitForFunction(() => !!window.__ville);
+      const week = async () => {
+        if (await page.locator('#sheet').isVisible()) await page.locator('#sheetClose').click();
+        await page.locator('#settingsBtn').click();
+        await page.locator('#settingsWeek').waitFor();
+        return page.locator('#settingsWeek');
+      };
+      let section = await week();
+      await section.locator('#reminderTime').fill('07:30');
+      const [download] = await Promise.all([page.waitForEvent('download'), section.getByRole('button', { name: 'Ajouter à mon agenda', exact: true }).click()]);
+      assert.match(download.suggestedFilename(), /\.ics$/);
+      const ics = await fs.readFile(await download.path(), 'utf8');
+      assert.match(ics, /\r\nDTSTART:\d{8}T073000\r\n/);
+      assert.match(await section.getByRole('link', { name: 'Google Agenda' }).getAttribute('href'), /recur=RRULE/);
+      await section.getByRole('radio', { name: 'Dimanche', exact: true }).click();
+      assert.equal(await page.evaluate(() => __ville.state.settings.weekStart), 'sun');
+      await page.locator('#sheetClose').click();
+      await page.locator('[data-tab="journal"]').click();
+      assert.match(await page.locator('#goalsCard .sub').innerText(), /^dim\./);
+      await page.reload();
+      await page.waitForFunction(() => !!window.__ville);
+      section = await week();
+      assert.equal(await section.locator('#reminderTime').inputValue(), '07:30');
+      assert.equal(await page.evaluate(() => __ville.state.settings.weekStart), 'sun');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return { scenarios: ['Son de fin : type, volume et vibration', 'Rappel dans l’agenda et début de semaine'] };
 }
 module.exports = { runSettings };

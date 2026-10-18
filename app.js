@@ -15,6 +15,7 @@ const LS_BEAT = 'ville-bien-etre/v2:beat';       // battement de la session en c
 const LS_WAKE_ACK = 'ville-bien-etre/v1:wake-ok';
 const LS_BACKUP_AT = 'ville-bien-etre/v1:backup-at';     // dernière sauvegarde faite depuis cet appareil
 const LS_REMIND = 'ville-bien-etre/v1:backup-later';     // rappel de sauvegarde reporté jusqu'à cette date
+const LS_REMINDER = 'ville-bien-etre/v1:reminder-time';  // heure du rappel quotidien (agenda), propre à l'appareil
 const BACKUP_EVERY = 14 * 86400000;                       // rappel quand la dernière sauvegarde a plus de 14 jours
 const HISTORY_MAX = 150;
 const LIST_MAX = 60;
@@ -942,6 +943,20 @@ DICT.fr = {
   'settings.volumeNormal': 'Normal',
   'settings.volumeLoud': 'Fort',
   'settings.vibrate': "Vibrer à la fin d'une session",
+
+  // Semaine et rappel quotidien
+  'settings.weekTitle': 'Semaine et rappel',
+  'settings.weekStart': 'La semaine commence le',
+  'settings.weekMon': 'Lundi',
+  'settings.weekSun': 'Dimanche',
+  'goal.introSun': 'Un cap du dimanche au samedi, à adapter à ta semaine. Chaque minute effectuée remplit cet objectif, même si tu interromps une session. Un jour actif compte dès 1 minute.',
+  'reminder.time': 'Heure du rappel',
+  'reminder.add': 'Ajouter à mon agenda',
+  'reminder.google': 'Ajouter à Google Agenda',
+  'reminder.note': "L'app ne peut pas t'envoyer de notification : le rappel vit dans ton agenda.",
+  'reminder.downloaded': "Fichier d'agenda téléchargé : ouvre-le pour ajouter le rappel.",
+  'reminder.summary': 'Ville du bien-être : un moment pour toi',
+  'reminder.description': "Ouvre la Ville du bien-être depuis l'icône de ton écran d'accueil.",
 };
 
 
@@ -1593,6 +1608,20 @@ DICT.en = {
   'settings.volumeNormal': 'Normal',
   'settings.volumeLoud': 'Loud',
   'settings.vibrate': 'Vibrate at the end of a session',
+
+  // Week and daily reminder
+  'settings.weekTitle': 'Week and reminder',
+  'settings.weekStart': 'The week starts on',
+  'settings.weekMon': 'Monday',
+  'settings.weekSun': 'Sunday',
+  'goal.introSun': 'A target from Sunday to Saturday, to fit your week. Every minute done fills this goal, even if you interrupt a session. An active day counts from 1 minute.',
+  'reminder.time': 'Reminder time',
+  'reminder.add': 'Add to my calendar',
+  'reminder.google': 'Add to Google Calendar',
+  'reminder.note': "The app can't send you notifications: the reminder lives in your calendar.",
+  'reminder.downloaded': 'Calendar file downloaded: open it to add the reminder.',
+  'reminder.summary': 'Ville du bien-être: a moment for you',
+  'reminder.description': 'Open Ville du bien-être from your home screen icon.',
 };
 
 
@@ -4244,30 +4273,32 @@ function renderRemind() {
 function isIOS() {
   return /iPhone|iPad|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
-// Sur iPhone : feuille de partage (« Enregistrer dans Fichiers »). Ailleurs : téléchargement.
-async function saveBackupFile() {
-  const text = exportBackup(), name = 'ville-du-bien-etre-' + today() + '.txt';
+// Sur iPhone : feuille de partage (« Enregistrer dans Fichiers »…). Ailleurs : téléchargement.
+async function shareOrDownload(text, filename, mime) {
   if (isIOS() && typeof File === 'function') {
     try {
-      const file = new File([text], name, { type: 'text/plain' });
+      const file = new File([text], filename, { type: mime });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file] });
-        markBackup();
-        toast(t('backup.shared'));
-        return;
+        return 'shared';
       }
     } catch (e) {
-      if (e && e.name === 'AbortError') return;   // partage annulé
+      if (e && e.name === 'AbortError') return 'cancelled';
     }
   }
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-  const a = h('a', { href: url, download: name, hidden: true });
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const a = h('a', { href: url, download: filename, hidden: true });
   document.body.append(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return 'downloaded';
+}
+async function saveBackupFile() {
+  const result = await shareOrDownload(exportBackup(), 'ville-du-bien-etre-' + today() + '.txt', 'text/plain');
+  if (result === 'cancelled') return;
   markBackup();
-  toast(t('backup.downloaded'));
+  toast(result === 'shared' ? t('backup.shared') : t('backup.downloaded'));
 }
 
 // Remet toute l'interface dans la langue de la ville : réglage, sauvegarde restaurée, autre onglet.
@@ -4384,6 +4415,35 @@ function settingsStreak(focus) {
   if (focus) setTimeout(() => { const el = $(focus, section); if (el) el.focus({ preventScroll: true }); }, 0);
   return section;
 }
+// Semaine et rappel : début de semaine (série et objectif), rappel quotidien ajouté à l'agenda.
+function settingsWeek() {
+  const starts = ['mon', 'sun'], labels = { mon: t('settings.weekMon'), sun: t('settings.weekSun') };
+  const weekSeg = h('div', { class: 'seg seg-2', role: 'radiogroup', 'aria-label': t('settings.weekStart') });
+  for (const v of starts) weekSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(S.settings.weekStart === v), onclick: () => {
+    S.settings.weekStart = v;
+    commit();
+    $$('button', weekSeg).forEach((b, i) => b.setAttribute('aria-checked', String(starts[i] === v)));
+  } }, labels[v]));
+  const time = h('input', { class: 'input', type: 'time', id: 'reminderTime', value: reminderTime(), required: true });
+  const google = h('a', { class: 'btn btn-ghost', href: googleCalendarUrl(reminderTime(), new Date()), target: '_blank', rel: 'noopener' }, t('reminder.google'));
+  const update = () => { if (isClockTime(time.value)) { setReminderTime(time.value); google.href = googleCalendarUrl(time.value, new Date()); } };
+  time.addEventListener('input', update);
+  time.addEventListener('change', update);
+  const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: async () => {
+    update();
+    const result = await shareOrDownload(buildReminderIcs(reminderTime(), new Date()), 'ville-du-bien-etre-rappel.ics', 'text/calendar');
+    if (result === 'downloaded') toast(t('reminder.downloaded'));
+  } }, icon('download'), t('reminder.add'));
+  return settingsBlock('settingsWeek',
+    h('div', { class: 'setting' },
+      h('span', { class: 'section-title' }, t('settings.weekTitle')),
+      h('span', { class: 'setting-label' }, t('settings.weekStart')),
+      weekSeg),
+    h('div', { class: 'setting' },
+      h('label', { class: 'setting-label', for: 'reminderTime' }, t('reminder.time')),
+      time, add, google,
+      h('p', { class: 'note' }, t('reminder.note'))));
+}
 function settingsTheme() {
   const themeSeg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('settings.theme') });
   const themeLabels = { auto: t('settings.themeAuto'), light: t('settings.themeLight'), dark: t('settings.themeDark') };
@@ -4463,7 +4523,7 @@ function settingsReset() {
 }
 function openSettings() {
   openSheet(t('nav.settings'), body => {
-    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
+    const sections = [settingsStart(), settingsLang(), settingsSessions(), settingsStreak(), settingsWeek(), settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()];
     sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
   });
 }
@@ -4523,7 +4583,7 @@ function openGoals() {
     const days = h('select', { class: 'select', id: 'goalDays' }, Array.from({ length: 7 }, (_, i) => h('option', { value: i + 1, selected: i + 1 === initial.days }, t('unit.days', { n: i + 1 }))));
     const cat = h('select', { class: 'select', id: 'goalCat' }, h('option', { value: 'all', selected: initial.cat === 'all' }, t('goal.allDomains')), catOptions(initial.cat));
     const building = h('select', { class: 'select', id: 'goalBuilding' }, h('option', { value: '', selected: !initial.building }, t('goal.letCityGuide')), Object.keys(ITEMS).filter(k => ITEMS[k].group !== 'decor').map(k => h('option', { value: k, selected: k === initial.building }, lockInfo(k) ? itemName(k) : t('goal.itemUnlocked', { item: itemName(k) }))));
-    body.append(h('p', {}, t('goal.intro')),
+    body.append(h('p', {}, S.settings.weekStart === 'sun' ? t('goal.introSun') : t('goal.intro')),
       h('form', { class: 'add-form', onsubmit: e => {
         e.preventDefault();
         S.goals = { minutes: int(Number(minutes.value), 5, 1260, 60), days: int(Number(days.value), 1, 7, 3), cat: isCat(cat.value) ? cat.value : 'all', building: isItem(building.value) ? building.value : '' };
@@ -4891,6 +4951,59 @@ function openHelp() {
         h('p', { class: 'note' }, t('help.offlineText')))
     );
   });
+}
+
+
+/* ---- 49-reminder.js ---- */
+/* =========================================================================
+   Rappel quotidien. Sans serveur, l'app ne peut pas envoyer de notification :
+   le rappel vit dans l'agenda (fichier .ics ou modèle Google Agenda).
+   ========================================================================= */
+const REMINDER_MINUTES = 10;
+function isClockTime(value) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || '')); }
+function reminderTime() {
+  try { const value = localStorage.getItem(LS_REMINDER); return isClockTime(value) ? value : '18:00'; } catch (e) { return '18:00'; }
+}
+function setReminderTime(value) {
+  if (!isClockTime(value)) return;
+  try { localStorage.setItem(LS_REMINDER, value); } catch (e) { /* pas de stockage */ }
+}
+// Prochain passage de l'heure « time » à partir de « now », en heure locale.
+function nextReminder(time, now) {
+  const [hh, mm] = time.split(':').map(Number);
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+  if (start <= now) start.setDate(start.getDate() + 1);
+  return start;
+}
+// Heure « flottante » : l'agenda garde la même heure locale, quel que soit le fuseau.
+function icsLocal(d) { return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + pad2(d.getMinutes()) + '00'; }
+function icsUtc(d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+// RFC 5545 : textes échappés, lignes repliées à 75 octets (retour à la ligne puis une espace).
+function icsText(text) { return String(text).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function icsFold(line) {
+  let out = '', size = 0;
+  for (const ch of line) {
+    const code = ch.codePointAt(0), bytes = code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+    if (size + bytes > 75) { out += '\r\n '; size = 1; }
+    out += ch; size += bytes;
+  }
+  return out;
+}
+function buildReminderIcs(time, now) {
+  const start = nextReminder(time, now), summary = icsText(t('reminder.summary'));
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ville-du-bien-etre//rappel//' + LANG.toUpperCase(), 'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT', 'UID:rappel-' + now.getTime() + '@ville-du-bien-etre', 'DTSTAMP:' + icsUtc(now), 'DTSTART:' + icsLocal(start),
+    'DURATION:PT' + REMINDER_MINUTES + 'M', 'RRULE:FREQ=DAILY', 'SUMMARY:' + summary, 'DESCRIPTION:' + icsText(t('reminder.description')),
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + summary, 'TRIGGER:PT0M', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR'].map(icsFold).join('\r\n') + '\r\n';
+}
+function googleCalendarUrl(time, now) {
+  const start = nextReminder(time, now), end = new Date(start.getTime() + REMINDER_MINUTES * 60000);
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + '&text=' + encodeURIComponent(t('reminder.summary'))
+    + '&details=' + encodeURIComponent(t('reminder.description'))
+    + '&dates=' + encodeURIComponent(icsLocal(start) + '/' + icsLocal(end))
+    + '&recur=' + encodeURIComponent('RRULE:FREQ=DAILY');
 }
 
 

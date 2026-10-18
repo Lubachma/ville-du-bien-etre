@@ -51,7 +51,7 @@ function openGoals() {
     const days = h('select', { class: 'select', id: 'goalDays' }, Array.from({ length: 7 }, (_, i) => h('option', { value: i + 1, selected: i + 1 === initial.days }, t('unit.days', { n: i + 1 }))));
     const cat = h('select', { class: 'select', id: 'goalCat' }, h('option', { value: 'all', selected: initial.cat === 'all' }, t('goal.allDomains')), catOptions(initial.cat));
     const building = h('select', { class: 'select', id: 'goalBuilding' }, h('option', { value: '', selected: !initial.building }, t('goal.letCityGuide')), Object.keys(ITEMS).filter(k => ITEMS[k].group !== 'decor').map(k => h('option', { value: k, selected: k === initial.building }, lockInfo(k) ? itemName(k) : t('goal.itemUnlocked', { item: itemName(k) }))));
-    body.append(h('p', {}, t('goal.intro')),
+    body.append(h('p', {}, S.settings.weekStart === 'sun' ? t('goal.introSun') : t('goal.intro')),
       h('form', { class: 'add-form', onsubmit: e => {
         e.preventDefault();
         S.goals = { minutes: int(Number(minutes.value), 5, 1260, 60), days: int(Number(days.value), 1, 7, 3), cat: isCat(cat.value) ? cat.value : 'all', building: isItem(building.value) ? building.value : '' };
