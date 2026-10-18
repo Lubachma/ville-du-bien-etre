@@ -87,6 +87,8 @@ Object.assign(DRAW, {
     g.shadow(cx, cy, .4);
     if (stage < 3) g.scaffold(x, y, g.tw * .3, 'back');
     legs(-g.tw * .03, shade(steel, -.15));
+    // Une fois inaugurée, la roue tourne lentement.
+    const rot = stage === 4 && g.anim ? g.time * .25 : 0;
     if (stage >= 2) {
       // Moitié de roue à l'étape 2, roue entière ensuite
       const full = stage >= 3, a0 = full ? 0 : Math.PI / 2, a1 = full ? Math.PI * 2 : Math.PI * 1.5;
@@ -94,7 +96,7 @@ Object.assign(DRAW, {
       ctx.lineCap = 'round';
       ctx.strokeStyle = steel; ctx.lineWidth = Math.max(1, g.tw * .012);
       for (let i = 0; i < 12; i++) {
-        const a = i / 12 * Math.PI * 2;
+        const a = i / 12 * Math.PI * 2 + rot;
         if (!full && (a < a0 || a > a1)) continue;
         ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + Math.cos(a) * R, hy + Math.sin(a) * R); ctx.stroke();
       }
@@ -107,14 +109,14 @@ Object.assign(DRAW, {
     if (stage === 4) {
       // Nacelles aux couleurs des cinq domaines
       for (let i = 0; i < 10; i++) {
-        const a = i / 10 * Math.PI * 2, px = hx + Math.cos(a) * R, py = hy + Math.sin(a) * R;
+        const a = i / 10 * Math.PI * 2 + rot, px = hx + Math.cos(a) * R, py = hy + Math.sin(a) * R;
         g.poly([[px, py], [px, py + g.tw * .03]], null, steel, 1);
         ctx.fillStyle = g.cat(CAT_ORDER[i % CAT_ORDER.length]);
         ctx.fillRect(px - g.tw * .035, py + g.tw * .03, g.tw * .07, g.tw * .055);
       }
       // Ampoules, allumées la nuit
       for (let i = 0; i < 20; i++) {
-        const a = i / 20 * Math.PI * 2, px = hx + Math.cos(a) * R, py = hy + Math.sin(a) * R;
+        const a = i / 20 * Math.PI * 2 + rot, px = hx + Math.cos(a) * R, py = hy + Math.sin(a) * R;
         if (g.night) g.glow(px, py, g.tw * .04, .5);
         g.circle(px, py, Math.max(.8, g.tw * .01), g.night ? '#fff3c4' : '#fffaf0');
       }

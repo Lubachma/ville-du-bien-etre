@@ -64,7 +64,7 @@ const ITEMS = {
   horloge:      { group: 'prestige', price: 1.5e9, needTotal: 1000, fem: true, hf: 1.5 },
   // Étape 2 : trois bâtiments de plus par domaine (prix tirés de la simulation de rythme).
   lavoir:      { group: 'foyer', price: 250e6, need: 500, hf: .62 },
-  moulin:      { group: 'foyer', price: 450e6, need: 1000, hf: .82 },
+  moulin:      { group: 'foyer', price: 450e6, need: 1000, hf: .85 },
   marche:      { group: 'foyer', price: 700e6, need: 1600, hf: .6 },
   musee:       { group: 'esprit', price: 250e6, need: 500, hf: .56 },
   universite:  { group: 'esprit', price: 450e6, need: 1000, fem: true, hf: .74 },

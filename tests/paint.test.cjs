@@ -91,4 +91,15 @@ test("obscurité progressive : à 1, la nuit d'avant ; à 0, le jour", () => {
   assert.ok(luma(a.groundColors('winter', 0)[0]) > .85);
 });
 
+test('éléments animés : dans leur case à tout instant, et l’horloge donne l’heure', () => {
+  const a = app(ALL);
+  // 4,363 s : une aile du moulin pointe droit vers le haut.
+  for (const time of [0, 1.7, 3.3, 4.363, 10]) {
+    for (const key of ['moulin', 'fontaine', 'source', 'fanions', 'horloge']) assertInTile(a, key, undefined, { time, anim: true });
+    assertInTile(a, 'granderoue', 4, { time, anim: true });
+  }
+  assert.notDeepEqual(paint(a, 'horloge', { clock: 0 }), paint(a, 'horloge', { clock: 360 }));
+  assert.notDeepEqual(paint(a, 'moulin', { time: 1, anim: true }), paint(a, 'moulin', { time: 1, anim: false }));
+});
+
 module.exports = { app, assertInTile, paint };

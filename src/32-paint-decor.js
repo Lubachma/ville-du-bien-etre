@@ -108,7 +108,8 @@ Object.assign(DRAW, {
     for (let i = 0; i < 5; i++) {
       const t = (i + .7) / 6, q = 1 - t;
       const px = q * q * top[0] + 2 * q * t * mid[0] + t * t * end[0], py = q * q * top[1] + 2 * q * t * mid[1] + t * t * end[1];
-      g.poly([[px - g.tw * .035, py], [px + g.tw * .035, py], [px, py + g.tw * .08]], cols[i]);
+      const wave = g.anim ? Math.sin(g.time * 3 + i) * g.tw * .015 : 0;
+      g.poly([[px - g.tw * .035, py], [px + g.tw * .035, py], [px + wave, py + g.tw * .08]], cols[i]);
     }
     g.circle(top[0], top[1] - g.tw * .03, g.tw * .025, g.c('#e8b84a'));
   },

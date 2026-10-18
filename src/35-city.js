@@ -155,6 +155,7 @@ const City = (() => {
     if (amb) { pal.season = amb.season; if (byTime) pal.dark = darkness(amb.moment); }
     pal.time = performance.now() / 1000;
     pal.anim = !clean && ambientRunning();
+    if (amb) pal.clock = amb.minutes;
     applySky(amb, byTime);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
@@ -218,6 +219,14 @@ const City = (() => {
       } catch (e) { /* un bâtiment illisible ne bloque pas le reste de la ville */ }
       ctx.restore();
       if (fx && k < 1) overlay('front');
+    }
+    // Couche de vie : fumée des cheminées (automne, hiver, matin de la boulangerie), faisceau du phare inauguré la nuit.
+    if (amb) {
+      const t = g.anim ? pal.time : 0, smoky = amb.season === 'autumn' || amb.season === 'winter';
+      for (const tile of S.city.tiles) {
+        if (CHIMNEYS[tile.item] && (smoky || (tile.item === 'boulangerie' && amb.minutes < 600))) drawSmoke(g, tile.x, tile.y, t, CHIMNEYS[tile.item]);
+        if (tile.item === 'phare' && (tile.stage || 4) >= 4 && g.dark > .5) drawBeam(g, tile.x, tile.y, t);
+      }
     }
     // Teinte du moment, posée seulement sur ce qui est dessiné (l'île et ses éléments).
     const tint = byTime ? lightTint(amb) : null;

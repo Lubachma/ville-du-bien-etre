@@ -69,7 +69,7 @@ const ITEMS = {
   horloge:      { group: 'prestige', price: 1.5e9, needTotal: 1000, fem: true, hf: 1.5 },
   // Étape 2 : trois bâtiments de plus par domaine (prix tirés de la simulation de rythme).
   lavoir:      { group: 'foyer', price: 250e6, need: 500, hf: .62 },
-  moulin:      { group: 'foyer', price: 450e6, need: 1000, hf: .82 },
+  moulin:      { group: 'foyer', price: 450e6, need: 1000, hf: .85 },
   marche:      { group: 'foyer', price: 700e6, need: 1600, hf: .6 },
   musee:       { group: 'esprit', price: 250e6, need: 500, hf: .56 },
   universite:  { group: 'esprit', price: 450e6, need: 1000, fem: true, hf: .74 },
@@ -4077,10 +4077,11 @@ const DRAW = {
     ctx.save();
     ctx.strokeStyle = g.night ? 'rgba(170,230,255,.75)' : 'rgba(255,255,255,.9)';
     ctx.lineWidth = Math.max(1.2, g.tw * .025);
-    for (const [u, v] of [[.22, .5], [.78, .5], [.5, .22], [.5, .78]]) {
-      const [ex, ey] = g.P(x + u, y + v, g.tw * .08);
-      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo((sx + ex) / 2, sy - g.tw * .12, ex, ey); ctx.stroke();
-    }
+    [[.22, .5], [.78, .5], [.5, .22], [.5, .78]].forEach(([u, v], i) => {
+      // Les jets respirent doucement, sans jamais monter plus haut qu'au repos.
+      const [ex, ey] = g.P(x + u, y + v, g.tw * .08), lift = g.anim ? (1 + Math.sin(g.time * 4 + i * 1.7)) * g.tw * .012 : 0;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo((sx + ex) / 2, sy - g.tw * .12 + lift, ex, ey); ctx.stroke();
+    });
     ctx.restore();
   },
   pavillon(g, x, y) {
@@ -4138,10 +4139,12 @@ const DRAW = {
       g.onFace(b, f, .38, .1, .24, .14, g.door);
       g.onFace(b, f, .4, .36, .2, .2, f === 'L' ? g.win : g.winR);
       g.faceDisc(b, f, .5, .8, .3, .1, g.night ? '#fff3cf' : '#fbf8ef');
-      const [cx, cy] = (f === 'L' ? g.fL : g.fR)(b, .5, .8);
+      // Aiguilles à l'heure de la ville (g.clock, en minutes depuis minuit).
+      const [cx, cy] = (f === 'L' ? g.fL : g.fR)(b, .5, .8), hand = (turn, len) => [cx + Math.sin(turn * Math.PI * 2) * len * .8, cy - Math.cos(turn * Math.PI * 2) * len];
+      const minute = hand((g.clock % 60) / 60, g.tw * .05), hour = hand(((g.clock / 60) % 12) / 12, g.tw * .033);
       g.ctx.strokeStyle = '#3b3b3b';
       g.ctx.lineWidth = Math.max(1, g.tw * .018);
-      g.ctx.beginPath(); g.ctx.moveTo(cx, cy); g.ctx.lineTo(cx, cy - g.tw * .05); g.ctx.moveTo(cx, cy); g.ctx.lineTo(cx + (f === 'L' ? -1 : 1) * g.tw * .035, cy + g.tw * .01); g.ctx.stroke();
+      g.ctx.beginPath(); g.ctx.moveTo(cx, cy); g.ctx.lineTo(...minute); g.ctx.moveTo(cx, cy); g.ctx.lineTo(...hour); g.ctx.stroke();
     }
     g.hipRoof(x + .26, y + .26, x + .74, y + .74, g.tw * .95, g.tw * .42, Pc);
     const [sx, sy] = g.P(x + .5, y + .5, g.tw * 1.4);
@@ -4190,8 +4193,9 @@ Object.assign(DRAW, {
     g.cone(cx, cy, .28, g.tw * .44, g.tw * .22, C);
     // Quatre ailes en croix, devant la tour
     const [hx, hy0] = g.P(cx, cy, g.tw * .52), hy = hy0 + g.tw * .06, len = g.tw * .4, w = g.tw * .09;
+    const spin = g.anim ? g.time * .9 : 0;
     for (let i = 0; i < 4; i++) {
-      const a = Math.PI / 4 + i * Math.PI / 2, dx = Math.cos(a), dy = Math.sin(a), nx = -dy * w, ny = dx * w;
+      const a = Math.PI / 4 + i * Math.PI / 2 + spin, dx = Math.cos(a), dy = Math.sin(a), nx = -dy * w, ny = dx * w;
       const ax = hx + dx * g.tw * .05, ay = hy + dy * g.tw * .05, bx = hx + dx * len, by = hy + dy * len;
       g.poly([[ax, ay], [bx, by], [bx + nx, by + ny], [ax + nx, ay + ny]], g.c('#f3ede0'), g.c('#7a5a43'), 1);
       ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(bx, by);
@@ -4344,11 +4348,11 @@ Object.assign(DRAW, {
     ctx.lineWidth = Math.max(1.2, g.tw * .022);
     ctx.strokeStyle = g.night ? 'rgba(210,228,255,.5)' : 'rgba(255,255,255,.9)';
     for (const [dx, k] of [[-.1, .9], [0, 1.1], [.1, .8]]) {
-      const [px, py] = g.P(x + .45 + dx, y + .57 - dx, 4), hgt = g.tw * .3 * k;
+      const [px, py] = g.P(x + .45 + dx, y + .57 - dx, 4), hgt = g.tw * .3 * k, sway = g.anim ? Math.sin(g.time * 1.5 + dx * 20) * g.tw * .02 : 0;
       ctx.beginPath();
       ctx.moveTo(px, py);
-      ctx.quadraticCurveTo(px - g.tw * .06, py - hgt * .3, px, py - hgt * .55);
-      ctx.quadraticCurveTo(px + g.tw * .06, py - hgt * .8, px, py - hgt);
+      ctx.quadraticCurveTo(px - g.tw * .06 + sway, py - hgt * .3, px + sway, py - hgt * .55);
+      ctx.quadraticCurveTo(px + g.tw * .06 + sway, py - hgt * .8, px, py - hgt);
       ctx.stroke();
     }
     ctx.restore();
@@ -4554,7 +4558,8 @@ Object.assign(DRAW, {
     for (let i = 0; i < 5; i++) {
       const t = (i + .7) / 6, q = 1 - t;
       const px = q * q * top[0] + 2 * q * t * mid[0] + t * t * end[0], py = q * q * top[1] + 2 * q * t * mid[1] + t * t * end[1];
-      g.poly([[px - g.tw * .035, py], [px + g.tw * .035, py], [px, py + g.tw * .08]], cols[i]);
+      const wave = g.anim ? Math.sin(g.time * 3 + i) * g.tw * .015 : 0;
+      g.poly([[px - g.tw * .035, py], [px + g.tw * .035, py], [px + wave, py + g.tw * .08]], cols[i]);
     }
     g.circle(top[0], top[1] - g.tw * .03, g.tw * .025, g.c('#e8b84a'));
   },
@@ -4675,6 +4680,8 @@ Object.assign(DRAW, {
     g.shadow(cx, cy, .4);
     if (stage < 3) g.scaffold(x, y, g.tw * .3, 'back');
     legs(-g.tw * .03, shade(steel, -.15));
+    // Une fois inaugurée, la roue tourne lentement.
+    const rot = stage === 4 && g.anim ? g.time * .25 : 0;
     if (stage >= 2) {
       // Moitié de roue à l'étape 2, roue entière ensuite
       const full = stage >= 3, a0 = full ? 0 : Math.PI / 2, a1 = full ? Math.PI * 2 : Math.PI * 1.5;
@@ -4682,7 +4689,7 @@ Object.assign(DRAW, {
       ctx.lineCap = 'round';
       ctx.strokeStyle = steel; ctx.lineWidth = Math.max(1, g.tw * .012);
       for (let i = 0; i < 12; i++) {
-        const a = i / 12 * Math.PI * 2;
+        const a = i / 12 * Math.PI * 2 + rot;
         if (!full && (a < a0 || a > a1)) continue;
         ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + Math.cos(a) * R, hy + Math.sin(a) * R); ctx.stroke();
       }
@@ -4695,14 +4702,14 @@ Object.assign(DRAW, {
     if (stage === 4) {
       // Nacelles aux couleurs des cinq domaines
       for (let i = 0; i < 10; i++) {
-        const a = i / 10 * Math.PI * 2, px = hx + Math.cos(a) * R, py = hy + Math.sin(a) * R;
+        const a = i / 10 * Math.PI * 2 + rot, px = hx + Math.cos(a) * R, py = hy + Math.sin(a) * R;
         g.poly([[px, py], [px, py + g.tw * .03]], null, steel, 1);
         ctx.fillStyle = g.cat(CAT_ORDER[i % CAT_ORDER.length]);
         ctx.fillRect(px - g.tw * .035, py + g.tw * .03, g.tw * .07, g.tw * .055);
       }
       // Ampoules, allumées la nuit
       for (let i = 0; i < 20; i++) {
-        const a = i / 20 * Math.PI * 2, px = hx + Math.cos(a) * R, py = hy + Math.sin(a) * R;
+        const a = i / 20 * Math.PI * 2 + rot, px = hx + Math.cos(a) * R, py = hy + Math.sin(a) * R;
         if (g.night) g.glow(px, py, g.tw * .04, .5);
         g.circle(px, py, Math.max(.8, g.tw * .01), g.night ? '#fff3c4' : '#fffaf0');
       }
@@ -4713,6 +4720,34 @@ Object.assign(DRAW, {
     if (stage < 3) g.scaffold(x, y, g.tw * .3, 'front');
   },
 });
+
+
+/* ---- 34-paint-life.js ---- */
+/* =========================================================================
+   Vie de la ville : ce qui se dessine par-dessus les éléments (fumée, faisceau…).
+   Uniquement des dessins, avec le peintre de makePainter ; t est le temps en secondes.
+   ========================================================================= */
+// Haut des cheminées : position sur la case et hauteur (en largeurs de case).
+const CHIMNEYS = { maison: [.64, .4, .58], boulangerie: [.35, .35, .48] };
+// Trois bouffées qui montent, s'élargissent et s'effacent au-dessus de la cheminée.
+function drawSmoke(g, x, y, t, chimney = CHIMNEYS.maison) {
+  const [u, v, z] = chimney, [sx, sy] = g.P(x + u, y + v, g.tw * z);
+  for (let i = 0; i < 3; i++) {
+    const k = (t * .35 + i / 3) % 1;
+    g.ctx.globalAlpha = .5 * (1 - k);
+    g.circle(sx + g.tw * .08 * k, sy - g.tw * (.06 + .4 * k), g.tw * (.035 + .05 * k), g.c('#eef0f2', .55));
+  }
+  g.ctx.globalAlpha = 1;
+}
+// Faisceau du phare la nuit : un pinceau de lumière qui tourne autour de la lanterne.
+function drawBeam(g, x, y, t) {
+  const [lx, ly] = g.P(x + .5, y + .5, g.tw * .94), a = t * .8, len = g.tw * 1.1, spread = .18;
+  const end = d => [lx + Math.cos(a + d) * len, ly + Math.sin(a + d) * len * .5], far = end(0);
+  const light = g.ctx.createLinearGradient(lx, ly, far[0], far[1]);
+  light.addColorStop(0, 'rgba(255,240,180,.55)');
+  light.addColorStop(1, 'rgba(255,240,180,0)');
+  g.poly([[lx, ly], end(-spread), end(spread)], light);
+}
 
 
 /* ---- 35-city.js ---- */
@@ -4873,6 +4908,7 @@ const City = (() => {
     if (amb) { pal.season = amb.season; if (byTime) pal.dark = darkness(amb.moment); }
     pal.time = performance.now() / 1000;
     pal.anim = !clean && ambientRunning();
+    if (amb) pal.clock = amb.minutes;
     applySky(amb, byTime);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
@@ -4936,6 +4972,14 @@ const City = (() => {
       } catch (e) { /* un bâtiment illisible ne bloque pas le reste de la ville */ }
       ctx.restore();
       if (fx && k < 1) overlay('front');
+    }
+    // Couche de vie : fumée des cheminées (automne, hiver, matin de la boulangerie), faisceau du phare inauguré la nuit.
+    if (amb) {
+      const t = g.anim ? pal.time : 0, smoky = amb.season === 'autumn' || amb.season === 'winter';
+      for (const tile of S.city.tiles) {
+        if (CHIMNEYS[tile.item] && (smoky || (tile.item === 'boulangerie' && amb.minutes < 600))) drawSmoke(g, tile.x, tile.y, t, CHIMNEYS[tile.item]);
+        if (tile.item === 'phare' && (tile.stage || 4) >= 4 && g.dark > .5) drawBeam(g, tile.x, tile.y, t);
+      }
     }
     // Teinte du moment, posée seulement sur ce qui est dessiné (l'île et ses éléments).
     const tint = byTime ? lightTint(amb) : null;

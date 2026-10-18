@@ -433,10 +433,11 @@ const DRAW = {
     ctx.save();
     ctx.strokeStyle = g.night ? 'rgba(170,230,255,.75)' : 'rgba(255,255,255,.9)';
     ctx.lineWidth = Math.max(1.2, g.tw * .025);
-    for (const [u, v] of [[.22, .5], [.78, .5], [.5, .22], [.5, .78]]) {
-      const [ex, ey] = g.P(x + u, y + v, g.tw * .08);
-      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo((sx + ex) / 2, sy - g.tw * .12, ex, ey); ctx.stroke();
-    }
+    [[.22, .5], [.78, .5], [.5, .22], [.5, .78]].forEach(([u, v], i) => {
+      // Les jets respirent doucement, sans jamais monter plus haut qu'au repos.
+      const [ex, ey] = g.P(x + u, y + v, g.tw * .08), lift = g.anim ? (1 + Math.sin(g.time * 4 + i * 1.7)) * g.tw * .012 : 0;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo((sx + ex) / 2, sy - g.tw * .12 + lift, ex, ey); ctx.stroke();
+    });
     ctx.restore();
   },
   pavillon(g, x, y) {
@@ -494,10 +495,12 @@ const DRAW = {
       g.onFace(b, f, .38, .1, .24, .14, g.door);
       g.onFace(b, f, .4, .36, .2, .2, f === 'L' ? g.win : g.winR);
       g.faceDisc(b, f, .5, .8, .3, .1, g.night ? '#fff3cf' : '#fbf8ef');
-      const [cx, cy] = (f === 'L' ? g.fL : g.fR)(b, .5, .8);
+      // Aiguilles à l'heure de la ville (g.clock, en minutes depuis minuit).
+      const [cx, cy] = (f === 'L' ? g.fL : g.fR)(b, .5, .8), hand = (turn, len) => [cx + Math.sin(turn * Math.PI * 2) * len * .8, cy - Math.cos(turn * Math.PI * 2) * len];
+      const minute = hand((g.clock % 60) / 60, g.tw * .05), hour = hand(((g.clock / 60) % 12) / 12, g.tw * .033);
       g.ctx.strokeStyle = '#3b3b3b';
       g.ctx.lineWidth = Math.max(1, g.tw * .018);
-      g.ctx.beginPath(); g.ctx.moveTo(cx, cy); g.ctx.lineTo(cx, cy - g.tw * .05); g.ctx.moveTo(cx, cy); g.ctx.lineTo(cx + (f === 'L' ? -1 : 1) * g.tw * .035, cy + g.tw * .01); g.ctx.stroke();
+      g.ctx.beginPath(); g.ctx.moveTo(cx, cy); g.ctx.lineTo(...minute); g.ctx.moveTo(cx, cy); g.ctx.lineTo(...hour); g.ctx.stroke();
     }
     g.hipRoof(x + .26, y + .26, x + .74, y + .74, g.tw * .95, g.tw * .42, Pc);
     const [sx, sy] = g.P(x + .5, y + .5, g.tw * 1.4);

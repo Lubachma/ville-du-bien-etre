@@ -36,8 +36,9 @@ Object.assign(DRAW, {
     g.cone(cx, cy, .28, g.tw * .44, g.tw * .22, C);
     // Quatre ailes en croix, devant la tour
     const [hx, hy0] = g.P(cx, cy, g.tw * .52), hy = hy0 + g.tw * .06, len = g.tw * .4, w = g.tw * .09;
+    const spin = g.anim ? g.time * .9 : 0;
     for (let i = 0; i < 4; i++) {
-      const a = Math.PI / 4 + i * Math.PI / 2, dx = Math.cos(a), dy = Math.sin(a), nx = -dy * w, ny = dx * w;
+      const a = Math.PI / 4 + i * Math.PI / 2 + spin, dx = Math.cos(a), dy = Math.sin(a), nx = -dy * w, ny = dx * w;
       const ax = hx + dx * g.tw * .05, ay = hy + dy * g.tw * .05, bx = hx + dx * len, by = hy + dy * len;
       g.poly([[ax, ay], [bx, by], [bx + nx, by + ny], [ax + nx, ay + ny]], g.c('#f3ede0'), g.c('#7a5a43'), 1);
       ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(bx, by);
@@ -190,11 +191,11 @@ Object.assign(DRAW, {
     ctx.lineWidth = Math.max(1.2, g.tw * .022);
     ctx.strokeStyle = g.night ? 'rgba(210,228,255,.5)' : 'rgba(255,255,255,.9)';
     for (const [dx, k] of [[-.1, .9], [0, 1.1], [.1, .8]]) {
-      const [px, py] = g.P(x + .45 + dx, y + .57 - dx, 4), hgt = g.tw * .3 * k;
+      const [px, py] = g.P(x + .45 + dx, y + .57 - dx, 4), hgt = g.tw * .3 * k, sway = g.anim ? Math.sin(g.time * 1.5 + dx * 20) * g.tw * .02 : 0;
       ctx.beginPath();
       ctx.moveTo(px, py);
-      ctx.quadraticCurveTo(px - g.tw * .06, py - hgt * .3, px, py - hgt * .55);
-      ctx.quadraticCurveTo(px + g.tw * .06, py - hgt * .8, px, py - hgt);
+      ctx.quadraticCurveTo(px - g.tw * .06 + sway, py - hgt * .3, px + sway, py - hgt * .55);
+      ctx.quadraticCurveTo(px + g.tw * .06 + sway, py - hgt * .8, px, py - hgt);
       ctx.stroke();
     }
     ctx.restore();
