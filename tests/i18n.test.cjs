@@ -126,7 +126,7 @@ test('noms dynamiques présents', () => {
 });
 
 // Fichiers dont tout le texte visible passe par t() ; chaque tâche de traduction y ajoute les siens.
-const CLEAN_FILES = ['20-rules.js', '35-city.js', '40-ui.js', '41-activities.js', '42-draw.js', '43-journal.js', '44-shop.js', '46-features.js', '47-accessibility.js', '60-boot.js'];
+const CLEAN_FILES = ['10-state.js', '20-rules.js', '35-city.js', '40-ui.js', '41-activities.js', '42-draw.js', '43-journal.js', '44-shop.js', '46-features.js', '47-accessibility.js', '50-session.js', '60-boot.js'];
 // Exceptions purement techniques : listes de classes CSS, polices, clés de stockage, nom de l'app
 // et sélecteurs CSS qui commencent par un identifiant ou une classe (« #poolSeg button »).
 const TECHNICAL = [/^[a-z0-9-]+( [a-z0-9-]+)+$/, /px|serif|system-ui/, /^ville-(du-)?bien-etre/, /^Ville du bien-être$/, /^[#.][\w-]+( [#.]?[\w-]+)*$/];

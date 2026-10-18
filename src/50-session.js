@@ -40,7 +40,7 @@ async function withSessionLock(action) {
     if (obj(JSON.parse(localStorage.getItem(SESSION_LOCK) || 'null')).token !== token) return false;
     return work();
   } catch (e) {
-    Store.reportLocal('Le stockage est nécessaire pour garantir une seule session à la fois. Répare-le avant de commencer.');
+    Store.reportLocal(t('storage.needLock'));
     return false;
   } finally {
     try { if (obj(JSON.parse(localStorage.getItem(SESSION_LOCK) || 'null')).token === token) localStorage.removeItem(SESSION_LOCK); } catch (e) { /* erreur déjà signalée */ }
@@ -153,7 +153,7 @@ const Chime = {
 async function beginSession(o) {
   if (run || beginning) return;
   const st = settledState();
-  if (st === 'elsewhere' || st === 'resume') { toast('Une session est déjà en cours. Termine-la avant de commencer.'); checkActive(); return; }
+  if (st === 'elsewhere' || st === 'resume') { toast(t('session.alreadyRunning')); checkActive(); return; }
   beginning = true;
   Chime.unlock();   // encore dans le geste : plus tard, le son serait refusé
   try {
@@ -165,24 +165,22 @@ async function beginSession(o) {
   }
 }
 function openWakeWarning(o, wake) {
-  openSheet("L'écran risque de se verrouiller", body => {
+  openSheet(t('wake.title'), body => {
     const ack = h('input', { type: 'checkbox', id: 'wakeAck' });
     body.append(
-      h('p', {}, wake === 'off'
-        ? "Tu as désactivé « Garder l'écran allumé ». Si l'écran se verrouille pendant la session, elle sera interrompue."
-        : "Ici, l'app ne peut pas empêcher la mise en veille. Si l'écran se verrouille pendant la session, elle sera interrompue : l'app ne peut pas faire la différence avec un changement d'app."),
-      h('p', { class: 'section-title' }, 'Avant de commencer'),
+      h('p', {}, wake === 'off' ? t('wake.offText') : t('wake.naText')),
+      h('p', { class: 'section-title' }, t('wake.before')),
       h('ul', { class: 'info-list' },
-        h('li', {}, icon('sun'), h('span', {}, h('strong', {}, 'iPhone : '), 'Réglages → Luminosité et affichage → Verrouillage automatique → Jamais. En mode Économie d’énergie, l’iPhone se verrouille quand même au bout de 30 s.')),
-        h('li', {}, icon('lock'), h('span', {}, h('strong', {}, 'Ou Accès guidé : '), 'dans ses options, règle « Verrouillage auto » sur « Jamais ». Il ne s’applique que pendant l’Accès guidé.')),
-        h('li', {}, icon('sun'), h('span', {}, h('strong', {}, 'Android : '), 'Paramètres → Affichage → Mise en veille de l’écran.'))),
-      h('label', { class: 'check', for: 'wakeAck' }, ack, h('span', {}, 'Ne plus me prévenir sur cet appareil')),
+        h('li', {}, icon('sun'), h('span', {}, h('strong', {}, t('wake.iphoneLabel')), t('wake.iphoneText'))),
+        h('li', {}, icon('lock'), h('span', {}, h('strong', {}, t('wake.guidedLabel')), t('wake.guidedText'))),
+        h('li', {}, icon('sun'), h('span', {}, h('strong', {}, t('wake.androidLabel')), t('wake.androidText')))),
+      h('label', { class: 'check', for: 'wakeAck' }, ack, h('span', {}, t('wake.dontWarn'))),
       h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'button', onclick: () => {
         if (ack.checked) { try { localStorage.setItem(LS_WAKE_ACK, '1'); } catch (e) { /* ignore */ } }
         closeSheet();
         startSession(o);
-      } }, icon('play'), "C'est réglé, commencer"),
-      h('button', { class: 'btn btn-ghost btn-block', type: 'button', onclick: closeSheet }, 'Annuler'));
+      } }, icon('play'), t('wake.start')),
+      h('button', { class: 'btn btn-ghost btn-block', type: 'button', onclick: closeSheet }, t('common.cancel')));
   }, { keep: true, onClose: () => Chime.rest(3000) });
 }
 
@@ -191,7 +189,7 @@ async function startSession(o, resume) {
   const started = await withSessionLock(() => {
     const st = activeState();
     if (st === 'elsewhere' || st === 'mine' || (!resume && st === 'resume')) {
-      toast('Une session est déjà en cours sur un autre écran.'); return false;
+      toast(t('session.runningElsewhere')); return false;
     }
     if (st === 'stale' && !resume) failInterrupted(true);
     return startSessionLocked(o, resume);
@@ -206,10 +204,10 @@ function startSessionLocked(o, resume) {
     if (o.sourceId && ['direct', 'wishes', 'chores'].includes(o.source || 'direct') && typeof taskAvailable === 'function') {
       const key = o.source === 'wishes' || o.source === 'chores' ? o.source : 'activities';
       const source = S[key].find(item => item.id === o.sourceId);
-      if (!source || !taskAvailable(source)) { toast('Cette activité a été supprimée ou déjà terminée sur un autre écran.'); return false; }
+      if (!source || !taskAvailable(source)) { toast(t('session.sourceGone')); return false; }
     }
     if (o.source === 'routine' && (!S.routineRun || S.routineRun.id !== o.routineRunId || S.routineRun.next !== o.routineStep || S.routineRun.status === 'done')) {
-      toast('Cette routine a changé sur un autre écran. Rouvre-la pour continuer.'); return false;
+      toast(t('session.routineChanged')); return false;
     }
     const day = effectiveDay(), min = int(o.min, 1, 180, 10), now = Date.now();
     const r = rewardFor(min, o.drawPct || 0, day);
@@ -231,7 +229,7 @@ function startSessionLocked(o, resume) {
   const saved = commit({ flush: true, silent: true });
   if (!saved || !S.active || S.active.id !== expectedId || S.active.owner !== Store.tab) {
     if (!saved && !resume && S.active && S.active.id === expectedId && S.active.owner === Store.tab) S.active = null;
-    toast('Le chrono ne peut pas commencer : la sauvegarde locale doit fonctionner.');
+    toast(t('session.cannotStart'));
     return false;
   }
   if (a.source === 'wishes' || a.source === 'chores') {
@@ -275,12 +273,12 @@ function showRun(a) {
   const ses = $('#session');
   ses.style.setProperty('--c', catVar(a.cat));
   $('#sessCat').replaceChildren(catDot(a.cat), catName(a.cat));
-  $('#sessName').textContent = frTypo(a.name);
+  $('#sessName').textContent = frTypo(displayName(a.name));
   const bonus = $('#sessBonus');
   bonus.hidden = !a.drawPct;
-  bonus.textContent = a.drawPct ? frTypo('Tirage accepté · bonus +' + a.drawPct + NB + '%') : '';
-  $('#timerSub').textContent = frTypo('Gain à la fin : ' + fmt(a.promised || rewardFor(a.min, a.drawPct).total));
-  $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? 'Rouvre l’app après la fin pour enregistrer ta récompense. Le son de fin n’est garanti que si l’app est ouverte.' : "Concentration : garde l'app à l'écran. Au-delà de " + S.settings.grace + NB + 's d’absence, le défi s’arrête ; ton temps effectué reste enregistré.'));
+  bonus.textContent = a.drawPct ? frTypo(t('session.drawBonus', { pct: a.drawPct })) : '';
+  $('#timerSub').textContent = frTypo(t('session.gain', { coins: fmt(a.promised || rewardFor(a.min, a.drawPct).total) }));
+  $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? t('session.ruleFree') : t('session.ruleFocus', { grace: S.settings.grace })));
   $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
@@ -348,7 +346,7 @@ function awayDuration() { return Math.max(performance.now() - run.awayAt, Date.n
 function onLeave() {
   if (!run || run.ended || run.finishing || run.awayAt != null) return;
   if (run.active.mode === 'free') { tick(); persistRun(true); return; }
-  dbg('onLeave vis=' + document.visibilityState + ' focus=' + document.hasFocus() + ' off=' + run.offscreen);
+  dbg('onLeave: vis=' + document.visibilityState + ' focus=' + document.hasFocus() + ' off=' + run.offscreen);
   const now = performance.now(), wall = Date.now();
   const dt = now - run.lastNow, gap = Math.max(dt, wall - run.lastWall);
   if (gap > graceMs() + 2000) { failSession('away', gap); return; }
@@ -380,7 +378,7 @@ function onReturn() {
   run.lastWall = Date.now();
   if (away > graceMs()) { failSession('away', away); return; }
   const al = $('#sessAlert');
-  al.replaceChildren(icon('alert'), h('span', {}, "L'app n'était plus à l'écran (" + fmtAway(away) + '). Au-delà de ' + S.settings.grace + NB + 's, la session est interrompue.'));
+  al.replaceChildren(icon('alert'), h('span', {}, t('session.awayAlert', { time: fmtAway(away), grace: S.settings.grace })));
   al.hidden = false;
   requestWake();
 }
@@ -510,7 +508,7 @@ function showResult(build) {
   res.hidden = false;
   $('#session').hidden = false;
   updateInert();
-  setTimeout(() => { const t = res.querySelector('.res-title'); if (t) t.focus({ preventScroll: true }); }, 30);
+  setTimeout(() => { const title = res.querySelector('.res-title'); if (title) title.focus({ preventScroll: true }); }, 30);
 }
 function showSuccess(a, total, fresh) {
   showResult(res => {
@@ -522,54 +520,54 @@ function showSuccess(a, total, fresh) {
       }
     }
     const lines = h('ul', { class: 'res-lines' },
-      h('li', {}, h('span', {}, a.min + NB + 'min × 1' + NB + 'M'), h('span', {}, fmt(a.min * RATE))),
-      a.drawPct ? h('li', {}, h('span', {}, 'Bonus tirage'), h('span', {}, '+' + a.drawPct + NB + '%')) : null,
-      a.streakPct ? h('li', {}, h('span', {}, 'Série de ' + a.streakDays + NB + 'jours'), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
-      h('li', {}, h('span', {}, 'Nouveau solde'), h('span', {}, fmt(S.coins))));
+      h('li', {}, h('span', {}, t('result.baseLine', { min: a.min })), h('span', {}, fmt(a.min * RATE))),
+      a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, '+' + a.drawPct + NB + '%')) : null,
+      a.streakPct ? h('li', {}, h('span', {}, t('result.streak', { n: a.streakDays })), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
+      h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmt(S.coins))));
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });
       City.thumb(cv, k, 56);
-      return h('div', { class: 'res-unlock' }, cv, h('span', {}, 'Nouveau bâtiment débloqué : ' + itemName(k)));
+      return h('div', { class: 'res-unlock' }, cv, h('span', {}, t('result.unlocked', { item: itemName(k) })));
     });
     res.append(
       h('div', { class: 'res-figure' }, burst, icon('coin'), '+' + fmt(total)),
-      h('h2', { class: 'res-title', tabindex: '-1' }, 'Session réussie'),
-      h('p', { class: 'sub' }, a.name + ' · ' + a.min + NB + 'min'),
+      h('h2', { class: 'res-title', tabindex: '-1' }, t('result.success')),
+      h('p', { class: 'sub' }, displayName(a.name) + ' · ' + a.min + NB + 'min'),
       lines, ...unlocks,
       h('div', { class: 'res-actions' },
-        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), 'Construire'),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, 'Retour à la ville')));
+        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), t('city.build')),
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
     if (typeof renderRoutineResult === 'function') renderRoutineResult(res, a, total);
   });
 }
 function showFail(a, reason, awayMs, elapsed) {
   const why = reason === 'away'
-    ? (awayMs > graceMs() + 2000 ? "L'app n'était plus à l'écran pendant " + fmtAway(awayMs) : "L'app n'était plus à l'écran pendant plus de " + S.settings.grace + NB + 's') + ' (autre app ou écran verrouillé).'
-    : reason === 'closed' ? "L'app a été fermée ou rechargée pendant le chrono."
-    : 'Tu as abandonné la session.';
+    ? (awayMs > graceMs() + 2000 ? t('result.awayFor', { time: fmtAway(awayMs) }) : t('result.awayMore', { grace: S.settings.grace }))
+    : reason === 'closed' ? t('result.closed')
+    : t('result.abandoned');
   const done = Math.floor((elapsed || 0) / 60000);
   $('#session').style.setProperty('--c', 'var(--danger)');
   showResult(res => {
     res.append(
       h('div', { class: 'res-fail' }, icon('lost', 'ic-big')),
-      h('h2', { class: 'res-title', tabindex: '-1' }, 'Session interrompue'),
-      h('p', { class: 'sub' }, a.name + ' · ' + a.min + NB + 'min' + (done ? ' (' + done + NB + 'min ' + (done > 1 ? 'faites' : 'faite') + ')' : '')),
+      h('h2', { class: 'res-title', tabindex: '-1' }, t('result.interrupted')),
+      h('p', { class: 'sub' }, done ? t('result.subDone', { name: displayName(a.name), min: a.min, n: done }) : displayName(a.name) + ' · ' + a.min + NB + 'min'),
       h('p', {}, why),
-      h('p', { class: 'note' }, a.draw ? "Aucune pièce cette fois. Ton temps effectué reste dans le journal. Tu peux recommencer cette même activité sans frais." : "Aucune pièce cette fois. Ton temps effectué reste enregistré dans ton journal et tes objectifs."),
+      h('p', { class: 'note' }, a.draw ? t('result.noCoinsDraw') : t('result.noCoins')),
       h('div', { class: 'res-actions' },
-        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); if (a.draw && S.draw.current && S.draw.current.id === a.draw.id) acceptDraw(); else beginSession({ name: a.name, cat: a.cat, min: a.min, mode: a.mode, source: a.source, sourceId: a.sourceId, routineRunId: a.routineRunId, routineStep: a.routineStep }); } }, icon('reroll'), 'Recommencer'),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, 'Retour à la ville')));
+        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); if (a.draw && S.draw.current && S.draw.current.id === a.draw.id) acceptDraw(); else beginSession({ name: a.name, cat: a.cat, min: a.min, mode: a.mode, source: a.source, sourceId: a.sourceId, routineRunId: a.routineRunId, routineStep: a.routineStep }); } }, icon('reroll'), t('result.restart')),
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
   });
 }
 
 function setWake(state) {
   const li = $('#wakeStatus');
   const msg = {
-    free: ['sun', 'Activité libre : tu peux verrouiller l’écran ou changer d’app, le chrono continue.'],
-    on: ['sun', 'Écran maintenu allumé pendant la session.'],
-    off: ['alert', "Écran : mise en veille normale. S'il se verrouille, la session est interrompue."],
-    checking: ['sun', "Activation de l'écran allumé…"],
-    na: ['alert', "L'écran ne peut pas être maintenu allumé ici : s'il se verrouille, la session est interrompue."],
+    free: ['sun', t('wake.statusFree')],
+    on: ['sun', t('wake.statusOn')],
+    off: ['alert', t('wake.statusOff')],
+    checking: ['sun', t('wake.statusChecking')],
+    na: ['alert', t('wake.statusNa')],
   }[state];
   li.className = state === 'na' || state === 'off' ? 'warn' : '';
   li.replaceChildren(icon(msg[0]), h('span', {}, msg[1]));

@@ -94,7 +94,7 @@ function cleanDraw(c) {
 function cleanHistory(e) {
   if (!e || typeof e !== 'object' || !validTs(e.at) || !isCat(e.cat)) return null;
   const out = {
-    id: idOf(e.id), name: str(e.name, 60) || 'Activité', cat: e.cat,
+    id: idOf(e.id), name: str(e.name, 60) || t('history.unnamed'), cat: e.cat,
     min: int(e.min, 1, 180, 1), ok: e.ok === true,
     reward: Math.round(num(e.reward, 0, COINS_MAX, 0)), at: e.at,
     source: ['direct', 'wishes', 'chores', 'routine'].includes(e.source) ? e.source : 'direct',
@@ -400,7 +400,7 @@ function merge3(B, L, R) {
     M.active.checkpointAt = Math.max(la.checkpointAt || 0, ra.checkpointAt || 0);
     M.active.owner = ra.owner || la.owner;
   }
-  if (conflicts.length) Store.localWarning = 'Modifications simultanées sur ' + conflicts.length + ' champ(s). Une valeur a été choisie de façon identique sur tous les écrans ; vérifie tes listes et réglages.';
+  if (conflicts.length) Store.localWarning = t('storage.conflicts', { n: conflicts.length });
   M.createdAt = Math.min(L.createdAt, R.createdAt);
   return normalize(M);
 }
@@ -481,8 +481,8 @@ const Store = {
       return normalize(parsed);
     } catch (e) {
       this.recoveryRaw = raw;
-      this.localWarning = 'Les anciennes données de ce navigateur sont illisibles. Leur contenu brut est conservé pour récupération.';
-      this.reportLocal('Données locales illisibles. Enregistre une copie de récupération ou réessaie la sauvegarde.');
+      this.localWarning = t('storage.legacyUnreadable');
+      this.reportLocal(t('storage.localUnreadable'));
       return null;
     }
   },
@@ -498,8 +498,8 @@ const Store = {
   },
   reportMigration() {
     this.reportLocal(this.migrationReason === 'session'
-      ? 'Une session est encore en cours dans l’ancienne version. Termine-la sur cet écran, ferme l’ancienne version puis réessaie la migration.'
-      : 'Ta ville reste protégée dans l’ancienne sauvegarde et en mémoire, mais sa copie ne peut pas être enregistrée. Libère de l’espace ou réactive le stockage puis réessaie la copie.');
+      ? t('storage.migrationWaitSession')
+      : t('storage.migrationNoSpace'));
   },
   migrateLegacy() {
     const raw = localStorage.getItem(LEGACY_LS_KEY);
@@ -508,7 +508,7 @@ const Store = {
     if (!legacy) {
       // Le document v1 reste à son emplacement exact, même si la v2 est réparée.
       this.recoveryKey = LEGACY_LS_KEY;
-      this.localWarning = 'Les anciennes données v1 sont illisibles et restent intactes pour récupération. Une nouvelle ville peut être enregistrée séparément.';
+      this.localWarning = t('storage.v1Unreadable');
       return null;
     }
     this.migrationSnapshot = clone(legacy);
@@ -530,7 +530,7 @@ const Store = {
     this.migrationPending = false;
     this.migrationReason = '';
     this.migrationSnapshot = null;
-    this.localWarning = 'Ta ville a été copiée depuis l’ancienne version. Ferme ses anciens onglets : leurs prochains changements restent dans la v1. Tu peux importer leur dernière sauvegarde si nécessaire.';
+    this.localWarning = t('storage.migrated');
     this.reportLocal('');
     return legacy;
   },
@@ -550,7 +550,7 @@ const Store = {
       this.lastReadFailed = true;
       this.migrationPending = true;
       this.migrationReason = 'storage';
-      this.reportLocal('Le stockage ne peut pas être lu. Réactive-le puis réessaie avant de modifier ta ville, afin de préserver les données déjà enregistrées.');
+      this.reportLocal(t('storage.unreadable'));
       return this.migrationSnapshot ? clone(this.migrationSnapshot) : null;
     }
   },
@@ -583,7 +583,7 @@ const Store = {
       this.recoveryKey = key;
       return true;
     } catch (e) {
-      this.reportLocal('Impossible de préserver les anciennes données. Exporte leur copie de récupération avant de réparer le stockage.');
+      this.reportLocal(t('storage.preserveFailed'));
       return false;
     }
   },
@@ -613,7 +613,7 @@ const Store = {
       this.reportLocal('');
       return true;
     } catch (e) {
-      this.reportLocal('La progression ne peut pas être enregistrée dans ce navigateur. Exporte une sauvegarde avant de fermer cette page.');
+      this.reportLocal(t('storage.cannotSave'));
       return false;
     }
   },
@@ -679,7 +679,7 @@ const Store = {
         const legacy = parseDoc(await this.legacyRef.get());
         if (legacy && this.legacySessionIsLive(legacy)) {
           this.cloudMigrationPending = true;
-          this.localWarning = 'Une session est encore active sur l’ancien compte. La copie vers la nouvelle version attend son résultat ; ta progression actuelle reste enregistrée dans ce navigateur.';
+          this.localWarning = t('storage.cloudSessionWait');
         } else { R = legacy; fromLegacy = !!legacy; }
       }
       this.mode = 'cloud';
@@ -729,7 +729,7 @@ const Store = {
           this.saveLocal();
         }
         this.status = 'ok';
-        this.localWarning = 'Les données du compte ont été copiées vers la nouvelle version. Ferme les anciens onglets pour continuer ici.';
+        this.localWarning = t('storage.cloudMigrated');
         this.schedule(0);
         renderSyncStatus();
         if (typeof renderStorageStatus === 'function') renderStorageStatus();
@@ -764,7 +764,7 @@ const Store = {
       if (code === 'invalid_argument' || code === 'quota_exceeded' || code === 'transform_error') {
         this.status = 'error';
         this.error = 'refused';
-        toast("Ta progression n'a pas pu être enregistrée sur ton compte. Elle reste dans ce navigateur.");
+        toast(t('storage.cloudSaveFailed'));
       } else if (code === 'revoked' || code === 'not_granted' || code === 'capability_disabled' || code === 'capability_removed') {
         this.mode = 'local';
         this.ref = null;
@@ -809,7 +809,7 @@ function afterReplace() {
     const session = $('#session');
     if (session) session.hidden = true;
     if (typeof updateInert === 'function') updateInert();
-    setTimeout(() => toast('La session a été terminée ou reprise sur un autre écran. Cet écran est synchronisé.'), 0);
+    setTimeout(() => toast(t('session.endedElsewhere')), 0);
   }
   if (replacePending) return;
   replacePending = true;

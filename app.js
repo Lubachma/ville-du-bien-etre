@@ -721,6 +721,71 @@ DICT.fr = {
   'png.footer': 'Ville du bien-être · {time} pour prendre soin de moi',
   'png.downloaded': 'Image de ta ville téléchargée.',
   'png.failed': 'Impossible de créer l’image pour le moment. Réessaie depuis la ville.',
+
+  // Stockage, migration et synchronisation
+  'history.unnamed': 'Activité',
+  'storage.conflicts': 'Modifications simultanées sur {n} champ(s). Une valeur a été choisie de façon identique sur tous les écrans ; vérifie tes listes et réglages.',
+  'storage.legacyUnreadable': 'Les anciennes données de ce navigateur sont illisibles. Leur contenu brut est conservé pour récupération.',
+  'storage.localUnreadable': 'Données locales illisibles. Enregistre une copie de récupération ou réessaie la sauvegarde.',
+  'storage.migrationWaitSession': 'Une session est encore en cours dans l’ancienne version. Termine-la sur cet écran, ferme l’ancienne version puis réessaie la migration.',
+  'storage.migrationNoSpace': 'Ta ville reste protégée dans l’ancienne sauvegarde et en mémoire, mais sa copie ne peut pas être enregistrée. Libère de l’espace ou réactive le stockage puis réessaie la copie.',
+  'storage.v1Unreadable': 'Les anciennes données v1 sont illisibles et restent intactes pour récupération. Une nouvelle ville peut être enregistrée séparément.',
+  'storage.migrated': 'Ta ville a été copiée depuis l’ancienne version. Ferme ses anciens onglets : leurs prochains changements restent dans la v1. Tu peux importer leur dernière sauvegarde si nécessaire.',
+  'storage.unreadable': 'Le stockage ne peut pas être lu. Réactive-le puis réessaie avant de modifier ta ville, afin de préserver les données déjà enregistrées.',
+  'storage.preserveFailed': 'Impossible de préserver les anciennes données. Exporte leur copie de récupération avant de réparer le stockage.',
+  'storage.cannotSave': 'La progression ne peut pas être enregistrée dans ce navigateur. Exporte une sauvegarde avant de fermer cette page.',
+  'storage.cloudSessionWait': 'Une session est encore active sur l’ancien compte. La copie vers la nouvelle version attend son résultat ; ta progression actuelle reste enregistrée dans ce navigateur.',
+  'storage.cloudMigrated': 'Les données du compte ont été copiées vers la nouvelle version. Ferme les anciens onglets pour continuer ici.',
+  'storage.cloudSaveFailed': "Ta progression n'a pas pu être enregistrée sur ton compte. Elle reste dans ce navigateur.",
+  'storage.needLock': 'Le stockage est nécessaire pour garantir une seule session à la fois. Répare-le avant de commencer.',
+
+  // Session : démarrage, écran allumé et chrono
+  'session.endedElsewhere': 'La session a été terminée ou reprise sur un autre écran. Cet écran est synchronisé.',
+  'session.alreadyRunning': 'Une session est déjà en cours. Termine-la avant de commencer.',
+  'session.runningElsewhere': 'Une session est déjà en cours sur un autre écran.',
+  'session.sourceGone': 'Cette activité a été supprimée ou déjà terminée sur un autre écran.',
+  'session.routineChanged': 'Cette routine a changé sur un autre écran. Rouvre-la pour continuer.',
+  'session.cannotStart': 'Le chrono ne peut pas commencer : la sauvegarde locale doit fonctionner.',
+  'session.drawBonus': 'Tirage accepté · bonus +{pct}\u00a0%',
+  'session.gain': 'Gain à la fin : {coins}',
+  'session.ruleFree': 'Rouvre l’app après la fin pour enregistrer ta récompense. Le son de fin n’est garanti que si l’app est ouverte.',
+  'session.ruleFocus': "Concentration : garde l'app à l'écran. Au-delà de {grace}\u00a0s d’absence, le défi s’arrête ; ton temps effectué reste enregistré.",
+  'session.awayAlert': "L'app n'était plus à l'écran ({time}). Au-delà de {grace}\u00a0s, la session est interrompue.",
+  'wake.title': "L'écran risque de se verrouiller",
+  'wake.offText': "Tu as désactivé « Garder l'écran allumé ». Si l'écran se verrouille pendant la session, elle sera interrompue.",
+  'wake.naText': "Ici, l'app ne peut pas empêcher la mise en veille. Si l'écran se verrouille pendant la session, elle sera interrompue : l'app ne peut pas faire la différence avec un changement d'app.",
+  'wake.before': 'Avant de commencer',
+  'wake.iphoneLabel': 'iPhone : ',
+  'wake.iphoneText': 'Réglages → Luminosité et affichage → Verrouillage automatique → Jamais. En mode Économie d’énergie, l’iPhone se verrouille quand même au bout de 30 s.',
+  'wake.guidedLabel': 'Ou Accès guidé : ',
+  'wake.guidedText': 'dans ses options, règle « Verrouillage auto » sur « Jamais ». Il ne s’applique que pendant l’Accès guidé.',
+  'wake.androidLabel': 'Android : ',
+  'wake.androidText': 'Paramètres → Affichage → Mise en veille de l’écran.',
+  'wake.dontWarn': 'Ne plus me prévenir sur cet appareil',
+  'wake.start': "C'est réglé, commencer",
+  'wake.statusFree': 'Activité libre : tu peux verrouiller l’écran ou changer d’app, le chrono continue.',
+  'wake.statusOn': 'Écran maintenu allumé pendant la session.',
+  'wake.statusOff': "Écran : mise en veille normale. S'il se verrouille, la session est interrompue.",
+  'wake.statusChecking': "Activation de l'écran allumé…",
+  'wake.statusNa': "L'écran ne peut pas être maintenu allumé ici : s'il se verrouille, la session est interrompue.",
+
+  // Bilan de session
+  'result.baseLine': '{min}\u00a0min × 1\u00a0M',
+  'result.drawBonus': 'Bonus tirage',
+  'result.streak': 'Série de {n}\u00a0jours',
+  'result.newBalance': 'Nouveau solde',
+  'result.unlocked': 'Nouveau bâtiment débloqué : {item}',
+  'result.success': 'Session réussie',
+  'result.backToCity': 'Retour à la ville',
+  'result.awayFor': "L'app n'était plus à l'écran pendant {time} (autre app ou écran verrouillé).",
+  'result.awayMore': "L'app n'était plus à l'écran pendant plus de {grace}\u00a0s (autre app ou écran verrouillé).",
+  'result.closed': "L'app a été fermée ou rechargée pendant le chrono.",
+  'result.abandoned': 'Tu as abandonné la session.',
+  'result.interrupted': 'Session interrompue',
+  'result.subDone': { one: '{name} · {min}\u00a0min ({n}\u00a0min faite)', other: '{name} · {min}\u00a0min ({n}\u00a0min faites)' },
+  'result.noCoinsDraw': 'Aucune pièce cette fois. Ton temps effectué reste dans le journal. Tu peux recommencer cette même activité sans frais.',
+  'result.noCoins': 'Aucune pièce cette fois. Ton temps effectué reste enregistré dans ton journal et tes objectifs.',
+  'result.restart': 'Recommencer',
 };
 
 
@@ -1154,6 +1219,71 @@ DICT.en = {
   'png.footer': 'Ville du bien-être · {time} of self-care',
   'png.downloaded': 'Picture of your town downloaded.',
   'png.failed': 'Could not create the picture right now. Try again from the town.',
+
+  // Storage, migration and sync
+  'history.unnamed': 'Activity',
+  'storage.conflicts': 'Simultaneous changes on {n} field(s). One value was chosen the same way on every screen; check your lists and settings.',
+  'storage.legacyUnreadable': "This browser's old data is unreadable. Its raw content is kept for recovery.",
+  'storage.localUnreadable': 'Local data unreadable. Save a recovery copy or try saving again.',
+  'storage.migrationWaitSession': 'A session is still running in the old version. Finish it on this screen, close the old version, then retry the migration.',
+  'storage.migrationNoSpace': 'Your town stays safe in the old save and in memory, but its copy cannot be saved. Free up space or re-enable storage, then retry the copy.',
+  'storage.v1Unreadable': 'The old v1 data is unreadable and stays intact for recovery. A new town can be saved separately.',
+  'storage.migrated': 'Your town was copied from the old version. Close its old tabs: their next changes stay in v1. You can import their latest backup if needed.',
+  'storage.unreadable': 'Storage cannot be read. Re-enable it and try again before changing your town, to keep the data already saved.',
+  'storage.preserveFailed': 'Could not preserve the old data. Export its recovery copy before repairing storage.',
+  'storage.cannotSave': 'Progress cannot be saved in this browser. Export a backup before closing this page.',
+  'storage.cloudSessionWait': 'A session is still active on the old account. The copy to the new version waits for its result; your current progress stays saved in this browser.',
+  'storage.cloudMigrated': 'The account data was copied to the new version. Close the old tabs to continue here.',
+  'storage.cloudSaveFailed': "Your progress couldn't be saved to your account. It stays in this browser.",
+  'storage.needLock': 'Storage is needed to make sure only one session runs at a time. Repair it before starting.',
+
+  // Session: start, screen on and timer
+  'session.endedElsewhere': 'The session was finished or resumed on another screen. This screen is in sync.',
+  'session.alreadyRunning': 'A session is already in progress. Finish it before starting.',
+  'session.runningElsewhere': 'A session is already running on another screen.',
+  'session.sourceGone': 'This activity was deleted or already completed on another screen.',
+  'session.routineChanged': 'This routine changed on another screen. Reopen it to continue.',
+  'session.cannotStart': "The timer can't start: local saving must work.",
+  'session.drawBonus': 'Draw accepted · bonus +{pct}%',
+  'session.gain': 'Reward at the end: {coins}',
+  'session.ruleFree': 'Reopen the app after the end to collect your reward. The end sound is only guaranteed while the app is open.',
+  'session.ruleFocus': 'Focus: keep the app on screen. After {grace}\u00a0s away, the challenge stops; the time you did is still recorded.',
+  'session.awayAlert': 'The app was off screen ({time}). After {grace}\u00a0s, the session is interrupted.',
+  'wake.title': 'The screen may lock',
+  'wake.offText': 'You turned off “Keep the screen on”. If the screen locks during the session, it will be interrupted.',
+  'wake.naText': "Here, the app can't prevent sleep mode. If the screen locks during the session, it will be interrupted: the app can't tell it apart from switching apps.",
+  'wake.before': 'Before you start',
+  'wake.iphoneLabel': 'iPhone: ',
+  'wake.iphoneText': 'Settings → Display & Brightness → Auto-Lock → Never. In Low Power Mode, the iPhone still locks after 30 s.',
+  'wake.guidedLabel': 'Or Guided Access: ',
+  'wake.guidedText': 'in its options, set “Display Auto-Lock” to “Never”. It only applies during Guided Access.',
+  'wake.androidLabel': 'Android: ',
+  'wake.androidText': 'Settings → Display → Screen timeout.',
+  'wake.dontWarn': "Don't warn me again on this device",
+  'wake.start': 'All set, start',
+  'wake.statusFree': 'Free activity: you can lock the screen or switch apps, the timer keeps going.',
+  'wake.statusOn': 'Screen kept on during the session.',
+  'wake.statusOff': 'Screen: normal sleep. If it locks, the session is interrupted.',
+  'wake.statusChecking': 'Keeping the screen on…',
+  'wake.statusNa': "The screen can't be kept on here: if it locks, the session is interrupted.",
+
+  // Session result
+  'result.baseLine': '{min}\u00a0min × 1\u00a0M',
+  'result.drawBonus': 'Draw bonus',
+  'result.streak': '{n}-day streak',
+  'result.newBalance': 'New balance',
+  'result.unlocked': 'New building unlocked: {item}',
+  'result.success': 'Session complete',
+  'result.backToCity': 'Back to town',
+  'result.awayFor': 'The app was off screen for {time} (another app or a locked screen).',
+  'result.awayMore': 'The app was off screen for more than {grace}\u00a0s (another app or a locked screen).',
+  'result.closed': 'The app was closed or reloaded during the timer.',
+  'result.abandoned': 'You stopped the session.',
+  'result.interrupted': 'Session interrupted',
+  'result.subDone': { one: '{name} · {min}\u00a0min ({n}\u00a0min done)', other: '{name} · {min}\u00a0min ({n}\u00a0min done)' },
+  'result.noCoinsDraw': 'No coins this time. The time you did stays in the journal. You can restart this same activity for free.',
+  'result.noCoins': 'No coins this time. The time you did stays recorded in your journal and goals.',
+  'result.restart': 'Try again',
 };
 
 
@@ -1254,7 +1384,7 @@ function cleanDraw(c) {
 function cleanHistory(e) {
   if (!e || typeof e !== 'object' || !validTs(e.at) || !isCat(e.cat)) return null;
   const out = {
-    id: idOf(e.id), name: str(e.name, 60) || 'Activité', cat: e.cat,
+    id: idOf(e.id), name: str(e.name, 60) || t('history.unnamed'), cat: e.cat,
     min: int(e.min, 1, 180, 1), ok: e.ok === true,
     reward: Math.round(num(e.reward, 0, COINS_MAX, 0)), at: e.at,
     source: ['direct', 'wishes', 'chores', 'routine'].includes(e.source) ? e.source : 'direct',
@@ -1560,7 +1690,7 @@ function merge3(B, L, R) {
     M.active.checkpointAt = Math.max(la.checkpointAt || 0, ra.checkpointAt || 0);
     M.active.owner = ra.owner || la.owner;
   }
-  if (conflicts.length) Store.localWarning = 'Modifications simultanées sur ' + conflicts.length + ' champ(s). Une valeur a été choisie de façon identique sur tous les écrans ; vérifie tes listes et réglages.';
+  if (conflicts.length) Store.localWarning = t('storage.conflicts', { n: conflicts.length });
   M.createdAt = Math.min(L.createdAt, R.createdAt);
   return normalize(M);
 }
@@ -1641,8 +1771,8 @@ const Store = {
       return normalize(parsed);
     } catch (e) {
       this.recoveryRaw = raw;
-      this.localWarning = 'Les anciennes données de ce navigateur sont illisibles. Leur contenu brut est conservé pour récupération.';
-      this.reportLocal('Données locales illisibles. Enregistre une copie de récupération ou réessaie la sauvegarde.');
+      this.localWarning = t('storage.legacyUnreadable');
+      this.reportLocal(t('storage.localUnreadable'));
       return null;
     }
   },
@@ -1658,8 +1788,8 @@ const Store = {
   },
   reportMigration() {
     this.reportLocal(this.migrationReason === 'session'
-      ? 'Une session est encore en cours dans l’ancienne version. Termine-la sur cet écran, ferme l’ancienne version puis réessaie la migration.'
-      : 'Ta ville reste protégée dans l’ancienne sauvegarde et en mémoire, mais sa copie ne peut pas être enregistrée. Libère de l’espace ou réactive le stockage puis réessaie la copie.');
+      ? t('storage.migrationWaitSession')
+      : t('storage.migrationNoSpace'));
   },
   migrateLegacy() {
     const raw = localStorage.getItem(LEGACY_LS_KEY);
@@ -1668,7 +1798,7 @@ const Store = {
     if (!legacy) {
       // Le document v1 reste à son emplacement exact, même si la v2 est réparée.
       this.recoveryKey = LEGACY_LS_KEY;
-      this.localWarning = 'Les anciennes données v1 sont illisibles et restent intactes pour récupération. Une nouvelle ville peut être enregistrée séparément.';
+      this.localWarning = t('storage.v1Unreadable');
       return null;
     }
     this.migrationSnapshot = clone(legacy);
@@ -1690,7 +1820,7 @@ const Store = {
     this.migrationPending = false;
     this.migrationReason = '';
     this.migrationSnapshot = null;
-    this.localWarning = 'Ta ville a été copiée depuis l’ancienne version. Ferme ses anciens onglets : leurs prochains changements restent dans la v1. Tu peux importer leur dernière sauvegarde si nécessaire.';
+    this.localWarning = t('storage.migrated');
     this.reportLocal('');
     return legacy;
   },
@@ -1710,7 +1840,7 @@ const Store = {
       this.lastReadFailed = true;
       this.migrationPending = true;
       this.migrationReason = 'storage';
-      this.reportLocal('Le stockage ne peut pas être lu. Réactive-le puis réessaie avant de modifier ta ville, afin de préserver les données déjà enregistrées.');
+      this.reportLocal(t('storage.unreadable'));
       return this.migrationSnapshot ? clone(this.migrationSnapshot) : null;
     }
   },
@@ -1743,7 +1873,7 @@ const Store = {
       this.recoveryKey = key;
       return true;
     } catch (e) {
-      this.reportLocal('Impossible de préserver les anciennes données. Exporte leur copie de récupération avant de réparer le stockage.');
+      this.reportLocal(t('storage.preserveFailed'));
       return false;
     }
   },
@@ -1773,7 +1903,7 @@ const Store = {
       this.reportLocal('');
       return true;
     } catch (e) {
-      this.reportLocal('La progression ne peut pas être enregistrée dans ce navigateur. Exporte une sauvegarde avant de fermer cette page.');
+      this.reportLocal(t('storage.cannotSave'));
       return false;
     }
   },
@@ -1839,7 +1969,7 @@ const Store = {
         const legacy = parseDoc(await this.legacyRef.get());
         if (legacy && this.legacySessionIsLive(legacy)) {
           this.cloudMigrationPending = true;
-          this.localWarning = 'Une session est encore active sur l’ancien compte. La copie vers la nouvelle version attend son résultat ; ta progression actuelle reste enregistrée dans ce navigateur.';
+          this.localWarning = t('storage.cloudSessionWait');
         } else { R = legacy; fromLegacy = !!legacy; }
       }
       this.mode = 'cloud';
@@ -1889,7 +2019,7 @@ const Store = {
           this.saveLocal();
         }
         this.status = 'ok';
-        this.localWarning = 'Les données du compte ont été copiées vers la nouvelle version. Ferme les anciens onglets pour continuer ici.';
+        this.localWarning = t('storage.cloudMigrated');
         this.schedule(0);
         renderSyncStatus();
         if (typeof renderStorageStatus === 'function') renderStorageStatus();
@@ -1924,7 +2054,7 @@ const Store = {
       if (code === 'invalid_argument' || code === 'quota_exceeded' || code === 'transform_error') {
         this.status = 'error';
         this.error = 'refused';
-        toast("Ta progression n'a pas pu être enregistrée sur ton compte. Elle reste dans ce navigateur.");
+        toast(t('storage.cloudSaveFailed'));
       } else if (code === 'revoked' || code === 'not_granted' || code === 'capability_disabled' || code === 'capability_removed') {
         this.mode = 'local';
         this.ref = null;
@@ -1969,7 +2099,7 @@ function afterReplace() {
     const session = $('#session');
     if (session) session.hidden = true;
     if (typeof updateInert === 'function') updateInert();
-    setTimeout(() => toast('La session a été terminée ou reprise sur un autre écran. Cet écran est synchronisé.'), 0);
+    setTimeout(() => toast(t('session.endedElsewhere')), 0);
   }
   if (replacePending) return;
   replacePending = true;
@@ -4314,7 +4444,7 @@ async function withSessionLock(action) {
     if (obj(JSON.parse(localStorage.getItem(SESSION_LOCK) || 'null')).token !== token) return false;
     return work();
   } catch (e) {
-    Store.reportLocal('Le stockage est nécessaire pour garantir une seule session à la fois. Répare-le avant de commencer.');
+    Store.reportLocal(t('storage.needLock'));
     return false;
   } finally {
     try { if (obj(JSON.parse(localStorage.getItem(SESSION_LOCK) || 'null')).token === token) localStorage.removeItem(SESSION_LOCK); } catch (e) { /* erreur déjà signalée */ }
@@ -4427,7 +4557,7 @@ const Chime = {
 async function beginSession(o) {
   if (run || beginning) return;
   const st = settledState();
-  if (st === 'elsewhere' || st === 'resume') { toast('Une session est déjà en cours. Termine-la avant de commencer.'); checkActive(); return; }
+  if (st === 'elsewhere' || st === 'resume') { toast(t('session.alreadyRunning')); checkActive(); return; }
   beginning = true;
   Chime.unlock();   // encore dans le geste : plus tard, le son serait refusé
   try {
@@ -4439,24 +4569,22 @@ async function beginSession(o) {
   }
 }
 function openWakeWarning(o, wake) {
-  openSheet("L'écran risque de se verrouiller", body => {
+  openSheet(t('wake.title'), body => {
     const ack = h('input', { type: 'checkbox', id: 'wakeAck' });
     body.append(
-      h('p', {}, wake === 'off'
-        ? "Tu as désactivé « Garder l'écran allumé ». Si l'écran se verrouille pendant la session, elle sera interrompue."
-        : "Ici, l'app ne peut pas empêcher la mise en veille. Si l'écran se verrouille pendant la session, elle sera interrompue : l'app ne peut pas faire la différence avec un changement d'app."),
-      h('p', { class: 'section-title' }, 'Avant de commencer'),
+      h('p', {}, wake === 'off' ? t('wake.offText') : t('wake.naText')),
+      h('p', { class: 'section-title' }, t('wake.before')),
       h('ul', { class: 'info-list' },
-        h('li', {}, icon('sun'), h('span', {}, h('strong', {}, 'iPhone : '), 'Réglages → Luminosité et affichage → Verrouillage automatique → Jamais. En mode Économie d’énergie, l’iPhone se verrouille quand même au bout de 30 s.')),
-        h('li', {}, icon('lock'), h('span', {}, h('strong', {}, 'Ou Accès guidé : '), 'dans ses options, règle « Verrouillage auto » sur « Jamais ». Il ne s’applique que pendant l’Accès guidé.')),
-        h('li', {}, icon('sun'), h('span', {}, h('strong', {}, 'Android : '), 'Paramètres → Affichage → Mise en veille de l’écran.'))),
-      h('label', { class: 'check', for: 'wakeAck' }, ack, h('span', {}, 'Ne plus me prévenir sur cet appareil')),
+        h('li', {}, icon('sun'), h('span', {}, h('strong', {}, t('wake.iphoneLabel')), t('wake.iphoneText'))),
+        h('li', {}, icon('lock'), h('span', {}, h('strong', {}, t('wake.guidedLabel')), t('wake.guidedText'))),
+        h('li', {}, icon('sun'), h('span', {}, h('strong', {}, t('wake.androidLabel')), t('wake.androidText')))),
+      h('label', { class: 'check', for: 'wakeAck' }, ack, h('span', {}, t('wake.dontWarn'))),
       h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'button', onclick: () => {
         if (ack.checked) { try { localStorage.setItem(LS_WAKE_ACK, '1'); } catch (e) { /* ignore */ } }
         closeSheet();
         startSession(o);
-      } }, icon('play'), "C'est réglé, commencer"),
-      h('button', { class: 'btn btn-ghost btn-block', type: 'button', onclick: closeSheet }, 'Annuler'));
+      } }, icon('play'), t('wake.start')),
+      h('button', { class: 'btn btn-ghost btn-block', type: 'button', onclick: closeSheet }, t('common.cancel')));
   }, { keep: true, onClose: () => Chime.rest(3000) });
 }
 
@@ -4465,7 +4593,7 @@ async function startSession(o, resume) {
   const started = await withSessionLock(() => {
     const st = activeState();
     if (st === 'elsewhere' || st === 'mine' || (!resume && st === 'resume')) {
-      toast('Une session est déjà en cours sur un autre écran.'); return false;
+      toast(t('session.runningElsewhere')); return false;
     }
     if (st === 'stale' && !resume) failInterrupted(true);
     return startSessionLocked(o, resume);
@@ -4480,10 +4608,10 @@ function startSessionLocked(o, resume) {
     if (o.sourceId && ['direct', 'wishes', 'chores'].includes(o.source || 'direct') && typeof taskAvailable === 'function') {
       const key = o.source === 'wishes' || o.source === 'chores' ? o.source : 'activities';
       const source = S[key].find(item => item.id === o.sourceId);
-      if (!source || !taskAvailable(source)) { toast('Cette activité a été supprimée ou déjà terminée sur un autre écran.'); return false; }
+      if (!source || !taskAvailable(source)) { toast(t('session.sourceGone')); return false; }
     }
     if (o.source === 'routine' && (!S.routineRun || S.routineRun.id !== o.routineRunId || S.routineRun.next !== o.routineStep || S.routineRun.status === 'done')) {
-      toast('Cette routine a changé sur un autre écran. Rouvre-la pour continuer.'); return false;
+      toast(t('session.routineChanged')); return false;
     }
     const day = effectiveDay(), min = int(o.min, 1, 180, 10), now = Date.now();
     const r = rewardFor(min, o.drawPct || 0, day);
@@ -4505,7 +4633,7 @@ function startSessionLocked(o, resume) {
   const saved = commit({ flush: true, silent: true });
   if (!saved || !S.active || S.active.id !== expectedId || S.active.owner !== Store.tab) {
     if (!saved && !resume && S.active && S.active.id === expectedId && S.active.owner === Store.tab) S.active = null;
-    toast('Le chrono ne peut pas commencer : la sauvegarde locale doit fonctionner.');
+    toast(t('session.cannotStart'));
     return false;
   }
   if (a.source === 'wishes' || a.source === 'chores') {
@@ -4549,12 +4677,12 @@ function showRun(a) {
   const ses = $('#session');
   ses.style.setProperty('--c', catVar(a.cat));
   $('#sessCat').replaceChildren(catDot(a.cat), catName(a.cat));
-  $('#sessName').textContent = frTypo(a.name);
+  $('#sessName').textContent = frTypo(displayName(a.name));
   const bonus = $('#sessBonus');
   bonus.hidden = !a.drawPct;
-  bonus.textContent = a.drawPct ? frTypo('Tirage accepté · bonus +' + a.drawPct + NB + '%') : '';
-  $('#timerSub').textContent = frTypo('Gain à la fin : ' + fmt(a.promised || rewardFor(a.min, a.drawPct).total));
-  $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? 'Rouvre l’app après la fin pour enregistrer ta récompense. Le son de fin n’est garanti que si l’app est ouverte.' : "Concentration : garde l'app à l'écran. Au-delà de " + S.settings.grace + NB + 's d’absence, le défi s’arrête ; ton temps effectué reste enregistré.'));
+  bonus.textContent = a.drawPct ? frTypo(t('session.drawBonus', { pct: a.drawPct })) : '';
+  $('#timerSub').textContent = frTypo(t('session.gain', { coins: fmt(a.promised || rewardFor(a.min, a.drawPct).total) }));
+  $('#graceRule').replaceChildren(icon('shield'), h('span', {}, a.mode === 'free' ? t('session.ruleFree') : t('session.ruleFocus', { grace: S.settings.grace })));
   $('#strictBtn').hidden = a.mode === 'free';   // bloquer le téléphone n'a de sens qu'en concentration
   $('#sessAlert').hidden = true;
   $('#ringFill').style.strokeDasharray = String(RING);
@@ -4622,7 +4750,7 @@ function awayDuration() { return Math.max(performance.now() - run.awayAt, Date.n
 function onLeave() {
   if (!run || run.ended || run.finishing || run.awayAt != null) return;
   if (run.active.mode === 'free') { tick(); persistRun(true); return; }
-  dbg('onLeave vis=' + document.visibilityState + ' focus=' + document.hasFocus() + ' off=' + run.offscreen);
+  dbg('onLeave: vis=' + document.visibilityState + ' focus=' + document.hasFocus() + ' off=' + run.offscreen);
   const now = performance.now(), wall = Date.now();
   const dt = now - run.lastNow, gap = Math.max(dt, wall - run.lastWall);
   if (gap > graceMs() + 2000) { failSession('away', gap); return; }
@@ -4654,7 +4782,7 @@ function onReturn() {
   run.lastWall = Date.now();
   if (away > graceMs()) { failSession('away', away); return; }
   const al = $('#sessAlert');
-  al.replaceChildren(icon('alert'), h('span', {}, "L'app n'était plus à l'écran (" + fmtAway(away) + '). Au-delà de ' + S.settings.grace + NB + 's, la session est interrompue.'));
+  al.replaceChildren(icon('alert'), h('span', {}, t('session.awayAlert', { time: fmtAway(away), grace: S.settings.grace })));
   al.hidden = false;
   requestWake();
 }
@@ -4784,7 +4912,7 @@ function showResult(build) {
   res.hidden = false;
   $('#session').hidden = false;
   updateInert();
-  setTimeout(() => { const t = res.querySelector('.res-title'); if (t) t.focus({ preventScroll: true }); }, 30);
+  setTimeout(() => { const title = res.querySelector('.res-title'); if (title) title.focus({ preventScroll: true }); }, 30);
 }
 function showSuccess(a, total, fresh) {
   showResult(res => {
@@ -4796,54 +4924,54 @@ function showSuccess(a, total, fresh) {
       }
     }
     const lines = h('ul', { class: 'res-lines' },
-      h('li', {}, h('span', {}, a.min + NB + 'min × 1' + NB + 'M'), h('span', {}, fmt(a.min * RATE))),
-      a.drawPct ? h('li', {}, h('span', {}, 'Bonus tirage'), h('span', {}, '+' + a.drawPct + NB + '%')) : null,
-      a.streakPct ? h('li', {}, h('span', {}, 'Série de ' + a.streakDays + NB + 'jours'), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
-      h('li', {}, h('span', {}, 'Nouveau solde'), h('span', {}, fmt(S.coins))));
+      h('li', {}, h('span', {}, t('result.baseLine', { min: a.min })), h('span', {}, fmt(a.min * RATE))),
+      a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, '+' + a.drawPct + NB + '%')) : null,
+      a.streakPct ? h('li', {}, h('span', {}, t('result.streak', { n: a.streakDays })), h('span', {}, '+' + a.streakPct + NB + '%')) : null,
+      h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmt(S.coins))));
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });
       City.thumb(cv, k, 56);
-      return h('div', { class: 'res-unlock' }, cv, h('span', {}, 'Nouveau bâtiment débloqué : ' + itemName(k)));
+      return h('div', { class: 'res-unlock' }, cv, h('span', {}, t('result.unlocked', { item: itemName(k) })));
     });
     res.append(
       h('div', { class: 'res-figure' }, burst, icon('coin'), '+' + fmt(total)),
-      h('h2', { class: 'res-title', tabindex: '-1' }, 'Session réussie'),
-      h('p', { class: 'sub' }, a.name + ' · ' + a.min + NB + 'min'),
+      h('h2', { class: 'res-title', tabindex: '-1' }, t('result.success')),
+      h('p', { class: 'sub' }, displayName(a.name) + ' · ' + a.min + NB + 'min'),
       lines, ...unlocks,
       h('div', { class: 'res-actions' },
-        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), 'Construire'),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, 'Retour à la ville')));
+        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), t('city.build')),
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
     if (typeof renderRoutineResult === 'function') renderRoutineResult(res, a, total);
   });
 }
 function showFail(a, reason, awayMs, elapsed) {
   const why = reason === 'away'
-    ? (awayMs > graceMs() + 2000 ? "L'app n'était plus à l'écran pendant " + fmtAway(awayMs) : "L'app n'était plus à l'écran pendant plus de " + S.settings.grace + NB + 's') + ' (autre app ou écran verrouillé).'
-    : reason === 'closed' ? "L'app a été fermée ou rechargée pendant le chrono."
-    : 'Tu as abandonné la session.';
+    ? (awayMs > graceMs() + 2000 ? t('result.awayFor', { time: fmtAway(awayMs) }) : t('result.awayMore', { grace: S.settings.grace }))
+    : reason === 'closed' ? t('result.closed')
+    : t('result.abandoned');
   const done = Math.floor((elapsed || 0) / 60000);
   $('#session').style.setProperty('--c', 'var(--danger)');
   showResult(res => {
     res.append(
       h('div', { class: 'res-fail' }, icon('lost', 'ic-big')),
-      h('h2', { class: 'res-title', tabindex: '-1' }, 'Session interrompue'),
-      h('p', { class: 'sub' }, a.name + ' · ' + a.min + NB + 'min' + (done ? ' (' + done + NB + 'min ' + (done > 1 ? 'faites' : 'faite') + ')' : '')),
+      h('h2', { class: 'res-title', tabindex: '-1' }, t('result.interrupted')),
+      h('p', { class: 'sub' }, done ? t('result.subDone', { name: displayName(a.name), min: a.min, n: done }) : displayName(a.name) + ' · ' + a.min + NB + 'min'),
       h('p', {}, why),
-      h('p', { class: 'note' }, a.draw ? "Aucune pièce cette fois. Ton temps effectué reste dans le journal. Tu peux recommencer cette même activité sans frais." : "Aucune pièce cette fois. Ton temps effectué reste enregistré dans ton journal et tes objectifs."),
+      h('p', { class: 'note' }, a.draw ? t('result.noCoinsDraw') : t('result.noCoins')),
       h('div', { class: 'res-actions' },
-        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); if (a.draw && S.draw.current && S.draw.current.id === a.draw.id) acceptDraw(); else beginSession({ name: a.name, cat: a.cat, min: a.min, mode: a.mode, source: a.source, sourceId: a.sourceId, routineRunId: a.routineRunId, routineStep: a.routineStep }); } }, icon('reroll'), 'Recommencer'),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, 'Retour à la ville')));
+        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); if (a.draw && S.draw.current && S.draw.current.id === a.draw.id) acceptDraw(); else beginSession({ name: a.name, cat: a.cat, min: a.min, mode: a.mode, source: a.source, sourceId: a.sourceId, routineRunId: a.routineRunId, routineStep: a.routineStep }); } }, icon('reroll'), t('result.restart')),
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
   });
 }
 
 function setWake(state) {
   const li = $('#wakeStatus');
   const msg = {
-    free: ['sun', 'Activité libre : tu peux verrouiller l’écran ou changer d’app, le chrono continue.'],
-    on: ['sun', 'Écran maintenu allumé pendant la session.'],
-    off: ['alert', "Écran : mise en veille normale. S'il se verrouille, la session est interrompue."],
-    checking: ['sun', "Activation de l'écran allumé…"],
-    na: ['alert', "L'écran ne peut pas être maintenu allumé ici : s'il se verrouille, la session est interrompue."],
+    free: ['sun', t('wake.statusFree')],
+    on: ['sun', t('wake.statusOn')],
+    off: ['alert', t('wake.statusOff')],
+    checking: ['sun', t('wake.statusChecking')],
+    na: ['alert', t('wake.statusNa')],
   }[state];
   li.className = state === 'na' || state === 'off' ? 'warn' : '';
   li.replaceChildren(icon(msg[0]), h('span', {}, msg[1]));
