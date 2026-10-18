@@ -331,3 +331,14 @@ test('le cadeau de bon retour est fixé au lancement et garde sa valeur après m
   assert.equal(e.returnPct, 20);
   assert.equal(e.reward, 6e6);
 });
+
+test("activité libre finie app fermée : l'historique garde l'heure réelle de fin", async () => {
+  const disk = storage(), locks = lockManager(), a = app(disk, locks);
+  a.init(); await a.startSession({ name: 'Marche', cat: 'corps', min: 5, mode: 'free' });
+  const startedAt = a.api.state.active.startedAt;
+  a.endRun(); disk.removeItem('ville-bien-etre/v2:beat');
+  const b = app(disk, locks); b.advance(25 * 60000); b.init();
+  b.checkActive(); await settle(); await settle();
+  const entry = JSON.parse(disk.getItem('ville-bien-etre/v2')).history[0];
+  assert.deepEqual([entry.ok, entry.at], [true, startedAt + 5 * 60000]);
+});

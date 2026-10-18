@@ -23,6 +23,8 @@ function historyMatches(def) {
         : e.source === 'wishes' || e.source === 'chores'));
 }
 const natureCount = () => S.city.tiles.filter(tile => NATURE_ITEMS.includes(tile.item)).length;
+// Construction de la n-ième case encore posée : à cette date, la ville en comptait déjà n ; 0 sinon.
+const nthBuilt = (tiles, n) => tiles.map(tile => tile.at).filter(validTs).sort((a, b) => a - b)[n - 1] || 0;
 const wondersDone = () => S.city.tiles.filter(tile => isWonder(tile.item) && tile.stage >= ITEMS[tile.item].wonder.length).length;
 // Premier jour (dans l'ordre) où la série atteint n ; null sinon.
 function streakDay(n) { return activeDays().find(d => streakDetail(d).days >= n) || null; }
@@ -94,6 +96,8 @@ function achievementDate(def) {
       const at = S.city.tiles.filter(tile => tile.paid > 0 && validTs(tile.at)).map(tile => tile.at);
       return at.length ? Math.min(...at) : 0;
     }
+    case 'tiles': return nthBuilt(S.city.tiles, def.n);
+    case 'nature': return nthBuilt(S.city.tiles.filter(tile => NATURE_ITEMS.includes(tile.item)), def.n);
     default: return 0;
   }
 }

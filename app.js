@@ -15,8 +15,8 @@ const LS_BEAT = 'ville-bien-etre/v2:beat';       // battement de la session en c
 const LS_WAKE_ACK = 'ville-bien-etre/v1:wake-ok';
 const LS_BACKUP_AT = 'ville-bien-etre/v1:backup-at';     // dernière sauvegarde faite depuis cet appareil
 const LS_REMIND = 'ville-bien-etre/v1:backup-later';     // rappel de sauvegarde reporté jusqu'à cette date
-const LS_REMINDER = 'ville-bien-etre/v1:reminder-time';
-const LS_CARNET_SEEN = 'ville-bien-etre/v1:carnet-seen';  // dernière ouverture du carnet sur cet appareil  // heure du rappel quotidien (agenda), propre à l'appareil
+const LS_REMINDER = 'ville-bien-etre/v1:reminder-time';   // heure du rappel quotidien (agenda), propre à l'appareil
+const LS_CARNET_SEEN = 'ville-bien-etre/v1:carnet-seen';  // succès et ensembles déjà vus dans le carnet, sur cet appareil
 const BACKUP_EVERY = 14 * 86400000;                       // rappel quand la dernière sauvegarde a plus de 14 jours
 const HISTORY_MAX = 150;
 const LIST_MAX = 60;
@@ -2022,7 +2022,7 @@ DICT.en = {
   'ach.grands-espaces.name': 'Wide open spaces',
   'ach.grands-espaces.desc': 'Expand your town to 11\u00a0×\u00a011 squares.',
   'ach.main-verte.name': 'Green thumb',
-  'ach.main-verte.desc': 'Plant 10 trees, hedges, flower beds or vegetable patches.',
+  'ach.main-verte.desc': 'Plant 10 trees, cherry trees, hedges, flower beds or vegetable patches.',
   'ach.ca-rayonne.name': 'Shining',
   'ach.ca-rayonne.desc': 'Raise a building to level 3 by practising its area.',
   'ach.bon-voisinage.name': 'Good neighbours',
@@ -2064,7 +2064,7 @@ DICT.en = {
   'shop.startWonder': 'Start building',
   'shop.startWonderFor': 'Start building {item} for {price}',
   'shop.wonderContinue': 'Stage {stage} of 4 · Continue',
-  'shop.wonderDone': 'Opened',
+  'shop.wonderDone': 'Inaugurated',
   'wonder.stageOf': 'Stage {stage} of 4: {name}',
   'wonder.next': 'Next stage: {name}',
   'wonder.need': '{have} of {need} in total',
@@ -2318,7 +2318,7 @@ function normalize(raw) {
       ids.add(id);
       const tile = { id, item: t.item, x, y, at: validTs(t.at) ? t.at : 0, paid: Math.round(num(t.paid, 0, COINS_MAX, 0)) };
       // Merveille : étape de 1 à 4, pièces payées recalculées d'après l'étape.
-      if (isWonder(t.item)) { tile.stage = int(t.stage, 1, 4, 1); tile.paid = wonderPaid(t.item, tile.stage); }
+      if (isWonder(t.item)) { tile.stage = int(t.stage, 1, ITEMS[t.item].wonder.length, 1); tile.paid = wonderPaid(t.item, tile.stage); }
       tiles.push(tile);
     }
     s.city = { size, tiles: splitWonders(tiles).kept };
@@ -3307,6 +3307,8 @@ function historyMatches(def) {
         : e.source === 'wishes' || e.source === 'chores'));
 }
 const natureCount = () => S.city.tiles.filter(tile => NATURE_ITEMS.includes(tile.item)).length;
+// Construction de la n-ième case encore posée : à cette date, la ville en comptait déjà n ; 0 sinon.
+const nthBuilt = (tiles, n) => tiles.map(tile => tile.at).filter(validTs).sort((a, b) => a - b)[n - 1] || 0;
 const wondersDone = () => S.city.tiles.filter(tile => isWonder(tile.item) && tile.stage >= ITEMS[tile.item].wonder.length).length;
 // Premier jour (dans l'ordre) où la série atteint n ; null sinon.
 function streakDay(n) { return activeDays().find(d => streakDetail(d).days >= n) || null; }
@@ -3378,6 +3380,8 @@ function achievementDate(def) {
       const at = S.city.tiles.filter(tile => tile.paid > 0 && validTs(tile.at)).map(tile => tile.at);
       return at.length ? Math.min(...at) : 0;
     }
+    case 'tiles': return nthBuilt(S.city.tiles, def.n);
+    case 'nature': return nthBuilt(S.city.tiles.filter(tile => NATURE_ITEMS.includes(tile.item)), def.n);
     default: return 0;
   }
 }
@@ -3407,6 +3411,10 @@ function readPalette() {
   p.danger = cssVar('--danger') || '#b4452e';
   return p;
 }
+
+// Chantier de pose : un échafaudage pour les bâtiments seulement. Le décor et ce qui reste au sol sortent sans,
+// et une merveille a déjà le sien, dessiné à chaque étape.
+function scaffoldOnBuild(key) { const it = ITEMS[key]; return !!it && it.group !== 'decor' && !it.ground && !it.wonder; }
 
 function makePainter(ctx, tw, ox, oy, pal) {
   const hw = tw / 2, hh = tw / 4;
@@ -4492,7 +4500,7 @@ const City = (() => {
   }
   // Échafaudage et poussière de part et d'autre de l'élément (« back » avant lui, « front » après lui), confettis devant.
   function effectOverlay(g, t, kind, k, layer) {
-    if ((kind === 'build' || kind === 'stage') && k < .8) {
+    if ((kind === 'build' || kind === 'stage') && k < .8 && scaffoldOnBuild(t.item)) {
       ctx.globalAlpha = k < .35 ? k / .35 : k > .65 ? (.8 - k) / .15 : 1;
       g.scaffold(t.x, t.y, g.tw * .5, layer);
     }
@@ -4658,24 +4666,20 @@ const City = (() => {
     c.clearRect(0, 0, size, size);
     const tw = Math.min(size * .9, (size * .86) / (it.hf + .25));
     const pal = readPalette();
-    const g = makePainter(c, tw, size / 2, size - 3 - tw / 2, pal);
-    g.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
+    const g = makePainter(c, tw, size / 2, size - 3 - tw / 2, pal), ground = () => g.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
     if (!opts.silhouette) {
+      ground();
       try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
       return;
     }
-    // Silhouette : l'élément en ombre unie, posé sur sa case visible.
-    const off = document.createElement('canvas');
-    off.width = cv.width; off.height = cv.height;
-    const o = off.getContext('2d');
-    o.setTransform(d, 0, 0, d, 0, 0);
-    try { DRAW[key](makePainter(o, tw, size / 2, size - 3 - tw / 2, pal), 0, 0, { stage: opts.stage || 4 }); } catch (e) { /* silhouette vide */ }
-    o.setTransform(1, 0, 0, 1, 0, 0);
-    o.globalCompositeOperation = 'source-in';
-    o.fillStyle = pal.night ? 'rgba(255,255,255,.3)' : 'rgba(40,60,50,.38)';
-    o.fillRect(0, 0, off.width, off.height);
-    c.setTransform(1, 0, 0, 1, 0, 0);
-    c.drawImage(off, 0, 0);
+    // Silhouette : l'élément en ombre unie, puis sa case glissée dessous, sans autre canvas.
+    try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); } catch (e) { /* silhouette vide */ }
+    c.globalCompositeOperation = 'source-in';
+    c.fillStyle = pal.night ? 'rgba(255,255,255,.3)' : 'rgba(40,60,50,.38)';
+    c.fillRect(0, 0, size, size);
+    c.globalCompositeOperation = 'destination-over';
+    ground();
+    c.globalCompositeOperation = 'source-over';
   }
   // Aucun effet quand le système demande de réduire les animations.
   function effect(id, kind) { if (reducedMotion()) return; effects.set(id, { kind, start: performance.now() }); draw(); }
@@ -7007,7 +7011,9 @@ function addEffort(a, elapsedSec, day) {
   cats[a.cat] = (cats[a.cat] || 0) + minutes;
 }
 function sessionHistory(a, ok, elapsedSec, extra = {}) {
-  return Object.assign({ id: a.id, name: a.name, cat: a.cat, min: a.min, mode: a.mode, elapsedSec, ok, reward: 0, at: Date.now(), source: a.source, day: maxDay(a.day || effectiveDay(), S.clock.lastDay), routineRunId: a.routineRunId || '', routineStep: a.routineStep || 0, returnPct: a.returnPct || 0 }, extra);
+  // Activité libre réussie, enregistrée au retour dans l'app : l'heure gardée est celle de sa vraie fin.
+  const end = a.startedAt + a.min * 60000, at = ok && a.mode === 'free' && end < Date.now() ? end : Date.now();
+  return Object.assign({ id: a.id, name: a.name, cat: a.cat, min: a.min, mode: a.mode, elapsedSec, ok, reward: 0, at, source: a.source, day: maxDay(a.day || effectiveDay(), S.clock.lastDay), routineRunId: a.routineRunId || '', routineStep: a.routineStep || 0, returnPct: a.returnPct || 0 }, extra);
 }
 async function failSession(reason, awayMs) {
   if (!run || run.finishing) return;
@@ -7198,12 +7204,22 @@ function carnetCounts() {
     sets: { have: Object.keys(S.sets || {}).length, total: SETS.length },
   };
 }
-// Dernière ouverture du carnet sur cet appareil.
-function carnetSeen() { try { return Number(localStorage.getItem(LS_CARNET_SEEN)) || 0; } catch (e) { return 0; } }
-function markCarnetSeen() { try { localStorage.setItem(LS_CARNET_SEEN, String(Date.now())); } catch (e) { /* pas de stockage */ } }
-// Repère « Nouveau » : un succès ou un ensemble obtenu depuis la dernière ouverture.
+// Succès et ensembles obtenus, avec leur date : « a:id » pour un succès, « s:id » pour un ensemble.
+function carnetObtained() {
+  const all = {};
+  for (const [id, at] of Object.entries(S.achievements || {})) all['a:' + id] = at;
+  for (const [id, at] of Object.entries(S.sets || {})) all['s:' + id] = at;
+  return all;
+}
+// Ce que le carnet montrait à sa dernière ouverture sur cet appareil.
+function carnetSeen() {
+  try { const seen = JSON.parse(localStorage.getItem(LS_CARNET_SEEN)); return seen && typeof seen === 'object' && !Array.isArray(seen) ? seen : {}; } catch (e) { return {}; }
+}
+function markCarnetSeen() { try { localStorage.setItem(LS_CARNET_SEEN, JSON.stringify(carnetObtained())); } catch (e) { /* pas de stockage */ } }
+// Repère « Nouveau » : un succès ou un ensemble pas encore vu ici, ou obtenu de nouveau à une autre date
+// (sauvegarde restaurée, ville recommencée). La date de l'appareil n'entre pas en jeu.
 function hasNewInCarnet(seen = carnetSeen()) {
-  return [S.achievements, S.sets].some(dates => Object.values(dates || {}).some(at => at > seen));
+  return Object.entries(carnetObtained()).some(([key, at]) => seen[key] !== at);
 }
 const carnetDate = at => dayFmt('short').format(keyToUTC(dayOf(at)));
 
@@ -7313,7 +7329,7 @@ function noticeProgress() {
 function catchUpCarnet() {
   const now = Date.now(), sets = discoverSets(now), achievements = checkAchievements(now, { retro: true });
   if (!sets.length && !achievements.length) return { achievements, sets };
-  commit({ silent: true });
+  commit();       // affiché tout de suite, même si le Journal est ouvert (restauration)
   const text = t('carnet.catchUp', { n: achievements.length }) + (sets.length ? ' ' + t('carnet.catchUpSets', { n: sets.length }) : '');
   toast(text, { label: t('carnet.open'), run: () => openCarnet() });
   return { achievements, sets };

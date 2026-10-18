@@ -79,3 +79,11 @@ test('fusion : une même merveille commencée deux fois, la plus avancée reste'
   assert.deepEqual(plain(M.city.tiles.filter(tile => tile.item === 'phare').map(tile => [tile.id, tile.stage])), [['a', 2]]);
   assert.equal(M.coins, 2e9 - 750e6);
 });
+
+test("étape d'une merveille : bornée par son propre nombre d'étapes", () => {
+  const a = app();
+  a.ITEMS.phare.wonder.push([5000, 550e6]);                                     // une cinquième étape
+  const st = a.defaultState();
+  st.city.tiles = [{ id: 'p', item: 'phare', x: 0, y: 0, at: T0, stage: 5, paid: 0 }, { id: 'g', item: 'grandarbre', x: 1, y: 0, at: T0, stage: 9, paid: 0 }];
+  assert.deepEqual(plain(a.normalize(st).city.tiles.map(tile => tile.stage)), [5, 4]);
+});

@@ -42,4 +42,10 @@ test('les merveilles se dessinent dans leur case à chaque étape, et chaque él
   assert.deepEqual(Object.keys(a.ITEMS).filter(key => typeof a.DRAW[key] !== 'function'), []);
 });
 
+test('chantier de pose : un échafaudage pour les bâtiments, pas pour le décor, le sol ni les merveilles', () => {
+  const a = loadApp(PAINT, { expose: ['scaffoldOnBuild'] });
+  const keys = ['maison', 'musee', 'stade', 'arbre', 'banc', 'chemin', 'piscine', 'skatepark', 'grandarbre'];
+  assert.deepEqual(keys.map(key => a.scaffoldOnBuild(key)), [true, true, true, false, false, false, false, false, false]);
+});
+
 module.exports = { app, assertInTile, paint };

@@ -207,7 +207,7 @@ function normalize(raw) {
       ids.add(id);
       const tile = { id, item: t.item, x, y, at: validTs(t.at) ? t.at : 0, paid: Math.round(num(t.paid, 0, COINS_MAX, 0)) };
       // Merveille : étape de 1 à 4, pièces payées recalculées d'après l'étape.
-      if (isWonder(t.item)) { tile.stage = int(t.stage, 1, 4, 1); tile.paid = wonderPaid(t.item, tile.stage); }
+      if (isWonder(t.item)) { tile.stage = int(t.stage, 1, ITEMS[t.item].wonder.length, 1); tile.paid = wonderPaid(t.item, tile.stage); }
       tiles.push(tile);
     }
     s.city = { size, tiles: splitWonders(tiles).kept };

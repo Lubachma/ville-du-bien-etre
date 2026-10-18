@@ -9,12 +9,22 @@ function carnetCounts() {
     sets: { have: Object.keys(S.sets || {}).length, total: SETS.length },
   };
 }
-// Dernière ouverture du carnet sur cet appareil.
-function carnetSeen() { try { return Number(localStorage.getItem(LS_CARNET_SEEN)) || 0; } catch (e) { return 0; } }
-function markCarnetSeen() { try { localStorage.setItem(LS_CARNET_SEEN, String(Date.now())); } catch (e) { /* pas de stockage */ } }
-// Repère « Nouveau » : un succès ou un ensemble obtenu depuis la dernière ouverture.
+// Succès et ensembles obtenus, avec leur date : « a:id » pour un succès, « s:id » pour un ensemble.
+function carnetObtained() {
+  const all = {};
+  for (const [id, at] of Object.entries(S.achievements || {})) all['a:' + id] = at;
+  for (const [id, at] of Object.entries(S.sets || {})) all['s:' + id] = at;
+  return all;
+}
+// Ce que le carnet montrait à sa dernière ouverture sur cet appareil.
+function carnetSeen() {
+  try { const seen = JSON.parse(localStorage.getItem(LS_CARNET_SEEN)); return seen && typeof seen === 'object' && !Array.isArray(seen) ? seen : {}; } catch (e) { return {}; }
+}
+function markCarnetSeen() { try { localStorage.setItem(LS_CARNET_SEEN, JSON.stringify(carnetObtained())); } catch (e) { /* pas de stockage */ } }
+// Repère « Nouveau » : un succès ou un ensemble pas encore vu ici, ou obtenu de nouveau à une autre date
+// (sauvegarde restaurée, ville recommencée). La date de l'appareil n'entre pas en jeu.
 function hasNewInCarnet(seen = carnetSeen()) {
-  return [S.achievements, S.sets].some(dates => Object.values(dates || {}).some(at => at > seen));
+  return Object.entries(carnetObtained()).some(([key, at]) => seen[key] !== at);
 }
 const carnetDate = at => dayFmt('short').format(keyToUTC(dayOf(at)));
 
@@ -124,7 +134,7 @@ function noticeProgress() {
 function catchUpCarnet() {
   const now = Date.now(), sets = discoverSets(now), achievements = checkAchievements(now, { retro: true });
   if (!sets.length && !achievements.length) return { achievements, sets };
-  commit({ silent: true });
+  commit();       // affiché tout de suite, même si le Journal est ouvert (restauration)
   const text = t('carnet.catchUp', { n: achievements.length }) + (sets.length ? ' ' + t('carnet.catchUpSets', { n: sets.length }) : '');
   toast(text, { label: t('carnet.open'), run: () => openCarnet() });
   return { achievements, sets };

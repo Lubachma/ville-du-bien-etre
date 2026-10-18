@@ -465,7 +465,9 @@ function addEffort(a, elapsedSec, day) {
   cats[a.cat] = (cats[a.cat] || 0) + minutes;
 }
 function sessionHistory(a, ok, elapsedSec, extra = {}) {
-  return Object.assign({ id: a.id, name: a.name, cat: a.cat, min: a.min, mode: a.mode, elapsedSec, ok, reward: 0, at: Date.now(), source: a.source, day: maxDay(a.day || effectiveDay(), S.clock.lastDay), routineRunId: a.routineRunId || '', routineStep: a.routineStep || 0, returnPct: a.returnPct || 0 }, extra);
+  // Activité libre réussie, enregistrée au retour dans l'app : l'heure gardée est celle de sa vraie fin.
+  const end = a.startedAt + a.min * 60000, at = ok && a.mode === 'free' && end < Date.now() ? end : Date.now();
+  return Object.assign({ id: a.id, name: a.name, cat: a.cat, min: a.min, mode: a.mode, elapsedSec, ok, reward: 0, at, source: a.source, day: maxDay(a.day || effectiveDay(), S.clock.lastDay), routineRunId: a.routineRunId || '', routineStep: a.routineStep || 0, returnPct: a.returnPct || 0 }, extra);
 }
 async function failSession(reason, awayMs) {
   if (!run || run.finishing) return;

@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '46-features.js', '52-carnet.js'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
-const app = (globals = {}) => loadApp(FILES, { expose: ['carnetCounts', 'hasNewInCarnet'], globals });
+const app = (globals = {}) => loadApp(FILES, { expose: ['carnetCounts', 'hasNewInCarnet', 'markCarnetSeen'], globals });
 
 test('compteurs du carnet', () => {
   const a = app();
@@ -13,13 +13,26 @@ test('compteurs du carnet', () => {
   assert.deepEqual(plain(a.carnetCounts()), { achievements: { have: 2, total: 33 }, collection: { have: 7, total: 50 }, sets: { have: 1, total: 12 } });
 });
 
-test('repère Nouveau : un succès ou un ensemble depuis la dernière ouverture', () => {
+test("repère Nouveau : ce qui n'a pas encore été vu sur cet appareil", () => {
   const a = app();
-  assert.equal(a.hasNewInCarnet(0), false);
+  assert.equal(a.hasNewInCarnet(), false);
   a.state.achievements = { 'premier-pas': T0 };
-  assert.deepEqual([a.hasNewInCarnet(0), a.hasNewInCarnet(T0)], [true, false]);
+  assert.equal(a.hasNewInCarnet(), true);
+  a.markCarnetSeen();
+  assert.equal(a.hasNewInCarnet(), false);
   a.state.sets = { cocon: T0 + 1 };
-  assert.equal(a.hasNewInCarnet(T0), true);
+  assert.equal(a.hasNewInCarnet(), true);
+});
+
+test("repère Nouveau : succès rendus par une sauvegarde plus ancienne, ou regagnés après « Tout recommencer »", () => {
+  const a = app();
+  a.state.achievements = { 'premier-pas': T0 };
+  a.markCarnetSeen();
+  a.state.achievements = { 'premier-pas': T0, hameau: T0 - 30 * 86400000 };     // restauration : un succès daté d'avant
+  assert.equal(a.hasNewInCarnet(), true);
+  a.markCarnetSeen();
+  a.state.achievements = { 'premier-pas': T0 + 60000 };                         // ville neuve : le même succès, regagné
+  assert.equal(a.hasNewInCarnet(), true);
 });
 
 test('rattrapage : un seul message pour tout ce que la ville avait déjà', () => {

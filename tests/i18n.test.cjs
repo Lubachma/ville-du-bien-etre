@@ -292,3 +292,9 @@ test('les libellés dans la phrase viennent du dictionnaire', () => {
   for (const file of ['41-activities.js', '42-draw.js']) assert.doesNotMatch(fs.readFileSync(path.join(root, 'src', file), 'utf8'), /toLowerCase\(\)/, file);
   assert.doesNotMatch(fs.readFileSync(path.join(root, 'src', '00-core.js'), 'utf8'), /function plural\(/);
 });
+
+test('anglais : « Green thumb » cite les cerisiers, une merveille finie est « Inaugurated »', () => {
+  const { DICT } = app();
+  assert.match(DICT.en['ach.main-verte.desc'], /cherry trees/);
+  assert.equal(DICT.en['shop.wonderDone'], 'Inaugurated');
+});

@@ -61,7 +61,7 @@ const City = (() => {
   }
   // Échafaudage et poussière de part et d'autre de l'élément (« back » avant lui, « front » après lui), confettis devant.
   function effectOverlay(g, t, kind, k, layer) {
-    if ((kind === 'build' || kind === 'stage') && k < .8) {
+    if ((kind === 'build' || kind === 'stage') && k < .8 && scaffoldOnBuild(t.item)) {
       ctx.globalAlpha = k < .35 ? k / .35 : k > .65 ? (.8 - k) / .15 : 1;
       g.scaffold(t.x, t.y, g.tw * .5, layer);
     }
@@ -227,24 +227,20 @@ const City = (() => {
     c.clearRect(0, 0, size, size);
     const tw = Math.min(size * .9, (size * .86) / (it.hf + .25));
     const pal = readPalette();
-    const g = makePainter(c, tw, size / 2, size - 3 - tw / 2, pal);
-    g.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
+    const g = makePainter(c, tw, size / 2, size - 3 - tw / 2, pal), ground = () => g.tile(0, 0, 0, pal.night ? '#2d4a3a' : '#acd292');
     if (!opts.silhouette) {
+      ground();
       try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); drawGrowth(g, key, 0, 0); } catch (e) { /* vignette vide */ }
       return;
     }
-    // Silhouette : l'élément en ombre unie, posé sur sa case visible.
-    const off = document.createElement('canvas');
-    off.width = cv.width; off.height = cv.height;
-    const o = off.getContext('2d');
-    o.setTransform(d, 0, 0, d, 0, 0);
-    try { DRAW[key](makePainter(o, tw, size / 2, size - 3 - tw / 2, pal), 0, 0, { stage: opts.stage || 4 }); } catch (e) { /* silhouette vide */ }
-    o.setTransform(1, 0, 0, 1, 0, 0);
-    o.globalCompositeOperation = 'source-in';
-    o.fillStyle = pal.night ? 'rgba(255,255,255,.3)' : 'rgba(40,60,50,.38)';
-    o.fillRect(0, 0, off.width, off.height);
-    c.setTransform(1, 0, 0, 1, 0, 0);
-    c.drawImage(off, 0, 0);
+    // Silhouette : l'élément en ombre unie, puis sa case glissée dessous, sans autre canvas.
+    try { DRAW[key](g, 0, 0, { stage: opts.stage || 4 }); } catch (e) { /* silhouette vide */ }
+    c.globalCompositeOperation = 'source-in';
+    c.fillStyle = pal.night ? 'rgba(255,255,255,.3)' : 'rgba(40,60,50,.38)';
+    c.fillRect(0, 0, size, size);
+    c.globalCompositeOperation = 'destination-over';
+    ground();
+    c.globalCompositeOperation = 'source-over';
   }
   // Aucun effet quand le système demande de réduire les animations.
   function effect(id, kind) { if (reducedMotion()) return; effects.set(id, { kind, start: performance.now() }); draw(); }

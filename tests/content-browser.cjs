@@ -131,8 +131,15 @@ async function runContent(browser, baseURL) {
       const body = page.locator('#sheetBody');
       const names = await body.locator('.carnet-row strong').allInnerTexts();
       assert.ok(names.indexOf('Premier pas') >= 0 && names.indexOf('Premier pas') < names.indexOf('Lève-tôt'), names.slice(0, 4).join(' | '));
+      // Une vignette, une seule zone de dessin : les silhouettes n'en créent pas d'autres.
+      await page.evaluate(() => {
+        window.__canvases = 0;
+        const make = document.createElement.bind(document);
+        document.createElement = (tag, ...rest) => { if (String(tag).toLowerCase() === 'canvas') window.__canvases++; return make(tag, ...rest); };
+      });
       await body.getByRole('radio', { name: 'Collection', exact: true }).click();
       assert.equal(await body.locator('.carnet-cell').count(), 50);
+      assert.equal(await page.evaluate(() => window.__canvases), 50);
       await body.getByRole('radio', { name: 'Ensembles', exact: true }).click();
       const sets = await body.locator('.carnet-row strong').allInnerTexts();
       assert.equal(sets[0], 'Cocon');
@@ -144,6 +151,12 @@ async function runContent(browser, baseURL) {
       }
       await page.locator('#sheetClose').click();
       assert.doesNotMatch(await card.innerText(), /Nouveau/);
+      // « Tout recommencer » efface aussi le carnet.
+      await page.locator('#settingsBtn').click();
+      await page.getByRole('button', { name: 'Tout recommencer', exact: true }).click();
+      await page.getByRole('button', { name: /^Confirmer\s:\stout effacer/ }).click();
+      await page.waitForFunction(() => !Object.keys(__ville.state.achievements).length && !Object.keys(__ville.state.sets).length);
+      assert.match(await card.innerText(), /0\ssur\s33/);
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Carnet : compteurs, onglets et repère Nouveau');
@@ -225,6 +238,7 @@ async function runContent(browser, baseURL) {
       city: { size: 7, tiles: [] }, clock: { tz: 'Europe/Zurich', maxSeen: 0, lastDay: '2026-10-06' } };
     const { context, page, errors } = await newTown(browser, baseURL, null);
     try {
+      await page.locator('[data-tab="journal"]').click();
       await page.locator('#settingsBtn').click();
       await page.locator('#importArea').fill(signBackup(old));
       await page.getByRole('button', { name: 'Vérifier la sauvegarde', exact: true }).click();
@@ -233,6 +247,9 @@ async function runContent(browser, baseURL) {
       await page.waitForFunction(() => __ville.state.stats.ok === 2);
       assert.match(await page.locator('#toast').innerText(), /a déjà \d+ succès/);
       assert.equal(await page.evaluate(() => !!__ville.state.achievements['grand-calme']), true);
+      // Restaurée depuis le Journal : la carte Carnet compte déjà les succès recalculés.
+      const have = await page.evaluate(() => Object.keys(__ville.state.achievements).length);
+      assert.match(await page.locator('#carnetCard').innerText(), new RegExp(have + '\\ssur\\s33'));
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
     scenarios.push('Restauration : succès recalculés');

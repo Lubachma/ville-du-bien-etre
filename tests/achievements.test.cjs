@@ -90,6 +90,15 @@ test('rattrapage : la vraie date quand elle se déduit, rien deux fois', () => {
   assert.deepEqual(plain(a.checkAchievements(T0, { retro: true })), []);
 });
 
+test('rattrapage : Hameau et Main verte datés de la construction de leur dixième case', () => {
+  const a = app();
+  const day = i => Date.parse('2026-09-01T10:00:00Z') + i * 86400000;
+  a.state.city.tiles = [...tiles('arbre', 10).map((tile, i) => ({ ...tile, at: day(i) })),
+    ...tiles('banc', 2).map((tile, i) => ({ ...tile, id: 'b' + i, x: i, y: 5, at: day(20 + i) }))];
+  a.checkAchievements(T0, { retro: true });
+  assert.deepEqual([a.state.achievements.hameau, a.state.achievements['main-verte']], [day(9), day(9)]);
+});
+
 test('sans rattrapage, la date est maintenant ; le succès ouvre son décor, série masquée ou non', () => {
   const a = app();
   a.state.settings.hideStreak = true;
