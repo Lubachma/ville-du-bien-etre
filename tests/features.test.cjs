@@ -8,7 +8,7 @@ function app() {
   const ctx = vm.createContext({ console, Intl, Date, setTimeout });
   for (const file of ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '20-rules.js', '46-features.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', file), 'utf8'), ctx);
   vm.runInContext(`let S = {
-    clock:{tz:'Europe/Zurich',maxSeen:0},goals:{minutes:60,days:3,cat:'all',building:''},
+    clock:{tz:'Europe/Zurich',maxSeen:0},settings:{weekStart:'mon'},goals:{minutes:60,days:3,cat:'all',building:''},
     stats:{byCat:{esprit:0,corps:0,calme:0,foyer:0,crea:0},days:{},dailyCats:{}},history:[],
     activities:[{id:'read',name:'Lecture',cat:'esprit',min:10,mode:'focus'},{id:'walk',name:'Marche',cat:'corps',min:20,mode:'free'}],
     routineRun:null,active:null

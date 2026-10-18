@@ -39,6 +39,8 @@ test("une sauvegarde d'avant la mise à jour reste en français", () => {
     assert.equal(restored.error, undefined);
     assert.equal(restored.state.settings.lang, 'fr');
     assert.equal(restored.state.settings.grace, 20);
+    assert.equal(restored.state.settings.restDays, 2);
+    assert.deepEqual([...restored.state.pauses], []);
   }
 });
 test('damaged or unsupported backups are rejected, active sessions are excluded from exports', () => {

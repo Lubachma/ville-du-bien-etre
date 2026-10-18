@@ -16,7 +16,7 @@ function defaultState() {
   return {
     v: 2, createdAt: now, updatedAt: 0, revision: '',
     coins: 5e6, earned: 0,
-    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto' },
+    settings: { grace: 10, keepAwake: true, sound: true, theme: 'auto', lang: 'auto', restDays: 2, weekStart: 'mon', hideStreak: false },
     clock: { tz: currentTz(), maxSeen: now, lastDay: '' },
     activities: [
       { id: uid(), name: t('tpl.act.reading'), cat: 'esprit', min: 10 },
@@ -38,7 +38,7 @@ function defaultState() {
     ],
     draw: { pool: 'wishes', current: null, rerolls: 0, filters: { maxMin: 0, energy: 'any', place: 'any' } },
     goals: { minutes: 60, days: 3, cat: 'all', building: '' },
-    personal: { name: '' }, routines: [], routineRun: null,
+    personal: { name: '' }, routines: [], routineRun: null, pauses: [],
     city: {
       size: 7,
       tiles: [
@@ -149,7 +149,14 @@ function normalize(raw) {
     sound: st.sound !== false, theme: THEMES.includes(st.theme) ? st.theme : 'auto',
     // Une ville d'avant la traduction reste en français ; une ville neuve suit le téléphone.
     lang: ['auto', 'fr', 'en'].includes(st.lang) ? st.lang : 'fr',
+    // Série : 2 jours de repos par semaine, semaine du lundi, série visible.
+    restDays: [0, 1, 2].includes(st.restDays) ? st.restDays : 2,
+    weekStart: st.weekStart === 'sun' ? 'sun' : 'mon',
+    hideStreak: st.hideStreak === true,
   };
+  s.pauses = Array.isArray(raw.pauses) ? raw.pauses
+    .filter(p => p && typeof p === 'object' && isDayKey(p.from) && (p.to === '' || (isDayKey(p.to) && p.to >= p.from)))
+    .slice(-20).map(p => ({ from: p.from, to: p.to })) : [];
   const ck = obj(raw.clock);
   s.clock = {
     tz: validTz(ck.tz) ? ck.tz : s.clock.tz,
@@ -387,6 +394,7 @@ function merge3(B, L, R) {
     else M.routineRun = clone([L.routineRun, R.routineRun].filter(Boolean).sort((a,b) => b.startedAt - a.startedAt || b.id.localeCompare(a.id))[0] || null);
   }
   if (JSON.stringify(L.draw) !== JSON.stringify(B.draw)) M.draw = clone(L.draw);
+  if (JSON.stringify(L.pauses) !== JSON.stringify(B.pauses)) M.pauses = clone(L.pauses);
   const city = mergeCity(B.city, L.city, R.city);
   M.city = { size: city.size, tiles: city.tiles };
   M.coins = clamp(M.coins + city.refund, 0, COINS_MAX);

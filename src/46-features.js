@@ -2,8 +2,7 @@
    Objectifs souples, routines et personnalisation
    ========================================================================= */
 function goalWeek(day = today()) {
-  const weekday = new Date(keyToUTC(day)).getUTCDay();
-  const start = shiftDay(day, -((weekday + 6) % 7));
+  const start = weekStartOf(day);
   return { start, end: shiftDay(start, 6), days: Array.from({ length: 7 }, (_, i) => shiftDay(start, i)) };
 }
 function goalProgress(state = S, day = today()) {
