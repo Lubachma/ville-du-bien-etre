@@ -126,7 +126,7 @@ test('noms dynamiques présents', () => {
 });
 
 // Fichiers dont tout le texte visible passe par t() ; chaque tâche de traduction y ajoute les siens.
-const CLEAN_FILES = ['00-core.js', '05-i18n.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '25-challenges.js', '26-summaries.js', '27-share.js', '30-paint.js', '31-paint-buildings.js', '32-paint-decor.js', '33-paint-wonders.js', '34-paint-life.js', '35-city.js', '40-ui.js', '41-activities.js', '42-draw.js',
+const CLEAN_FILES = ['00-core.js', '05-i18n.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '25-challenges.js', '26-summaries.js', '27-share.js', '28-harmony.js', '30-paint.js', '31-paint-buildings.js', '32-paint-decor.js', '33-paint-wonders.js', '34-paint-life.js', '35-city.js', '40-ui.js', '41-activities.js', '42-draw.js',
   '43-journal.js', '44-shop.js', '45-settings.js', '46-features.js', '47-accessibility.js', '48-status.js', '49-reminder.js', '50-session.js', '52-carnet.js', '53-visits.js', '54-rituals.js', '55-share.js', '60-boot.js', '70-install.js'];
 // Exceptions purement techniques : listes de classes CSS, polices, clés de stockage, nom de l'app
 // et sélecteurs CSS qui commencent par un identifiant ou une classe (« #poolSeg button »).

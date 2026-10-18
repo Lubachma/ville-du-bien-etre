@@ -3,8 +3,9 @@ const assert = require('node:assert/strict');
 const { loadApp, plain } = require('./helpers/app.cjs');
 
 // Étape 5 : souhaits des habitants, harmonie de la ville, réglages de l'ambiance.
-const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js', '46-features.js'];
-const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'giftAmount'];
+const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
+  '28-harmony.js', '46-features.js'];
+const EXPOSE = ['defaultState', 'normalize', 'merge3', 'clone', 'giftAmount', 'harmonyCriteria', 'claimStars', 'starsEarned'];
 const T0 = Date.parse('2026-10-18T12:00:00Z');
 function app(now = '2026-10-21T10:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
@@ -45,4 +46,64 @@ test('étape 5 : fusion du souhait, cadeau en double remboursé', () => {
   L.gifts['wish:2026-10-18'] = T0; L.coins += 3e6;
   R.gifts['wish:2026-10-18'] = T0 + 1; R.coins += 3e6;
   assert.equal(a.merge3(B, L, R).coins, 10e6 + 3e6);
+});
+
+// Une ville de 7 × 7 faite des éléments donnés : [élément, x, y].
+const cityOf = list => ({ size: 7, tiles: list.map(([item, x, y], i) => ({ id: 't' + i, item, x, y, at: T0, paid: 0 })) });
+const crit = (a, list, id) => plain(a.harmonyCriteria(cityOf(list)).find(c => c.id === id));
+// Six bâtiments de la ligne du haut, et un septième.
+const SIX = [['maison', 0, 0], ['boulangerie', 1, 0], ['bibliotheque', 2, 0], ['terrain', 3, 0], ['jardin', 4, 0], ['kiosque', 5, 0]];
+const SEVEN = [...SIX, ['maison', 6, 0]];
+
+test('harmonie : les cinq critères, dans l’ordre', () => {
+  assert.deepEqual(plain(app().harmonyCriteria(cityOf([])).map(c => c.id)), ['verdure', 'variete', 'details', 'quartiers', 'lumieres']);
+});
+
+test('harmonie : verdure, juste avant et au seuil', () => {
+  const a = app();
+  assert.deepEqual(crit(a, [...SIX, ['arbre', 0, 6]], 'verdure'), { id: 'verdure', met: false, missing: 1 });
+  assert.deepEqual(crit(a, [...SIX, ['arbre', 0, 6], ['fleurs', 1, 6]], 'verdure'), { id: 'verdure', met: true, missing: 0 });
+  assert.deepEqual(crit(a, [...SEVEN, ['arbre', 0, 6], ['fleurs', 1, 6]], 'verdure'), { id: 'verdure', met: false, missing: 1 });
+  assert.equal(crit(a, [...SEVEN, ['arbre', 0, 6], ['fleurs', 1, 6], ['haie', 2, 6]], 'verdure').met, true);
+});
+
+test('harmonie : variété', () => {
+  const a = app();
+  assert.deepEqual(crit(a, [['maison', 0, 0], ['boulangerie', 2, 0], ['bibliotheque', 4, 0]], 'variete'), { id: 'variete', met: false, missing: 1 });
+  assert.equal(crit(a, [['maison', 0, 0], ['bibliotheque', 2, 0], ['terrain', 4, 0]], 'variete').met, true);
+});
+
+test('harmonie : petits détails (un décor voisin, diagonale comprise)', () => {
+  const a = app(), four = [['maison', 0, 0], ['bibliotheque', 3, 0], ['terrain', 6, 0], ['jardin', 0, 3]];
+  assert.deepEqual(crit(a, [...four, ['banc', 1, 1], ['banc', 4, 0]], 'details'), { id: 'details', met: false, missing: 1 });
+  assert.equal(crit(a, [...four, ['banc', 1, 1], ['banc', 4, 0], ['lampadaire', 5, 1]], 'details').met, true);
+  assert.deepEqual(crit(a, [['maison', 0, 0], ['bibliotheque', 3, 0], ['terrain', 6, 0], ['banc', 1, 0], ['banc', 4, 0], ['banc', 5, 0]], 'details'),
+    { id: 'details', met: false, missing: 1 });
+});
+
+test('harmonie : quartiers', () => {
+  const a = app(), lecture = [['bibliotheque', 0, 0], ['banc', 1, 0], ['arbre', 2, 0]];
+  assert.deepEqual(crit(a, lecture, 'quartiers'), { id: 'quartiers', met: false, missing: 1 });
+  assert.equal(crit(a, [...lecture, ['maison', 4, 4], ['fleurs', 5, 4], ['haie', 6, 4]], 'quartiers').met, true);
+});
+
+test('harmonie : lumières du soir', () => {
+  const a = app(), five = SIX.slice(0, 5);
+  assert.deepEqual(crit(a, five, 'lumieres'), { id: 'lumieres', met: false, missing: 1 });
+  assert.equal(crit(a, [...five, ['lampadaire', 0, 6]], 'lumieres').met, true);
+  assert.deepEqual(crit(a, [...SIX, ['lanterne', 0, 6]], 'lumieres'), { id: 'lumieres', met: false, missing: 1 });
+  assert.equal(crit(a, [...SIX, ['lanterne', 0, 6], ['lampadaire', 1, 6]], 'lumieres').met, true);
+});
+
+test('étoiles : 10 M une seule fois, gardées après un retrait', () => {
+  const a = app(), s = a.state;
+  s.city = cityOf([['arbre', 0, 0], ['fleurs', 2, 2]]);
+  const coins = s.coins;
+  assert.deepEqual(plain(a.claimStars()), ['verdure']);
+  assert.equal(s.coins, coins + 10e6);
+  assert.ok(s.gifts['star:verdure'] > 0);
+  assert.deepEqual(plain(a.claimStars()), []);
+  s.city.tiles = [];
+  assert.deepEqual(plain(a.starsEarned()), ['verdure']);
+  assert.equal(s.coins, coins + 10e6);
 });
