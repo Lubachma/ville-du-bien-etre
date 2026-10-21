@@ -3591,6 +3591,66 @@ function merge3(B, L, R) {
   return normalize(M);
 }
 
+const isRecord = v => !!v && typeof v === 'object' && !Array.isArray(v);
+// Élément d'une liste à id, avec un id qu'idOf() garde tel quel (sinon normalize() lui en donne un autre).
+const hasId = x => isRecord(x) && typeof x.id === 'string' && /^[\w-]{1,40}$/.test(x.id);
+/* Parties inconnues : ce que normalize() retire d'un document enregistré (known = normalize(raw)), écrit par une version plus
+   récente. À chaque écriture locale, elles sont reprises du document enregistré et remises dans le texte écrit, sans jamais
+   entrer dans l'état en mémoire. Un patch vaut { clé: partie }, et une partie :
+   - { value } : une clé inconnue, copiée telle quelle, ou un objet que cette version refuse et remplace par null (Rejected) ;
+   - { patch } : un objet présent des deux côtés, parcouru à son tour ;
+   - { extra, inside } : une liste à id (ListPatch), avec ses éléments inconnus et, par id, les parties inconnues des autres.
+   Les listes sans id et les valeurs simples ne donnent rien : la valeur de cette version l'emporte. La clé __proto__ est ignorée.
+   Règle pour les étapes suivantes, car cette protection repose sur elle : ne jamais changer le sens d'un champ existant (pour
+   une nouvelle donnée, ajouter un champ), et ne pas ranger de données qui comptent dans une liste sans id. */
+function unknownParts(raw, known) {
+  const patch = {};
+  for (const k of Object.keys(raw)) {
+    if (k === '__proto__') continue;
+    const r = raw[k], has = own(known, k), kn = has ? known[k] : undefined;
+    let part;
+    if (!has || (isRecord(r) && kn === null)) part = { value: r };
+    else if (isRecord(r) && isRecord(kn)) { const sub = unknownParts(r, kn); if (sub) part = { patch: sub }; }
+    else if (Array.isArray(r) && Array.isArray(kn) && kn.every(hasId)) part = unknownItems(r, kn);
+    if (part) patch[k] = part;
+  }
+  return Object.keys(patch).length ? patch : undefined;
+}
+// Liste à id : les éléments dont l'id manque dans known, et les parties inconnues des autres. Un id invalide ne donne rien
+// (normalize() a pu garder l'élément sous un autre id : il reviendrait en double) ; d'un id répété, seule compte la première
+// occurrence, comme dans normalize().
+function unknownItems(raw, known) {
+  const kept = new Map(known.map(x => [x.id, x])), seen = new Set(), extra = [], inside = new Map();
+  for (const x of raw) {
+    if (!hasId(x) || seen.has(x.id)) continue;
+    seen.add(x.id);
+    if (!kept.has(x.id)) { extra.push(x); continue; }
+    const sub = unknownParts(x, kept.get(x.id));
+    if (sub) inside.set(x.id, sub);
+  }
+  return extra.length || inside.size ? { extra, inside } : undefined;
+}
+// Remet un patch dans target, une copie JSON de l'état, sans jamais remplacer une valeur posée par cette version : une valeur
+// seulement là où cette version n'a rien (clé absente, ou null), un patch dans l'objet de même clé ou l'élément de même id s'il
+// existe encore, un élément inconnu à la fin de sa liste si son id y manque. Renvoie ce qui a été remis (undefined si rien) :
+// ce sont les parties inconnues du texte écrit.
+function graftUnknown(target, patch) {
+  const put = {};
+  for (const k of Object.keys(patch)) {
+    const part = patch[k], cur = own(target, k) ? target[k] : undefined;
+    if ('value' in part) { if (cur == null) { target[k] = part.value; put[k] = part; } }
+    else if (part.patch) { const sub = isRecord(cur) && graftUnknown(cur, part.patch); if (sub) put[k] = { patch: sub }; }
+    else if (Array.isArray(cur)) {
+      const items = new Map(cur.filter(hasId).map(x => [x.id, x])), inside = new Map();
+      for (const [id, sub] of part.inside) { const back = items.has(id) && graftUnknown(items.get(id), sub); if (back) inside.set(id, back); }
+      const extra = part.extra.filter(x => !items.has(x.id));
+      cur.push(...extra);
+      if (extra.length || inside.size) put[k] = { extra, inside };
+    }
+  }
+  return Object.keys(put).length ? put : undefined;
+}
+
 let S = defaultState();
 
 /* =========================================================================
@@ -3633,6 +3693,8 @@ const Store = {
   bootState: null,
   lsAt: -1,
   lsBase: null,
+  unknown: null,          // parties inconnues du dernier texte lu ou écrit : { raw, patch }
+  unknownRuns: 0,         // nombre de calculs de ces parties (pour les tests)
   writing: 0,
   busy: false,
   again: false,
@@ -3663,17 +3725,30 @@ const Store = {
     this.errorMsg = key ? [key, params] : null;
     if (typeof renderStorageStatus === 'function') renderStorageStatus();
   },
-  decodeLocal(raw) {
+  // Texte enregistré → { parsed, state } : l'objet lu et son état normalisé ; null s'il est illisible.
+  readText(raw) {
     try {
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid-state');
-      return normalize(parsed);
+      return { parsed, state: normalize(parsed) };
     } catch (e) {
       this.recoveryRaw = raw;
       this.warningMsg = ['storage.legacyUnreadable'];
       this.reportLocal('storage.localUnreadable');
       return null;
     }
+  },
+  decodeLocal(raw) {
+    const read = this.readText(raw);
+    return read && read.state;
+  },
+  // Parties inconnues d'un texte enregistré, calculées une fois par texte : relire le texte qu'on vient d'écrire ne coûte rien.
+  unknownFor(raw, parsed, normalized) {
+    if (!this.unknown || this.unknown.raw !== raw) {
+      this.unknownRuns++;
+      this.unknown = { raw, patch: unknownParts(parsed, normalized) };
+    }
+    return this.unknown.patch;
   },
   legacySessionIsLive(state) {
     const a = state && state.active;
@@ -3775,26 +3850,35 @@ const Store = {
     }
   },
   repairLocal() { return this.migrationPending ? this.retryMigration() : this.saveLocal(); },
-  // Écrit seulement après préservation d'un éventuel document illisible.
-  saveLocal() {
+  // Écrit seulement après préservation d'un éventuel document illisible. Pour la même ville, les parties que cette version ne
+  // connaît pas (venues d'une version plus récente) sont reprises dans le texte écrit. `replace` (restauration, « Tout
+  // recommencer ») écrit l'état tel quel : ni fusion avec un autre onglet, ni reprise.
+  saveLocal(opts = {}) {
     if (this.migrationPending) {
       this.reportMigration();
       return false;
     }
     try {
       const raw = localStorage.getItem(LS_KEY);
+      let patch;
       if (raw) {
-        const other = this.decodeLocal(raw);
+        const read = this.readText(raw), other = read && read.state;
         if (!other) { if (!this.preserveRecovery(raw)) return false; }
-        else if (!sameVersion(other, this.lsBase) && !sameVersion(other, S)) {
-          S = merge3(this.lsBase || other, S, other);
-          markChanged(other.updatedAt);
-          afterReplace();
+        else if (!opts.replace) {
+          if (!sameVersion(other, this.lsBase) && !sameVersion(other, S)) {
+            S = merge3(this.lsBase || other, S, other);
+            markChanged(other.updatedAt);
+            afterReplace();
+          }
+          if (other.createdAt === S.createdAt) patch = this.unknownFor(raw, read.parsed, other);
         }
       }
-      const json = JSON.stringify(S);
+      // Cas courant, sans partie inconnue : l'état est écrit sans copie.
+      const doc = patch ? clone(S) : S, put = patch && graftUnknown(doc, patch);
+      const json = JSON.stringify(doc);
       localStorage.setItem(LS_KEY, json);
       if (localStorage.getItem(LS_KEY) !== json) throw new Error('write-not-confirmed');
+      this.unknown = { raw: json, patch: put };
       this.lsBase = clone(S);
       this.lsAt = S.updatedAt;
       this.reportLocal('');
@@ -3980,7 +4064,8 @@ function commit(opts = {}) {
   if (Store.migrationPending) { Store.reportMigration(); return false; }
   markChanged();
   touchClock();
-  const saved = Store.saveLocal();
+  // replace : restauration ou « Tout recommencer », l'état est écrit tel quel (voir Store.saveLocal).
+  const saved = Store.saveLocal({ replace: opts.replace });
   Store.schedule(opts.flush ? 0 : 1200);
   if (!opts.silent) renderAll();
   return saved;
@@ -8800,7 +8885,8 @@ function restoreBackup(st) {
   // Une sauvegarde d'avant la mise à jour reçoit ses succès d'un coup, datés, avant que la Ville réaffichée ne note la saison
   // (qui les donnerait sinon à la date du jour). Leur message remplace celui de la restauration.
   const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet({ defer: true }) : null;
-  const saved = commit({ flush: true });
+  // La sauvegarde remplace tout : ni fusion avec un autre onglet, ni reprise de ce que gardait l'ancienne ville.
+  const saved = commit({ flush: true, replace: true });
   City.relayout();
   if (caught && (caught.achievements.length || caught.sets.length)) flushCarnetNote();
   else toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
@@ -9176,7 +9262,7 @@ function settingsReset() {
     closeSheet();
     Mode.state = null;
     refreshLang();
-    commit({ flush: true });
+    commit({ flush: true, replace: true });   // une ville neuve : rien n'est repris de l'ancienne
     City.relayout();
     toast(t('settings.resetDone'));
   });

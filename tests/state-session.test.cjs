@@ -1,32 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const path = require('node:path');
+const { storage, lockManager, stateApp: app } = require('./helpers/state-vm.cjs');
 
-const source = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '50-session.js'].map(file => fs.readFileSync(path.join(__dirname, '../src', file), 'utf8')).join('\n');
-function storage() {
-  const data = new Map();
-  return { data, fail: false, getItem(k) { return data.get(k) ?? null; }, setItem(k, v) { if (this.fail) throw new Error('QuotaExceededError'); data.set(k, String(v)); }, removeItem(k) { data.delete(k); } };
-}
-function lockManager() {
-  let queue = Promise.resolve();
-  return { request(name, options, callback) { const job = queue.then(callback); queue = job.catch(() => {}); return job; } };
-}
-function app(localStorage = storage(), locks = lockManager()) {
-  let wall = Date.parse('2026-10-17T12:00:00Z');
-  class Clock extends Date { constructor(...a) { super(...(a.length ? a : [wall])); } static now() { return wall; } }
-  const element = { hidden: true, style: { setProperty() {} }, replaceChildren() {}, focus() {}, append() {}, querySelector() { return this; }, setAttribute() {} };
-  const context = vm.createContext({ console, Date: Clock, Intl, Math, JSON, setTimeout, clearTimeout, setInterval: () => 1, clearInterval() {}, localStorage,
-    navigator: { locks }, performance: { now: () => wall },
-    window: { matchMedia: () => ({ matches: true }) },
-    document: { visibilityState: 'visible', hasFocus: () => true, querySelector: () => element, querySelectorAll: () => [], createElement: () => element },
-    currentTab: 'activites', Mode: {}, Selection: {}, City: { relayout() {} }, sheetKeepOnSync: true,
-    renderStorageStatus() {}, renderSyncStatus() {}, renderAll() {}, renderVille() {}, updateInert() {}, closeSheet() {}, toast() {}, bump() {},
-  });
-  vm.runInContext(source + `\nshowRun = () => {}; showFail = () => {}; showSuccess = () => {}; setWake = () => {}; renderTimer = () => {}; Chime.rest = () => {}; Chime.play = () => {};\nthis.api = { Store, defaultState, normalize, merge3, mergeList, startSession, completeSession, failSession, checkActive, tick, onLeave, endRun, persistRun, commit, activeState, get state() { return S; }, set state(v) { S = normalize(v); }, get run() { return run; } };`, context);
-  return { ...context.api, api: context.api, context, localStorage, advance(ms) { wall += ms; }, init() { context.api.Store.init(); } };
-}
 const copy = obj => JSON.parse(JSON.stringify(obj));
 const settle = () => new Promise(resolve => setTimeout(resolve, 10));
 

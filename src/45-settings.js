@@ -59,7 +59,8 @@ function restoreBackup(st) {
   // Une sauvegarde d'avant la mise à jour reçoit ses succès d'un coup, datés, avant que la Ville réaffichée ne note la saison
   // (qui les donnerait sinon à la date du jour). Leur message remplace celui de la restauration.
   const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet({ defer: true }) : null;
-  const saved = commit({ flush: true });
+  // La sauvegarde remplace tout : ni fusion avec un autre onglet, ni reprise de ce que gardait l'ancienne ville.
+  const saved = commit({ flush: true, replace: true });
   City.relayout();
   if (caught && (caught.achievements.length || caught.sets.length)) flushCarnetNote();
   else toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
@@ -435,7 +436,7 @@ function settingsReset() {
     closeSheet();
     Mode.state = null;
     refreshLang();
-    commit({ flush: true });
+    commit({ flush: true, replace: true });   // une ville neuve : rien n'est repris de l'ancienne
     City.relayout();
     toast(t('settings.resetDone'));
   });
