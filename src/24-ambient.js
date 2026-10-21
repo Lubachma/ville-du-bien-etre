@@ -88,6 +88,13 @@ function giftAmount(key) {
   return k.startsWith('visit:') ? GIFTS.visit : k.startsWith('fest:anniversaire:') ? GIFTS.birthday : k.startsWith('fest:') ? GIFTS.fest
     : k.startsWith('chal:') ? GIFTS.challenge : k.startsWith('wish:') ? GIFTS.townWish : k.startsWith('star:') ? GIFTS.star : 0;
 }
+// Dernier jour récompensé d'un cadeau du jour (« visit: », « wish: »), d'après les clés des cadeaux reçus : ces cadeaux ne se
+// reçoivent jamais pour un jour antérieur, même avec la date du téléphone reculée.
+function lastGiftDay(prefix) {
+  let last = '';
+  for (const key of Object.keys(S.gifts || {})) if (key.startsWith(prefix) && key.slice(prefix.length) > last) last = key.slice(prefix.length);
+  return last;
+}
 // Premier jour de la fête, ce jour-là ou après.
 function nextFestival(id, day) {
   for (let i = 0; i < 400; i++) { const d = shiftDay(day, i); if (festivalsOn(d).some(f => f.id === id)) return d; }

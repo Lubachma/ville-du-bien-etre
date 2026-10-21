@@ -108,24 +108,84 @@ test("horloge : le ciel suit l'heure réelle", () => {
 
 test('horloge : aucun cadeau deux fois', () => {
   const disk = town(), a = open(disk, VISITS), coins = a.api.state.coins;
-  // Cadeau du visiteur reçu le 25 pendant l'avance, puis celui du 21 une fois l'heure remise.
+  // Cadeau du visiteur reçu le 25 pendant l'avance. L'heure remise au 21, celui du 21 n'est plus offert : jamais un jour
+  // antérieur au dernier cadeau reçu, et la fiche du visiteur ne propose pas de bouton.
   a.setNow(OCT25);
   assert.equal(a.claimVisitGift('2026-10-25'), true);
   a.commit({ silent: true });
   a.setNow(BACK);
-  assert.equal(a.claimVisitGift('2026-10-21'), true);
-  a.commit({ silent: true });
-  // Le vrai 25 arrive : le cadeau de ce jour est déjà reçu.
+  assert.equal(a.today(), '2026-10-21');
+  assert.equal(a.claimVisitGift('2026-10-21'), false);
+  assert.equal(a.context.visitGiftOpen('2026-10-21'), false);
+  // Le vrai 25 arrive : le cadeau de ce jour est déjà reçu ; celui du lendemain est de nouveau offert.
   const b = open(disk, { now: '2026-10-25T12:00:00+01:00', ...VISITS });
   assert.equal(b.claimVisitGift('2026-10-25'), false);
+  b.setNow('2026-10-26T12:00:00+01:00');
+  assert.equal(b.claimVisitGift('2026-10-26'), true);
   assert.equal(b.api.state.coins, coins + 2 * 2e6);
+});
+
+test('horloge : aucun cadeau de souhait à rebours', () => {
+  // Même règle que pour le visiteur : un souhait d'un jour antérieur au dernier souhait récompensé est exaucé, sans cadeau. Un
+  // tirage ne donne jamais un tel souhait (il suit toujours le précédent) : la règle est une garde.
+  const grant = rewarded => {
+    const a = open(town(), { files: ['28-harmony.js'], expose: ['claimTownWish'] }), s = a.api.state;
+    s.city.tiles = [{ id: 'maison', item: 'maison', x: 3, y: 3, at: Date.parse(OCT21), paid: 0 }];
+    s.townWish = { day: '2026-10-21', tile: 'maison', item: 'fleurs' };
+    s.gifts['wish:' + rewarded] = Date.parse(OCT21);
+    const coins = s.coins;
+    s.city.tiles.push({ id: 'fleurs', item: 'fleurs', x: 4, y: 3, at: Date.parse(OCT21), paid: 1e6 });
+    assert.ok(a.claimTownWish());
+    return { paid: s.coins - coins, rewarded: !!s.gifts['wish:2026-10-21'] };
+  };
+  assert.deepEqual(grant('2026-10-25'), { paid: 0, rewarded: false });
+  assert.deepEqual(grant('2026-10-20'), { paid: 3e6, rewarded: true });
 });
 
 test("horloge : une ville figée par l'étape 6 se répare", () => {
   // Un enregistrement fait pendant l'avance avait poussé l'horloge au 25, sans séance ce jour-là.
   assert.equal(open(town({ maxSeen: Date.parse(OCT25), lastDay: '2026-10-20' })).today(), '2026-10-21');
-  // Une séance réussie ce jour-là garde son jour : la ville reste au 25 jusqu'à ce que l'heure réelle la rattrape.
+  // Une séance réussie ce jour-là n'est pas une ville figée : elle garde son jour (risque accepté d'A4), et la ville aussi.
   assert.equal(open(town({ maxSeen: Date.parse(OCT25), lastDay: '2026-10-25' })).today(), '2026-10-25');
+});
+
+test("horloge : une séance future n'est pas mise en banque", async () => {
+  // Pendant l'avance, une séance réussie le 24, puis une séance abandonnée le 25. L'heure est remise au 21 ; l'app est rouverte,
+  // un réglage enregistré, puis rouverte encore.
+  const disk = town(), a = open(disk);
+  a.setNow('2026-10-24T10:00:00+02:00');
+  assert.equal((await session(a)).day, '2026-10-24');
+  a.setNow('2026-10-25T10:02:00+01:00');
+  await a.startSession({ name: 'Lecture', cat: 'esprit', min: 10, mode: 'free' });
+  await a.failSession('abandon', 0);
+  assert.deepEqual([a.api.state.history[0].ok, a.api.state.history[0].day], [false, '2026-10-25']);
+  const b = open(disk, { now: '2026-10-21T10:03:00+02:00' });
+  b.api.state.settings.sound = false;
+  b.commit({ silent: true });
+  // La ville reste au jour de la dernière fin de séance, l'abandon du 25 : rien ne se date avant la séance réussie du 24, et
+  // les jours du 21 au 23 ne peuvent plus se remplir derrière elle.
+  const c = open(disk, { now: '2026-10-21T10:04:00+02:00' });
+  assert.equal(c.today(), '2026-10-25');
+  assert.equal((await session(c)).day, '2026-10-25');
+  assert.equal(c.api.state.stats.days['2026-10-24'], 10);
+  assert.deepEqual(['2026-10-21', '2026-10-22', '2026-10-23'].filter(day => c.api.state.stats.days[day]), []);
+});
+
+test('horloge : une heure reculée pendant une séance ne fait rien dater avant elle', async () => {
+  // Une Concentration commence le 22 à 0 h 01 ; pendant la séance, l'heure du téléphone recule au 21 à 23 h 50, et y reste.
+  // Le chrono de la séance, lui, ne recule pas.
+  const disk = town(), a = open(disk, { now: '2026-10-22T00:01:00+02:00' });
+  let chrono = 0;
+  a.context.performance.now = () => chrono;
+  await a.startSession({ name: 'Lecture', cat: 'esprit', min: 5, mode: 'focus' });
+  a.setNow('2026-10-21T23:50:00+02:00');
+  for (let second = 0; second < 5 * 60; second++) { chrono += 1000; a.advance(1000); a.tick(); }
+  await settle(); await settle();
+  assert.deepEqual([a.api.state.history[0].ok, a.api.state.history[0].day], [true, '2026-10-22']);
+  // L'app rouverte, l'heure toujours en retard : la séance suivante ne se date pas du 21, la veille de la dernière séance.
+  const b = open(disk, { now: '2026-10-21T23:57:00+02:00' });
+  assert.equal(b.api.state.clock.lastDay, '2026-10-22');
+  assert.equal((await session(b)).day, '2026-10-22');
 });
 
 test("horloge : restauration d'une sauvegarde datée du futur", () => {

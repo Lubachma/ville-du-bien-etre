@@ -4095,19 +4095,22 @@ const Store = {
   },
 };
 
-// Horloge de la ville (maxSeen) : l'heure la plus avancée vue à une fin de séance (réussie, interrompue, abandonnée ou reprise
-// après fermeture, voir pushHistory), jamais aux autres enregistrements. Une heure avancée par erreur puis remise ne fige donc
-// rien tant qu'aucune séance n'a eu lieu entre-temps ; une séance faite pendant l'avance garde son jour, et les suivantes s'y
-// rattachent jusqu'à ce que l'heure réelle le rattrape.
-function touchClock() {
-  const now = Date.now();
-  if (now > S.clock.maxSeen) S.clock.maxSeen = now;
+// Horloge de la ville (maxSeen) : elle n'avance qu'à une fin de séance (réussie, interrompue, abandonnée ou reprise après
+// fermeture, voir pushHistory), jamais aux autres enregistrements. Elle va alors jusqu'à l'heure du téléphone, et au moins
+// jusqu'à l'heure où la séance a commencé, car le jour de la séance est fixé à son départ : le dernier jour de séance (lastDay)
+// ne dépasse donc jamais le jour de maxSeen. Une heure avancée par erreur puis remise ne fige rien tant qu'aucune séance n'a eu
+// lieu entre-temps.
+function touchClock(startedAt = 0) {
+  const seen = Math.max(Date.now(), startedAt);
+  if (seen > S.clock.maxSeen) S.clock.maxSeen = seen;
 }
-// À l'ouverture : une ville figée par l'étape 6, où chaque enregistrement faisait avancer l'horloge. Son heure est restée dans le
-// futur, après une heure avancée par erreur puis remise, sans séance réussie ce jour-là : elle reprend l'heure du téléphone.
+// À l'ouverture : une ville figée, son heure restée dans le futur après une heure avancée par erreur puis remise. C'est l'œuvre
+// de l'étape 6, où chaque enregistrement faisait avancer l'horloge, ou d'une séance manquée pendant l'avance. Sans séance réussie
+// ce jour-là ni datée après aujourd'hui, elle reprend l'heure du téléphone. Une séance réussie datée d'un jour à venir garde
+// son jour, et la ville aussi, jusqu'à ce que l'heure réelle le rattrape (risque accepté d'A4).
 function healClock() {
-  const now = Date.now();
-  if (S.clock.maxSeen > now + 60000 && dayOf(S.clock.maxSeen) > S.clock.lastDay) S.clock.maxSeen = now;
+  const now = Date.now(), { maxSeen, lastDay } = S.clock;
+  if (maxSeen > now + 60000 && dayOf(maxSeen) > lastDay && lastDay <= dayOf(now)) S.clock.maxSeen = now;
 }
 function commit(opts = {}) {
   if (Store.migrationPending) { Store.reportMigration(); return false; }
@@ -4671,6 +4674,13 @@ function giftAmount(key) {
   return k.startsWith('visit:') ? GIFTS.visit : k.startsWith('fest:anniversaire:') ? GIFTS.birthday : k.startsWith('fest:') ? GIFTS.fest
     : k.startsWith('chal:') ? GIFTS.challenge : k.startsWith('wish:') ? GIFTS.townWish : k.startsWith('star:') ? GIFTS.star : 0;
 }
+// Dernier jour récompensé d'un cadeau du jour (« visit: », « wish: »), d'après les clés des cadeaux reçus : ces cadeaux ne se
+// reçoivent jamais pour un jour antérieur, même avec la date du téléphone reculée.
+function lastGiftDay(prefix) {
+  let last = '';
+  for (const key of Object.keys(S.gifts || {})) if (key.startsWith(prefix) && key.slice(prefix.length) > last) last = key.slice(prefix.length);
+  return last;
+}
 // Premier jour de la fête, ce jour-là ou après.
 function nextFestival(id, day) {
   for (let i = 0; i < 400; i++) { const d = shiftDay(day, i); if (festivalsOn(d).some(f => f.id === id)) return d; }
@@ -5184,13 +5194,14 @@ function drawTownWish(day = today()) {
   S.townWish = { day, tile: pick.tile, item: pick.item };
   return true;
 }
-// Souhait exaucé quand le décor voulu est dans une case voisine du bâtiment : 3 M, une seule fois. N'enregistre pas.
+// Souhait exaucé quand le décor voulu est dans une case voisine du bâtiment : 3 M, une seule fois, et jamais pour un jour antérieur
+// au dernier souhait récompensé. N'enregistre pas.
 function claimTownWish() {
   const tile = townWishTile(), w = S.townWish;
   if (!tile || !neighbourTiles(S.city, tile).some(other => other.item === w.item)) return null;
   w.done = nowTs();
   const key = 'wish:' + w.day;
-  if (!S.gifts[key]) {
+  if (lastGiftDay('wish:') < w.day) {
     S.gifts[key] = w.done;
     S.coins = clamp(S.coins + GIFTS.townWish, 0, COINS_MAX);
   }
@@ -10351,11 +10362,12 @@ function endRun() {
   run = null;
   return r;
 }
-// Chaque fin de séance passe par ici : c'est elle, et elle seule, qui fait avancer l'horloge de la ville (voir touchClock).
-function pushHistory(e) {
+// Chaque fin de séance passe par ici : c'est elle, et elle seule, qui fait avancer l'horloge de la ville, au moins jusqu'à
+// l'heure de départ de la séance (startedAt, voir touchClock).
+function pushHistory(e, startedAt) {
   S.history.unshift(e);
   if (S.history.length > HISTORY_MAX) S.history.length = HISTORY_MAX;
-  touchClock();
+  touchClock(startedAt);
 }
 // Un échec rend le tirage : on ne peut pas se refaire un tirage gratuit en abandonnant.
 function restoreDraw(a) {
@@ -10385,7 +10397,7 @@ async function failSession(reason, awayMs) {
     endRun();
     if (S.history.some(e => e.id === id)) { S.active = null; commit({ silent: true }); return true; }
     const e = sessionHistory(a, false, elapsedSec, { reason, away: Math.round((awayMs || 0) / 1000) });
-    pushHistory(e);
+    pushHistory(e, a.startedAt);
     addEffort(a, elapsedSec, e.day);
     if (typeof addCompanionMinutes === 'function') addCompanionMinutes(elapsedSec / 60);   // le temps fait ensemble compte aussi
     S.stats.ko += 1;
@@ -10409,7 +10421,7 @@ function failInterrupted(silent) {
     return;
   }
   const elapsedSec = Math.floor(a.elapsedSec || 0), e = sessionHistory(a, false, elapsedSec, { reason: 'closed' });
-  pushHistory(e);
+  pushHistory(e, a.startedAt);
   addEffort(a, elapsedSec, e.day);
   if (typeof addCompanionMinutes === 'function') addCompanionMinutes(elapsedSec / 60);
   S.stats.ko += 1;
@@ -10440,7 +10452,7 @@ async function completeSession() {
     cats[a.cat] = (cats[a.cat] || 0) + a.min;
     S.stats.ok += 1;
     S.clock.lastDay = maxDay(S.clock.lastDay, day);
-    pushHistory(sessionHistory(a, true, a.min * 60, { reward: total, day }));
+    pushHistory(sessionHistory(a, true, a.min * 60, { reward: total, day }), a.startedAt);
     S.active = null;
     if (typeof completeTask === 'function') completeTask(a);
     if (typeof onRoutineSessionComplete === 'function') onRoutineSessionComplete(a, total);
@@ -10999,11 +11011,12 @@ function meetVisitor(id, day) {
   S.visits[id] = v ? { first: v.first, count: v.count + 1, last: day } : { first: nowTs(), count: 1, last: day };
   return { first: !v };
 }
-// Cadeau du visiteur : une fois par jour, et seulement pour aujourd'hui (l'horloge reculée n'en donne pas d'autre).
+// Cadeau du visiteur encore offert : seulement pour aujourd'hui, une fois par jour, et jamais pour un jour antérieur au dernier
+// reçu (l'horloge reculée n'en donne pas d'autre).
+function visitGiftOpen(day) { return day === today() && lastGiftDay('visit:') < day; }
 function claimVisitGift(day) {
-  const key = 'visit:' + day;
-  if (day !== today() || S.gifts[key]) return false;
-  S.gifts[key] = nowTs();
+  if (!visitGiftOpen(day)) return false;
+  S.gifts['visit:' + day] = nowTs();
   S.coins = clamp(S.coins + GIFTS.visit, 0, COINS_MAX);
   return true;
 }
@@ -11017,7 +11030,7 @@ function openVisitor() {
     const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
     City.visitorThumb(cv, v.id, 96);
     const line = t('visitor.' + v.id + '.line' + (1 + Math.floor(chance(amb.day + ':line') * 3)));
-    const gift = S.gifts['visit:' + amb.day]
+    const gift = !visitGiftOpen(amb.day)
       ? h('p', { class: 'note' }, t('visit.giftDone'))
       : h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => {
         if (!claimVisitGift(amb.day)) {

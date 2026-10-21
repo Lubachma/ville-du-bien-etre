@@ -14,11 +14,12 @@ function meetVisitor(id, day) {
   S.visits[id] = v ? { first: v.first, count: v.count + 1, last: day } : { first: nowTs(), count: 1, last: day };
   return { first: !v };
 }
-// Cadeau du visiteur : une fois par jour, et seulement pour aujourd'hui (l'horloge reculée n'en donne pas d'autre).
+// Cadeau du visiteur encore offert : seulement pour aujourd'hui, une fois par jour, et jamais pour un jour antérieur au dernier
+// reçu (l'horloge reculée n'en donne pas d'autre).
+function visitGiftOpen(day) { return day === today() && lastGiftDay('visit:') < day; }
 function claimVisitGift(day) {
-  const key = 'visit:' + day;
-  if (day !== today() || S.gifts[key]) return false;
-  S.gifts[key] = nowTs();
+  if (!visitGiftOpen(day)) return false;
+  S.gifts['visit:' + day] = nowTs();
   S.coins = clamp(S.coins + GIFTS.visit, 0, COINS_MAX);
   return true;
 }
@@ -32,7 +33,7 @@ function openVisitor() {
     const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
     City.visitorThumb(cv, v.id, 96);
     const line = t('visitor.' + v.id + '.line' + (1 + Math.floor(chance(amb.day + ':line') * 3)));
-    const gift = S.gifts['visit:' + amb.day]
+    const gift = !visitGiftOpen(amb.day)
       ? h('p', { class: 'note' }, t('visit.giftDone'))
       : h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => {
         if (!claimVisitGift(amb.day)) {

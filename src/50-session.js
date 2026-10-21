@@ -474,11 +474,12 @@ function endRun() {
   run = null;
   return r;
 }
-// Chaque fin de séance passe par ici : c'est elle, et elle seule, qui fait avancer l'horloge de la ville (voir touchClock).
-function pushHistory(e) {
+// Chaque fin de séance passe par ici : c'est elle, et elle seule, qui fait avancer l'horloge de la ville, au moins jusqu'à
+// l'heure de départ de la séance (startedAt, voir touchClock).
+function pushHistory(e, startedAt) {
   S.history.unshift(e);
   if (S.history.length > HISTORY_MAX) S.history.length = HISTORY_MAX;
-  touchClock();
+  touchClock(startedAt);
 }
 // Un échec rend le tirage : on ne peut pas se refaire un tirage gratuit en abandonnant.
 function restoreDraw(a) {
@@ -508,7 +509,7 @@ async function failSession(reason, awayMs) {
     endRun();
     if (S.history.some(e => e.id === id)) { S.active = null; commit({ silent: true }); return true; }
     const e = sessionHistory(a, false, elapsedSec, { reason, away: Math.round((awayMs || 0) / 1000) });
-    pushHistory(e);
+    pushHistory(e, a.startedAt);
     addEffort(a, elapsedSec, e.day);
     if (typeof addCompanionMinutes === 'function') addCompanionMinutes(elapsedSec / 60);   // le temps fait ensemble compte aussi
     S.stats.ko += 1;
@@ -532,7 +533,7 @@ function failInterrupted(silent) {
     return;
   }
   const elapsedSec = Math.floor(a.elapsedSec || 0), e = sessionHistory(a, false, elapsedSec, { reason: 'closed' });
-  pushHistory(e);
+  pushHistory(e, a.startedAt);
   addEffort(a, elapsedSec, e.day);
   if (typeof addCompanionMinutes === 'function') addCompanionMinutes(elapsedSec / 60);
   S.stats.ko += 1;
@@ -563,7 +564,7 @@ async function completeSession() {
     cats[a.cat] = (cats[a.cat] || 0) + a.min;
     S.stats.ok += 1;
     S.clock.lastDay = maxDay(S.clock.lastDay, day);
-    pushHistory(sessionHistory(a, true, a.min * 60, { reward: total, day }));
+    pushHistory(sessionHistory(a, true, a.min * 60, { reward: total, day }), a.startedAt);
     S.active = null;
     if (typeof completeTask === 'function') completeTask(a);
     if (typeof onRoutineSessionComplete === 'function') onRoutineSessionComplete(a, total);

@@ -77,13 +77,14 @@ function drawTownWish(day = today()) {
   S.townWish = { day, tile: pick.tile, item: pick.item };
   return true;
 }
-// Souhait exaucé quand le décor voulu est dans une case voisine du bâtiment : 3 M, une seule fois. N'enregistre pas.
+// Souhait exaucé quand le décor voulu est dans une case voisine du bâtiment : 3 M, une seule fois, et jamais pour un jour antérieur
+// au dernier souhait récompensé. N'enregistre pas.
 function claimTownWish() {
   const tile = townWishTile(), w = S.townWish;
   if (!tile || !neighbourTiles(S.city, tile).some(other => other.item === w.item)) return null;
   w.done = nowTs();
   const key = 'wish:' + w.day;
-  if (!S.gifts[key]) {
+  if (lastGiftDay('wish:') < w.day) {
     S.gifts[key] = w.done;
     S.coins = clamp(S.coins + GIFTS.townWish, 0, COINS_MAX);
   }

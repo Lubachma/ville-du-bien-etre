@@ -55,7 +55,7 @@ Le reste de l'analyse (performance, acquisition, rétention) est classé pour le
 
 - **Une régression pour les villes existantes** : pièces, série, succès, compagnon ou ville modifiés à l'ouverture de la nouvelle version.
 - **Changer une règle du jeu** (gains, prix, série, cadeaux) au-delà de ce que dit ce document.
-- **Rendre la triche à l'horloge plus facile** qu'aujourd'hui pour la série et les cadeaux.
+- **Rendre la triche à l'horloge plus facile** qu'aujourd'hui pour les cadeaux. Pour la série, voir le prix accepté d'A4.
 - **Un rechargement automatique qui interrompt une séance** ou efface une saisie en cours.
 - **Des textes qui débordent à 320 px**, en français comme en anglais.
 
@@ -137,7 +137,8 @@ Aujourd'hui, tout enregistrement fait avancer l'horloge de la ville jusqu'à l'h
 **Ce qui est décidé**
 - **Seules les fins de séance font avancer l'horloge de la ville** (`maxSeen`) : réussie, interrompue, abandonnée ou reprise après fermeture. Les autres enregistrements n'y touchent plus.
 - **Le ciel suit toujours l'heure réelle du téléphone** : la lumière, le moment de la journée et la tour de l'horloge. **Le jour garde l'anti-recul** : météo, visiteur, fêtes et date des séances.
-- **Conséquence voulue** : la triche n'est pas plus facile qu'aujourd'hui pour la série et les cadeaux, puisqu'une séance ne se date jamais avant la dernière séance. Une horloge avancée puis remise ne fige plus rien si aucune séance n'a eu lieu entre-temps.
+- **Conséquence voulue** : une séance ne se date jamais avant la dernière séance, et un cadeau de visiteur ou de souhait ne se reçoit jamais pour un jour antérieur au dernier cadeau du même genre. Une horloge avancée puis remise ne fige plus rien si aucune séance n'a eu lieu entre-temps.
+- **Prix accepté** : reculer la date du téléphone permet de dater une séance d'un jour manqué après la dernière séance, même si l'app a été ouverte entre-temps (avant cette étape, seulement si elle ne l'avait pas été). Toute protection plus forte ramènerait la ville figée ; le jeu est solo et sans classement.
 - **Risque accepté** : une séance faite pendant que l'horloge était en avance garde ce jour-là. Les suivantes s'y rattachent jusqu'à ce que la vraie date le rattrape, comme aujourd'hui.
 
 ### A5. Les chiffres disent vrai
@@ -350,5 +351,6 @@ Un nom de ville long se coupe au milieu des mots, sur 5 à 7 lignes.
 - **Parties inconnues gardées telles quelles.** Une donnée invalide venue d'une version future reste dans le stockage tant que cette version l'ignore. C'est sans gravité : chaque version la retire de sa lecture.
 - **Rechargement automatique.** Il n'a lieu qu'au repos. Une fenêtre ouverte le retarde, et le bandeau reste en attendant.
 - **Horloge.** Une séance faite pendant que l'horloge était en avance garde ce jour-là (A4).
+- **Horloge réparée au démarrage seulement.** Une fusion avec un onglet resté sur l'étape 6 peut refiger la ville jusqu'au démarrage suivant.
 - **WebKit dans le workflow.** La vérification est plus longue, environ 5 minutes de plus. Si la tâche WebKit devient instable, elle reste séparée et n'empêche pas de publier.
 - **Focus restitué.** Un élément redessiné sans clé stable ramène le focus au titre de la vue : c'est mieux que `body`, mais moins précis. Les tests couvrent les actions listées en D1.

@@ -1084,19 +1084,22 @@ const Store = {
   },
 };
 
-// Horloge de la ville (maxSeen) : l'heure la plus avancée vue à une fin de séance (réussie, interrompue, abandonnée ou reprise
-// après fermeture, voir pushHistory), jamais aux autres enregistrements. Une heure avancée par erreur puis remise ne fige donc
-// rien tant qu'aucune séance n'a eu lieu entre-temps ; une séance faite pendant l'avance garde son jour, et les suivantes s'y
-// rattachent jusqu'à ce que l'heure réelle le rattrape.
-function touchClock() {
-  const now = Date.now();
-  if (now > S.clock.maxSeen) S.clock.maxSeen = now;
+// Horloge de la ville (maxSeen) : elle n'avance qu'à une fin de séance (réussie, interrompue, abandonnée ou reprise après
+// fermeture, voir pushHistory), jamais aux autres enregistrements. Elle va alors jusqu'à l'heure du téléphone, et au moins
+// jusqu'à l'heure où la séance a commencé, car le jour de la séance est fixé à son départ : le dernier jour de séance (lastDay)
+// ne dépasse donc jamais le jour de maxSeen. Une heure avancée par erreur puis remise ne fige rien tant qu'aucune séance n'a eu
+// lieu entre-temps.
+function touchClock(startedAt = 0) {
+  const seen = Math.max(Date.now(), startedAt);
+  if (seen > S.clock.maxSeen) S.clock.maxSeen = seen;
 }
-// À l'ouverture : une ville figée par l'étape 6, où chaque enregistrement faisait avancer l'horloge. Son heure est restée dans le
-// futur, après une heure avancée par erreur puis remise, sans séance réussie ce jour-là : elle reprend l'heure du téléphone.
+// À l'ouverture : une ville figée, son heure restée dans le futur après une heure avancée par erreur puis remise. C'est l'œuvre
+// de l'étape 6, où chaque enregistrement faisait avancer l'horloge, ou d'une séance manquée pendant l'avance. Sans séance réussie
+// ce jour-là ni datée après aujourd'hui, elle reprend l'heure du téléphone. Une séance réussie datée d'un jour à venir garde
+// son jour, et la ville aussi, jusqu'à ce que l'heure réelle le rattrape (risque accepté d'A4).
 function healClock() {
-  const now = Date.now();
-  if (S.clock.maxSeen > now + 60000 && dayOf(S.clock.maxSeen) > S.clock.lastDay) S.clock.maxSeen = now;
+  const now = Date.now(), { maxSeen, lastDay } = S.clock;
+  if (maxSeen > now + 60000 && dayOf(maxSeen) > lastDay && lastDay <= dayOf(now)) S.clock.maxSeen = now;
 }
 function commit(opts = {}) {
   if (Store.migrationPending) { Store.reportMigration(); return false; }
