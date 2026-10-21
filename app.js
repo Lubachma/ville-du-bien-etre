@@ -7181,6 +7181,7 @@ const City = (() => {
     updateInert();
     layout(); draw();
     $('#cityExpand').focus({ preventScroll: true });
+    if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
   }
   // Visite : la ville d'un code s'ouvre en grand, avec son nom, son nombre d'éléments et la taille de son terrain. Si la vue
   // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose.
@@ -8015,6 +8016,8 @@ function closeSheet() {
   if (cb) cb();
   if (op && op.isConnected && typeof op.focus === 'function' && !op.closest('[inert]')) op.focus({ preventScroll: true });
   City.wake();
+  // Un onglet en retard se recharge juste après ce que le même geste lance ensuite (une autre fenêtre, une séance), s'il est alors au repos.
+  if (typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0);
 }
 function announce(msg) {
   const live = $('#live');
@@ -9753,6 +9756,16 @@ function renderPwaStatus() {
       pwa.activate();
     } }, t('pwa.updateButton')));
 }
+// Un onglet resté sur l'ancienne version (la mise à jour a été acceptée dans un autre onglet) se recharge de lui-même dès qu'il est au repos.
+// Une séance qui tourne ou démarre ici le retient. Page visible, il attend aussi qu'il n'y ait plus ni fenêtre, ni écran de séance, ni vue en
+// grand (donc ni visite d'une ville amie), ni pose ; en arrière-plan, seule la séance le retient. Le bandeau « Mettre à jour » reste affiché.
+function reloadWhenIdle() {
+  const pwa = window.VillePWA;
+  if (!pwa || !pwa.reloadAvailable || pwa.reloading) return;
+  if (run || beginning) return;
+  if (document.visibilityState === 'visible' && ['#sheet', '#session', '#cityBig', '#placebar'].some(selector => !$(selector).hidden)) return;
+  pwa.activate();
+}
 
 function openHelp() {
   openSheet(t('help.title'), body => {
@@ -10065,8 +10078,10 @@ function openWakeWarning(o, wake) {
       h('label', { class: 'check', for: 'wakeAck' }, ack, h('span', {}, t('wake.dontWarn'))),
       h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'button', onclick: () => {
         if (ack.checked) { try { localStorage.setItem(LS_WAKE_ACK, '1'); } catch (e) { /* ignore */ } }
+        // La séance ne tourne qu'au prochain tour de verrou : jusque-là, elle compte déjà comme en cours pour un onglet en retard.
+        beginning = true;
         closeSheet();
-        startSession(o);
+        startSession(o).finally(() => { beginning = false; });
       } }, icon('play'), t('wake.start')),
       h('button', { class: 'btn btn-ghost btn-block', type: 'button', onclick: closeSheet }, t('common.cancel')));
   }, { keep: true, onClose: () => Chime.rest(3000) });
@@ -10417,6 +10432,8 @@ function closeSession() {
   if (tab) tab.focus({ preventScroll: true });
   // Une ville amie reçue pendant la séance : elle s'ouvre maintenant, après ce que le bouton de l'écran de fin a lancé.
   if (typeof openPendingVisit === 'function') setTimeout(openPendingVisit, 0);
+  // Un onglet en retard se recharge juste après, si ni la boutique, ni une nouvelle séance, ni cette visite ne l'ont retenu.
+  if (typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0);
 }
 function showResult(build) {
   const res = $('#sessResult');
@@ -11766,7 +11783,8 @@ function bindEvents() {
   // Présence pendant une session + resynchronisation au retour
   document.addEventListener('visibilitychange', () => {
     updatePresence();
-    if (document.visibilityState === 'hidden') Store.flush();
+    // En arrière-plan, l'état est enregistré, puis un onglet resté sur l'ancienne version se recharge (hors séance).
+    if (document.visibilityState === 'hidden') { Store.flush(); reloadWhenIdle(); }
     // Un onglet ouvert en arrière-plan : le bilan dû s'ouvre quand il devient visible.
     else { Store.pull(); checkActive(); refreshDay(); City.wake(); maybeOpenRitual(); }
   });
@@ -11814,7 +11832,7 @@ function boot(hotData) {
   fillSelects();
   enhanceActivityForms();
   setupAccessibility();
-  window.addEventListener('ville:pwa', renderPwaStatus);
+  window.addEventListener('ville:pwa', () => { renderPwaStatus(); reloadWhenIdle(); });
   bindEvents();
   City.layout();
   // Ville d'avant la mise à jour : ses succès et ses ensembles déjà mérités, datés, avant le premier affichage de la Ville

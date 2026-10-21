@@ -72,7 +72,8 @@ function bindEvents() {
   // Présence pendant une session + resynchronisation au retour
   document.addEventListener('visibilitychange', () => {
     updatePresence();
-    if (document.visibilityState === 'hidden') Store.flush();
+    // En arrière-plan, l'état est enregistré, puis un onglet resté sur l'ancienne version se recharge (hors séance).
+    if (document.visibilityState === 'hidden') { Store.flush(); reloadWhenIdle(); }
     // Un onglet ouvert en arrière-plan : le bilan dû s'ouvre quand il devient visible.
     else { Store.pull(); checkActive(); refreshDay(); City.wake(); maybeOpenRitual(); }
   });
@@ -120,7 +121,7 @@ function boot(hotData) {
   fillSelects();
   enhanceActivityForms();
   setupAccessibility();
-  window.addEventListener('ville:pwa', renderPwaStatus);
+  window.addEventListener('ville:pwa', () => { renderPwaStatus(); reloadWhenIdle(); });
   bindEvents();
   City.layout();
   // Ville d'avant la mise à jour : ses succès et ses ensembles déjà mérités, datés, avant le premier affichage de la Ville

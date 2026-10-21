@@ -56,6 +56,16 @@ function renderPwaStatus() {
       pwa.activate();
     } }, t('pwa.updateButton')));
 }
+// Un onglet resté sur l'ancienne version (la mise à jour a été acceptée dans un autre onglet) se recharge de lui-même dès qu'il est au repos.
+// Une séance qui tourne ou démarre ici le retient. Page visible, il attend aussi qu'il n'y ait plus ni fenêtre, ni écran de séance, ni vue en
+// grand (donc ni visite d'une ville amie), ni pose ; en arrière-plan, seule la séance le retient. Le bandeau « Mettre à jour » reste affiché.
+function reloadWhenIdle() {
+  const pwa = window.VillePWA;
+  if (!pwa || !pwa.reloadAvailable || pwa.reloading) return;
+  if (run || beginning) return;
+  if (document.visibilityState === 'visible' && ['#sheet', '#session', '#cityBig', '#placebar'].some(selector => !$(selector).hidden)) return;
+  pwa.activate();
+}
 
 function openHelp() {
   openSheet(t('help.title'), body => {

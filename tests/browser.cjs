@@ -290,12 +290,12 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
       await page.clock.install(); await chooseSession(page, { mode: 'free' });
       await page.clock.fastForward(301000); await page.waitForFunction(() => __ville.state.stats.ok === 1);
       await page.getByRole('button', { name: 'Retour à la ville', exact: true }).click();
+      // L'autre onglet n'a rien demandé : il est au repos, il se recharge de lui-même dès que la mise à jour est acceptée ici.
+      const otherReload = other.waitForNavigation();
       await Promise.all([page.waitForNavigation(), page.locator('#updateNotice').getByRole('button', { name: 'Mettre à jour', exact: true }).click()]);
       await page.waitForFunction(() => __ville.state.stats.ok === 1 && VillePWA.version.endsWith('-test-update'));
       assert.equal(await coinsWithoutBonuses(page), 10000000);
-      await other.waitForFunction(() => VillePWA.reloadAvailable && !__ville.state.active);
-      assert.equal(await other.evaluate(() => window.keepThisPage), true);
-      await Promise.all([other.waitForNavigation(), other.locator('#updateNotice').getByRole('button', { name: 'Mettre à jour', exact: true }).click()]);
+      await otherReload;
       await other.waitForFunction(() => window.__ville && VillePWA.version.endsWith('-test-update'));
       assert.equal(await other.evaluate(() => !!window.keepThisPage), false);
       assert.equal(await other.evaluate(() => __ville.state.stats.ok), 1);

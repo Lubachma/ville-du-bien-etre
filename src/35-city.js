@@ -287,6 +287,7 @@ const City = (() => {
     updateInert();
     layout(); draw();
     $('#cityExpand').focus({ preventScroll: true });
+    if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
   }
   // Visite : la ville d'un code s'ouvre en grand, avec son nom, son nombre d'éléments et la taille de son terrain. Si la vue
   // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose.

@@ -50,6 +50,8 @@ function closeSheet() {
   if (cb) cb();
   if (op && op.isConnected && typeof op.focus === 'function' && !op.closest('[inert]')) op.focus({ preventScroll: true });
   City.wake();
+  // Un onglet en retard se recharge juste après ce que le même geste lance ensuite (une autre fenêtre, une séance), s'il est alors au repos.
+  if (typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0);
 }
 function announce(msg) {
   const live = $('#live');

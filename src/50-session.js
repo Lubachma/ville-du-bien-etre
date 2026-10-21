@@ -234,8 +234,10 @@ function openWakeWarning(o, wake) {
       h('label', { class: 'check', for: 'wakeAck' }, ack, h('span', {}, t('wake.dontWarn'))),
       h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'button', onclick: () => {
         if (ack.checked) { try { localStorage.setItem(LS_WAKE_ACK, '1'); } catch (e) { /* ignore */ } }
+        // La séance ne tourne qu'au prochain tour de verrou : jusque-là, elle compte déjà comme en cours pour un onglet en retard.
+        beginning = true;
         closeSheet();
-        startSession(o);
+        startSession(o).finally(() => { beginning = false; });
       } }, icon('play'), t('wake.start')),
       h('button', { class: 'btn btn-ghost btn-block', type: 'button', onclick: closeSheet }, t('common.cancel')));
   }, { keep: true, onClose: () => Chime.rest(3000) });
@@ -586,6 +588,8 @@ function closeSession() {
   if (tab) tab.focus({ preventScroll: true });
   // Une ville amie reçue pendant la séance : elle s'ouvre maintenant, après ce que le bouton de l'écran de fin a lancé.
   if (typeof openPendingVisit === 'function') setTimeout(openPendingVisit, 0);
+  // Un onglet en retard se recharge juste après, si ni la boutique, ni une nouvelle séance, ni cette visite ne l'ont retenu.
+  if (typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0);
 }
 function showResult(build) {
   const res = $('#sessResult');

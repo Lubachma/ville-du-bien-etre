@@ -614,4 +614,4 @@ async function runRituals(browser, baseURL) {
   return { scenarios };
 }
 
-module.exports = { runRituals, SCENARIOS, filledWeek, runSession, startSession, activities };
+module.exports = { runRituals, SCENARIOS, filledWeek, runSession, startSession, activities, sessionTown, setVisibility, leaCode };
