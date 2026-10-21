@@ -3594,11 +3594,16 @@ function merge3(B, L, R) {
 const isRecord = v => !!v && typeof v === 'object' && !Array.isArray(v);
 // Élément d'une liste à id, avec un id qu'idOf() garde tel quel (sinon normalize() lui en donne un autre).
 const hasId = x => isRecord(x) && typeof x.id === 'string' && /^[\w-]{1,40}$/.test(x.id);
+// Identité d'un objet enregistré : ['id', son id], sinon ['day', son jour] (souhait d'habitant), si cette version connaît ce
+// champ (kn l'a, elle le pose donc aussi) ; null pour les autres (réglages, horloge…). Un champ qu'elle ne connaît pas ne
+// compte pas : elle ne le pose jamais, et l'objet ne serait jamais le même.
+const identity = (r, kn) => (typeof r.id === 'string' && own(kn, 'id') ? ['id', r.id] : typeof r.day === 'string' && own(kn, 'day') ? ['day', r.day] : null);
 /* Parties inconnues : ce que normalize() retire d'un document enregistré (known = normalize(raw)), écrit par une version plus
    récente. À chaque écriture locale, elles sont reprises du document enregistré et remises dans le texte écrit, sans jamais
    entrer dans l'état en mémoire. Un patch vaut { clé: partie }, et une partie :
    - { value } : une clé inconnue, copiée telle quelle, ou un objet que cette version refuse et remplace par null (Rejected) ;
-   - { patch } : un objet présent des deux côtés, parcouru à son tour ;
+   - { patch, same } : un objet présent des deux côtés, parcouru à son tour, et son identité (voir identity) : un objet que
+     cette version a remplacé par un autre (autre id, autre jour) n'en reçoit rien ;
    - { extra, inside } : une liste à id (ListPatch), avec ses éléments inconnus et, par id, les parties inconnues des autres.
    Les listes sans id et les valeurs simples ne donnent rien : la valeur de cette version l'emporte. La clé __proto__ est ignorée.
    Règle pour les étapes suivantes, car cette protection repose sur elle : ne jamais changer le sens d'un champ existant (pour
@@ -3610,7 +3615,7 @@ function unknownParts(raw, known) {
     const r = raw[k], has = own(known, k), kn = has ? known[k] : undefined;
     let part;
     if (!has || (isRecord(r) && kn === null)) part = { value: r };
-    else if (isRecord(r) && isRecord(kn)) { const sub = unknownParts(r, kn); if (sub) part = { patch: sub }; }
+    else if (isRecord(r) && isRecord(kn)) { const sub = unknownParts(r, kn); if (sub) part = { patch: sub, same: identity(r, kn) }; }
     else if (Array.isArray(r) && Array.isArray(kn) && kn.every(hasId)) part = unknownItems(r, kn);
     if (part) patch[k] = part;
   }
@@ -3631,15 +3636,19 @@ function unknownItems(raw, known) {
   return extra.length || inside.size ? { extra, inside } : undefined;
 }
 // Remet un patch dans target, une copie JSON de l'état, sans jamais remplacer une valeur posée par cette version : une valeur
-// seulement là où cette version n'a rien (clé absente, ou null), un patch dans l'objet de même clé ou l'élément de même id s'il
-// existe encore, un élément inconnu à la fin de sa liste si son id y manque. Renvoie ce qui a été remis (undefined si rien) :
-// ce sont les parties inconnues du texte écrit.
+// seulement là où cette version n'a rien (clé absente, ou null), un patch dans l'objet de même clé s'il est le même objet (même
+// id, sinon même jour) ou dans l'élément de même id s'il existe encore, un élément inconnu à la fin de sa liste si son id y
+// manque. Renvoie ce qui a été remis (undefined si rien) : ce sont les parties inconnues du texte écrit.
 function graftUnknown(target, patch) {
   const put = {};
   for (const k of Object.keys(patch)) {
     const part = patch[k], cur = own(target, k) ? target[k] : undefined;
     if ('value' in part) { if (cur == null) { target[k] = part.value; put[k] = part; } }
-    else if (part.patch) { const sub = isRecord(cur) && graftUnknown(cur, part.patch); if (sub) put[k] = { patch: sub }; }
+    else if (part.patch) {
+      const same = isRecord(cur) && (!part.same || cur[part.same[0]] === part.same[1]);
+      const sub = same && graftUnknown(cur, part.patch);
+      if (sub) put[k] = { patch: sub, same: part.same };
+    }
     else if (Array.isArray(cur)) {
       const items = new Map(cur.filter(hasId).map(x => [x.id, x])), inside = new Map();
       for (const [id, sub] of part.inside) { const back = items.has(id) && graftUnknown(items.get(id), sub); if (back) inside.set(id, back); }

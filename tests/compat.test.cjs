@@ -176,7 +176,7 @@ test('compat : lecture, fusion entre onglets, écriture et nouvelle lecture ne p
   assertKept(out, doc);
 });
 
-test('compat : ce que cette version a remplacé ou terminé ne revient pas', () => {
+test('compat : une séance remplacée ou terminée ici ne revient pas, ni ses champs inconnus', () => {
   // Une séance que cette version ne sait pas lire (domaine inconnu) : gardée tant que rien ne la remplace ici.
   const doc = future(stateApp());
   doc.active = { id: 'xs', name: 'Atelier', cat: 'social', min: 25, startedAt: NOW - 60000, mode: 'focus' };
@@ -204,6 +204,45 @@ test('compat : ce que cette version a remplacé ou terminé ne revient pas', () 
   two.a.commit({ silent: true });
   assert.equal(stored(two.disk).active.id, 'y1');
   assert.equal('pausedMs' in stored(two.disk).active, false);
+});
+
+test('compat : une partie inconnue ne passe qu\'au même objet (même id ou même jour)', () => {
+  const steps = [{ activityId: 'a', name: 'Lecture', cat: 'esprit', min: 10, mode: 'focus' }, { activityId: 'b', name: 'Sport', cat: 'corps', min: 10, mode: 'free' }];
+  const run = (id, more = {}) => ({ id, routineId: '', name: 'Matin', steps, next: 0, minutes: 0, reward: 0, startedAt: NOW - 60000, finishedAt: 0, ...more });
+  const doc = future(stateApp());
+  doc.routineRun = run('r1', { tempo: 'lent' });
+  doc.townWish = { day: '2026-10-16', tile: doc.city.tiles[0].id, item: 'fleurs', note: 'merci' };
+  // La même routine (même id) et le même souhait (même jour), changés ici : leurs champs inconnus restent.
+  const same = opened(doc);
+  same.a.api.state.routineRun.next = 1;
+  same.a.api.state.townWish.skipped = true;
+  same.a.commit({ silent: true });
+  let out = stored(same.disk);
+  assert.equal(out.routineRun.next, 1);
+  assert.equal(out.routineRun.tempo, 'lent');
+  assert.equal(out.townWish.skipped, true);
+  assert.equal(out.townWish.note, 'merci');
+  // Une autre routine (autre id) et le souhait du lendemain (autre jour) les remplacent directement : rien n'y passe, que les
+  // parties inconnues viennent du texte que cet onglet vient d'écrire ou du document enregistré.
+  for (const tab of [same, opened(doc)]) {
+    tab.a.api.state.routineRun = run('r2');
+    tab.a.api.state.townWish = { day: '2026-10-17', tile: doc.city.tiles[0].id, item: 'banc' };
+    tab.a.commit({ silent: true });
+    out = stored(tab.disk);
+    assert.equal(out.routineRun.id, 'r2');
+    assert.equal('tempo' in out.routineRun, false);
+    assert.equal(out.townWish.day, '2026-10-17');
+    assert.equal('note' in out.townWish, false);
+    assertKept(out, doc);
+  }
+  // Un id ou un jour que cette version ne connaît pas n'est pas une identité : elle ne le pose jamais, rien ne serait gardé.
+  const later = future(stateApp());
+  later.settings.day = '2026-10-16';
+  const tab = opened(later);
+  tab.a.commit({ silent: true });
+  out = stored(tab.disk);
+  assert.equal(out.settings.day, '2026-10-16');
+  assert.equal(out.settings.onboarded, true);
 });
 
 test('compat : un id invalide ou répété, ou une liste sans id, ne fait pas grandir les listes', () => {
