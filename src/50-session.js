@@ -219,6 +219,8 @@ async function beginSession(o) {
     await startSession(o);
   } finally {
     beginning = false;
+    // Un démarrage refusé (séance ailleurs, activité disparue) laisse l'onglet en retard au repos : il peut se recharger.
+    if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
   }
 }
 function openWakeWarning(o, wake) {
@@ -237,7 +239,10 @@ function openWakeWarning(o, wake) {
         // La séance ne tourne qu'au prochain tour de verrou : jusque-là, elle compte déjà comme en cours pour un onglet en retard.
         beginning = true;
         closeSheet();
-        startSession(o).finally(() => { beginning = false; });
+        startSession(o).finally(() => {
+          beginning = false;
+          if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
+        });
       } }, icon('play'), t('wake.start')),
       h('button', { class: 'btn btn-ghost btn-block', type: 'button', onclick: closeSheet }, t('common.cancel')));
   }, { keep: true, onClose: () => Chime.rest(3000) });

@@ -7751,11 +7751,15 @@ const Mode = {
   cancel() { this.state = null; this.render(); City.draw(); },
   render() {
     const bar = $('#placebar'), txt = $('#placeText'), ok = $('#placeConfirm');
-    const st = this.state;
+    const st = this.state, wasPlacing = !bar.hidden;
     bar.hidden = !st;
     $('#cityExpand').hidden = $('#shareCity').hidden = !!st;
     if (typeof renderCompanionButton === 'function') renderCompanionButton();
-    if (!st) return;
+    if (!st) {
+      // Pose finie ou annulée : un onglet en retard qui n'attendait plus qu'elle se recharge, après ce que le même geste lance ensuite (une visite).
+      if (wasPlacing && typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0);
+      return;
+    }
     if (st.type === 'place') {
       txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : t('city.tapToPlace', { item: itemName(st.item), price: fmt(priceOf(st.item)) }));
       ok.textContent = t('city.placeHere');
@@ -9756,14 +9760,20 @@ function renderPwaStatus() {
       pwa.activate();
     } }, t('pwa.updateButton')));
 }
+// Un texte saisi et pas encore envoyé dans un champ de la page (nouvelle activité, envie ou obligation) : le recharger l'effacerait. Les champs
+// d'une fenêtre ne comptent pas : ouverte, elle retient déjà l'onglet ; fermée, elle peut garder un texte que la personne a laissé.
+function hasTypedText() {
+  return $$('input:not([type]), input[type="text"], input[type="search"], textarea').some(field => !field.closest('#sheet') && field.value.trim());
+}
 // Un onglet resté sur l'ancienne version (la mise à jour a été acceptée dans un autre onglet) se recharge de lui-même dès qu'il est au repos.
 // Une séance qui tourne ou démarre ici le retient. Page visible, il attend aussi qu'il n'y ait plus ni fenêtre, ni écran de séance, ni vue en
-// grand (donc ni visite d'une ville amie), ni pose ; en arrière-plan, seule la séance le retient. Le bandeau « Mettre à jour » reste affiché.
+// grand (donc ni visite d'une ville amie), ni pose, ni texte en cours de saisie ; en arrière-plan, seule la séance le retient. Le bandeau
+// « Mettre à jour » reste affiché. Chaque moment où l'une de ces attentes peut finir rappelle cette fonction, sans risque : elle est idempotente.
 function reloadWhenIdle() {
   const pwa = window.VillePWA;
   if (!pwa || !pwa.reloadAvailable || pwa.reloading) return;
   if (run || beginning) return;
-  if (document.visibilityState === 'visible' && ['#sheet', '#session', '#cityBig', '#placebar'].some(selector => !$(selector).hidden)) return;
+  if (document.visibilityState === 'visible' && (['#sheet', '#session', '#cityBig', '#placebar'].some(selector => !$(selector).hidden) || hasTypedText())) return;
   pwa.activate();
 }
 
@@ -10063,6 +10073,8 @@ async function beginSession(o) {
     await startSession(o);
   } finally {
     beginning = false;
+    // Un démarrage refusé (séance ailleurs, activité disparue) laisse l'onglet en retard au repos : il peut se recharger.
+    if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
   }
 }
 function openWakeWarning(o, wake) {
@@ -10081,7 +10093,10 @@ function openWakeWarning(o, wake) {
         // La séance ne tourne qu'au prochain tour de verrou : jusque-là, elle compte déjà comme en cours pour un onglet en retard.
         beginning = true;
         closeSheet();
-        startSession(o).finally(() => { beginning = false; });
+        startSession(o).finally(() => {
+          beginning = false;
+          if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
+        });
       } }, icon('play'), t('wake.start')),
       h('button', { class: 'btn btn-ghost btn-block', type: 'button', onclick: closeSheet }, t('common.cancel')));
   }, { keep: true, onClose: () => Chime.rest(3000) });
@@ -11776,6 +11791,8 @@ function bindEvents() {
       toast(t('draw.added'));
     });
   }
+  // Un formulaire envoyé a vidé son champ : l'onglet en retard qui attendait cette saisie se recharge, s'il est alors au repos.
+  document.addEventListener('submit', () => setTimeout(reloadWhenIdle, 0));
   for (const b of $$('#poolSeg button')) b.addEventListener('click', () => { if (S.draw.pool !== b.dataset.pool) { S.draw.pool = b.dataset.pool; commit(); } });
   $('#strictBtn').addEventListener('click', openStrict);
   twoStep($('#abandonBtn'), () => t('session.abandon'), () => t('session.abandonConfirm'), abandon);

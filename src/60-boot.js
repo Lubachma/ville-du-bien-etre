@@ -65,6 +65,8 @@ function bindEvents() {
       toast(t('draw.added'));
     });
   }
+  // Un formulaire envoyé a vidé son champ : l'onglet en retard qui attendait cette saisie se recharge, s'il est alors au repos.
+  document.addEventListener('submit', () => setTimeout(reloadWhenIdle, 0));
   for (const b of $$('#poolSeg button')) b.addEventListener('click', () => { if (S.draw.pool !== b.dataset.pool) { S.draw.pool = b.dataset.pool; commit(); } });
   $('#strictBtn').addEventListener('click', openStrict);
   twoStep($('#abandonBtn'), () => t('session.abandon'), () => t('session.abandonConfirm'), abandon);

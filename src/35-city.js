@@ -857,11 +857,15 @@ const Mode = {
   cancel() { this.state = null; this.render(); City.draw(); },
   render() {
     const bar = $('#placebar'), txt = $('#placeText'), ok = $('#placeConfirm');
-    const st = this.state;
+    const st = this.state, wasPlacing = !bar.hidden;
     bar.hidden = !st;
     $('#cityExpand').hidden = $('#shareCity').hidden = !!st;
     if (typeof renderCompanionButton === 'function') renderCompanionButton();
-    if (!st) return;
+    if (!st) {
+      // Pose finie ou annulée : un onglet en retard qui n'attendait plus qu'elle se recharge, après ce que le même geste lance ensuite (une visite).
+      if (wasPlacing && typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0);
+      return;
+    }
     if (st.type === 'place') {
       txt.textContent = frTypo(st.target ? itemName(st.item) + ' · ' + fmt(priceOf(st.item)) : t('city.tapToPlace', { item: itemName(st.item), price: fmt(priceOf(st.item)) }));
       ok.textContent = t('city.placeHere');

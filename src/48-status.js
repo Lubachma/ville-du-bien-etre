@@ -56,14 +56,20 @@ function renderPwaStatus() {
       pwa.activate();
     } }, t('pwa.updateButton')));
 }
+// Un texte saisi et pas encore envoyé dans un champ de la page (nouvelle activité, envie ou obligation) : le recharger l'effacerait. Les champs
+// d'une fenêtre ne comptent pas : ouverte, elle retient déjà l'onglet ; fermée, elle peut garder un texte que la personne a laissé.
+function hasTypedText() {
+  return $$('input:not([type]), input[type="text"], input[type="search"], textarea').some(field => !field.closest('#sheet') && field.value.trim());
+}
 // Un onglet resté sur l'ancienne version (la mise à jour a été acceptée dans un autre onglet) se recharge de lui-même dès qu'il est au repos.
 // Une séance qui tourne ou démarre ici le retient. Page visible, il attend aussi qu'il n'y ait plus ni fenêtre, ni écran de séance, ni vue en
-// grand (donc ni visite d'une ville amie), ni pose ; en arrière-plan, seule la séance le retient. Le bandeau « Mettre à jour » reste affiché.
+// grand (donc ni visite d'une ville amie), ni pose, ni texte en cours de saisie ; en arrière-plan, seule la séance le retient. Le bandeau
+// « Mettre à jour » reste affiché. Chaque moment où l'une de ces attentes peut finir rappelle cette fonction, sans risque : elle est idempotente.
 function reloadWhenIdle() {
   const pwa = window.VillePWA;
   if (!pwa || !pwa.reloadAvailable || pwa.reloading) return;
   if (run || beginning) return;
-  if (document.visibilityState === 'visible' && ['#sheet', '#session', '#cityBig', '#placebar'].some(selector => !$(selector).hidden)) return;
+  if (document.visibilityState === 'visible' && (['#sheet', '#session', '#cityBig', '#placebar'].some(selector => !$(selector).hidden) || hasTypedText())) return;
   pwa.activate();
 }
 

@@ -163,14 +163,16 @@ async function lateTabReloadsWhenIdle(browser, baseURL) {
     await markLate(page);
     await assertStays(page, 'visite ouverte');
     await assertReloads(page, () => page.locator('#cityBigClose').click(), 'visite fermée');
-    // La boutique se ferme pour une pose, qui retient l'onglet à son tour ; puis une fenêtre, et la page passe en arrière-plan.
+    // La boutique se ferme pour une pose, qui retient l'onglet à son tour ; annulée, elle le libère.
     await page.locator('#buildBtn').click();
     await markLate(page);
     await assertStays(page, 'boutique ouverte');
     await page.getByRole('button', { name: /^Placer Banc pour/ }).click();
     await assertStays(page, 'pose en cours');
-    await page.locator('#placeCancel').click();
+    await assertReloads(page, () => page.locator('#placeCancel').click(), 'pose annulée');
+    // Une fenêtre encore ouverte, mais la page passe en arrière-plan : plus rien ne retient l'onglet.
     await page.locator('#settingsBtn').click();
+    await markLate(page);
     await assertStays(page, 'Réglages ouverts, page visible');
     await assertReloads(page, () => setVisibility(page, 'hidden'), 'page en arrière-plan');
     assert.deepEqual(errors, []);
@@ -222,7 +224,78 @@ async function lateTabWaitsForWhatFollows(browser, baseURL) {
   return 'Onglet en retard : la suite du geste passe avant le rechargement';
 }
 
-const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows];
+// Un texte saisi hors fenêtre et pas encore envoyé retient l'onglet visible, même si la personne change d'onglet : le recharger l'effacerait.
+// Envoyé, il est enregistré et l'onglet se recharge. Des espaces seuls, ou un texte laissé dans une fenêtre fermée, ne retiennent rien, et en
+// arrière-plan plus rien ne retient l'onglet (voulu : la personne est partie).
+async function lateTabWaitsForTyping(browser, baseURL) {
+  const { context, page, errors } = await sessionTown(browser);
+  const wish = page.locator('#addWish [name="name"]');
+  try {
+    await page.goto(baseURL);
+    await page.waitForFunction(() => !!window.__ville);
+    // Un texte laissé dans une fenêtre qu'on ferme n'est plus une saisie en cours.
+    await page.locator('#shareCity').click();
+    await page.locator('#visitLinkField').fill('lien à moitié collé');
+    await markLate(page);
+    await assertStays(page, 'fenêtre de partage ouverte');
+    await assertReloads(page, () => page.locator('#sheetClose').click(), 'fenêtre de partage fermée');
+    // Une envie à moitié écrite, page visible et aucune fenêtre ouverte ; le texte reste quand on change d'onglet, ouvre et ferme une fenêtre.
+    await page.locator('[data-tab="tirage"]').click();
+    await wish.fill('Faire du pain');
+    await markLate(page);
+    await assertStays(page, 'envie à moitié écrite');
+    await page.locator('[data-tab="ville"]').click();
+    await page.locator('#settingsBtn').click();
+    await page.locator('#sheetClose').click();
+    await assertStays(page, 'envie gardée, autre onglet');
+    // Envoyée : enregistrée, puis l'onglet se recharge.
+    await page.locator('[data-tab="tirage"]').click();
+    await assertReloads(page, () => wish.press('Enter'), 'envie envoyée');
+    assert.ok(await page.evaluate(() => __ville.state.wishes.some(entry => entry.name === 'Faire du pain')), 'envie enregistrée');
+    // Des espaces seuls ne sont pas un texte à garder.
+    await page.locator('[data-tab="tirage"]').click();
+    await wish.fill('   ');
+    await assertReloads(page, () => markLate(page), 'espaces seuls');
+    // La page passe en arrière-plan avec un texte non envoyé : plus rien ne retient l'onglet.
+    await page.locator('[data-tab="tirage"]').click();
+    await wish.fill('Encore une envie');
+    await markLate(page);
+    await assertStays(page, 'autre envie à moitié écrite');
+    await assertReloads(page, () => setVisibility(page, 'hidden'), 'page en arrière-plan');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return "Onglet en retard : attend la fin d'une saisie";
+}
+
+// Un démarrage refusé libère l'onglet qu'il retenait : ici l'activité n'existe plus quand on touche « Commencer » (supprimée ailleurs).
+// En séance libre, puis en Concentration derrière la mise en garde « écran allumé » (réglage coupé).
+async function lateTabReloadsWhenStartIsRefused(browser, baseURL) {
+  for (const [label, mode, settings] of [['séance libre', 'Activité libre', {}], ['mise en garde', 'Concentration', { keepAwake: false }]]) {
+    const { context, page, errors } = await sessionTown(browser, settings);
+    try {
+      await page.goto(baseURL);
+      await page.waitForFunction(() => !!window.__ville);
+      await page.locator('[data-tab="activites"]').click();
+      await page.getByRole('button', { name: /^Pratique corps/ }).first().click();
+      await page.getByRole('radio', { name: '5 min', exact: true }).click();
+      await page.getByRole('radio', { name: mode, exact: true }).click();
+      await markLate(page);
+      await assertStays(page, label + ' : fenêtre de départ ouverte');
+      await page.evaluate(() => { __ville.state.activities = __ville.state.activities.filter(entry => entry.id !== 'a-corps'); });
+      const start = page.getByRole('button', { name: /^Commencer/ });
+      if (mode === 'Concentration') {
+        await start.click();
+        await assertStays(page, label + ' : mise en garde ouverte');
+        await assertReloads(page, () => page.getByRole('button', { name: "C'est réglé, commencer", exact: true }).click(), label + ' : démarrage refusé');
+      } else await assertReloads(page, () => start.click(), label + ' : démarrage refusé');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Onglet en retard : un démarrage refusé le libère';
+}
+
+const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
+  lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
