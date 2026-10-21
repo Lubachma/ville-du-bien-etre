@@ -3,17 +3,19 @@
    Règles pures, sans DOM. L'heure est celle du fuseau de la ville.
    ========================================================================= */
 const clockFmtCache = new Map();
-// Jour (AAAA-MM-JJ) et minutes depuis minuit, dans le fuseau de la ville.
-function cityClock(ts = nowTs()) {
-  const tz = S.clock.tz;
+// Jour (AAAA-MM-JJ) et minutes depuis minuit, dans le fuseau de la ville. Sans instant donné, c'est maintenant : le jour de la
+// ville (today(), qui ne recule pas avant la dernière fin de séance) et l'heure du téléphone, que suivent la lumière, le moment
+// de la journée et la tour de l'horloge.
+function cityClock(ts) {
+  const tz = S.clock.tz, live = ts === undefined;
   if (!clockFmtCache.has(tz)) {
     let f;
     try { f = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }); }
     catch (e) { f = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }); }
     clockFmtCache.set(tz, f);
   }
-  const parts = clockFmtCache.get(tz).formatToParts(ts), part = type => Number(parts.find(p => p.type === type).value);
-  return { day: dayOf(ts), minutes: part('hour') * 60 + part('minute') };
+  const parts = clockFmtCache.get(tz).formatToParts(live ? Date.now() : ts), part = type => Number(parts.find(p => p.type === type).value);
+  return { day: live ? today() : dayOf(ts), minutes: part('hour') * 60 + part('minute') };
 }
 // Hémisphère sud : choisi dans les réglages, sinon deviné d'après le fuseau de la ville.
 function southern() {
@@ -60,7 +62,6 @@ function rainbowOn(day, minutes) {
   return minutes < 720 && dayWeather(day) === 'sun' && dayWeather(shiftDay(day, -1)) === 'rain' && chance(day + ':rainbow') < 1 / 3;
 }
 
-const leapYear = year => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 // Fêtes du jour, chacune avec sa clé de cadeau (une par an) ; le 31 décembre du Nouvel An porte l'année qui commence.
 // L'anniversaire tombe à la date de création de la ville, dès l'année suivante ; un 29 février se fête le 28 hors années bissextiles.
 function festivalsOn(day) {
@@ -165,10 +166,10 @@ function visitorOf(day) {
   return v;
 }
 
-// L'ambiance de la ville à un instant : jour, minutes, saison, moment, météo, arc-en-ciel, fêtes et visiteur.
-// ambientForce impose certains champs, pour les tests et la planche.
+// L'ambiance de la ville à un instant (maintenant par défaut, voir cityClock) : jour, minutes, saison, moment, météo,
+// arc-en-ciel, fêtes et visiteur. ambientForce impose certains champs, pour les tests et la planche.
 let ambientForce = null;
-function ambientAt(ts = nowTs()) {
+function ambientAt(ts) {
   const { day, minutes } = cityClock(ts);
   const amb = { day, minutes, season: seasonOf(day), moment: momentOf(day, minutes), weather: weatherOf(day, minutes),
     rainbow: rainbowOn(day, minutes), festivals: festivalsOn(day), visitor: visitorOf(day) };

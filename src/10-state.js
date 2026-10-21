@@ -145,7 +145,7 @@ function normalize(raw) {
   const s = defaultState();
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return s;
   s.createdAt = validTs(raw.createdAt) ? raw.createdAt : s.createdAt;
-  s.updatedAt = num(raw.updatedAt, 0, 9e15, 0);
+  s.updatedAt = validTs(raw.updatedAt) ? raw.updatedAt : 0;
   s.revision = str(raw.revision, 80);
   s.coins = Math.round(num(raw.coins, 0, COINS_MAX, s.coins));
   s.earned = Math.round(num(raw.earned, 0, COINS_MAX, 0));
@@ -195,12 +195,14 @@ function normalize(raw) {
   s.townWish = knownTownWish(raw.townWish);
   s.companion = knownCompanion(raw.companion);
   s.companionLater = validTs(raw.companionLater) ? raw.companionLater : 0;
-  const ck = obj(raw.clock);
-  s.clock = {
-    tz: validTz(ck.tz) ? ck.tz : s.clock.tz,
-    maxSeen: num(ck.maxSeen, 0, 9e15, 0),
-    lastDay: isDayKey(ck.lastDay) ? ck.lastDay : '',
-  };
+  const ck = obj(raw.clock), tz = validTz(ck.tz) ? ck.tz : s.clock.tz;
+  // Jour (AAAA-MM-JJ) d'un instant, dans le fuseau de la ville : borne du dernier jour de séance, puis jour des anciennes séances.
+  const cityDay = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+  // Horloge : une heure hors des dates valides (validTs) vaut 0 ; au-delà, elle bloquait l'app (9e15, que JavaScript ne sait pas
+  // dater) ou faisait repayer des cadeaux. Le dernier jour de séance ne dépasse pas le jour de l'heure la plus avancée, celle du
+  // téléphone ou maxSeen.
+  const maxSeen = validTs(ck.maxSeen) ? ck.maxSeen : 0, newest = cityDay.format(Math.max(Date.now(), maxSeen));
+  s.clock = { tz, maxSeen, lastDay: isDayKey(ck.lastDay) ? (ck.lastDay < newest ? ck.lastDay : newest) : '' };
   for (const k of ['activities', 'wishes', 'chores']) if (Array.isArray(raw[k])) s[k] = cleanList(raw[k]);
   const dr = obj(raw.draw);
   s.draw = { pool: ['wishes', 'chores', 'both'].includes(dr.pool) ? dr.pool : 'wishes', current: cleanDraw(dr.current), rerolls: int(dr.rerolls, 0, 10, 0), filters: {
@@ -259,9 +261,8 @@ function normalize(raw) {
     const ids = new Set();
     s.history = raw.history.slice(0, HISTORY_MAX * 2).map(cleanHistory).filter(e => e && !ids.has(e.id) && ids.add(e.id)).slice(0, HISTORY_MAX);
   }
-  const historyDays = new Intl.DateTimeFormat('en-CA', { timeZone: s.clock.tz, year: 'numeric', month: '2-digit', day: '2-digit' });
   for (const e of s.history) {
-    if (!e.day) e.day = historyDays.format(e.at);
+    if (!e.day) e.day = cityDay.format(e.at);
     if (!e.ok || own(obj(sts.dailyCats), e.day)) continue;
     const cats = s.stats.dailyCats[e.day] || (s.stats.dailyCats[e.day] = {});
     cats[e.cat] = (cats[e.cat] || 0) + e.min;
@@ -727,7 +728,7 @@ const Store = {
       const rawBase = localStorage.getItem(LS_BASE);
       if (rawBase) this.base = normalize(JSON.parse(rawBase));
     } catch (e) { this.base = null; }
-    touchClock();
+    healClock();
   },
   reportLocal(key, params) {
     this.errorMsg = key ? [key, params] : null;
@@ -1083,14 +1084,23 @@ const Store = {
   },
 };
 
+// Horloge de la ville (maxSeen) : l'heure la plus avancée vue à une fin de séance (réussie, interrompue, abandonnée ou reprise
+// après fermeture, voir pushHistory), jamais aux autres enregistrements. Une heure avancée par erreur puis remise ne fige donc
+// rien tant qu'aucune séance n'a eu lieu entre-temps ; une séance faite pendant l'avance garde son jour, et les suivantes s'y
+// rattachent jusqu'à ce que l'heure réelle le rattrape.
 function touchClock() {
   const now = Date.now();
   if (now > S.clock.maxSeen) S.clock.maxSeen = now;
 }
+// À l'ouverture : une ville figée par l'étape 6, où chaque enregistrement faisait avancer l'horloge. Son heure est restée dans le
+// futur, après une heure avancée par erreur puis remise, sans séance réussie ce jour-là : elle reprend l'heure du téléphone.
+function healClock() {
+  const now = Date.now();
+  if (S.clock.maxSeen > now + 60000 && dayOf(S.clock.maxSeen) > S.clock.lastDay) S.clock.maxSeen = now;
+}
 function commit(opts = {}) {
   if (Store.migrationPending) { Store.reportMigration(); return false; }
   markChanged();
-  touchClock();
   // replace : restauration ou « Tout recommencer », l'état est écrit tel quel (voir Store.saveLocal).
   const saved = Store.saveLocal({ replace: opts.replace });
   Store.schedule(opts.flush ? 0 : 1200);

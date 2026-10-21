@@ -474,9 +474,11 @@ function endRun() {
   run = null;
   return r;
 }
+// Chaque fin de séance passe par ici : c'est elle, et elle seule, qui fait avancer l'horloge de la ville (voir touchClock).
 function pushHistory(e) {
   S.history.unshift(e);
   if (S.history.length > HISTORY_MAX) S.history.length = HISTORY_MAX;
+  touchClock();
 }
 // Un échec rend le tirage : on ne peut pas se refaire un tirage gratuit en abandonnant.
 function restoreDraw(a) {

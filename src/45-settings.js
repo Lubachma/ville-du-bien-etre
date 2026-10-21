@@ -49,10 +49,15 @@ function summary(st) {
 }
 function restoreBackup(st) {
   if (S.active || run) { toast(t('backup.finishSessionFirst')); return; }
-  const clock = S.clock;
+  const clock = S.clock, now = Date.now();
   S = st;
   S.active = null;
-  S.clock = { tz: clock.tz, maxSeen: Math.max(clock.maxSeen, st.clock.maxSeen), lastDay: maxDay(clock.lastDay, st.clock.lastDay) };
+  // L'horloge ne recule pas. Une sauvegarde datée de plus d'un jour dans le futur (horloge avancée, sauvegarde modifiée) ne fige
+  // pas la ville : son heure est ramenée à maintenant, et le dernier jour de séance au plus au jour de l'horloge obtenue.
+  const seen = st.clock.maxSeen > now + 86400000 ? now : st.clock.maxSeen;
+  S.clock = { tz: clock.tz, maxSeen: Math.max(clock.maxSeen, seen), lastDay: maxDay(clock.lastDay, st.clock.lastDay) };
+  const newest = dayOf(Math.max(now, S.clock.maxSeen));
+  if (S.clock.lastDay > newest) S.clock.lastDay = newest;
   Mode.state = null;
   closeSheet();
   refreshLang();

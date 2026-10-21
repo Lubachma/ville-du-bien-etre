@@ -323,7 +323,14 @@ const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const HIDDEN_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g;
 const VISIBLE_CHAR = /[^\s\u200c\u200d]/;
 const idOf = v => (typeof v === 'string' && v.length > 0 && v.length <= 40 && /^[\w-]+$/.test(v) ? v : uid());
-const isDayKey = k => typeof k === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(k);
+const leapYear = year => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+// Clé de jour AAAA-MM-JJ d'une vraie date du calendrier : « 2026-02-30 » n'en est pas une.
+const isDayKey = k => {
+  if (typeof k !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(k)) return false;
+  const year = Number(k.slice(0, 4)), month = Number(k.slice(5, 7)), day = Number(k.slice(8));
+  return month >= 1 && month <= 12 && day >= 1 && day <= (month === 2 && leapYear(year) ? 29 : MONTH_DAYS[month - 1]);
+};
 const validTs = v => typeof v === 'number' && Number.isFinite(v) && v > 1.5e12 && v < 4.1e12;
 
 /* Empreinte non cryptographique (cyrb53) : rend visible une sauvegarde modifiée à la main */
