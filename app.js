@@ -10331,7 +10331,8 @@ function showSuccess(a, total, fresh, earned = [], challenges = [], companion = 
       City.thumb(cv, k, 56);
       return h('div', { class: 'res-unlock' }, cv, h('span', {}, t('result.unlocked', { item: itemName(k) })));
     });
-    res.append(
+    // Sans compagnon affiché, companionResult() rend null, et append() l'écrirait en toutes lettres : on filtre.
+    res.append(...[
       h('div', { class: 'res-figure' }, burst, icon('coin'), '+' + fmt(total)),
       h('h2', { class: 'res-title', tabindex: '-1' }, t('result.success')),
       h('p', { class: 'sub' }, displayName(a.name) + ' · ' + a.min + NB + 'min'),
@@ -10346,7 +10347,7 @@ function showSuccess(a, total, fresh, earned = [], challenges = [], companion = 
       ...(S.settings.mood === false ? [] : [moodPicker(a.id)]),
       h('div', { class: 'res-actions' },
         h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); go('ville'); openShop(); } }, icon('build'), t('city.build')),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity')))].filter(Boolean));
     if (typeof renderRoutineResult === 'function') renderRoutineResult(res, a, total);
   });
 }
@@ -10358,7 +10359,8 @@ function showFail(a, reason, awayMs, elapsed) {
   const done = Math.floor((elapsed || 0) / 60000);
   $('#session').style.setProperty('--c', 'var(--danger)');
   showResult(res => {
-    res.append(
+    // Idem : sans compagnon affiché, companionFail() rend null.
+    res.append(...[
       h('div', { class: 'res-fail' }, icon('lost', 'ic-big')),
       typeof companionFail === 'function' ? companionFail() : null,
       h('h2', { class: 'res-title', tabindex: '-1' }, t('result.interrupted')),
@@ -10367,7 +10369,7 @@ function showFail(a, reason, awayMs, elapsed) {
       h('p', { class: 'note' }, a.draw ? t('result.noCoinsDraw') : t('result.noCoins')),
       h('div', { class: 'res-actions' },
         h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); if (a.draw && S.draw.current && S.draw.current.id === a.draw.id) acceptDraw(); else beginSession({ name: a.name, cat: a.cat, min: a.min, mode: a.mode, source: a.source, sourceId: a.sourceId, routineRunId: a.routineRunId, routineStep: a.routineStep }); } }, icon('reroll'), t('result.restart')),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity'))));
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity')))].filter(Boolean));
   });
 }
 
