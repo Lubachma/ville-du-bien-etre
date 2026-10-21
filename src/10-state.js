@@ -682,6 +682,9 @@ function markChanged(after = 0) {
   S.updatedAt = Math.max(Date.now(), S.updatedAt + 1, after + 1);
   S.revision = uid() + '-' + uid();
 }
+// États lus d'un document qui porte sa propre date de création (voir Store.replacedBy). Sans date valide, normalize() lui donne
+// l'heure de la lecture : elle change d'une lecture à l'autre et ne dit rien de sa ville.
+const dated = new WeakSet();
 
 const Store = {
   mode: 'local',          // 'local' | 'connecting' | 'cloud'
@@ -735,7 +738,9 @@ const Store = {
     try {
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid-state');
-      return { parsed, state: normalize(parsed) };
+      const state = normalize(parsed);
+      if (validTs(parsed.createdAt)) dated.add(state);
+      return { parsed, state };
     } catch (e) {
       this.recoveryRaw = raw;
       this.warningMsg = ['storage.legacyUnreadable'];
@@ -855,9 +860,14 @@ const Store = {
     }
   },
   repairLocal() { return this.migrationPending ? this.retryMigration() : this.saveLocal(); },
+  // Ville remplacée ailleurs (« Tout recommencer », restauration) : la version lue n'est plus la ville de la base. Elle l'emporte
+  // entière, sans fusion. Sans date sûre, la fusion reste : une ville jamais écrite (lsAt === -1) n'a pas encore de base, et un
+  // document sans date de création valide (ville préparée, horloge fausse à sa création) en reçoit une nouvelle à chaque lecture.
+  replacedBy(other) { return this.lsAt !== -1 && dated.has(other) && other.createdAt !== this.lsBase.createdAt; },
   // Écrit seulement après préservation d'un éventuel document illisible. Pour la même ville, les parties que cette version ne
   // connaît pas (venues d'une version plus récente) sont reprises dans le texte écrit. `replace` (restauration, « Tout
-  // recommencer ») écrit l'état tel quel : ni fusion avec un autre onglet, ni reprise.
+  // recommencer ») écrit l'état tel quel : ni fusion avec un autre onglet, ni reprise. Une ville remplacée ailleurs est adoptée
+  // telle quelle, sans rien écrire.
   saveLocal(opts = {}) {
     if (this.migrationPending) {
       this.reportMigration();
@@ -870,8 +880,20 @@ const Store = {
         const read = this.readText(raw), other = read && read.state;
         if (!other) { if (!this.preserveRecovery(raw)) return false; }
         else if (!opts.replace) {
+          if (this.replacedBy(other)) {
+            S = other;
+            this.lsBase = clone(other);
+            this.lsAt = other.updatedAt;
+            afterReplace();
+            this.reportLocal('');
+            return true;
+          }
           if (!sameVersion(other, this.lsBase) && !sameVersion(other, S)) {
             S = merge3(this.lsBase || other, S, other);
+            // La base devient la version lue, même si l'écriture échoue ensuite : la fusion suivante ne compte pas une seconde
+            // fois les changements de l'autre onglet (achats débités deux fois, complicité comptée deux fois).
+            this.lsBase = clone(other);
+            this.lsAt = other.updatedAt;
             markChanged(other.updatedAt);
             afterReplace();
           }
@@ -893,13 +915,13 @@ const Store = {
       return false;
     }
   },
-  // Un autre onglet a écrit : on récupère son état (fusionné avec nos changements éventuels).
+  // Un autre onglet a écrit : on récupère son état (fusionné avec nos changements éventuels, sauf pour une ville remplacée).
   pullLocal() {
     const other = this.readLocal();
     dbg('pullLocal ' + (other && other.updatedAt) + ' active=' + !!(other && other.active));
     if (this.migrationPending) return;
     if (!other || sameVersion(other, S) || sameVersion(other, this.lsBase)) return;
-    if (sameVersion(S, this.lsBase)) {
+    if (sameVersion(S, this.lsBase) || this.replacedBy(other)) {
       S = other;
       this.lsBase = clone(other);
       this.lsAt = other.updatedAt;

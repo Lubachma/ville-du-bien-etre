@@ -297,3 +297,134 @@ test('compat : la clé __proto__ est toujours ignorée', () => {
   assert.equal(a.api.state.settings.grace, 10);
   assertKept(stored(disk), doc);
 });
+
+test('fusion : une écriture refusée ne compte pas deux fois', () => {
+  // Une ville à 100 M, avec un compagnon de 100 min, ouverte dans deux onglets.
+  const disk = storage(), a = stateApp(disk), b = stateApp(disk);
+  a.init();
+  a.api.state.coins = 100e6;
+  a.api.state.companion = { species: 'lapin', name: '', since: NOW - 20 * 86400000, minutes: 100, wear: '' };
+  a.commit({ silent: true });
+  b.init();
+  // A achète une case à 15 M et passe 30 min avec son compagnon.
+  a.api.state.coins -= 15e6;
+  a.api.state.city.tiles.push({ id: 'boul', item: 'boulangerie', x: 0, y: 0, at: NOW, paid: 15e6 });
+  a.api.state.companion.minutes += 30;
+  assert.equal(a.commit({ silent: true }), true);
+  // B n'a pas vu l'écriture de A : il achète une case à 2 M, fusionne avec la version de A, mais son écriture est refusée.
+  b.api.state.coins -= 2e6;
+  b.api.state.city.tiles.push({ id: 'banc', item: 'banc', x: 6, y: 6, at: NOW, paid: 2e6 });
+  disk.fail = true;
+  assert.equal(b.commit({ silent: true }), false);
+  // L'écriture suivante réussit, sans compter une seconde fois l'achat et la complicité de A.
+  disk.fail = false;
+  assert.equal(b.commit({ silent: true }), true);
+  const out = stored(disk);
+  assert.equal(out.coins, 83e6);
+  assert.equal(out.companion.minutes, 130);
+  assert.deepEqual(out.city.tiles.filter(t => t.paid).map(t => t.id).sort(), ['banc', 'boul']);
+});
+
+test('fusion : une remise à zéro faite ailleurs l\'emporte', () => {
+  // La ville V : terrain 11, une carte postale, des visiteurs rencontrés et un compagnon, ouverte dans trois onglets.
+  const v = copy(stateApp().defaultState()), disk = storage();
+  v.createdAt = Date.parse('2025-03-01T09:00:00Z');
+  v.city = { size: 11, tiles: v.city.tiles.map(t => ({ ...t, x: t.x + 2, y: t.y + 2 })) };
+  v.postcards = { a1b2c3d4e5f6: { code: 'AQcAAAAAAAAAAA', name: 'Amis', size: 7, count: 0, at: Date.parse('2026-09-01T10:00:00Z') } };
+  v.visits = { chat: { first: Date.parse('2026-05-01T10:00:00Z'), count: 9, last: '2026-10-16' } };
+  v.companion = { species: 'ourson', name: 'Nounours', since: Date.parse('2026-06-01T10:00:00Z'), minutes: 1900, wear: 'cape' };
+  disk.setItem(KEY, JSON.stringify(v));
+  const a = stateApp(disk), b = stateApp(disk), c = stateApp(disk);
+  a.init(); b.init(); c.init();
+  // B et C changent chacun quelque chose, mais leurs écritures sont refusées : ces changements ne sont pas encore écrits.
+  b.api.state.settings.sound = false;
+  c.api.state.personal.name = 'Ancienne ville';
+  disk.fail = true;
+  assert.equal(b.commit({ silent: true }), false);
+  assert.equal(c.commit({ silent: true }), false);
+  disk.fail = false;
+  // A fait « Tout recommencer » (voir settingsReset) : une ville neuve, écrite telle quelle.
+  a.advance(60000);
+  a.api.state = a.defaultState();
+  assert.equal(a.commit({ silent: true, replace: true }), true);
+  const text = disk.getItem(KEY), fresh = JSON.parse(text);
+  const assertFresh = s => {
+    assert.equal(s.city.size, 7);
+    assert.deepEqual(Object.keys(s.postcards), []);
+    assert.deepEqual(Object.keys(s.visits), []);
+    assert.equal(s.companion, null);
+    assert.equal(s.createdAt, fresh.createdAt);
+    assert.equal(s.revision, fresh.revision);
+  };
+  // B reçoit l'écriture de A : la ville neuve l'emporte entière, sans fusion ni écriture.
+  b.Store.pullLocal();
+  assertFresh(b.api.state);
+  assert.equal(b.api.state.settings.sound, true);
+  assert.equal(disk.getItem(KEY), text);
+  // C écrit à nouveau avant d'avoir vu l'écriture de A : rien n'est écrit, la ville neuve l'emporte aussi, et l'alerte
+  // d'écriture impossible s'efface, puisque plus rien n'attend d'être écrit.
+  assert.notEqual(c.Store.localError, '');
+  c.api.state.goals.minutes = 90;
+  assert.equal(c.commit({ silent: true }), true);
+  assert.equal(disk.getItem(KEY), text);
+  assertFresh(c.api.state);
+  assert.equal(c.api.state.personal.name, '');
+  assert.equal(c.api.state.goals.minutes, 60);
+  assert.equal(c.Store.localError, '');
+  // La ville neuve est désormais leur base : un changement suivant s'y écrit.
+  b.api.state.personal.name = 'Nouveau départ';
+  assert.equal(b.commit({ silent: true }), true);
+  const out = stored(disk);
+  assert.equal(out.personal.name, 'Nouveau départ');
+  assert.equal(out.createdAt, fresh.createdAt);
+  assert.equal(out.companion, null);
+});
+
+test('fusion : deux onglets neufs gardent la fusion actuelle', () => {
+  // Deux onglets ouverts sur un stockage vide, à une milliseconde d'écart : deux villes jamais écrites (lsAt === -1), nées
+  // chacune à son heure.
+  const disk = storage(), a = stateApp(disk), b = stateApp(disk);
+  a.init();
+  b.advance(1);
+  b.init();
+  assert.equal(a.Store.lsAt, -1);
+  assert.equal(b.Store.lsAt, -1);
+  assert.notEqual(b.api.state.createdAt, a.api.state.createdAt);
+  assert.equal(a.commit({ silent: true }), true);
+  // B ajoute une envie sans avoir vu l'écriture de A : sa ville jamais écrite n'est pas remplacée, elle se fond dans celle de A.
+  b.api.state.wishes.push({ id: 'envie-b', name: 'Peindre', cat: 'crea', min: 20 });
+  assert.equal(b.commit({ silent: true }), true);
+  const out = stored(disk);
+  assert.equal(out.createdAt, a.api.state.createdAt);
+  assert.deepEqual(out.city.tiles.map(t => t.id), Array.from(a.api.state.city.tiles, t => t.id));
+  assert.ok(out.wishes.some(w => w.id === 'envie-b'));
+});
+
+test('fusion : un document sans date de création valide n\'est pas une ville remplacée', () => {
+  // normalize() donne l'heure de la lecture à un document sans date de création valide (ville préparée, horloge fausse à sa
+  // création) : elle change d'une lecture à l'autre. Ce n'est pas une autre ville, et sa première écriture lui donne une date.
+  for (const createdAt of [undefined, 1e9]) {
+    const seed = { ...copy(stateApp().defaultState()), createdAt };
+    // Une écriture, une seconde après l'ouverture : elle a lieu, puis la suivante aussi.
+    const one = opened(seed);
+    one.a.advance(1000);
+    one.a.api.state.personal.name = 'Lumière';
+    assert.equal(one.a.commit({ silent: true }), true);
+    assert.equal(stored(one.disk).personal.name, 'Lumière');
+    assert.equal(stored(one.disk).createdAt, one.a.api.state.createdAt);
+    one.a.advance(1000);
+    one.a.api.state.goals.minutes = 90;
+    assert.equal(one.a.commit({ silent: true }), true);
+    assert.equal(stored(one.disk).goals.minutes, 90);
+    // Une relecture avec un changement pas encore écrit (écriture refusée) : il reste, et s'écrit.
+    const two = opened(seed);
+    two.a.api.state.personal.name = 'Lumière';
+    two.disk.fail = true;
+    assert.equal(two.a.commit({ silent: true }), false);
+    two.disk.fail = false;
+    two.a.advance(1000);
+    two.a.Store.pullLocal();
+    assert.equal(two.a.api.state.personal.name, 'Lumière');
+    assert.equal(stored(two.disk).personal.name, 'Lumière');
+  }
+});
