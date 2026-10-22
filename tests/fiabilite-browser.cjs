@@ -868,9 +868,92 @@ async function toastHeldByMouseAndFocus(browser, baseURL) {
   return 'Message avec bouton : ni la souris ni le focus ne le ferment';
 }
 
+// À 320 px, un nom long ne se coupe plus au milieu des mots, sur cinq à sept lignes, dans les 51 px laissés par un solde de 1,2 Md et 40 jours
+// de série : les pastilles, groupées avec les Réglages, passent sous le nom. Un nom court reste, lui, sur la ligne des pastilles tant qu'il y
+// tient (à 390 px) : seul un nom qui manque de place les fait passer dessous. Une ville de 40 jours de série finit hier (le 20 octobre).
+async function headerFitsAt320(browser, baseURL) {
+  const days = {};
+  for (let back = 1; back <= 40; back++) days[new Date(at(NOW) - back * 864e5).toISOString().slice(0, 10)] = 10;
+  for (const [lang, name, coins, series] of [['fr', 'Les Jardins de Montreux', '1,2' + NBSP + 'Md', '40' + NBSP + 'j'], ['en', 'Riverside Gardens Town', '1.2' + NBSP + 'B', '40' + NBSP + 'd']]) {
+    const seed = town({ calme: 400 }, [], { coins: 1.2e9, personal: { name }, settings: { lang }, stats: { ok: 40, byCat: { calme: 400 }, days } });
+    const { context, page, errors } = await cityAt(browser, baseURL, seed, NOW, { viewport: { width: 320, height: 568 } });
+    try {
+      // La largeur d'un « 0 » (l'unité ch) vient de la police : on mesure une fois qu'elle est chargée.
+      await page.evaluate(async () => { await document.fonts.load('20px "Young Serif"', 'Les Jardins'); await document.fonts.ready; });
+      assert.equal(await page.locator('.brand-name').innerText(), name);
+      assert.equal(await page.locator('#balance').innerText(), coins);
+      assert.equal(await page.locator('#streak').innerText(), series);
+      const header = await page.evaluate(() => {
+        const title = document.querySelector('.brand-name'), box = title.getBoundingClientRect(), text = title.firstChild, broken = [];
+        // Un mot coupé occupe deux lignes : ses rectangles n'ont pas tous le même haut.
+        for (let found, words = /\S+/g; (found = words.exec(text.textContent));) {
+          const range = document.createRange();
+          range.setStart(text, found.index);
+          range.setEnd(text, found.index + found[0].length);
+          if (new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size > 1) broken.push(found[0]);
+        }
+        const place = selector => { const rect = document.querySelector(selector).getBoundingClientRect(); return { left: rect.left, right: rect.right, middle: (rect.top + rect.bottom) / 2 }; };
+        return { width: box.width, height: box.height, line: parseFloat(getComputedStyle(title).lineHeight), broken, scroll: document.documentElement.scrollWidth,
+          screen: window.innerWidth, balance: place('#balanceChip'), streak: place('#streakChip'), settings: place('#settingsBtn') };
+      });
+      const label = `${lang} « ${name} »`;
+      assert.ok(header.width >= 150, `${label} : le nom mesure ${Math.round(header.width)} px de large (150 px au moins attendus)`);
+      assert.ok(header.line > 0 && header.height <= 2 * header.line, `${label} : le nom mesure ${Math.round(header.height)} px de haut, sur des lignes de ${header.line} px (2 lignes au plus)`);
+      assert.deepEqual(header.broken, [], `${label} : des mots coupés au milieu`);
+      assert.ok(header.scroll <= header.screen, `${label} : la page déborde (${header.scroll} px sur ${header.screen} px)`);
+      // Les pastilles et les Réglages restent ensemble : sur une même ligne, de gauche à droite, dans l'écran.
+      const { balance: chipCoins, streak: chipSeries, settings: gear } = header;
+      assert.ok(Math.abs(chipCoins.middle - chipSeries.middle) <= 1 && Math.abs(chipSeries.middle - gear.middle) <= 1, `${label} : les pastilles et les Réglages ne sont pas sur une même ligne`);
+      assert.ok(chipCoins.left >= 0 && chipCoins.right <= chipSeries.left && chipSeries.right <= gear.left && gear.right <= header.screen, `${label} : les pastilles et les Réglages sortent de l'écran ou se recouvrent`);
+      // Un nom court (celui d'une ville neuve) et les mêmes pastilles : une seule ligne à 390 px.
+      await page.setViewportSize({ width: 390, height: 844 });
+      const short = lang === 'fr' ? 'Ma ville' : 'My town';
+      await page.evaluate(text => { document.querySelector('.brand-name').textContent = text; }, short);
+      const [titleMiddle, chipMiddle] = await page.evaluate(() => ['.brand-name', '#balanceChip'].map(selector => { const rect = document.querySelector(selector).getBoundingClientRect(); return (rect.top + rect.bottom) / 2; }));
+      assert.ok(Math.abs(titleMiddle - chipMiddle) <= 1, `${lang} « ${short} » à 390 px : le nom passe seul sur sa ligne alors qu'il tient à côté des pastilles`);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'En-tête : un nom long tient à 320 px';
+}
+
+// Le contour de focus d'une puce de la barre des rubriques de la boutique est dessiné à 4 px de la puce (2 px de décalage, 2 px de trait). La
+// barre défile : c'est un conteneur qui coupe ce qui dépasse, et 2 px de marge intérieure en coupaient le haut et le bas de chaque puce, et le
+// côté de la première et de la dernière. On met le focus sur chaque puce, de la première à la dernière, après une touche : le contour ne se
+// dessine qu'au clavier. (Tab n'atteint pas les boutons dans WebKit sur Mac ; « focus » après une touche donne le même contour partout.)
+// Une puce à moitié visible au bord n'est pas ramenée par le focus (les navigateurs s'en passent dès que 32 px en sont visibles) : on ne
+// regarde pas ses côtés, seulement ceux de la première puce (barre au début) et de la dernière (barre au bout).
+async function shopFocusRingWhole(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }), NOW);
+  try {
+    await page.locator('#buildBtn').click();
+    await page.waitForFunction(() => document.activeElement === document.querySelector('#sheetTitle'));
+    const chips = page.locator('.shop-nav .chip'), count = await chips.count();
+    assert.ok(count >= 6, 'rubriques de la boutique : ' + count);
+    assert.equal(await page.locator('.shop-nav').evaluate(bar => bar.scrollWidth > bar.clientWidth), true, 'la barre des rubriques ne défile pas : le test ne parcourrait rien');
+    await page.keyboard.press('Tab');
+    for (let index = 0; index < count; index++) {
+      await chips.nth(index).focus();
+      const ring = await page.evaluate(() => {
+        const chip = document.activeElement, bar = chip.closest('.shop-nav').getBoundingClientRect(), box = chip.getBoundingClientRect(), style = getComputedStyle(chip);
+        const out = parseFloat(style.outlineOffset) + parseFloat(style.outlineWidth);
+        return { name: chip.textContent, drawn: style.outlineStyle !== 'none', out, top: box.top - out - bar.top, bottom: bar.bottom - (box.bottom + out), left: box.left - out - bar.left, right: bar.right - (box.right + out) };
+      });
+      const name = ring.name;
+      assert.deepEqual([ring.drawn, ring.out], [true, 4], `« ${name} » : le contour de focus n'est pas dessiné à 4 px de la puce`);
+      // Ce qui reste dans la barre, au dixième de pixel près (le défilement n'est pas entier).
+      const sides = [['top', 'en haut'], ['bottom', 'en bas'], ...(index === 0 ? [['left', 'à gauche']] : []), ...(index === count - 1 ? [['right', 'à droite']] : [])];
+      for (const [side, where] of sides) assert.ok(ring[side] >= -0.1, `« ${name} » (puce ${index + 1} sur ${count}) : le contour de focus est coupé ${where} (${ring[side].toFixed(1)} px)`);
+    }
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Boutique : contour de focus entier';
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost, undoLastsUntilNextAction, toastHeldByMouseAndFocus];
+  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost, undoLastsUntilNextAction, toastHeldByMouseAndFocus, headerFitsAt320,
+  shopFocusRingWhole];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

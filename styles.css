@@ -177,20 +177,25 @@ button { cursor: pointer; }
 }
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 12px 16px 10px;
 }
+/* Le nom réserve 12ch (144 px) sur sa ligne ; sans cette place, les pastilles (groupées avec les Réglages) passent sous lui, à droite.
+   Un nom plus court ne réserve que sa largeur (max-content) et reste à côté des pastilles tant qu'il y tient. Il ne se coupe qu'entre
+   les mots, sauf un mot plus long que la ligne. */
 .brand-name {
   font-family: var(--font-display);
   font-size: 20px;
   line-height: 1.1;
   letter-spacing: -.01em;
-  flex: 1;
+  flex: 1 1 12ch;
   min-width: 0;
-  overflow-wrap: anywhere;
+  max-width: max-content;
+  overflow-wrap: break-word;
 }
-.top-stats { display: flex; align-items: center; gap: 6px; }
+.top-stats { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .stat-chip {
   display: inline-flex; align-items: center; gap: 6px;
   height: 34px; padding: 0 12px;
@@ -412,6 +417,9 @@ main {
   font-size: 16px;
 }
 .textarea { min-height: 110px; font-size: 16px; resize: vertical; overflow-wrap: anywhere; }
+/* Le texte indicatif est parfois la seule étiquette visible : le gris du navigateur (2,3:1) et l'éclaircissement de Firefox sont trop pâles ;
+   --muted atteint 5,4:1 sur le champ. */
+.input::placeholder, .textarea::placeholder { color: var(--muted); opacity: 1; }
 .row-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 
 /* Choice chips (durations, segmented) */
@@ -444,7 +452,8 @@ a.btn { text-decoration: none; }
   min-height: 44px; border: 0; border-radius: 999px; padding: 2px 4px;
   background: transparent; color: var(--ink-2); font-weight: 700; font-size: 14px;
 }
-.seg button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+/* L'option choisie a le fond foncé et le texte clair des puces choisies (12:1 sur le fond du contrôle) ; l'ancien fond clair n'y faisait que 1,08:1. */
+.seg button[aria-checked="true"] { background: var(--ink); color: var(--surface); box-shadow: none; }
 
 /* ---------- Draw ---------- */
 .draw-card { display: grid; gap: 14px; text-align: center; justify-items: center; padding: 22px 16px; }
@@ -575,8 +584,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
 /* Le prochain élément à débloquer reste en couleur ; les autres sont des silhouettes compactes */
 .shop-item.hidden { grid-template-columns: 40px minmax(0, 1fr); padding: 6px 10px 6px 6px; background: var(--surface-2); }
 .shop-item.hidden canvas { width: 40px; height: 40px; }
-/* Dans la grille de la fenêtre, une rangée qui défile se tasserait sans hauteur minimale */
-.shop-nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 2px; min-height: 48px; }
+/* Dans la grille de la fenêtre, une rangée qui défile se tasserait sans hauteur minimale. La barre coupe ce qui dépasse : 5 px de marge
+   intérieure laissent entier le contour de focus des puces (4 px), et la marge extérieure négative les reprend, la mise en page ne bouge pas. */
+.shop-nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -3px -5px; padding: 5px; min-height: 54px; }
 .shop-nav::-webkit-scrollbar { display: none; }
 .shop-nav .chip { flex: none; }
 .shop-item .si-name { font-weight: 700; overflow-wrap: anywhere; }
@@ -708,6 +718,8 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
 #city:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; border-radius: 20px; }
 .elsewhere { display: flex; gap: 12px; align-items: flex-start; border-color: var(--accent); background: var(--accent-soft); }
 .elsewhere > .ic { color: var(--accent-ink); width: 22px; height: 22px; margin-top: 2px; }
+/* La note du bandeau : --muted sur son fond ne fait que 4,26:1 en thème sombre, --ink-2 plus de 6:1. */
+.elsewhere .note { color: var(--ink-2); }
 .ew-main { display: grid; gap: 6px; min-width: 0; justify-items: start; }
 .city-list { margin-top: -10px; }
 .city-list summary { text-align: center; color: var(--muted); font-weight: 600; font-size: 13px; }
