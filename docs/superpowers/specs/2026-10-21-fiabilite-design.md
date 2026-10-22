@@ -101,7 +101,9 @@ Un onglet resté sur l'étape 5 efface ainsi le compagnon de l'étape 6, pour de
   - les autres parties de la fusion ne changent pas. Une remise à zéro ne fait donc plus revenir le terrain, les visiteurs, les cartes postales ou le compagnon de l'ancienne ville.
 - **Un onglet en retard se recharge de lui-même.** C'est le cas d'un onglet dont le service worker a changé sans qu'il l'ait demandé, quand l'utilisateur a mis à jour ailleurs. Il se recharge dès qu'il est au repos, c'est-à-dire :
   - qu'aucune séance ne tourne dans cet onglet ;
-  - qu'aucune fenêtre n'y est ouverte, ou qu'il passe en arrière-plan.
+  - qu'aucune fenêtre n'y est ouverte, ou qu'il passe en arrière-plan ;
+  - que le message « Annuler » d'une suppression n'y est plus affiché, page visible ou non ;
+  - que, même en arrière-plan, aucun texte tapé n'y attend d'être envoyé et que l'écran de fin d'une séance n'y est plus affiché. Un texte tapé, c'est un champ de la page ou d'une fenêtre ouverte dont la valeur, non vide, diffère de sa valeur de départ : un champ prérempli laissé tel quel ne compte pas.
 
   En attendant, le bandeau « Mettre à jour » reste affiché, comme aujourd'hui.
 - **Une règle notée pour les étapes suivantes** (README, partie « Données »), parce que la protection repose sur elle : ne jamais changer le sens d'un champ existant. Pour une nouvelle donnée, ajouter un champ.
@@ -232,7 +234,8 @@ Certains noms reçus par lien s'affichent vides alors qu'ils semblent visibles :
 
 **Ce qui est décidé**
 - **Un seul nettoyage** pour les noms de ville partagée et du compagnon.
-- **Caractères retirés** : les caractères de format et ignorables, les séparateurs de ligne et de paragraphe, et les blancs qui ressemblent à un caractère.
+- **Caractères retirés** : les caractères de format et ignorables, et les blancs qui ressemblent à un caractère.
+- **Blancs** : un séparateur de ligne ou de paragraphe devient une espace, comme une tabulation ou un retour à la ligne ; des blancs qui se suivent ne font plus qu'une espace.
 - **Nom valable** : il contient au moins une lettre, un chiffre, un symbole, une ponctuation ou un émoji.
 - **Coupure** : un nom trop long est coupé entre deux caractères entiers, jamais au milieu d'un émoji.
 
@@ -349,7 +352,7 @@ Un nom de ville long se coupe au milieu des mots, sur 5 à 7 lignes.
 ## Risques connus
 
 - **Parties inconnues gardées telles quelles.** Une donnée invalide venue d'une version future reste dans le stockage tant que cette version l'ignore. C'est sans gravité : chaque version la retire de sa lecture.
-- **Rechargement automatique.** Il n'a lieu qu'au repos. Une fenêtre ouverte le retarde, et le bandeau reste en attendant.
+- **Rechargement automatique.** Il n'a lieu qu'au repos. Une fenêtre ouverte, un texte tapé, l'écran de fin d'une séance ou le message « Annuler » le retardent, et le bandeau reste en attendant.
 - **Horloge.** Une séance faite pendant que l'horloge était en avance garde ce jour-là (A4).
 - **Horloge réparée au démarrage seulement.** Une fusion avec un onglet resté sur l'étape 6 peut refiger la ville jusqu'au démarrage suivant.
 - **WebKit dans le workflow.** La vérification est plus longue, environ 5 minutes de plus. Si la tâche WebKit devient instable, elle reste séparée et n'empêche pas de publier.
