@@ -868,6 +868,124 @@ async function toastHeldByMouseAndFocus(browser, baseURL) {
   return 'Message avec bouton : ni la souris ni le focus ne le ferment';
 }
 
+// Le message gardé (« Annuler » après une suppression) est fixe au-dessus de la barre des onglets, et à 320 px il fait deux rangées (le texte,
+// puis le bouton). La page ne lui laissait aucune place : le voisin qui prend le focus après une suppression, la fin de la liste et les champs
+// du formulaire passaient dessous, et le défilement ne les en sortait pas. Après une suppression au clavier : le voisin n'est pas recouvert, la
+// fin de la page défile au-dessus du message, et Tab, arrêt après arrêt, n'amène rien dessous jusqu'au bouton « Annuler » (dans WebKit sur Mac,
+// Tab ne s'arrête pas aux boutons : ses arrêts sont les champs et le résumé du formulaire, et il sort de la page après eux). Un nom de 40 lettres
+// sans espace donne le message le plus haut : il reste dans sa pilule, et la place laissée suit sa hauteur.
+async function keptMessageCoversNothing(browser, baseURL) {
+  const long = 'Abcdefghijklmnopqrstuvwxyz0123456789ABCD';
+  const webkit = browser.browserType().name() === 'webkit';
+  for (const [lang, remove] of [['fr', 'Supprimer '], ['en', 'Delete ']]) {
+    const { context, page, errors } = await sessionTown(browser, { lang });
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.addInitScript(name => {
+      const key = 'ville-bien-etre/v2', saved = JSON.parse(localStorage.getItem(key));
+      saved.activities.push({ id: 'a-long', name, cat: 'crea', min: 5, mode: 'free' });
+      localStorage.setItem(key, JSON.stringify(saved));
+    }, long);
+    // Le message est posé : son entrée (un déplacement de 12 px) est finie, on mesure sa vraie place.
+    const settled = () => page.waitForFunction(() => document.querySelector('#toast').getAnimations().length === 0);
+    const focusKey = () => page.evaluate(() => document.activeElement.dataset.focusKey || document.activeElement.id || document.activeElement.tagName);
+    // Part de la surface de l'élément qui a le focus que le message recouvre, de 0 à 1 : ce qu'on en voit, dans la zone qui défile s'il en fait partie
+    // (WebKit ne fait pas défiler le focus d'un champ de saisie : hors de la zone, il n'est pas sous le message, il est ailleurs).
+    const covered = () => page.evaluate(() => {
+      const message = document.querySelector('#toast').getBoundingClientRect(), el = document.activeElement, box = el.getBoundingClientRect();
+      const view = document.querySelector('#main').contains(el) ? document.querySelector('#main').getBoundingClientRect() : { left: -1e9, right: 1e9, top: -1e9, bottom: 1e9 };
+      const seen = { left: Math.max(box.left, view.left), right: Math.min(box.right, view.right), top: Math.max(box.top, view.top), bottom: Math.min(box.bottom, view.bottom) };
+      const across = Math.min(seen.right, message.right) - Math.max(seen.left, message.left), down = Math.min(seen.bottom, message.bottom) - Math.max(seen.top, message.top);
+      return Math.max(0, across) * Math.max(0, down) / (box.width * box.height);
+    });
+    // Le bas de la dernière carte de l'onglet (les routines), la page défilée jusqu'au bout, et le haut du message.
+    const endOfPage = () => page.evaluate(() => {
+      const main = document.querySelector('#main');
+      main.scrollTop = main.scrollHeight;
+      return { card: document.querySelector('#routinesCard').getBoundingClientRect().bottom, message: document.querySelector('#toast').getBoundingClientRect().top };
+    });
+    // La place mesurée par l'appli (--toast-room) contre la vraie : du haut du message à la barre des onglets, où #main finirait sans lui.
+    const room = () => page.evaluate(() => ({ measured: parseFloat(document.body.style.getPropertyValue('--toast-room')),
+      actual: document.querySelector('.tabbar').getBoundingClientRect().top - document.querySelector('#toast').getBoundingClientRect().top }));
+    const roomRight = async label => { const found = await room(); assert.ok(Math.abs(found.measured - found.actual) <= 1, `${lang} : ${label} : la place mesurée est ${found.measured} px, la vraie ${found.actual} px`); };
+    // Le remplissage et le scroll-padding du bas de #main, en px (« auto » : aucun), et la classe que le message gardé pose sur body.
+    const padding = () => page.evaluate(() => { const style = getComputedStyle(document.querySelector('#main')); return [parseFloat(style.paddingBottom), parseFloat(style.scrollPaddingBottom) || 0, document.body.classList.contains('toast-kept')]; });
+    // Où est le focus : son nom, si c'est le bouton du message, et si la page n'a plus le focus (Tab est sorti de ses arrêts).
+    const where = () => page.evaluate(() => ({ name: document.activeElement.dataset.focusKey || document.activeElement.id || document.activeElement.tagName,
+      undo: document.activeElement.classList.contains('toast-btn'), out: document.activeElement === document.body }));
+    try {
+      await page.goto(baseURL);
+      await page.waitForFunction(() => !!window.__ville);
+      await page.locator('[data-tab="activites"]').click();
+      await page.locator('#editActs').click();
+      const [bottom] = await padding();
+      // La 3e activité supprimée au clavier : le focus va à la suppression de la suivante, sous le message si la page ne lui fait pas de place.
+      await page.getByRole('button', { name: remove + 'Pratique calme', exact: true }).focus();
+      await page.keyboard.press('Enter');
+      await settled();
+      assert.equal(await focusKey(), 'act-del:a-foyer', lang + ' : le focus ne va pas au voisin');
+      const near = await covered();
+      assert.equal(near, 0, `${lang} : le message recouvre ${Math.round(near * 100)} % du voisin qui a le focus`);
+      await roomRight('message de deux rangées');
+      // Tant que le message est là, #main a un remplissage et un scroll-padding en bas d'au moins sa place.
+      const [kept, scrolled, flagged] = await padding(), taken = (await room()).actual;
+      assert.ok(flagged && kept >= taken && scrolled >= taken, `${lang} : remplissage ${kept} px et scroll-padding ${scrolled} px pour un message de ${taken} px (classe : ${flagged})`);
+      // Tab, arrêt après arrêt, jusqu'au bouton du message (le dernier arrêt de la page) ou jusqu'à la sortie de la page : aucun n'est sous lui.
+      const under = [];
+      let stops = 0, reached = false;
+      for (let press = 0; press < 40; press++) {
+        await page.keyboard.press('Tab');
+        const now = await where();
+        if (now.out) break;
+        if (now.undo) { reached = true; break; }
+        stops++;
+        const share = await covered();
+        if (share > 0) under.push(`${now.name} ${Math.round(share * 100)} %`);
+      }
+      assert.ok(stops >= (webkit ? 4 : 12), `${lang} : ${stops} arrêts de Tab seulement, le parcours est trop court`);
+      assert.ok(webkit || reached, lang + " : Tab n'atteint pas le bouton du message");
+      assert.deepEqual(under, [], `${lang} : des arrêts de Tab sous le message`);
+      // La fin de la page défile au-dessus du message.
+      const end = await endOfPage();
+      assert.ok(end.card <= end.message, `${lang} : la dernière carte descend de ${Math.round(end.card - end.message)} px sous le message, la page défilée jusqu'au bout`);
+      // Le plus long nom : le message, plus haut, reste dans sa pilule, et le voisin de la dernière activité n'est pas recouvert non plus.
+      await page.getByRole('button', { name: remove + long, exact: true }).focus();
+      await page.keyboard.press('Enter');
+      await settled();
+      const pill = await page.evaluate(() => {
+        const message = document.querySelector('#toast'), box = message.getBoundingClientRect(), text = message.querySelector('span').getBoundingClientRect();
+        return { spill: message.scrollWidth - message.clientWidth, left: text.left - box.left, right: box.right - text.right, height: box.height };
+      });
+      assert.ok(pill.spill <= 0 && pill.left >= 0 && pill.right >= 0, `${lang} : le nom de 40 lettres sort de la pilule (${JSON.stringify(pill)})`);
+      await roomRight('message de 40 lettres');
+      assert.equal(await focusKey(), 'act-del:a-crea', lang + ' : le focus ne va pas au voisin de la dernière activité');
+      const tall = await covered();
+      assert.equal(tall, 0, `${lang} : le message de 40 lettres recouvre ${Math.round(tall * 100)} % du voisin qui a le focus`);
+      const far = await endOfPage();
+      assert.ok(far.card <= far.message, `${lang} : le message de 40 lettres : la dernière carte descend de ${Math.round(far.card - far.message)} px dessous`);
+      // Le message se replie autrement quand l'écran change de largeur, et la place suit : posé à 390 px (une rangée), il fait deux rangées à 320 px.
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole('button', { name: remove + 'Pratique crea', exact: true }).focus();
+      await page.keyboard.press('Enter');
+      await settled();
+      await page.setViewportSize({ width: 320, height: 568 });
+      await page.waitForTimeout(100);
+      const narrow = await endOfPage();
+      assert.ok(narrow.card <= narrow.message, `${lang} : le message replié sur deux rangées : la dernière carte descend de ${Math.round(narrow.card - narrow.message)} px dessous`);
+      await roomRight('message replié par le redimensionnement');
+      // Le message parti (« Annuler »), ou remplacé par un message court, #main a retrouvé son remplissage, sans scroll-padding.
+      await page.locator('#toast').getByRole('button').click();
+      assert.deepEqual(await padding(), [bottom, 0, false], lang + ' : #main garde la place du message après « Annuler »');
+      await page.getByRole('button', { name: remove + 'Pratique foyer', exact: true }).focus();
+      await page.keyboard.press('Enter');
+      await page.locator('#actName').fill('Lecture');
+      await page.locator('#actName').press('Enter');
+      assert.deepEqual(await padding(), [bottom, 0, false], lang + ' : #main garde la place du message quand un message court le remplace');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Annuler : le message ne cache pas ce qui a le focus, même à 320 px';
+}
+
 // À 320 px, un nom long ne se coupe plus au milieu des mots, sur cinq à sept lignes, dans les 51 px laissés par un solde de 1,2 Md et 40 jours
 // de série : les pastilles, groupées avec les Réglages, passent sous le nom. Un nom court reste, lui, sur la ligne des pastilles tant qu'il y
 // tient (à 390 px) : seul un nom qui manque de place les fait passer dessous. Une ville de 40 jours de série finit hier (le 20 octobre).
@@ -952,8 +1070,8 @@ async function shopFocusRingWhole(browser, baseURL) {
 
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost, undoLastsUntilNextAction, toastHeldByMouseAndFocus, headerFitsAt320,
-  shopFocusRingWhole];
+  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost, undoLastsUntilNextAction, toastHeldByMouseAndFocus,
+  keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

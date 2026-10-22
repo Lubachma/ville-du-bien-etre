@@ -8227,7 +8227,8 @@ function announce(msg) {
 // Le message affiché : son minuteur, sa durée en ms (0 : il reste), et ce qui le retient (souris, focus ; null s'il ne peut pas l'être).
 let toastTimer = 0, toastMs = 0, toastHeld = null;
 // « spoken » : ce que les lecteurs d'écran entendent, quand il dit plus que le message affiché.
-// opts.keep : aucun minuteur, le message reste jusqu'au prochain message, à go() ou à openSheet() (« Annuler » après une suppression).
+// opts.keep : aucun minuteur, le message reste jusqu'au prochain message ; go(), openSheet() et updateInert() (la séance ou la vue en grand qui
+// s'ouvre) le ferment (« Annuler » après une suppression), et la page lui laisse sa place (reserveToastRoom).
 // Sinon il dure 6 s avec une action, 2,8 s sans ; un message avec action ne se ferme pas tant qu'il a le focus ou la souris, et ses 6 s
 // repartent quand les deux l'ont quitté.
 function toast(msg, action, spoken = msg, opts = {}) {
@@ -8242,10 +8243,13 @@ function toast(msg, action, spoken = msg, opts = {}) {
   toastMs = opts.keep ? 0 : action ? 6000 : 2800;
   toastHeld = action && !opts.keep ? { mouse: false, focus: false } : null;
   armToast();
+  document.body.classList.toggle('toast-kept', !!opts.keep);
+  if (opts.keep) reserveToastRoom();
 }
+// Le minuteur n'envoie rien à hideToast, dont le paramètre est un booléen.
 function armToast() {
   clearTimeout(toastTimer);
-  if (toastMs) toastTimer = setTimeout(hideToast, toastMs);
+  if (toastMs) toastTimer = setTimeout(() => hideToast(), toastMs);
 }
 // La souris ou le focus arrive sur le message (on) ou le quitte : le minuteur s'arrête tant que l'un des deux y est, puis repart de zéro.
 function holdToast(by, on) {
@@ -8258,6 +8262,16 @@ $('#toast').addEventListener('mouseenter', () => holdToast('mouse', true));
 $('#toast').addEventListener('mouseleave', () => holdToast('mouse', false));
 $('#toast').addEventListener('focusin', () => holdToast('focus', true));
 $('#toast').addEventListener('focusout', () => holdToast('focus', false));
+// Un message gardé est fixe au-dessus de la barre des onglets, devant le bas de la page : tant qu'il est là (body.toast-kept), la zone qui défile
+// lui laisse sa place (padding-bottom et scroll-padding-bottom de #main, dans la feuille de style) : la fin de la page défile au-dessus de lui,
+// et le focus y amène l'élément. --toast-room, du bord haut du message au bas de #main, est mesuré : le message se replie selon la largeur, la
+// langue et la taille du texte. C'est sa hauteur, plus sa distance au bas de l'écran, moins la barre des onglets.
+function reserveToastRoom() {
+  const t = $('#toast');
+  const room = t.offsetHeight + (parseFloat(getComputedStyle(t).bottom) || 0) - $('.tabbar').offsetHeight;
+  document.body.style.setProperty('--toast-room', Math.max(0, Math.ceil(room)) + 'px');
+}
+window.addEventListener('resize', () => { if (document.body.classList.contains('toast-kept')) reserveToastRoom(); });
 // keptOnly : go(), openSheet() et l'ouverture d'une séance ne ferment que le message qui reste ; les autres gardent leur minuteur (« Un
 // nouveau jour commence », écrit juste avant que la fiche du visiteur ne se rouvre, doit encore se voir).
 function hideToast(keptOnly = false) {
@@ -8265,6 +8279,7 @@ function hideToast(keptOnly = false) {
   clearTimeout(toastTimer);
   toastHeld = null;
   $('#toast').hidden = true;
+  document.body.classList.remove('toast-kept');
 }
 function bump() { const c = $('#balanceChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
 // Les libellés peuvent être des fonctions : un bouton créé au démarrage suit alors la langue affichée.
@@ -8296,8 +8311,8 @@ function removeWithUndo(key, id) {
   const near = S[key][idx + 1] || S[key][idx - 1], del = DELETE_KEYS[key];
   const [item] = S[key].splice(idx, 1);
   commit();
-  if (!focusByKey(near && del && del + ':' + near.id, { scroll: true }) && !layerOpen()) focusViewHeading();
-  // Le message reste jusqu'à l'action suivante, et l'annonce dit qu'on peut annuler.
+  // Le message reste jusqu'à l'action suivante, et l'annonce dit qu'on peut annuler. Il vient avant le focus du voisin : la page lui laisse sa
+  // place d'abord, et le navigateur amène alors le voisin au-dessus de lui.
   const name = displayName(item.name);
   toast(t('ui.deleted', { name }), { label: t('common.undo'), run: () => {
     if (S[key].some(x => x.id === item.id)) return;
@@ -8306,6 +8321,7 @@ function removeWithUndo(key, id) {
     // Revenu, il reprend le focus sur son bouton de suppression.
     if (del) focusByKey(del + ':' + item.id, { scroll: true });
   } }, t('ui.deletedUndo', { name }), { keep: true });
+  if (!focusByKey(near && del && del + ':' + near.id, { scroll: true }) && !layerOpen()) focusViewHeading();
 }
 
 /* =========================================================================

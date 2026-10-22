@@ -700,6 +700,12 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
   min-height: 44px; padding: 0 14px; border-radius: 999px; border: 0;
   background: var(--surface); color: var(--ink); font-weight: 800; font-size: 14px;
 }
+/* Un nom de 40 lettres sans espace se coupe dans la pilule au lieu d'en sortir. */
+.toast span { overflow-wrap: anywhere; }
+/* Le message gardé (« Annuler » après une suppression) ne cache rien de ce qui a le focus : tant qu'il est là (body.toast-kept), la zone qui défile
+   lui laisse sa place. --toast-room, mesuré par toast(), va de son bord haut au bas de la zone : la fin de la page défile au-dessus de lui (24 px
+   de marge, comme d'habitude), et le focus amène l'élément au-dessus de lui (8 px, pour son contour). */
+body.toast-kept main { padding-bottom: calc(var(--toast-room, 9rem) + 24px); scroll-padding-bottom: calc(var(--toast-room, 9rem) + 8px); }
 
 @media (hover: hover) {
   .icon-btn:hover { background: var(--surface-2); }
