@@ -978,8 +978,8 @@ async function undoLastsUntilNextAction(browser, baseURL) {
 }
 
 // « Annuler » parle de la ville d'où l'élément a été supprimé. Une autre ville adoptée entre-temps (« Tout recommencer » dans un autre onglet,
-// ici une deuxième page du même navigateur) ferme le message, et son bouton, même touché quand même, ne ramène rien de l'ancienne ville dans
-// la nouvelle.
+// ici une deuxième page du même navigateur) ferme le message, et son bouton, touché quand même, ne ramène rien de l'ancienne ville dans la
+// nouvelle.
 async function undoStaysInItsCity(browser, baseURL) {
   const activities = ['esprit', 'corps', 'crea'].map(cat => ({ id: 'a-' + cat, name: 'Pratique ' + cat, cat, min: 5, mode: 'free' }));
   const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }, [], { createdAt: at('2026-05-04T09:00:00Z'), activities, achievements: FIRST_STEP }), NOW);
@@ -1456,10 +1456,10 @@ async function refusedGiftsNotAnnounced(browser, baseURL) {
 }
 
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
-  lateTabWaitsForTyping, lateTabWaitsForUndo, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn, imagesOwnCityUnderSky, recapFiguresReadable, zoomDrawsOncePerFrame, focusNeverLost, villeFocusKeptOnPartialRenders, undoLastsUntilNextAction, undoStaysInItsCity, toastHeldByMouseAndFocus,
-  keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole, streakReadInFull, routineStepAnnounced, challengesNameFollowsLanguage, blankNamesReported,
-  refusedGiftsNotAnnounced];
+  lateTabWaitsForTyping, lateTabWaitsForUndo, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal,
+  ambienceClosedAtEnd, soundResumedOnReturn, imagesOwnCityUnderSky, recapFiguresReadable, zoomDrawsOncePerFrame, focusNeverLost,
+  villeFocusKeptOnPartialRenders, undoLastsUntilNextAction, undoStaysInItsCity, toastHeldByMouseAndFocus, keptMessageCoversNothing, headerFitsAt320,
+  shopFocusRingWhole, streakReadInFull, routineStepAnnounced, challengesNameFollowsLanguage, blankNamesReported, refusedGiftsNotAnnounced];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
