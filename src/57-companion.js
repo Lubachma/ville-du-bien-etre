@@ -18,8 +18,9 @@ function renderCompanionInvite() {
   const faces = COMPANION_SPECIES.map(species => { const cv = h('canvas'); paintCompanion(cv, { species, pose: 'idle', face: true }, 40); return cv; });
   card.replaceChildren(h('h3', { id: 'companionInviteTitle' }, t('companion.inviteTitle')),
     h('div', { class: 'companion-invite-main' }, h('div', { class: 'companion-faces', 'aria-hidden': 'true' }, ...faces), h('p', {}, t('companion.inviteLine'))),
+    // Le compagnon accueilli, la carte disparaît : le focus passe au bouton du compagnon, de même clé.
     h('div', { class: 'wish-actions' },
-      h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => openCompanionChoice() }, t('companion.meet')),
+      h('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-focus-key': 'companion:open', onclick: () => openCompanionChoice() }, t('companion.meet')),
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
         S.companionLater = nowTs();
         commit();
@@ -80,6 +81,7 @@ function openCompanionChoice({ edit = false } = {}) {
 function renderCompanionButton() {
   const btn = $('#companionBtn'), c = S.companion;
   if (!btn) return;
+  btn.dataset.focusKey = 'companion:open';
   btn.hidden = !c || S.settings.companionShown === false || !!Mode.state;
   if (btn.hidden) return;
   paintCompanion(btn.firstElementChild, { species: c.species, wear: c.wear, pose: 'idle', face: true }, 34);

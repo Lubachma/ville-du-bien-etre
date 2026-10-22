@@ -7205,8 +7205,9 @@ const City = (() => {
     new IntersectionObserver(entries => { onScreen = entries[entries.length - 1].isIntersecting; if (onScreen) wake(); }).observe(small);
   }
 
-  // Ville en grand : zoom voulu (1 à 3) et zoom montré pendant la transition, décalage du glissement, doigts posés.
-  const big = { open: false, zoom: 1, shown: 1, pan: [0, 0], base: null, anim: null, pointers: new Map(), moved: 0, lastTap: null };
+  // Ville en grand : zoom voulu (1 à 3) et zoom montré pendant la transition, décalage du glissement, doigts posés. À la fermeture,
+  // opener reprend le focus, puis back rouvre ce d'où vient la visite (le carnet, pour une de ses cartes postales).
+  const big = { open: false, zoom: 1, shown: 1, pan: [0, 0], base: null, anim: null, pointers: new Map(), moved: 0, lastTap: null, opener: null, back: null };
   // Visite : la ville d'un ami (ou la sienne, telle que les amis la voient), montrée en grand et en lecture seule. Seul le dessin
   // la lit ; sa propre ville n'est jamais touchée.
   let visit = null;
@@ -7284,9 +7285,11 @@ const City = (() => {
     applyView();
     requestFrame();
   }
-  function openBig() {
+  // from : l'élément qui reprendra le focus à la fermeture (le bouton « en grand », ou ce qui avait le focus quand une visite s'ouvre).
+  function openBig(from = document.activeElement) {
     if (big.open || Mode.state) return;
     big.open = true;
+    big.opener = from; big.back = null;
     big.zoom = big.shown = 1; big.pan = [0, 0]; big.anim = null; big.pointers.clear();
     $('#cityBig').hidden = false;
     renderCityCaption();
@@ -7316,12 +7319,17 @@ const City = (() => {
     canvas = small; ctx = small.getContext('2d');
     updateInert();
     layout(); draw();
-    $('#cityExpand').focus({ preventScroll: true });
+    // Le focus revient à ce qui a ouvert la vue s'il est encore là, sinon au bouton « en grand » de la Ville, ou au titre de la vue.
+    // Une carte postale du carnet rouvre ensuite le carnet, sur elle : il se refermera sur ce focus.
+    const { opener, back } = big;
+    big.opener = big.back = null;
+    if (!tryFocus(opener) && !(currentTab === 'ville' && tryFocus($('#cityExpand')))) focusViewHeading();
+    if (back) back();
     if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
   }
   // Visite : la ville d'un code s'ouvre en grand, avec son nom, son nombre d'éléments et la taille de son terrain. Si la vue
-  // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose.
-  function openVisit(snapshot, { own = false } = {}) {
+  // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose. back : ce que sa fermeture rouvre.
+  function openVisit(snapshot, { own = false, back = null } = {}) {
     if (Mode.state) return false;
     visit = { city: snapshot, own };
     const name = own ? cityName() : snapshot.name || t('visit.friendCity'), meta = t('visit.cityMeta', { n: snapshot.tiles.length, size: snapshot.size });
@@ -7331,6 +7339,7 @@ const City = (() => {
     $('#cityBigTitle').textContent = frTypo(own ? t('visit.ownCity') : name);
     if (big.open) { big.zoom = big.shown = 1; big.pan = [0, 0]; big.anim = null; layout(); draw(); }
     else openBig();
+    big.back = back;
     $('#cityBigCanvas').setAttribute('aria-label', frTypo(name + ' · ' + meta));
     return true;
   }
@@ -7350,7 +7359,7 @@ const City = (() => {
   }
   window.addEventListener('popstate', () => { if (big.open) closeBig(true); });
   window.addEventListener('resize', () => { if (big.open) { layout(); draw(); } });
-  $('#cityExpand').addEventListener('click', openBig);
+  $('#cityExpand').addEventListener('click', () => openBig($('#cityExpand')));
   $('#cityBigClose').addEventListener('click', () => closeBig());
   $('#cityBigIn').addEventListener('click', () => zoomAt(big.zoom * 1.5, W / 2, H / 2, true));
   $('#cityBigOut').addEventListener('click', () => zoomAt(big.zoom / 1.5, W / 2, H / 2, true));
@@ -7782,7 +7791,8 @@ const City = (() => {
     if (openCompanionAt(px, py)) return;
     if (openWishAt(px, py)) return;
     const b = pickBuilding(px, py);
-    if (b) openBuildingSheet(b); else openBig();
+    // Hors bâtiment, le toucher fait comme le bouton « en grand », qui reprendra le focus.
+    if (b) openBuildingSheet(b); else openBig($('#cityExpand'));
   });
   small.addEventListener('focus', () => { if (keyboard) draw(); });
   small.addEventListener('blur', () => draw());
@@ -8120,12 +8130,42 @@ function go(tab, focusDestination = false) {
   for (const t of $$('.tab')) { if (t.dataset.tab === tab) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); }
   $('#main').scrollTop = 0;
   renderView(tab);
-  if (focusDestination || origin && origin.closest('.view') && origin.closest('.view').hidden) {
-    const heading = $('#view-' + tab + ' h2') || $('#view-' + tab);
-    heading.tabIndex = -1;
-    heading.focus({ preventScroll: true });
-  }
+  if (focusDestination || origin && origin.closest('.view') && origin.closest('.view').hidden) focusViewHeading();
   if (tab === 'ville') requestAnimationFrame(() => City.relayout());
+}
+
+/* Focus : un élément redessiné porte la même clé que celui qu'il remplace (data-focus-key="nom:id"). Le focus parti avec l'ancien va
+   au nouveau, sinon au titre de la vue : jamais sur body. */
+const focusKeyOf = el => (el && el.dataset && el.dataset.focusKey) || null;
+// Peut prendre le focus : dans la page, affiché, hors [inert].
+const focusable = el => !!el && el !== document.body && el.isConnected && typeof el.focus === 'function' && !el.closest('[inert]') && el.getClientRects().length > 0;
+// Met le focus sur el s'il peut le prendre ; vrai s'il l'a (un bouton désactivé le refuse). scroll : montré s'il est hors de vue.
+function tryFocus(el, scroll = false) {
+  if (!focusable(el)) return false;
+  el.focus({ preventScroll: !scroll });
+  return document.activeElement === el;
+}
+// Le premier élément de cette clé qui peut prendre le focus le reçoit ; vrai s'il l'a.
+function focusByKey(key) {
+  return !!key && $$('[data-focus-key]').some(el => el.dataset.focusKey === key && tryFocus(el, true));
+}
+// Le titre de la vue affichée (la Ville n'en a pas : la vue elle-même).
+function focusViewHeading() {
+  const heading = $('#view-' + currentTab + ' h2') || $('#view-' + currentTab);
+  heading.tabIndex = -1;
+  heading.focus({ preventScroll: true });
+}
+// Une fenêtre, l'écran de séance et la vue en grand ont leur propre focus.
+const LAYERS = '#sheet, #session, #cityBig';
+const layerOpen = () => $$(LAYERS).some(el => !el.hidden);
+// Après un dessin : le focus perdu en route (élément retiré ou caché, focus retombé sur body) va au remplaçant de même clé, sinon au
+// titre de la vue quand rien ne la couvre. Rien ne bouge pour un focus qui était, ou qui est, dans une fenêtre, l'écran de séance ou la
+// vue en grand, ni pour un focus déjà sur body avant le dessin : rien n'avait le focus.
+function keepFocus(before, key) {
+  if (!before || before === document.body || before.closest(LAYERS)) return;
+  const now = document.activeElement;
+  if (now && now !== document.body && (now !== before || focusable(before))) return;
+  if (!focusByKey(key) && !layerOpen()) focusViewHeading();
 }
 
 function updateInert() {
@@ -8139,6 +8179,8 @@ function updateInert() {
 let sheetOnClose = null, sheetOpener = null, sheetKeepOnSync = false;
 function openSheet(title, build, opts = {}) {
   if ($('#sheet').hidden) sheetOpener = document.activeElement;
+  // Une fenêtre qui en remplace une autre : ce que l'ancienne devait faire à sa fermeture est fait d'abord (son indicateur retiré…).
+  else if (sheetOnClose) { const cb = sheetOnClose; sheetOnClose = null; cb(); }
   $('#sheetTitle').textContent = frTypo(title);
   const body = $('#sheetBody');
   body.replaceChildren();
@@ -8149,7 +8191,9 @@ function openSheet(title, build, opts = {}) {
   sheetKeepOnSync = !!opts.keep;
   body.scrollTop = 0;
   updateInert();
-  setTimeout(() => $('#sheetTitle').focus({ preventScroll: true }), 30);
+  // Le titre prend le focus, sauf si un élément de la fenêtre l'a pris entre-temps : un champ refusé à l'envoi, mis en avant dans ces
+  // 30 ms, ou la carte postale du carnet rouvert au retour d'une visite.
+  setTimeout(() => { if (!body.contains(document.activeElement)) $('#sheetTitle').focus({ preventScroll: true }); }, 30);
 }
 function closeSheet() {
   if ($('#sheet').hidden) return;
@@ -8159,7 +8203,9 @@ function closeSheet() {
   const cb = sheetOnClose, op = sheetOpener;
   sheetOnClose = null; sheetOpener = null; sheetKeepOnSync = false;
   if (cb) cb();
-  if (op && op.isConnected && typeof op.focus === 'function' && !op.closest('[inert]')) op.focus({ preventScroll: true });
+  // Le focus revient à ce qui a ouvert la fenêtre ; redessiné entre-temps (la carte du carnet, refaite à sa fermeture), à son remplaçant
+  // de même clé ; sinon au titre de la vue, si rien d'autre n'est ouvert.
+  if (!tryFocus(op) && !focusByKey(focusKeyOf(op)) && !layerOpen()) focusViewHeading();
   City.wake();
   // Un onglet en retard se recharge juste après ce que le même geste lance ensuite (une autre fenêtre, une séance), s'il est alors au repos.
   if (typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0);
@@ -8205,15 +8251,22 @@ function twoStep(btn, label, confirmLabel, action) {
   });
   return btn;
 }
+// Bouton de suppression de chaque liste (renderActivities, renderList) : celui du voisin reprend le focus.
+const DELETE_KEYS = { activities: 'act-del', wishes: 'task-del', chores: 'task-del' };
 function removeWithUndo(key, id) {
   const idx = S[key].findIndex(x => x.id === id);
   if (idx < 0) return;
+  // Le voisin qui prendra le focus, noté avant la suppression : le suivant, sinon le précédent.
+  const near = S[key][idx + 1] || S[key][idx - 1], del = DELETE_KEYS[key];
   const [item] = S[key].splice(idx, 1);
   commit();
+  if (!focusByKey(near && del && del + ':' + near.id) && !layerOpen()) focusViewHeading();
   toast(t('ui.deleted', { name: displayName(item.name) }), { label: t('common.undo'), run: () => {
     if (S[key].some(x => x.id === item.id)) return;
     S[key].splice(Math.min(idx, S[key].length), 0, item);
     commit();
+    // Revenu, il reprend le focus sur son bouton de suppression.
+    if (del) focusByKey(del + ':' + item.id);
   } });
 }
 
@@ -8223,6 +8276,8 @@ function removeWithUndo(key, id) {
 // Jour pour lequel l'écran a été dessiné : série, minutes du jour et graphique changent à minuit.
 let renderedDay = '';
 function renderAll() {
+  // Le focus d'avant le dessin et sa clé : redessiné, il passe au remplaçant (keepFocus).
+  const before = document.activeElement, key = focusKeyOf(before);
   renderedDay = today();
   applyTheme();
   renderHeader();
@@ -8231,6 +8286,7 @@ function renderAll() {
   renderView(currentTab);
   Mode.render();
   if (currentTab === 'ville') City.draw();
+  keepFocus(before, key);
 }
 // Au retour dans l'app et chaque minute : on redessine si la date a changé depuis.
 function refreshDay() {
@@ -8318,15 +8374,16 @@ function renderVille() {
     box.append(h('p', {}, t('city.allUnlocked')));
   }
   card.append(icon('sparkle'), box);
-  box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, t('goal.choose')));
+  box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', 'data-focus-key': 'goals:edit', onclick: openGoals }, t('goal.choose')));
   const list = $('#cityList'), amb = typeof ambientAt === 'function' ? ambientAt() : null;
-  // En tête, le visiteur du jour : sa fiche s'ouvre aussi d'ici (clavier, lecteur d'écran).
-  const visitorRow = amb && amb.visitor ? [h('li', {}, h('button', { type: 'button', onclick: () => openVisitor() },
+  // En tête, le visiteur du jour : sa fiche s'ouvre aussi d'ici (clavier, lecteur d'écran). La liste est refaite à chaque rendu : ses
+  // boutons ont une clé, pour y garder le focus.
+  const visitorRow = amb && amb.visitor ? [h('li', {}, h('button', { type: 'button', 'data-focus-key': 'visitor:open', onclick: () => openVisitor() },
     t('city.listVisitor', { name: lowerFirst(t('visitor.' + amb.visitor.id + '.name')) })))] : [];
   list.replaceChildren(...visitorRow, ...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
     const params = { item: itemName(tile.item), x: tile.x + 1, y: tile.y + 1, level: buildingLevel(tile.item) };
     const label = isWonder(tile.item) ? t('city.listItemStage', { ...params, stage: tile.stage || 1 }) : params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params);
-    return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, label));
+    return h('li', {}, h('button', { type: 'button', 'data-focus-key': 'tile:' + tile.id, onclick: () => openBuildingSheet(tile) }, label));
   }));
 }
 
@@ -8433,7 +8490,9 @@ function renderActivities() {
   $('#actsLede').textContent = frTypo(editingActs ? t('act.ledeEditing') : t('act.lede'));
   for (const a of S.activities) {
     const available = taskAvailable(a);
+    // En mode Modifier, la carte est le bouton de modification de l'activité.
     const card = h('button', { class: 'act' + (!available ? ' task-waiting' : ''), type: 'button', vars: { '--c': catVar(a.cat) },
+      'data-focus-key': (editingActs ? 'act-edit:' : 'act:') + a.id,
       'aria-label': editingActs || !available ? t('act.editNamed', { name: displayName(a.name) }) : null,
       onclick: () => { if (editingActs || !available) openEditSheet('activities', a.id); else openStartSheet(a); } },
       h('span', { class: 'act-name' }, displayName(a.name)), catLabel(a.cat),
@@ -8441,7 +8500,7 @@ function renderActivities() {
       h('span', { class: 'act-meta' }, a.min + NB + 'min · ' + fmt(a.min * RATE)),
       taskStatus(a) ? h('span', { class: 'task-status' }, taskStatus(a)) : null);
     if (editingActs) grid.append(h('div', { class: 'act-wrap' }, card,
-      h('button', { class: 'act-del', type: 'button', 'aria-label': t('act.deleteNamed', { name: displayName(a.name) }), onclick: () => removeWithUndo('activities', a.id) }, icon('trash'))));
+      h('button', { class: 'act-del', type: 'button', 'data-focus-key': 'act-del:' + a.id, 'aria-label': t('act.deleteNamed', { name: displayName(a.name) }), onclick: () => removeWithUndo('activities', a.id) }, icon('trash'))));
     else grid.append(card);
   }
   if (!S.activities.length) grid.append(h('p', { class: 'empty-state', style: 'grid-column:1/-1' }, t('act.empty', { button: t('act.edit') })));
@@ -8610,7 +8669,7 @@ function renderDraw() {
       : t('draw.manyIdeas', { n: count });
     card.append(h('div', { class: 'draw-empty' }, icon('dice')),
       h('p', { class: 'draw-name' }, t('draw.whatNow')), h('p', { class: 'sub' }, note),
-      h('div', { class: 'draw-actions' }, h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: count ? null : true, onclick: doDraw }, icon('dice'), t('draw.drawButton'))));
+      h('div', { class: 'draw-actions' }, h('button', { class: 'btn btn-primary btn-lg', type: 'button', 'data-focus-key': 'draw:go', disabled: count ? null : true, onclick: doDraw }, icon('dice'), t('draw.drawButton'))));
     return;
   }
   const r = rewardFor(cur.min, cur.bonus), cost = rerollCost();
@@ -8631,9 +8690,10 @@ function renderDraw() {
     bonusNote ? h('p', { class: 'note' }, bonusNote) : null,
     outsideFilters ? h('p', { class: 'note' }, t('draw.outsideFilters')) : null,
     !available ? h('p', { class: 'note' }, t('draw.doneSince', { button: t('act.makeAvailable') })) : null,
+    // « C'est parti » prend la place de « Tirer au sort » : même clé.
     h('div', { class: 'draw-actions' },
-      h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: available ? null : true, onclick: acceptDraw }, icon('play'), t('draw.accept')),
-      h('button', { class: 'btn btn-secondary', type: 'button', disabled: short || !canReroll ? true : null, onclick: doDraw }, icon('reroll'), t('draw.reroll', { coins: fmt(cost) }))),
+      h('button', { class: 'btn btn-primary btn-lg', type: 'button', 'data-focus-key': 'draw:go', disabled: available ? null : true, onclick: acceptDraw }, icon('play'), t('draw.accept')),
+      h('button', { class: 'btn btn-secondary', type: 'button', 'data-focus-key': 'draw:reroll', disabled: short || !canReroll ? true : null, onclick: doDraw }, icon('reroll'), t('draw.reroll', { coins: fmt(cost) }))),
     !canReroll ? h('p', { class: 'note' }, t('draw.noOther'))
       : short ? h('p', { class: 'note' }, t('draw.shortReroll', { coins: fmt(cost - S.coins) }))
       : h('p', { class: 'note' }, t('draw.rerollNote')),
@@ -8662,17 +8722,28 @@ function doDraw() {
 }
 function animateDraw(items, pick) {
   const card = $('#drawCard');
-  if (reducedMotion() || items.length < 2) { drawAnim = null; renderDraw(); announce(t('draw.result', { name: displayName(pick.name) })); return; }
+  // Le bouton pressé, encore là (le rendu de commit() laisse la carte tant qu'elle tourne), disparaît avec elle : sa clé, pour rendre
+  // le focus à la fin.
+  const key = focusKeyOf(document.activeElement);
+  const done = () => { drawAnim = null; renderDraw(); drawFocus(key); announce(t('draw.result', { name: displayName(pick.name) })); };
+  if (reducedMotion() || items.length < 2) { done(); return; }
   const nameEl = h('p', { class: 'draw-name spinning', 'aria-hidden': 'true' });
   card.setAttribute('aria-busy', 'true');
   card.replaceChildren(h('p', { class: 'draw-kind' }, t('draw.spinning')), nameEl);
   let i = Math.floor(Math.random() * items.length), delay = 45;
   const step = () => {
-    if (delay > 230) { drawAnim = null; renderDraw(); announce(t('draw.result', { name: displayName(pick.name) })); return; }
+    if (delay > 230) { done(); return; }
     nameEl.textContent = displayName(items[i++ % items.length].name);
     delay *= 1.17; drawAnim = setTimeout(step, delay);
   };
   step();
+}
+// La carte redessinée : le focus perdu avec le bouton pressé va à son remplaçant, ou à « C'est parti » quand « Relancer » ne peut plus
+// servir. Mis ailleurs entre-temps par la personne, il y reste.
+function drawFocus(key) {
+  const now = document.activeElement;
+  if (now && now !== document.body) return;
+  if (!focusByKey(key) && !focusByKey('draw:go') && !layerOpen()) focusViewHeading();
 }
 function acceptDraw() {
   const cur = S.draw.current;
@@ -8692,10 +8763,11 @@ function renderList(key, ul) {
         h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · ' + t('draw.example') : '')),
         h('span', { class: 'task-status' }, t('draw.modeEnergy', { mode: activityModeLabel(it.mode), energy: (energies.find(([value]) => value === (it.energy || 'medium')) || energies[1])[2] })),
         status ? h('span', { class: 'task-status' }, status) : null,
-        !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': t('act.makeAvailableNamed', { name }), onclick: () => resetTask(key, it.id) }, t('act.makeAvailable')) : null),
+        // Rendue disponible, la ligne perd ce bouton : le focus passe à son bouton de modification.
+        !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': t('act.makeAvailableNamed', { name }), onclick: () => { resetTask(key, it.id); focusByKey('task:' + it.id); } }, t('act.makeAvailable')) : null),
       h('div', { class: 'task-actions' },
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('act.editNamed', { name }), onclick: () => openEditSheet(key, it.id) }, icon('pencil')),
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('act.deleteNamed', { name }), onclick: () => removeWithUndo(key, it.id) }, icon('trash')))));
+        h('button', { class: 'icon-btn', type: 'button', 'data-focus-key': 'task:' + it.id, 'aria-label': t('act.editNamed', { name }), onclick: () => openEditSheet(key, it.id) }, icon('pencil')),
+        h('button', { class: 'icon-btn', type: 'button', 'data-focus-key': 'task-del:' + it.id, 'aria-label': t('act.deleteNamed', { name }), onclick: () => removeWithUndo(key, it.id) }, icon('trash')))));
   }
 }
 
@@ -9500,7 +9572,7 @@ function renderGoals() {
   const range = dayFmt('short').format(keyToUTC(p.start)) + ' – ' + dayFmt('short').format(keyToUTC(p.end));
   card.replaceChildren(
     h('div', { class: 'feature-between' }, h('h3', {}, p.done ? t('goal.reached') : t('goal.title')),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openGoals }, t('common.edit'))),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'goals:edit', onclick: openGoals }, t('common.edit'))),
     h('p', { class: 'sub' }, range + ' · ' + (g.cat === 'all' ? t('goal.allDomains') : catName(g.cat))),
     featureMeter(t('goal.minutesDone'), p.minutes, g.minutes), featureMeter(t('goal.activeDays'), p.activeDays, g.days),
     h('p', { class: 'note' }, p.done ? t('goal.doneNote') : t('goal.note')));
@@ -9561,19 +9633,20 @@ function renderRoutines() {
   if (!parent) return;
   let card = $('#routinesCard');
   if (!card) { card = h('section', { id: 'routinesCard', class: 'card feature-card', 'aria-label': t('routine.title') }); parent.append(card); }
-  card.replaceChildren(h('div', { class: 'feature-between' }, h('h3', {}, t('routine.title')), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openRoutines }, t('routine.manage'))));
+  // « Gérer », et « Créer ma première routine » qui lui laisse la place une fois la routine enregistrée : même clé.
+  card.replaceChildren(h('div', { class: 'feature-between' }, h('h3', {}, t('routine.title')), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'routines:manage', onclick: openRoutines }, t('routine.manage'))));
   const progress = S.routineRun;
   if (progress) card.append(routineProgressCard(progress));
   const routines = S.routines || [];
   if (!routines.length) {
     card.append(h('p', { class: 'sub' }, t('routine.emptyIntro')),
-      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => openRoutineEditor() }, icon('plus'), t('routine.createFirst')));
+      h('button', { class: 'btn btn-secondary', type: 'button', 'data-focus-key': 'routines:manage', onclick: () => openRoutineEditor() }, icon('plus'), t('routine.createFirst')));
     return;
   }
   const list = h('ul', { class: 'routine-list' });
   for (const routine of routines) {
     const d = routineSummary(routine);
-    const btn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', disabled: d.missing || d.scheduled || !!S.active, onclick: () => launchRoutine(routine.id) }, icon('play'), t('routine.launch'));
+    const btn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'data-focus-key': 'routine:' + routine.id, disabled: d.missing || d.scheduled || !!S.active, onclick: () => launchRoutine(routine.id) }, icon('play'), t('routine.launch'));
     list.append(h('li', {}, h('div', { class: 'routine-main' }, h('strong', {}, routine.name), h('p', { class: 'note' }, d.missing ? t('routine.missing') : d.scheduled ? t('routine.scheduled') : t('routine.summary', { n: routine.activityIds.length, time: fmtMin(d.minutes) }))), btn));
   }
   card.append(list);
@@ -11030,7 +11103,7 @@ function renderCarnetCard() {
   card.replaceChildren(
     h('div', { class: 'feature-between' },
       h('h3', {}, t('carnet.title'), hasNewInCarnet() ? h('span', { class: 'badge-new' }, t('carnet.new')) : null),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => openCarnet() }, t('carnet.open'))),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'carnet:open', onclick: () => openCarnet() }, t('carnet.open'))),
     row('carnet.tabAchievements', counts.achievements), row('carnet.tabCollection', counts.collection), row('carnet.tabSets', counts.sets),
     row('carnet.tabVisits', counts.visits));
 }
@@ -11120,11 +11193,13 @@ function carnetVisits() {
         years.length ? h('span', { class: 'note' }, t('fest.lived', { years: years.join(', ') })) : null,
         next ? h('span', { class: 'note' }, t('fest.next', { date: dayFmt('long').format(keyToUTC(next)) })) : null));
   };
-  // Villes amies : une carte postale par ville visitée, la plus récente d'abord ; la toucher rouvre la ville.
-  const postcard = ([, card]) => {
-    const cv = h('canvas', { 'aria-hidden': 'true' }), city = decodeCity(card.code);
+  // Villes amies : une carte postale par ville visitée, la plus récente d'abord ; la toucher rouvre la ville, et fermer la ville rouvre
+  // le carnet, sur cette carte.
+  const postcard = ([id, card]) => {
+    const cv = h('canvas', { 'aria-hidden': 'true' }), city = decodeCity(card.code), key = 'postcard:' + id;
     if (city) City.townThumb(cv, city, 48);
-    return h('li', {}, h('button', { class: 'carnet-row carnet-postcard earned', type: 'button', onclick: () => openVisitFromCode(card.code) }, cv,
+    const back = () => { openCarnet('visits'); focusByKey(key); };
+    return h('li', {}, h('button', { class: 'carnet-row carnet-postcard earned', type: 'button', 'data-focus-key': key, onclick: () => openVisitFromCode(card.code, { back }) }, cv,
       h('span', { class: 'carnet-text' }, h('strong', {}, card.name || t('visit.friendCity')), h('span', { class: 'note' }, t('carnet.visitedOn', { date: carnetDate(card.at) })))));
   };
   const met = VISITORS.filter(v => visits[v.id]).sort((a, b) => visits[a.id].first - visits[b.id].first);
@@ -11328,10 +11403,12 @@ function renderChallengesCard() {
   const rows = weekChallenges(week).map((ch, i) => {
     const p = challengeProgress(ch, week), done = p.done || !!S.gifts[challengeKey(ch, week)], text = challengeText(ch);
     const value = ch.id === 'long' ? t('chal.minutes', { have: p.have, need: p.need }) : p.have + ' / ' + p.need;
-    return h('li', { class: 'chal-row' + (done ? ' done' : '') },
+    // Les boutons « Changer » disparaissent au premier changement : le nouveau défi prend la clé du sien, et le focus.
+    const turned = swapped && S.challenges.swapped === i;
+    return h('li', { class: 'chal-row' + (done ? ' done' : ''), tabindex: turned ? '-1' : null, 'data-focus-key': turned ? 'chal-swap:' + i : null },
       h('span', { class: 'chal-text' }, text),
       h('span', { class: 'chal-state' }, done ? t('chal.relieved') : value + ' · ' + t('chal.reward', { coins: fmt(GIFTS.challenge) })),
-      swapped || done ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('chal.swapLabel', { text }),
+      swapped || done ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'chal-swap:' + i, 'aria-label': t('chal.swapLabel', { text }),
         onclick: () => { if (swapChallenge(i)) commit(); } }, t('chal.swap')));
   });
   card.replaceChildren(h('h3', {}, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));
@@ -11595,8 +11672,9 @@ let pendingVisit = '';   // lien reçu pendant une séance : la ville amie s'ouv
 let visiting = null;     // ville montrée en grand : { snapshot, code }
 
 // Ouvre la ville d'un code. Lien illisible : un message doux. Pendant une séance : le lien attend la fin de la séance.
-// Une pose en cours s'annule et une fenêtre ouverte se ferme : la ville amie prend la place, comme annoncé.
-function openVisitFromCode(code) {
+// Une pose en cours s'annule et une fenêtre ouverte se ferme : la ville amie prend la place, comme annoncé. back : ce que la
+// fermeture de la visite rouvre (le carnet, pour une de ses cartes postales).
+function openVisitFromCode(code, { back = null } = {}) {
   const snapshot = decodeCity(code);
   if (!snapshot) { toast(t('visit.badLink')); return false; }
   if (S.active || (typeof run !== 'undefined' && run) || !$('#session').hidden) {
@@ -11606,7 +11684,7 @@ function openVisitFromCode(code) {
   }
   if (Mode.state) Mode.cancel();
   if (!$('#sheet').hidden) closeSheet();
-  if (!City.openVisit(snapshot, { own: snapshot.id === S.shareId })) return false;
+  if (!City.openVisit(snapshot, { own: snapshot.id === S.shareId, back })) return false;
   visiting = { snapshot, code };
   const keep = $('#visitKeep');
   keep.textContent = frTypo(t('visit.keep'));
@@ -11755,8 +11833,9 @@ function renderCompanionInvite() {
   const faces = COMPANION_SPECIES.map(species => { const cv = h('canvas'); paintCompanion(cv, { species, pose: 'idle', face: true }, 40); return cv; });
   card.replaceChildren(h('h3', { id: 'companionInviteTitle' }, t('companion.inviteTitle')),
     h('div', { class: 'companion-invite-main' }, h('div', { class: 'companion-faces', 'aria-hidden': 'true' }, ...faces), h('p', {}, t('companion.inviteLine'))),
+    // Le compagnon accueilli, la carte disparaît : le focus passe au bouton du compagnon, de même clé.
     h('div', { class: 'wish-actions' },
-      h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => openCompanionChoice() }, t('companion.meet')),
+      h('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-focus-key': 'companion:open', onclick: () => openCompanionChoice() }, t('companion.meet')),
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
         S.companionLater = nowTs();
         commit();
@@ -11817,6 +11896,7 @@ function openCompanionChoice({ edit = false } = {}) {
 function renderCompanionButton() {
   const btn = $('#companionBtn'), c = S.companion;
   if (!btn) return;
+  btn.dataset.focusKey = 'companion:open';
   btn.hidden = !c || S.settings.companionShown === false || !!Mode.state;
   if (btn.hidden) return;
   paintCompanion(btn.firstElementChild, { species: c.species, wear: c.wear, pose: 'idle', face: true }, 34);
@@ -11992,6 +12072,7 @@ function bindEvents() {
   $('#harmonyBtn').addEventListener('click', openHarmonySheet);
   $('#ambienceBtn').addEventListener('click', openAmbienceSheet);
   $('#buildBtn').addEventListener('click', openShop);
+  $('#buildBtn').dataset.focusKey = 'shop:open';
   $('#ctaStart').addEventListener('click', () => go('activites', true));
   $('#ctaDraw').addEventListener('click', () => go('tirage', true));
   $('#placeCancel').addEventListener('click', () => Mode.cancel());
@@ -12109,7 +12190,7 @@ function boot(hotData) {
     const hot = window.claude && window.claude.hot;
     if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (run && !run.ended ? { run: { id: run.id, elapsed: run.elapsed, exits: run.exits } } : {}));
   } catch (e) { /* pas de rechargement à chaud ici */ }
-  if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
+  if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, renderAll, log: [],
     ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors, imageSky: () => imageSky() },
     rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual(), recapCanvas: (kind, key) => recapCanvas(recapSummary(kind, key)) },
     png: { canvas: () => cityImageCanvas() },

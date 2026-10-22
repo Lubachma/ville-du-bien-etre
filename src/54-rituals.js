@@ -17,10 +17,12 @@ function renderChallengesCard() {
   const rows = weekChallenges(week).map((ch, i) => {
     const p = challengeProgress(ch, week), done = p.done || !!S.gifts[challengeKey(ch, week)], text = challengeText(ch);
     const value = ch.id === 'long' ? t('chal.minutes', { have: p.have, need: p.need }) : p.have + ' / ' + p.need;
-    return h('li', { class: 'chal-row' + (done ? ' done' : '') },
+    // Les boutons « Changer » disparaissent au premier changement : le nouveau défi prend la clé du sien, et le focus.
+    const turned = swapped && S.challenges.swapped === i;
+    return h('li', { class: 'chal-row' + (done ? ' done' : ''), tabindex: turned ? '-1' : null, 'data-focus-key': turned ? 'chal-swap:' + i : null },
       h('span', { class: 'chal-text' }, text),
       h('span', { class: 'chal-state' }, done ? t('chal.relieved') : value + ' · ' + t('chal.reward', { coins: fmt(GIFTS.challenge) })),
-      swapped || done ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('chal.swapLabel', { text }),
+      swapped || done ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'chal-swap:' + i, 'aria-label': t('chal.swapLabel', { text }),
         onclick: () => { if (swapChallenge(i)) commit(); } }, t('chal.swap')));
   });
   card.replaceChildren(h('h3', {}, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));

@@ -5,8 +5,9 @@ let pendingVisit = '';   // lien reçu pendant une séance : la ville amie s'ouv
 let visiting = null;     // ville montrée en grand : { snapshot, code }
 
 // Ouvre la ville d'un code. Lien illisible : un message doux. Pendant une séance : le lien attend la fin de la séance.
-// Une pose en cours s'annule et une fenêtre ouverte se ferme : la ville amie prend la place, comme annoncé.
-function openVisitFromCode(code) {
+// Une pose en cours s'annule et une fenêtre ouverte se ferme : la ville amie prend la place, comme annoncé. back : ce que la
+// fermeture de la visite rouvre (le carnet, pour une de ses cartes postales).
+function openVisitFromCode(code, { back = null } = {}) {
   const snapshot = decodeCity(code);
   if (!snapshot) { toast(t('visit.badLink')); return false; }
   if (S.active || (typeof run !== 'undefined' && run) || !$('#session').hidden) {
@@ -16,7 +17,7 @@ function openVisitFromCode(code) {
   }
   if (Mode.state) Mode.cancel();
   if (!$('#sheet').hidden) closeSheet();
-  if (!City.openVisit(snapshot, { own: snapshot.id === S.shareId })) return false;
+  if (!City.openVisit(snapshot, { own: snapshot.id === S.shareId, back })) return false;
   visiting = { snapshot, code };
   const keep = $('#visitKeep');
   keep.textContent = frTypo(t('visit.keep'));

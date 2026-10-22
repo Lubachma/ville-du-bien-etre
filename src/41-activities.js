@@ -98,7 +98,9 @@ function renderActivities() {
   $('#actsLede').textContent = frTypo(editingActs ? t('act.ledeEditing') : t('act.lede'));
   for (const a of S.activities) {
     const available = taskAvailable(a);
+    // En mode Modifier, la carte est le bouton de modification de l'activité.
     const card = h('button', { class: 'act' + (!available ? ' task-waiting' : ''), type: 'button', vars: { '--c': catVar(a.cat) },
+      'data-focus-key': (editingActs ? 'act-edit:' : 'act:') + a.id,
       'aria-label': editingActs || !available ? t('act.editNamed', { name: displayName(a.name) }) : null,
       onclick: () => { if (editingActs || !available) openEditSheet('activities', a.id); else openStartSheet(a); } },
       h('span', { class: 'act-name' }, displayName(a.name)), catLabel(a.cat),
@@ -106,7 +108,7 @@ function renderActivities() {
       h('span', { class: 'act-meta' }, a.min + NB + 'min · ' + fmt(a.min * RATE)),
       taskStatus(a) ? h('span', { class: 'task-status' }, taskStatus(a)) : null);
     if (editingActs) grid.append(h('div', { class: 'act-wrap' }, card,
-      h('button', { class: 'act-del', type: 'button', 'aria-label': t('act.deleteNamed', { name: displayName(a.name) }), onclick: () => removeWithUndo('activities', a.id) }, icon('trash'))));
+      h('button', { class: 'act-del', type: 'button', 'data-focus-key': 'act-del:' + a.id, 'aria-label': t('act.deleteNamed', { name: displayName(a.name) }), onclick: () => removeWithUndo('activities', a.id) }, icon('trash'))));
     else grid.append(card);
   }
   if (!S.activities.length) grid.append(h('p', { class: 'empty-state', style: 'grid-column:1/-1' }, t('act.empty', { button: t('act.edit') })));

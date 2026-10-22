@@ -219,8 +219,9 @@ const City = (() => {
     new IntersectionObserver(entries => { onScreen = entries[entries.length - 1].isIntersecting; if (onScreen) wake(); }).observe(small);
   }
 
-  // Ville en grand : zoom voulu (1 à 3) et zoom montré pendant la transition, décalage du glissement, doigts posés.
-  const big = { open: false, zoom: 1, shown: 1, pan: [0, 0], base: null, anim: null, pointers: new Map(), moved: 0, lastTap: null };
+  // Ville en grand : zoom voulu (1 à 3) et zoom montré pendant la transition, décalage du glissement, doigts posés. À la fermeture,
+  // opener reprend le focus, puis back rouvre ce d'où vient la visite (le carnet, pour une de ses cartes postales).
+  const big = { open: false, zoom: 1, shown: 1, pan: [0, 0], base: null, anim: null, pointers: new Map(), moved: 0, lastTap: null, opener: null, back: null };
   // Visite : la ville d'un ami (ou la sienne, telle que les amis la voient), montrée en grand et en lecture seule. Seul le dessin
   // la lit ; sa propre ville n'est jamais touchée.
   let visit = null;
@@ -298,9 +299,11 @@ const City = (() => {
     applyView();
     requestFrame();
   }
-  function openBig() {
+  // from : l'élément qui reprendra le focus à la fermeture (le bouton « en grand », ou ce qui avait le focus quand une visite s'ouvre).
+  function openBig(from = document.activeElement) {
     if (big.open || Mode.state) return;
     big.open = true;
+    big.opener = from; big.back = null;
     big.zoom = big.shown = 1; big.pan = [0, 0]; big.anim = null; big.pointers.clear();
     $('#cityBig').hidden = false;
     renderCityCaption();
@@ -330,12 +333,17 @@ const City = (() => {
     canvas = small; ctx = small.getContext('2d');
     updateInert();
     layout(); draw();
-    $('#cityExpand').focus({ preventScroll: true });
+    // Le focus revient à ce qui a ouvert la vue s'il est encore là, sinon au bouton « en grand » de la Ville, ou au titre de la vue.
+    // Une carte postale du carnet rouvre ensuite le carnet, sur elle : il se refermera sur ce focus.
+    const { opener, back } = big;
+    big.opener = big.back = null;
+    if (!tryFocus(opener) && !(currentTab === 'ville' && tryFocus($('#cityExpand')))) focusViewHeading();
+    if (back) back();
     if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
   }
   // Visite : la ville d'un code s'ouvre en grand, avec son nom, son nombre d'éléments et la taille de son terrain. Si la vue
-  // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose.
-  function openVisit(snapshot, { own = false } = {}) {
+  // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose. back : ce que sa fermeture rouvre.
+  function openVisit(snapshot, { own = false, back = null } = {}) {
     if (Mode.state) return false;
     visit = { city: snapshot, own };
     const name = own ? cityName() : snapshot.name || t('visit.friendCity'), meta = t('visit.cityMeta', { n: snapshot.tiles.length, size: snapshot.size });
@@ -345,6 +353,7 @@ const City = (() => {
     $('#cityBigTitle').textContent = frTypo(own ? t('visit.ownCity') : name);
     if (big.open) { big.zoom = big.shown = 1; big.pan = [0, 0]; big.anim = null; layout(); draw(); }
     else openBig();
+    big.back = back;
     $('#cityBigCanvas').setAttribute('aria-label', frTypo(name + ' · ' + meta));
     return true;
   }
@@ -364,7 +373,7 @@ const City = (() => {
   }
   window.addEventListener('popstate', () => { if (big.open) closeBig(true); });
   window.addEventListener('resize', () => { if (big.open) { layout(); draw(); } });
-  $('#cityExpand').addEventListener('click', openBig);
+  $('#cityExpand').addEventListener('click', () => openBig($('#cityExpand')));
   $('#cityBigClose').addEventListener('click', () => closeBig());
   $('#cityBigIn').addEventListener('click', () => zoomAt(big.zoom * 1.5, W / 2, H / 2, true));
   $('#cityBigOut').addEventListener('click', () => zoomAt(big.zoom / 1.5, W / 2, H / 2, true));
@@ -796,7 +805,8 @@ const City = (() => {
     if (openCompanionAt(px, py)) return;
     if (openWishAt(px, py)) return;
     const b = pickBuilding(px, py);
-    if (b) openBuildingSheet(b); else openBig();
+    // Hors bâtiment, le toucher fait comme le bouton « en grand », qui reprendra le focus.
+    if (b) openBuildingSheet(b); else openBig($('#cityExpand'));
   });
   small.addEventListener('focus', () => { if (keyboard) draw(); });
   small.addEventListener('blur', () => draw());

@@ -34,7 +34,7 @@ function renderGoals() {
   const range = dayFmt('short').format(keyToUTC(p.start)) + ' – ' + dayFmt('short').format(keyToUTC(p.end));
   card.replaceChildren(
     h('div', { class: 'feature-between' }, h('h3', {}, p.done ? t('goal.reached') : t('goal.title')),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openGoals }, t('common.edit'))),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'goals:edit', onclick: openGoals }, t('common.edit'))),
     h('p', { class: 'sub' }, range + ' · ' + (g.cat === 'all' ? t('goal.allDomains') : catName(g.cat))),
     featureMeter(t('goal.minutesDone'), p.minutes, g.minutes), featureMeter(t('goal.activeDays'), p.activeDays, g.days),
     h('p', { class: 'note' }, p.done ? t('goal.doneNote') : t('goal.note')));
@@ -95,19 +95,20 @@ function renderRoutines() {
   if (!parent) return;
   let card = $('#routinesCard');
   if (!card) { card = h('section', { id: 'routinesCard', class: 'card feature-card', 'aria-label': t('routine.title') }); parent.append(card); }
-  card.replaceChildren(h('div', { class: 'feature-between' }, h('h3', {}, t('routine.title')), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: openRoutines }, t('routine.manage'))));
+  // « Gérer », et « Créer ma première routine » qui lui laisse la place une fois la routine enregistrée : même clé.
+  card.replaceChildren(h('div', { class: 'feature-between' }, h('h3', {}, t('routine.title')), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'routines:manage', onclick: openRoutines }, t('routine.manage'))));
   const progress = S.routineRun;
   if (progress) card.append(routineProgressCard(progress));
   const routines = S.routines || [];
   if (!routines.length) {
     card.append(h('p', { class: 'sub' }, t('routine.emptyIntro')),
-      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => openRoutineEditor() }, icon('plus'), t('routine.createFirst')));
+      h('button', { class: 'btn btn-secondary', type: 'button', 'data-focus-key': 'routines:manage', onclick: () => openRoutineEditor() }, icon('plus'), t('routine.createFirst')));
     return;
   }
   const list = h('ul', { class: 'routine-list' });
   for (const routine of routines) {
     const d = routineSummary(routine);
-    const btn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', disabled: d.missing || d.scheduled || !!S.active, onclick: () => launchRoutine(routine.id) }, icon('play'), t('routine.launch'));
+    const btn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'data-focus-key': 'routine:' + routine.id, disabled: d.missing || d.scheduled || !!S.active, onclick: () => launchRoutine(routine.id) }, icon('play'), t('routine.launch'));
     list.append(h('li', {}, h('div', { class: 'routine-main' }, h('strong', {}, routine.name), h('p', { class: 'note' }, d.missing ? t('routine.missing') : d.scheduled ? t('routine.scheduled') : t('routine.summary', { n: routine.activityIds.length, time: fmtMin(d.minutes) }))), btn));
   }
   card.append(list);

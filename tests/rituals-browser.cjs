@@ -497,6 +497,9 @@ async function postcardsInCarnet(browser, baseURL) {
       assert.match(await page.locator('#cityVisitHead').innerText(), /Léa[\s\S]*éléments/);
       await page.locator('#cityBigClose').click();
       await page.locator('#cityBig').waitFor({ state: 'hidden' });
+      // Fermée, la visite rend la main au carnet, sur la carte postale (le focus : fiabilite-browser.cjs) ; on le referme.
+      await page.locator('#sheet').waitFor();
+      await page.locator('#sheetClose').click();
       await page.locator('[data-tab="ville"]').click();
     }
     // Sa propre ville : vue comme les amis la voient, sans carte postale à garder.

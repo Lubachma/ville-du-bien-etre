@@ -26,6 +26,7 @@ function bindEvents() {
   $('#harmonyBtn').addEventListener('click', openHarmonySheet);
   $('#ambienceBtn').addEventListener('click', openAmbienceSheet);
   $('#buildBtn').addEventListener('click', openShop);
+  $('#buildBtn').dataset.focusKey = 'shop:open';
   $('#ctaStart').addEventListener('click', () => go('activites', true));
   $('#ctaDraw').addEventListener('click', () => go('tirage', true));
   $('#placeCancel').addEventListener('click', () => Mode.cancel());
@@ -143,7 +144,7 @@ function boot(hotData) {
     const hot = window.claude && window.claude.hot;
     if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (run && !run.ended ? { run: { id: run.id, elapsed: run.elapsed, exits: run.exits } } : {}));
   } catch (e) { /* pas de rechargement à chaud ici */ }
-  if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
+  if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, renderAll, log: [],
     ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors, imageSky: () => imageSky() },
     rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual(), recapCanvas: (kind, key) => recapCanvas(recapSummary(kind, key)) },
     png: { canvas: () => cityImageCanvas() },

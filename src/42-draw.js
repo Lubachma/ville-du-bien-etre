@@ -87,7 +87,7 @@ function renderDraw() {
       : t('draw.manyIdeas', { n: count });
     card.append(h('div', { class: 'draw-empty' }, icon('dice')),
       h('p', { class: 'draw-name' }, t('draw.whatNow')), h('p', { class: 'sub' }, note),
-      h('div', { class: 'draw-actions' }, h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: count ? null : true, onclick: doDraw }, icon('dice'), t('draw.drawButton'))));
+      h('div', { class: 'draw-actions' }, h('button', { class: 'btn btn-primary btn-lg', type: 'button', 'data-focus-key': 'draw:go', disabled: count ? null : true, onclick: doDraw }, icon('dice'), t('draw.drawButton'))));
     return;
   }
   const r = rewardFor(cur.min, cur.bonus), cost = rerollCost();
@@ -108,9 +108,10 @@ function renderDraw() {
     bonusNote ? h('p', { class: 'note' }, bonusNote) : null,
     outsideFilters ? h('p', { class: 'note' }, t('draw.outsideFilters')) : null,
     !available ? h('p', { class: 'note' }, t('draw.doneSince', { button: t('act.makeAvailable') })) : null,
+    // « C'est parti » prend la place de « Tirer au sort » : même clé.
     h('div', { class: 'draw-actions' },
-      h('button', { class: 'btn btn-primary btn-lg', type: 'button', disabled: available ? null : true, onclick: acceptDraw }, icon('play'), t('draw.accept')),
-      h('button', { class: 'btn btn-secondary', type: 'button', disabled: short || !canReroll ? true : null, onclick: doDraw }, icon('reroll'), t('draw.reroll', { coins: fmt(cost) }))),
+      h('button', { class: 'btn btn-primary btn-lg', type: 'button', 'data-focus-key': 'draw:go', disabled: available ? null : true, onclick: acceptDraw }, icon('play'), t('draw.accept')),
+      h('button', { class: 'btn btn-secondary', type: 'button', 'data-focus-key': 'draw:reroll', disabled: short || !canReroll ? true : null, onclick: doDraw }, icon('reroll'), t('draw.reroll', { coins: fmt(cost) }))),
     !canReroll ? h('p', { class: 'note' }, t('draw.noOther'))
       : short ? h('p', { class: 'note' }, t('draw.shortReroll', { coins: fmt(cost - S.coins) }))
       : h('p', { class: 'note' }, t('draw.rerollNote')),
@@ -139,17 +140,28 @@ function doDraw() {
 }
 function animateDraw(items, pick) {
   const card = $('#drawCard');
-  if (reducedMotion() || items.length < 2) { drawAnim = null; renderDraw(); announce(t('draw.result', { name: displayName(pick.name) })); return; }
+  // Le bouton pressé, encore là (le rendu de commit() laisse la carte tant qu'elle tourne), disparaît avec elle : sa clé, pour rendre
+  // le focus à la fin.
+  const key = focusKeyOf(document.activeElement);
+  const done = () => { drawAnim = null; renderDraw(); drawFocus(key); announce(t('draw.result', { name: displayName(pick.name) })); };
+  if (reducedMotion() || items.length < 2) { done(); return; }
   const nameEl = h('p', { class: 'draw-name spinning', 'aria-hidden': 'true' });
   card.setAttribute('aria-busy', 'true');
   card.replaceChildren(h('p', { class: 'draw-kind' }, t('draw.spinning')), nameEl);
   let i = Math.floor(Math.random() * items.length), delay = 45;
   const step = () => {
-    if (delay > 230) { drawAnim = null; renderDraw(); announce(t('draw.result', { name: displayName(pick.name) })); return; }
+    if (delay > 230) { done(); return; }
     nameEl.textContent = displayName(items[i++ % items.length].name);
     delay *= 1.17; drawAnim = setTimeout(step, delay);
   };
   step();
+}
+// La carte redessinée : le focus perdu avec le bouton pressé va à son remplaçant, ou à « C'est parti » quand « Relancer » ne peut plus
+// servir. Mis ailleurs entre-temps par la personne, il y reste.
+function drawFocus(key) {
+  const now = document.activeElement;
+  if (now && now !== document.body) return;
+  if (!focusByKey(key) && !focusByKey('draw:go') && !layerOpen()) focusViewHeading();
 }
 function acceptDraw() {
   const cur = S.draw.current;
@@ -169,9 +181,10 @@ function renderList(key, ul) {
         h('span', { class: 'row-sub' }, catDot(it.cat), catName(it.cat) + ' · ' + it.min + NB + 'min' + (it.ex ? ' · ' + t('draw.example') : '')),
         h('span', { class: 'task-status' }, t('draw.modeEnergy', { mode: activityModeLabel(it.mode), energy: (energies.find(([value]) => value === (it.energy || 'medium')) || energies[1])[2] })),
         status ? h('span', { class: 'task-status' }, status) : null,
-        !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': t('act.makeAvailableNamed', { name }), onclick: () => resetTask(key, it.id) }, t('act.makeAvailable')) : null),
+        // Rendue disponible, la ligne perd ce bouton : le focus passe à son bouton de modification.
+        !available ? h('button', { class: 'btn btn-ghost btn-sm task-reset', type: 'button', 'aria-label': t('act.makeAvailableNamed', { name }), onclick: () => { resetTask(key, it.id); focusByKey('task:' + it.id); } }, t('act.makeAvailable')) : null),
       h('div', { class: 'task-actions' },
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('act.editNamed', { name }), onclick: () => openEditSheet(key, it.id) }, icon('pencil')),
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('act.deleteNamed', { name }), onclick: () => removeWithUndo(key, it.id) }, icon('trash')))));
+        h('button', { class: 'icon-btn', type: 'button', 'data-focus-key': 'task:' + it.id, 'aria-label': t('act.editNamed', { name }), onclick: () => openEditSheet(key, it.id) }, icon('pencil')),
+        h('button', { class: 'icon-btn', type: 'button', 'data-focus-key': 'task-del:' + it.id, 'aria-label': t('act.deleteNamed', { name }), onclick: () => removeWithUndo(key, it.id) }, icon('trash')))));
   }
 }

@@ -9,12 +9,42 @@ function go(tab, focusDestination = false) {
   for (const t of $$('.tab')) { if (t.dataset.tab === tab) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); }
   $('#main').scrollTop = 0;
   renderView(tab);
-  if (focusDestination || origin && origin.closest('.view') && origin.closest('.view').hidden) {
-    const heading = $('#view-' + tab + ' h2') || $('#view-' + tab);
-    heading.tabIndex = -1;
-    heading.focus({ preventScroll: true });
-  }
+  if (focusDestination || origin && origin.closest('.view') && origin.closest('.view').hidden) focusViewHeading();
   if (tab === 'ville') requestAnimationFrame(() => City.relayout());
+}
+
+/* Focus : un élément redessiné porte la même clé que celui qu'il remplace (data-focus-key="nom:id"). Le focus parti avec l'ancien va
+   au nouveau, sinon au titre de la vue : jamais sur body. */
+const focusKeyOf = el => (el && el.dataset && el.dataset.focusKey) || null;
+// Peut prendre le focus : dans la page, affiché, hors [inert].
+const focusable = el => !!el && el !== document.body && el.isConnected && typeof el.focus === 'function' && !el.closest('[inert]') && el.getClientRects().length > 0;
+// Met le focus sur el s'il peut le prendre ; vrai s'il l'a (un bouton désactivé le refuse). scroll : montré s'il est hors de vue.
+function tryFocus(el, scroll = false) {
+  if (!focusable(el)) return false;
+  el.focus({ preventScroll: !scroll });
+  return document.activeElement === el;
+}
+// Le premier élément de cette clé qui peut prendre le focus le reçoit ; vrai s'il l'a.
+function focusByKey(key) {
+  return !!key && $$('[data-focus-key]').some(el => el.dataset.focusKey === key && tryFocus(el, true));
+}
+// Le titre de la vue affichée (la Ville n'en a pas : la vue elle-même).
+function focusViewHeading() {
+  const heading = $('#view-' + currentTab + ' h2') || $('#view-' + currentTab);
+  heading.tabIndex = -1;
+  heading.focus({ preventScroll: true });
+}
+// Une fenêtre, l'écran de séance et la vue en grand ont leur propre focus.
+const LAYERS = '#sheet, #session, #cityBig';
+const layerOpen = () => $$(LAYERS).some(el => !el.hidden);
+// Après un dessin : le focus perdu en route (élément retiré ou caché, focus retombé sur body) va au remplaçant de même clé, sinon au
+// titre de la vue quand rien ne la couvre. Rien ne bouge pour un focus qui était, ou qui est, dans une fenêtre, l'écran de séance ou la
+// vue en grand, ni pour un focus déjà sur body avant le dessin : rien n'avait le focus.
+function keepFocus(before, key) {
+  if (!before || before === document.body || before.closest(LAYERS)) return;
+  const now = document.activeElement;
+  if (now && now !== document.body && (now !== before || focusable(before))) return;
+  if (!focusByKey(key) && !layerOpen()) focusViewHeading();
 }
 
 function updateInert() {
@@ -28,6 +58,8 @@ function updateInert() {
 let sheetOnClose = null, sheetOpener = null, sheetKeepOnSync = false;
 function openSheet(title, build, opts = {}) {
   if ($('#sheet').hidden) sheetOpener = document.activeElement;
+  // Une fenêtre qui en remplace une autre : ce que l'ancienne devait faire à sa fermeture est fait d'abord (son indicateur retiré…).
+  else if (sheetOnClose) { const cb = sheetOnClose; sheetOnClose = null; cb(); }
   $('#sheetTitle').textContent = frTypo(title);
   const body = $('#sheetBody');
   body.replaceChildren();
@@ -38,7 +70,9 @@ function openSheet(title, build, opts = {}) {
   sheetKeepOnSync = !!opts.keep;
   body.scrollTop = 0;
   updateInert();
-  setTimeout(() => $('#sheetTitle').focus({ preventScroll: true }), 30);
+  // Le titre prend le focus, sauf si un élément de la fenêtre l'a pris entre-temps : un champ refusé à l'envoi, mis en avant dans ces
+  // 30 ms, ou la carte postale du carnet rouvert au retour d'une visite.
+  setTimeout(() => { if (!body.contains(document.activeElement)) $('#sheetTitle').focus({ preventScroll: true }); }, 30);
 }
 function closeSheet() {
   if ($('#sheet').hidden) return;
@@ -48,7 +82,9 @@ function closeSheet() {
   const cb = sheetOnClose, op = sheetOpener;
   sheetOnClose = null; sheetOpener = null; sheetKeepOnSync = false;
   if (cb) cb();
-  if (op && op.isConnected && typeof op.focus === 'function' && !op.closest('[inert]')) op.focus({ preventScroll: true });
+  // Le focus revient à ce qui a ouvert la fenêtre ; redessiné entre-temps (la carte du carnet, refaite à sa fermeture), à son remplaçant
+  // de même clé ; sinon au titre de la vue, si rien d'autre n'est ouvert.
+  if (!tryFocus(op) && !focusByKey(focusKeyOf(op)) && !layerOpen()) focusViewHeading();
   City.wake();
   // Un onglet en retard se recharge juste après ce que le même geste lance ensuite (une autre fenêtre, une séance), s'il est alors au repos.
   if (typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0);
@@ -94,15 +130,22 @@ function twoStep(btn, label, confirmLabel, action) {
   });
   return btn;
 }
+// Bouton de suppression de chaque liste (renderActivities, renderList) : celui du voisin reprend le focus.
+const DELETE_KEYS = { activities: 'act-del', wishes: 'task-del', chores: 'task-del' };
 function removeWithUndo(key, id) {
   const idx = S[key].findIndex(x => x.id === id);
   if (idx < 0) return;
+  // Le voisin qui prendra le focus, noté avant la suppression : le suivant, sinon le précédent.
+  const near = S[key][idx + 1] || S[key][idx - 1], del = DELETE_KEYS[key];
   const [item] = S[key].splice(idx, 1);
   commit();
+  if (!focusByKey(near && del && del + ':' + near.id) && !layerOpen()) focusViewHeading();
   toast(t('ui.deleted', { name: displayName(item.name) }), { label: t('common.undo'), run: () => {
     if (S[key].some(x => x.id === item.id)) return;
     S[key].splice(Math.min(idx, S[key].length), 0, item);
     commit();
+    // Revenu, il reprend le focus sur son bouton de suppression.
+    if (del) focusByKey(del + ':' + item.id);
   } });
 }
 
@@ -112,6 +155,8 @@ function removeWithUndo(key, id) {
 // Jour pour lequel l'écran a été dessiné : série, minutes du jour et graphique changent à minuit.
 let renderedDay = '';
 function renderAll() {
+  // Le focus d'avant le dessin et sa clé : redessiné, il passe au remplaçant (keepFocus).
+  const before = document.activeElement, key = focusKeyOf(before);
   renderedDay = today();
   applyTheme();
   renderHeader();
@@ -120,6 +165,7 @@ function renderAll() {
   renderView(currentTab);
   Mode.render();
   if (currentTab === 'ville') City.draw();
+  keepFocus(before, key);
 }
 // Au retour dans l'app et chaque minute : on redessine si la date a changé depuis.
 function refreshDay() {
@@ -207,15 +253,16 @@ function renderVille() {
     box.append(h('p', {}, t('city.allUnlocked')));
   }
   card.append(icon('sparkle'), box);
-  box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', onclick: openGoals }, t('goal.choose')));
+  box.append(h('button', { class: 'btn btn-ghost btn-sm goal-choice', type: 'button', 'data-focus-key': 'goals:edit', onclick: openGoals }, t('goal.choose')));
   const list = $('#cityList'), amb = typeof ambientAt === 'function' ? ambientAt() : null;
-  // En tête, le visiteur du jour : sa fiche s'ouvre aussi d'ici (clavier, lecteur d'écran).
-  const visitorRow = amb && amb.visitor ? [h('li', {}, h('button', { type: 'button', onclick: () => openVisitor() },
+  // En tête, le visiteur du jour : sa fiche s'ouvre aussi d'ici (clavier, lecteur d'écran). La liste est refaite à chaque rendu : ses
+  // boutons ont une clé, pour y garder le focus.
+  const visitorRow = amb && amb.visitor ? [h('li', {}, h('button', { type: 'button', 'data-focus-key': 'visitor:open', onclick: () => openVisitor() },
     t('city.listVisitor', { name: lowerFirst(t('visitor.' + amb.visitor.id + '.name')) })))] : [];
   list.replaceChildren(...visitorRow, ...[...S.city.tiles].sort((a, b) => a.y - b.y || a.x - b.x).map(tile => {
     const params = { item: itemName(tile.item), x: tile.x + 1, y: tile.y + 1, level: buildingLevel(tile.item) };
     const label = isWonder(tile.item) ? t('city.listItemStage', { ...params, stage: tile.stage || 1 }) : params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params);
-    return h('li', {}, h('button', { type: 'button', onclick: () => openBuildingSheet(tile) }, label));
+    return h('li', {}, h('button', { type: 'button', 'data-focus-key': 'tile:' + tile.id, onclick: () => openBuildingSheet(tile) }, label));
   }));
 }
 

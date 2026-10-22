@@ -41,7 +41,7 @@ function renderCarnetCard() {
   card.replaceChildren(
     h('div', { class: 'feature-between' },
       h('h3', {}, t('carnet.title'), hasNewInCarnet() ? h('span', { class: 'badge-new' }, t('carnet.new')) : null),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => openCarnet() }, t('carnet.open'))),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'carnet:open', onclick: () => openCarnet() }, t('carnet.open'))),
     row('carnet.tabAchievements', counts.achievements), row('carnet.tabCollection', counts.collection), row('carnet.tabSets', counts.sets),
     row('carnet.tabVisits', counts.visits));
 }
@@ -131,11 +131,13 @@ function carnetVisits() {
         years.length ? h('span', { class: 'note' }, t('fest.lived', { years: years.join(', ') })) : null,
         next ? h('span', { class: 'note' }, t('fest.next', { date: dayFmt('long').format(keyToUTC(next)) })) : null));
   };
-  // Villes amies : une carte postale par ville visitée, la plus récente d'abord ; la toucher rouvre la ville.
-  const postcard = ([, card]) => {
-    const cv = h('canvas', { 'aria-hidden': 'true' }), city = decodeCity(card.code);
+  // Villes amies : une carte postale par ville visitée, la plus récente d'abord ; la toucher rouvre la ville, et fermer la ville rouvre
+  // le carnet, sur cette carte.
+  const postcard = ([id, card]) => {
+    const cv = h('canvas', { 'aria-hidden': 'true' }), city = decodeCity(card.code), key = 'postcard:' + id;
     if (city) City.townThumb(cv, city, 48);
-    return h('li', {}, h('button', { class: 'carnet-row carnet-postcard earned', type: 'button', onclick: () => openVisitFromCode(card.code) }, cv,
+    const back = () => { openCarnet('visits'); focusByKey(key); };
+    return h('li', {}, h('button', { class: 'carnet-row carnet-postcard earned', type: 'button', 'data-focus-key': key, onclick: () => openVisitFromCode(card.code, { back }) }, cv,
       h('span', { class: 'carnet-text' }, h('strong', {}, card.name || t('visit.friendCity')), h('span', { class: 'note' }, t('carnet.visitedOn', { date: carnetDate(card.at) })))));
   };
   const met = VISITORS.filter(v => visits[v.id]).sort((a, b) => visits[a.id].first - visits[b.id].first);

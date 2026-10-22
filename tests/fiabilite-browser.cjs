@@ -601,9 +601,134 @@ async function zoomDrawsOncePerFrame(browser, baseURL) {
   return 'Zoom : un seul dessin par image';
 }
 
+// Focus jamais perdu, au clavier (Entrée sur l'élément focalisé) : après chaque action qui redessine l'écran, le focus est sur l'élément
+// d'origine, sur son remplaçant (même data-focus-key), sur un voisin après une suppression, ou sur le titre de la vue (la Ville n'en a
+// pas : la vue elle-même), jamais sur body. Une visite ouverte par une carte postale rend la main au carnet, sur cette carte. Une fenêtre
+// qui s'ouvre ne vole plus le focus d'un champ refusé dans ses 30 premières ms (ce qui faisait échouer la suite sur WebKit), et un rendu
+// de l'arrière-plan laisse le focus dans la fenêtre ouverte.
+async function focusNeverLost(browser, baseURL) {
+  const code = await leaCode(browser, baseURL);
+  const bench = { id: 'b', item: 'banc', x: 1, y: 5, at: at('2026-10-01T09:00:00Z'), paid: 2e6 };
+  const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }, [bench]), NOW);
+  // L'élément focalisé : sa clé, sinon son id, sinon sa balise ; BODY quand le focus est perdu.
+  const focused = () => page.evaluate(() => {
+    const el = document.activeElement;
+    return !el || el === document.body ? 'BODY' : el.dataset.focusKey || el.id || el.tagName;
+  });
+  const enter = async locator => { await locator.focus(); await page.keyboard.press('Enter'); };
+  const view = name => enter(page.locator(`[data-tab="${name}"]`));
+  // Une fenêtre qui s'ouvre met son titre au focus 30 ms plus tard : on attend ce moment avant d'y aller au clavier.
+  const sheetReady = () => page.waitForFunction(() => document.activeElement === document.querySelector('#sheetTitle'));
+  // La carte du tirage a fini de tourner.
+  const drawn = () => page.waitForFunction(() => !document.querySelector('#drawCard').hasAttribute('aria-busy'));
+  const activityIds = () => page.evaluate(() => __ville.state.activities.map(a => a.id));
+  const button = (selector, name) => page.locator(selector).getByRole('button', { name, exact: true });
+  try {
+    // La carte postale de Léa, gardée pendant sa visite.
+    await page.evaluate(c => __ville.share.open(c), code);
+    await page.locator('#visitKeep').click();
+    await page.locator('#cityBigClose').click();
+    await page.locator('#cityBig').waitFor({ state: 'hidden' });
+    const postcard = await page.evaluate(() => Object.keys(__ville.state.postcards)[0]);
+    // Tirage : la carte se redessine après avoir tourné.
+    await view('tirage');
+    await enter(button('#drawCard', 'Tirer au sort'));
+    await drawn();
+    assert.equal(await focused(), 'draw:go', '« Tirer au sort »');
+    await enter(page.locator('#drawCard').getByRole('button', { name: /^Relancer/ }));
+    await drawn();
+    assert.equal(await focused(), 'draw:reroll', '« Relancer »');
+    // La 2e envie supprimée : le focus va à la suppression de la 3e.
+    const wishes = await page.evaluate(() => __ville.state.wishes.map(w => w.id));
+    await enter(page.locator('#wishList li').nth(1).getByRole('button', { name: /^Supprimer/ }));
+    assert.equal(await focused(), 'task-del:' + wishes[2], 'suppression de la 2e envie');
+    // Activités, en mode Modifier : la 2e activité enregistrée.
+    await view('activites');
+    await enter(page.locator('#editActs'));
+    const acts = await activityIds();
+    await enter(page.locator('#actsGrid .act').nth(1));
+    await sheetReady();
+    await enter(page.locator('#sheet button[type="submit"]'));
+    assert.equal(await focused(), 'act-edit:' + acts[1], '« Enregistrer » dans « Modifier l’activité »');
+    // Journal : l'objectif enregistré.
+    await view('journal');
+    await enter(button('#goalsCard', 'Modifier'));
+    await sheetReady();
+    await enter(page.locator('#sheet button[type="submit"]'));
+    assert.equal(await focused(), 'goals:edit', '« Enregistrer » de l’objectif');
+    // Ville : le compagnon accueilli, l'invitation disparaît.
+    await view('ville');
+    await enter(button('#companionInvite', 'Faire connaissance'));
+    await sheetReady();
+    await enter(page.locator('#sheet .companion-go'));
+    assert.equal(await focused(), 'companion:open', '« Accueillir » le compagnon');
+    // Le banc démoli depuis la liste des constructions : sa ligne disparaît, le focus va à la vue.
+    await enter(page.locator('.city-list summary'));
+    await enter(page.locator('#cityList').getByRole('button', { name: /^Banc/ }));
+    await sheetReady();
+    const demolish = button('#sheetBody', 'Démolir');
+    await enter(demolish);
+    await page.keyboard.press('Enter');   // « Confirmer la démolition », le même bouton
+    assert.equal(await page.evaluate(() => __ville.state.city.tiles.length), 0);
+    assert.equal(await focused(), 'view-ville', 'banc démoli');
+    // Journal : le Carnet fermé par Échap.
+    await view('journal');
+    await enter(button('#carnetCard', 'Ouvrir le carnet'));
+    await sheetReady();
+    await page.keyboard.press('Escape');
+    assert.equal(await focused(), 'carnet:open', 'Carnet fermé par Échap');
+    // Activités : la 2e supprimée, le focus va à la 3e ; la dernière, à l'avant-dernière.
+    await view('activites');
+    await enter(page.locator('#actsGrid .act-del').nth(1));
+    assert.equal(await focused(), 'act-del:' + acts[2], 'suppression de la 2e activité');
+    const left = await activityIds();
+    await enter(page.locator('#actsGrid .act-del').last());
+    assert.equal(await focused(), 'act-del:' + left[left.length - 2], 'suppression de la dernière activité');
+    // Journal : le 2e défi changé ; ses boutons « Changer » disparaissent, le focus va au nouveau défi.
+    await view('journal');
+    await enter(page.locator('#challengesCard .chal-row').nth(1).getByRole('button'));
+    assert.equal(await page.evaluate(() => __ville.state.challenges.swapped), 1);
+    assert.equal(await focused(), 'chal-swap:1', 'défi changé');
+    // Journal › Carnet › Visites › la carte postale : la ville de Léa en grand ; Échap la ferme et rouvre le carnet sur la carte.
+    await enter(button('#carnetCard', 'Ouvrir le carnet'));
+    await sheetReady();
+    await enter(page.locator('#sheetBody').getByRole('radio', { name: 'Visites', exact: true }));
+    await enter(page.locator('#sheetBody .carnet-postcard').first());
+    await page.locator('#cityBig').waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('#cityBig').waitFor({ state: 'hidden' });
+    await page.waitForTimeout(100);   // le titre du carnet rouvert ne reprend pas le focus 30 ms plus tard
+    assert.equal(await focused(), 'postcard:' + postcard, 'visite ouverte par une carte postale, fermée par Échap');
+    assert.deepEqual(await page.evaluate(() => [!document.querySelector('#sheet').hidden, document.querySelector('#sheetTitle').textContent,
+      document.querySelector('#sheetBody [role="radio"][aria-checked="true"]').textContent]), [true, 'Carnet', 'Visites']);
+    await page.keyboard.press('Escape');
+    assert.equal(await focused(), 'carnet:open', 'Carnet rouvert, fermé par Échap');
+    // « Mon objectif » s'ouvre et un nombre hors bornes part aussitôt, dans le même tour : le champ refusé garde le focus.
+    await page.evaluate(() => {
+      const open = document.querySelector('#goalsCard button');
+      open.focus();
+      open.click();
+      document.querySelector('#goalMinutes').value = '2000';
+      document.querySelector('#sheet button[type="submit"]').click();
+    });
+    await page.waitForTimeout(100);
+    assert.equal(await focused(), 'goalMinutes', 'champ refusé dans les 30 ms qui suivent l’ouverture');
+    // Garde : l'arrière-plan redessiné pendant que la fenêtre est ouverte, le focus reste dans la fenêtre.
+    await page.evaluate(() => __ville.renderAll());
+    assert.equal(await focused(), 'goalMinutes', 'rendu pendant une fenêtre ouverte');
+    await page.keyboard.press('Escape');
+    assert.equal(await focused(), 'goals:edit', '« Mon objectif » fermé par Échap');
+    // Garde : quand rien n'a le focus, un rendu de fond (la minute, un autre onglet) ne le prend pas.
+    await page.evaluate(() => { document.activeElement.blur(); __ville.renderAll(); });
+    assert.equal(await focused(), 'BODY', 'rendu quand rien n’a le focus');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Focus : jamais perdu, au clavier';
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame];
+  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
