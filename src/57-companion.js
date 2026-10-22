@@ -53,7 +53,8 @@ function openCompanionChoice({ edit = false } = {}) {
       paintCompanion(cv, { species: s, pose: 'idle', wear: c ? c.wear : '' }, 72);
       group.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(s === species), onclick: () => pick(s) }, cv, h('span', {}, t('companion.species.' + s))));
     }
-    input.addEventListener('input', () => { typed = input.value.trim() !== ''; sync(); });
+    // Rien de visible tapé (champ vide, blancs, caractères invisibles) : la suggestion de l'animal suit encore le choix.
+    input.addEventListener('input', () => { typed = cleanCompanionName(input.value) !== ''; sync(); });
     go.addEventListener('click', () => {
       const name = kept();
       closeSheet();

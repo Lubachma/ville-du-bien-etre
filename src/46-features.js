@@ -265,7 +265,7 @@ function buildingLevelText(key) {
 function openCityPersonalization() {
   openSheet(t('city.personalTitle'), body => {
     const name = h('input', { class: 'input', id: 'cityName', maxlength: '40', value: cityName(), required: true });
-    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = name.value.trim().slice(0, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast(t('city.renamed')); } },
+    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = cleanName(name.value, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast(t('city.renamed')); } },
       h('div', { class: 'field' }, h('label', { for: 'cityName' }, t('city.nameLabel')), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), t('city.saveName'))),
       h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, t('city.growsTitle')),
       h('p', {}, t('city.growsText')),

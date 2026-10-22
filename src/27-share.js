@@ -46,7 +46,7 @@ function encodeCity(state = S) {
   return toBase64url(bytes);
 }
 // Ville lue dans un code, ou null s'il n'est pas lisible (jamais d'erreur). Les éléments inconnus, hors du terrain ou en
-// double à la même place sont écartés sans refuser le reste. Le nom perd ses caractères de contrôle, de direction et invisibles, et tient en 40 caractères.
+// double à la même place sont écartés sans refuser le reste. Le nom est nettoyé par cleanName : sans caractères invisibles, de 40 caractères au plus.
 function decodeCity(code) {
   try {
     if (typeof code !== 'string' || !code || code.length > SHARE_CODE_MAX || !/^[A-Za-z0-9_-]+$/.test(code)) return null;
@@ -57,9 +57,8 @@ function decodeCity(code) {
     if (next() !== SHARE_VERSION) return null;
     const size = next();
     if (!SIZES.includes(size)) return null;
-    // Les liants des émojis composés (U+200C, U+200D) restent ; un nom sans rien de visible compte comme vide.
-    const raw = new TextDecoder().decode(take(next())).replace(HIDDEN_CHARS, '');
-    const kept = [...raw].slice(0, SHARE_NAME_CHARS).join('').trim(), name = VISIBLE_CHAR.test(kept) ? kept : '';
+    // Le même nettoyage que pour nos propres noms (cleanName) : un nom sans rien de visible est vide, et la visite montre alors « Une ville amie ».
+    const name = cleanName(new TextDecoder().decode(take(next())), SHARE_NAME_CHARS);
     const id = [...take(6)].map(b => b.toString(16).padStart(2, '0')).join('');
     const count = next(), tiles = [], used = new Set();
     for (let k = 0; k < count; k++) {

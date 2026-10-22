@@ -124,14 +124,14 @@ async function adoptLongName(browser, baseURL) {
   return 'Compagnon : un nom de 20 caractères tient à 320 px';
 }
 
-// Le nom suggéré suit la langue : un compagnon accueilli sans nom tapé (champ laissé tel quel, ou vidé) s'appelle Pompon, puis
-// Pompom en anglais.
+// Le nom suggéré suit la langue : un compagnon accueilli sans nom tapé (champ laissé tel quel, vidé, ou rempli de caractères
+// invisibles : un blanc braille) s'appelle Pompon, puis Pompom en anglais.
 async function suggestedNameFollowsLanguage(browser, baseURL) {
-  for (const empty of [false, true]) {
+  for (const typed of [null, '', '\u{2800}']) {
     const { context, page, errors } = await cityAt(browser, baseURL, seed([]), NOW);
     try {
       await meet(page);
-      if (empty) await page.locator('#companionName').fill('');
+      if (typed !== null) await page.locator('#companionName').fill(typed);
       await page.locator('#sheetBody').getByRole('button', { name: 'Accueillir Pompon', exact: true }).click();
       await toastMatches(page, /Bienvenue à Pompon/);
       assert.deepEqual(await page.evaluate(() => [__ville.companion.state().name, __ville.companion.name()]), ['', 'Pompon']);

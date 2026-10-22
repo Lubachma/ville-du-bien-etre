@@ -368,6 +368,14 @@ async function visitFriend(browser, baseURL) {
     await page.waitForFunction(() => !__ville.City.bigState().open);
     assert.equal(await page.evaluate(() => __ville.City.bigState().visit), false);
     assert.equal(await page.evaluate(() => JSON.stringify(__ville.state.city)), own);
+    // Un nom fait seulement de caractères invisibles (remplissage hangeul) : la visite s'appelle « Une ville amie ».
+    const bytes = Buffer.from(code, 'base64url'), filler = Buffer.from('\u{3164}');
+    const unnamed = Buffer.concat([bytes.subarray(0, 2), Buffer.from([filler.length]), filler, bytes.subarray(3 + bytes[2])]).toString('base64url');
+    await page.evaluate(c => { location.hash = '#ville=' + c; }, unnamed);
+    await page.waitForFunction(() => /Une ville amie/.test(document.querySelector('#cityVisitHead').innerText));
+    assert.match(await visitHead(page).innerText(), /^Une ville amie\s+6 éléments · terrain 7×7/);
+    await page.locator('#cityBigClose').click();
+    await page.waitForFunction(() => !__ville.City.bigState().open);
     // Lien abîmé : un message, aucune vue.
     await page.evaluate(() => { location.hash = '#ville=abc'; });
     await page.locator('#toast').getByText("Ce lien de ville n'est pas lisible").waitFor();

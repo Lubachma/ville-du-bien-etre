@@ -336,10 +336,22 @@ const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const num = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) ? clamp(v, lo, hi) : def);
 const int = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) ? clamp(Math.round(v), lo, hi) : def);
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-// Noms tapés (ville partagée, compagnon) : caractères de contrôle, de direction et invisibles retirés ; les liants des émojis
-// composés (U+200C, U+200D) restent, et un nom sans rien de visible compte comme vide.
-const HIDDEN_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g;
-const VISIBLE_CHAR = /[^\s\u200c\u200d]/;
+// Un nom tapé ou reçu par un lien (sa ville, une ville amie, le compagnon), nettoyé de la même façon partout.
+// - Retirés : les caractères de format et ignorables (marques de direction, étiquettes, trait d'union conditionnel…), de contrôle,
+//   les séparateurs de ligne et de paragraphe, les remplissages hangeul et le blanc braille (qui ressemblent à un caractère), et
+//   les moitiés de paire de substitution (reste d'une ancienne coupure en unités UTF-16). Les liants des émojis composés (U+200C,
+//   U+200D) restent.
+// - Les blancs en série n'en font plus qu'une espace, sans blanc au début ni à la fin.
+// - Le nom est coupé à `max` points de code : jamais au milieu d'un caractère, un émoji simple compris (un émoji composé peut perdre sa fin).
+// - Sans lettre, chiffre, symbole ni ponctuation, rien de visible ne reste : le nom compte comme vide ('').
+const NAME_HIDDEN = /[\p{Cf}\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cs}\u{2028}\u{2029}\u{3164}\u{2800}\u{115f}\u{1160}\u{ffa0}]/gu;
+const NAME_VISIBLE = /[\p{L}\p{N}\p{S}\p{P}]/u;
+function cleanName(raw, max) {
+  if (typeof raw !== 'string') return '';
+  const text = raw.replace(NAME_HIDDEN, ch => (ch === '\u{200c}' || ch === '\u{200d}' ? ch : '')).replace(/\s+/g, ' ').trim();
+  const name = Array.from(text).slice(0, max).join('').trim();
+  return NAME_VISIBLE.test(name) ? name : '';
+}
 const idOf = v => (typeof v === 'string' && v.length > 0 && v.length <= 40 && /^[\w-]+$/.test(v) ? v : uid());
 const leapYear = year => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];

@@ -42,6 +42,26 @@ test('compagnon : validation', () => {
   assert.deepEqual(['cape', 'licorne'].map(wear => known(pal('marmotte', { minutes: 1800, wear })).wear), ['cape', '']);
 });
 
+// Étape 7 (C4) : le même nettoyage que les noms de ville. Les caractères invisibles s'écrivent \u{…}.
+test('compagnon : un nom sans rien de visible donne la suggestion de l’animal', () => {
+  const a = app(), known = raw => plain(a.normalize({ companion: raw }).companion);
+  a.setLang('fr');
+  for (const hidden of ['\u{2800}', '\u{3164}', '\u{115f}\u{1160}', '\u{ffa0}', '\u{2028}', '\u{E0041}', '\u{ad}']) {
+    assert.equal(known(pal('lapin', { name: hidden })).name, '', JSON.stringify(hidden));
+    a.adoptCompanion('lapin', hidden);
+    assert.deepEqual([a.state.companion.name, a.companionName()], ['', 'Pompon'], JSON.stringify(hidden));
+    a.editCompanion('ourson', hidden);
+    assert.deepEqual([a.state.companion.name, a.companionName()], ['', 'Caramel'], JSON.stringify(hidden));
+  }
+  // Les invisibles à l'intérieur d'un nom s'en vont, les blancs en série n'en font qu'un, un émoji reste entier.
+  assert.equal(known(pal('lapin', { name: 'Lu\u{200b}ne\u{2800}' })).name, 'Lune');
+  assert.equal(known(pal('lapin', { name: ' Petit   Lu\u{2028}ne ' })).name, 'Petit Lune');
+  assert.equal(known(pal('lapin', { name: 'Lune 🌙' })).name, 'Lune 🌙');
+  // Vingt points de code au plus : 20 émojis (40 unités) tiennent, un 21e fait revenir la suggestion.
+  assert.equal(known(pal('lapin', { name: '🌙'.repeat(20) })).name, '🌙'.repeat(20));
+  assert.equal(known(pal('lapin', { name: '🌙'.repeat(21) })).name, '');
+});
+
 test('compagnon : niveaux aux seuils', () => {
   const a = app();
   assert.deepEqual([0, 19.9, 20, 59, 60, 1799, 1800, 99999].map(m => a.companionLevelOf(m)), [1, 1, 2, 2, 3, 9, 10, 10]);

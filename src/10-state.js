@@ -212,7 +212,7 @@ function normalize(raw) {
   } };
   const goals = obj(raw.goals);
   s.goals = { minutes: int(goals.minutes, 5, 1260, 60), days: int(goals.days, 1, 7, 3), cat: isCat(goals.cat) ? goals.cat : 'all', building: isItem(goals.building) ? goals.building : '' };
-  s.personal = { name: str(obj(raw.personal).name, 40) };
+  s.personal = { name: cleanName(obj(raw.personal).name, 40) };
   if (Array.isArray(raw.routines)) {
     const ids = new Set();
     s.routines = raw.routines.slice(0, 20).filter(r => r && typeof r === 'object' && str(r.name, 40) && Array.isArray(r.activityIds)).map(r => ({ id: idOf(r.id), name: str(r.name, 40), activityIds: r.activityIds.filter(id => typeof id === 'string' && /^[\w-]{1,40}$/.test(id)).slice(0, 6) })).filter(r => !ids.has(r.id) && ids.add(r.id));
@@ -319,10 +319,11 @@ function companionLevelOf(minutes) {
   COMPANION_LEVELS.forEach((need, i) => { if (minutes >= need) level = i + 1; });
   return level;
 }
-// Nom du compagnon : nettoyé comme un nom de ville partagée ; '' s'il est vide ou trop long (l'app montre alors le nom suggéré).
+// Nom du compagnon : nettoyé comme un nom de ville (cleanName, sans coupure) ; '' s'il est vide, sans rien de visible ou de plus de
+// COMPANION_NAME_MAX points de code (l'app montre alors le nom suggéré).
 function cleanCompanionName(raw) {
-  const name = typeof raw === 'string' ? raw.replace(HIDDEN_CHARS, '').trim() : '';
-  return VISIBLE_CHAR.test(name) && [...name].length <= COMPANION_NAME_MAX ? name : '';
+  const name = cleanName(raw, Infinity);
+  return Array.from(name).length <= COMPANION_NAME_MAX ? name : '';
 }
 // Compagnon enregistré : animal connu et date d'arrivée valide, sinon aucun ; un accessoire ne se porte qu'une fois gagné.
 function knownCompanion(raw) {
@@ -343,7 +344,7 @@ function mergeCompanion(B, L, R) {
 }
 function knownPostcards(raw) {
   const cards = Object.entries(obj(raw)).filter(([id, c]) => /^[0-9a-f]{12}$/.test(id) && c && typeof c.code === 'string' && /^[A-Za-z0-9_-]{4,4000}$/.test(c.code)
-    && SIZES.includes(c.size) && validTs(c.at)).map(([id, c]) => [id, { code: c.code, name: str(c.name, 40), size: c.size, count: int(c.count, 0, 121, 0), at: c.at }]);
+    && SIZES.includes(c.size) && validTs(c.at)).map(([id, c]) => [id, { code: c.code, name: cleanName(c.name, 40), size: c.size, count: int(c.count, 0, 121, 0), at: c.at }]);
   return Object.fromEntries(cards.sort((p, q) => q[1].at - p[1].at).slice(0, POSTCARDS_MAX));
 }
 function knownVisits(raw) {

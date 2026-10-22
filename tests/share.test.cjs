@@ -5,7 +5,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
   '25-challenges.js', '26-summaries.js', '27-share.js', '46-features.js'];
-const EXPOSE = ['encodeCity', 'decodeCity', 'shareLink', 'codeFromText', 'keepPostcard', 'ensureShareId', 'buildingLevel'];
+const EXPOSE = ['encodeCity', 'decodeCity', 'shareLink', 'codeFromText', 'keepPostcard', 'ensureShareId', 'buildingLevel', 'cleanName', 'normalize', 't'];
 const app = () => loadApp(FILES, { expose: EXPOSE,
   globals: { btoa, atob, crypto: webcrypto, location: { origin: 'https://lubachma.github.io', pathname: '/ville-du-bien-etre/' } } });
 const ITEMS_ORDER = ['arbre', 'fleurs', 'chemin', 'banc', 'lampadaire', 'etang', 'maison', 'boulangerie', 'serre', 'bibliotheque', 'ecole', 'observatoire',
@@ -90,9 +90,91 @@ test('lien de ville : un nom fait de caractères invisibles compte comme vide ; 
   assert.equal(a.decodeCity(a.encodeCity()).name, 'Atelier \u{1F469}\u200d\u{1F4BB}');
 });
 
+// Étape 7 (C4) : un seul nettoyage pour les noms de ville (la sienne, une ville amie) et de compagnon. Les caractères invisibles
+// s'écrivent \u{…} : ni le remplissage hangeul ni le blanc braille ne se voient dans un éditeur.
+const HALF_PAIR = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+test('noms : invisibles retirés, coupure entière', () => {
+  const a = app();
+  // Rien de visible : remplissage hangeul, blanc braille, trait d'union conditionnel.
+  assert.equal(a.cleanName('\u{3164}', 40), '');
+  assert.equal(a.cleanName('\u{2800}\u{2800}', 40), '');
+  assert.equal(a.cleanName('\u{ad}', 40), '');
+  // Une marque de direction arabe, un séparateur de ligne (retiré, pas remplacé par une espace), une étiquette invisible.
+  assert.equal(a.cleanName('Jardin\u{61c}', 40), 'Jardin');
+  assert.equal(a.cleanName('a\u{2028}b', 40), 'ab');
+  assert.equal(a.cleanName('Ville \u{E0041}🌳', 40), 'Ville 🌳');
+  // 45 émojis coupés à 40 points de code : aucune moitié de paire.
+  const cut = a.cleanName('😀'.repeat(45), 40);
+  assert.equal(Array.from(cut).length, 40);
+  assert.equal(cut, '😀'.repeat(40));
+  assert.doesNotMatch(cut, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+});
+
+test('noms : tous les invisibles, les blancs en série, les liants d’émojis, les moitiés de paire', () => {
+  const a = app();
+  // Les autres remplissages, les séparateurs, les étiquettes, les caractères de contrôle et de direction : rien ne reste.
+  for (const hidden of ['\u{115f}', '\u{1160}', '\u{ffa0}', '\u{2029}', '\u{E0041}\u{E0042}', '\u{200b}\u{200e}\u{202e}\u{2060}\u{feff}', '\u{7}\u{85}\u{7f}',
+    '\u{200c}\u{200d}', '\u{301}', ' \u{a0}\u{3000} ', '']) {
+    assert.equal(a.cleanName(hidden, 40), '', JSON.stringify(hidden));
+  }
+  for (const other of [undefined, null, 42, {}, ['Léa']]) assert.equal(a.cleanName(other, 40), '', String(other));
+  // Les blancs en série deviennent une espace, sans blanc au début ni à la fin ; les retraits se font avant.
+  assert.equal(a.cleanName('  Le   jardin \u{a0} calme\u{3000}', 40), 'Le jardin calme');
+  assert.equal(a.cleanName('Le \u{200b} jardin', 40), 'Le jardin');
+  // Un nom coupé ne finit pas par une espace.
+  assert.equal(a.cleanName('a'.repeat(39) + ' bbb', 40), 'a'.repeat(39));
+  assert.equal(a.cleanName('Ville d’Élodie 🌸', 40), 'Ville d’Élodie 🌸');
+  // Les liants des émojis composés (U+200C, U+200D) restent, et comptent comme des points de code.
+  const worker = '👩\u{200d}💻';
+  assert.equal(a.cleanName('Atelier ' + worker, 40), 'Atelier ' + worker);
+  assert.equal(Array.from(a.cleanName('x'.repeat(30) + worker.repeat(5), 40)).length, 40);
+  // Une moitié de paire déjà présente (ancienne coupure à 40 unités) est retirée ; une paire entière reste.
+  assert.equal(a.cleanName('Ville\u{D83D}', 40), 'Ville');
+  assert.equal(a.cleanName('\u{DE00}Ville', 40), 'Ville');
+  assert.equal(a.cleanName('😀'.repeat(3), 2), '😀'.repeat(2));
+  assert.doesNotMatch(a.cleanName('a' + '😀'.repeat(45) + '\u{D83D}', 40), HALF_PAIR);
+  // Des points de code, pas des unités : 40 lettres accentuées tiennent, la 41e part.
+  assert.equal(a.cleanName('é'.repeat(41), 40), 'é'.repeat(40));
+});
+
+test('lien de ville : un nom fait seulement de caractères invisibles s’affiche « Une ville amie »', () => {
+  const a = app();
+  for (const name of ['\u{3164}', '\u{2800}\u{2800}', '\u{ad}', '\u{E0041}\u{E0042}', ' \u{115f}\u{1160} ']) {
+    town(a, 7, ['banc'], name);
+    const city = a.decodeCity(a.encodeCity());
+    assert.equal(city.name, '', JSON.stringify(name));
+    // Le nom vide fait afficher le nom par défaut d'une ville amie, dans la visite comme dans le Carnet.
+    assert.equal(city.name || a.t('visit.friendCity'), 'Une ville amie');
+  }
+  // Même quand le nom est écrit à la main dans le lien : séparateurs retirés, blancs réduits, 40 caractères entiers.
+  const forged = text => a.decodeCity(Buffer.from([1, 7, Buffer.byteLength(text), ...Buffer.from(text), 1, 2, 3, 4, 5, 6, 0, 0]).toString('base64url'));
+  assert.equal(forged('\u{3164}').name, '');
+  assert.equal(forged('Ville\u{2028} Amie\u{2029}  du   lac\u{61c}').name, 'Ville Amie du lac');
+  const long = forged('😀'.repeat(60)).name;
+  assert.equal(Array.from(long).length, 40);
+  assert.doesNotMatch(long, HALF_PAIR);
+});
+
+test('noms : un état enregistré ou importé garde des noms propres (ville, cartes postales)', () => {
+  const a = app(), at = Date.parse('2026-10-18T12:00:00Z');
+  const personal = name => a.normalize({ personal: { name } }).personal.name;
+  assert.equal(personal(' Le jardin '), 'Le jardin');
+  assert.equal(personal('\u{3164}'), '');
+  assert.equal(personal('Lac\u{2028} \u{200b}Bleu'), 'Lac Bleu');
+  const long = personal('a' + '😀'.repeat(45));
+  assert.equal(Array.from(long).length, 40);
+  assert.doesNotMatch(long, HALF_PAIR);
+  assert.doesNotMatch(personal('😀'.repeat(19) + 'a' + '😀'.repeat(30)), HALF_PAIR);
+  assert.equal(personal(12), '');
+  // Une carte postale gardée avant ce nettoyage se nettoie aussi à la lecture.
+  const card = name => ({ code: 'AAAAAAAAAAAA', name, size: 7, count: 3, at });
+  const cards = a.normalize({ postcards: { '0123456789ab': card('\u{3164}'), fedcba987654: card('Jardin\u{61c} d\u{2028}Éli'), '00112233aabb': card('Léa') } }).postcards;
+  assert.deepEqual([cards['0123456789ab'].name, cards.fedcba987654.name, cards['00112233aabb'].name], ['', 'Jardin dÉli', 'Léa']);
+});
+
 test('sources : aucun caractère invisible ou de direction écrit tel quel (ils s’écrivent \\u…)', () => {
   const fs = require('node:fs'), path = require('node:path'), dir = path.join(__dirname, '..', 'src');
-  const hidden = /[\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/;
+  const hidden = /[\u{ad}\u{61c}\u{115f}\u{1160}\u{200b}-\u{200f}\u{2028}-\u{202e}\u{2060}\u{2066}-\u{2069}\u{2800}\u{3164}\u{feff}\u{ffa0}\u{E0000}-\u{E007F}]/u;
   const found = fs.readdirSync(dir).filter(name => hidden.test(fs.readFileSync(path.join(dir, name), 'utf8')));
   assert.deepEqual(found, []);
 });

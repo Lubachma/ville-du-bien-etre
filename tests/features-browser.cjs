@@ -94,7 +94,12 @@ async function runFeatures(browser, baseURL = process.env.BASE_URL || 'http://12
     await page.locator('#cityName').fill('');
     await page.getByRole('button', { name: 'Enregistrer le nom', exact: true }).click();
     assert.equal(await page.locator('#sheet [role="alert"]').innerText(), 'Ce champ est à remplir.');
-    await page.locator('#cityName').fill('Le jardin tranquille');
+    // Un nom fait seulement de caractères invisibles (remplissage hangeul) ne s'enregistre pas ; ceux d'un vrai nom sont retirés.
+    await page.locator('#cityName').fill('\u{3164}');
+    await page.getByRole('button', { name: 'Enregistrer le nom', exact: true }).click();
+    assert.equal(await page.locator('#cityName').isVisible(), true);
+    assert.equal(await page.evaluate(() => window.__ville.state.personal.name), '');
+    await page.locator('#cityName').fill('  Le jardin\u{2028} \u{200b}tranquille\u{3164} ');
     await page.getByRole('button', { name: 'Enregistrer le nom', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__ville.state.personal.name), 'Le jardin tranquille');
     await page.reload();

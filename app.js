@@ -341,10 +341,22 @@ const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const num = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) ? clamp(v, lo, hi) : def);
 const int = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) ? clamp(Math.round(v), lo, hi) : def);
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-// Noms tapés (ville partagée, compagnon) : caractères de contrôle, de direction et invisibles retirés ; les liants des émojis
-// composés (U+200C, U+200D) restent, et un nom sans rien de visible compte comme vide.
-const HIDDEN_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g;
-const VISIBLE_CHAR = /[^\s\u200c\u200d]/;
+// Un nom tapé ou reçu par un lien (sa ville, une ville amie, le compagnon), nettoyé de la même façon partout.
+// - Retirés : les caractères de format et ignorables (marques de direction, étiquettes, trait d'union conditionnel…), de contrôle,
+//   les séparateurs de ligne et de paragraphe, les remplissages hangeul et le blanc braille (qui ressemblent à un caractère), et
+//   les moitiés de paire de substitution (reste d'une ancienne coupure en unités UTF-16). Les liants des émojis composés (U+200C,
+//   U+200D) restent.
+// - Les blancs en série n'en font plus qu'une espace, sans blanc au début ni à la fin.
+// - Le nom est coupé à `max` points de code : jamais au milieu d'un caractère, un émoji simple compris (un émoji composé peut perdre sa fin).
+// - Sans lettre, chiffre, symbole ni ponctuation, rien de visible ne reste : le nom compte comme vide ('').
+const NAME_HIDDEN = /[\p{Cf}\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cs}\u{2028}\u{2029}\u{3164}\u{2800}\u{115f}\u{1160}\u{ffa0}]/gu;
+const NAME_VISIBLE = /[\p{L}\p{N}\p{S}\p{P}]/u;
+function cleanName(raw, max) {
+  if (typeof raw !== 'string') return '';
+  const text = raw.replace(NAME_HIDDEN, ch => (ch === '\u{200c}' || ch === '\u{200d}' ? ch : '')).replace(/\s+/g, ' ').trim();
+  const name = Array.from(text).slice(0, max).join('').trim();
+  return NAME_VISIBLE.test(name) ? name : '';
+}
 const idOf = v => (typeof v === 'string' && v.length > 0 && v.length <= 40 && /^[\w-]+$/.test(v) ? v : uid());
 const leapYear = year => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -3241,7 +3253,7 @@ function normalize(raw) {
   } };
   const goals = obj(raw.goals);
   s.goals = { minutes: int(goals.minutes, 5, 1260, 60), days: int(goals.days, 1, 7, 3), cat: isCat(goals.cat) ? goals.cat : 'all', building: isItem(goals.building) ? goals.building : '' };
-  s.personal = { name: str(obj(raw.personal).name, 40) };
+  s.personal = { name: cleanName(obj(raw.personal).name, 40) };
   if (Array.isArray(raw.routines)) {
     const ids = new Set();
     s.routines = raw.routines.slice(0, 20).filter(r => r && typeof r === 'object' && str(r.name, 40) && Array.isArray(r.activityIds)).map(r => ({ id: idOf(r.id), name: str(r.name, 40), activityIds: r.activityIds.filter(id => typeof id === 'string' && /^[\w-]{1,40}$/.test(id)).slice(0, 6) })).filter(r => !ids.has(r.id) && ids.add(r.id));
@@ -3348,10 +3360,11 @@ function companionLevelOf(minutes) {
   COMPANION_LEVELS.forEach((need, i) => { if (minutes >= need) level = i + 1; });
   return level;
 }
-// Nom du compagnon : nettoyé comme un nom de ville partagée ; '' s'il est vide ou trop long (l'app montre alors le nom suggéré).
+// Nom du compagnon : nettoyé comme un nom de ville (cleanName, sans coupure) ; '' s'il est vide, sans rien de visible ou de plus de
+// COMPANION_NAME_MAX points de code (l'app montre alors le nom suggéré).
 function cleanCompanionName(raw) {
-  const name = typeof raw === 'string' ? raw.replace(HIDDEN_CHARS, '').trim() : '';
-  return VISIBLE_CHAR.test(name) && [...name].length <= COMPANION_NAME_MAX ? name : '';
+  const name = cleanName(raw, Infinity);
+  return Array.from(name).length <= COMPANION_NAME_MAX ? name : '';
 }
 // Compagnon enregistré : animal connu et date d'arrivée valide, sinon aucun ; un accessoire ne se porte qu'une fois gagné.
 function knownCompanion(raw) {
@@ -3372,7 +3385,7 @@ function mergeCompanion(B, L, R) {
 }
 function knownPostcards(raw) {
   const cards = Object.entries(obj(raw)).filter(([id, c]) => /^[0-9a-f]{12}$/.test(id) && c && typeof c.code === 'string' && /^[A-Za-z0-9_-]{4,4000}$/.test(c.code)
-    && SIZES.includes(c.size) && validTs(c.at)).map(([id, c]) => [id, { code: c.code, name: str(c.name, 40), size: c.size, count: int(c.count, 0, 121, 0), at: c.at }]);
+    && SIZES.includes(c.size) && validTs(c.at)).map(([id, c]) => [id, { code: c.code, name: cleanName(c.name, 40), size: c.size, count: int(c.count, 0, 121, 0), at: c.at }]);
   return Object.fromEntries(cards.sort((p, q) => q[1].at - p[1].at).slice(0, POSTCARDS_MAX));
 }
 function knownVisits(raw) {
@@ -5114,7 +5127,7 @@ function encodeCity(state = S) {
   return toBase64url(bytes);
 }
 // Ville lue dans un code, ou null s'il n'est pas lisible (jamais d'erreur). Les éléments inconnus, hors du terrain ou en
-// double à la même place sont écartés sans refuser le reste. Le nom perd ses caractères de contrôle, de direction et invisibles, et tient en 40 caractères.
+// double à la même place sont écartés sans refuser le reste. Le nom est nettoyé par cleanName : sans caractères invisibles, de 40 caractères au plus.
 function decodeCity(code) {
   try {
     if (typeof code !== 'string' || !code || code.length > SHARE_CODE_MAX || !/^[A-Za-z0-9_-]+$/.test(code)) return null;
@@ -5125,9 +5138,8 @@ function decodeCity(code) {
     if (next() !== SHARE_VERSION) return null;
     const size = next();
     if (!SIZES.includes(size)) return null;
-    // Les liants des émojis composés (U+200C, U+200D) restent ; un nom sans rien de visible compte comme vide.
-    const raw = new TextDecoder().decode(take(next())).replace(HIDDEN_CHARS, '');
-    const kept = [...raw].slice(0, SHARE_NAME_CHARS).join('').trim(), name = VISIBLE_CHAR.test(kept) ? kept : '';
+    // Le même nettoyage que pour nos propres noms (cleanName) : un nom sans rien de visible est vide, et la visite montre alors « Une ville amie ».
+    const name = cleanName(new TextDecoder().decode(take(next())), SHARE_NAME_CHARS);
     const id = [...take(6)].map(b => b.toString(16).padStart(2, '0')).join('');
     const count = next(), tiles = [], used = new Set();
     for (let k = 0; k < count; k++) {
@@ -9716,7 +9728,7 @@ function buildingLevelText(key) {
 function openCityPersonalization() {
   openSheet(t('city.personalTitle'), body => {
     const name = h('input', { class: 'input', id: 'cityName', maxlength: '40', value: cityName(), required: true });
-    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = name.value.trim().slice(0, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast(t('city.renamed')); } },
+    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = cleanName(name.value, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast(t('city.renamed')); } },
       h('div', { class: 'field' }, h('label', { for: 'cityName' }, t('city.nameLabel')), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), t('city.saveName'))),
       h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, t('city.growsTitle')),
       h('p', {}, t('city.growsText')),
@@ -11775,7 +11787,8 @@ function openCompanionChoice({ edit = false } = {}) {
       paintCompanion(cv, { species: s, pose: 'idle', wear: c ? c.wear : '' }, 72);
       group.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(s === species), onclick: () => pick(s) }, cv, h('span', {}, t('companion.species.' + s))));
     }
-    input.addEventListener('input', () => { typed = input.value.trim() !== ''; sync(); });
+    // Rien de visible tapé (champ vide, blancs, caractères invisibles) : la suggestion de l'animal suit encore le choix.
+    input.addEventListener('input', () => { typed = cleanCompanionName(input.value) !== ''; sync(); });
     go.addEventListener('click', () => {
       const name = kept();
       closeSheet();
