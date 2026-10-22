@@ -7065,6 +7065,13 @@ const City = (() => {
   }
   // Relance la ville (retour sur l'onglet, fenêtre fermée, réglage changé…) : une image, puis la bonne cadence.
   function wake() { if (!raf && !ambientTimer) draw(); }
+  // Demande le dessin de la prochaine image de l'écran. Autant de demandes qu'on veut d'ici là, un seul dessin : deux doigts qui
+  // pincent ou une molette qui tourne vite changent la vue à chaque événement, et la ville se dessine une fois, avec la vue du moment.
+  function requestFrame() {
+    if (raf) return;
+    clearTimeout(ambientTimer); ambientTimer = 0;
+    raf = requestAnimationFrame(draw);
+  }
   // Promeneurs : chacun suit, aller et retour, un petit chemin de 12 pas sur les cases où l'on marche, tiré une fois
   // pour toutes de son indice ; un pas toutes les 4 s (2,5 s de marche, puis une pause).
   const WALK_STEPS = 12, STEP_S = 4, MOVE_S = 2.5, WALKER_COLORS = ['#d9573b', '#3f78c4', '#e3a12f', '#3a9a7a', '#d0628f', '#7a8b6e'];
@@ -7240,16 +7247,19 @@ const City = (() => {
     const [x, y] = cellUnder(W / 2, H / 2, z, pan), cx = clamp(x, 0, N), cy = clamp(y, 0, N), tw = big.base.tw * z;
     return [pan[0] - ((cx - cy) - (x - y)) * tw / 2, pan[1] - ((cx + cy) - (x + y)) * tw / 4];
   }
-  // Zoom vers z autour d'un point de l'écran, qui reste sous le doigt ; en douceur avec les boutons, sauf animations réduites.
+  // Zoom vers z autour d'un point de l'écran, qui reste sous le doigt. En douceur avec les boutons (sauf animations réduites) : la
+  // transition se dessine aussitôt, puis image après image. Sinon, pincement ou molette : la vue change aussitôt et le dessin attend
+  // l'image suivante.
   function zoomAt(z, px, py, smooth) {
     const to = clamp(z, 1, 3), k = to / big.shown;
     const pan = keepInView([px - W / 2 - (px - W / 2 - big.pan[0]) * k, py - H / 2 - (py - H / 2 - big.pan[1]) * k], to);
     big.zoom = to;
     $('#cityBigIn').setAttribute('aria-disabled', String(to >= 3));
     $('#cityBigOut').setAttribute('aria-disabled', String(to <= 1));
-    if (smooth && !reducedMotion()) big.anim = { start: performance.now(), from: { z: big.shown, pan: big.pan }, to: { z: to, pan } };
-    else { big.anim = null; big.shown = to; big.pan = pan; applyView(); }
-    draw();
+    if (smooth && !reducedMotion()) {
+      big.anim = { start: performance.now(), from: { z: big.shown, pan: big.pan }, to: { z: to, pan } };
+      draw();
+    } else { big.anim = null; big.shown = to; big.pan = pan; applyView(); requestFrame(); }
   }
   function panBy(dx, dy) {
     // Pendant un zoom en douceur, le glissement s'ajoute aux deux bouts de la transition, qui sinon l'écraserait.
@@ -7257,7 +7267,7 @@ const City = (() => {
     if (a) { a.from.pan = [a.from.pan[0] + dx, a.from.pan[1] + dy]; a.to.pan = keepInView([a.to.pan[0] + dx, a.to.pan[1] + dy], a.to.z); }
     big.pan = keepInView([big.pan[0] + dx, big.pan[1] + dy], big.shown);
     applyView();
-    if (!raf) { clearTimeout(ambientTimer); ambientTimer = 0; raf = requestAnimationFrame(draw); }
+    requestFrame();
   }
   function openBig() {
     if (big.open || Mode.state) return;
@@ -7790,9 +7800,10 @@ const City = (() => {
 
   return { layout, draw, relayout, thumb, townThumb, effect, sparkle, effectCount, tileOf, snapshot, wake, frames: () => frames, walkers: () => lastPeople, visitorBox: () => visitorBox, wishBox: () => wishBox, companionBox: () => companionBox, companionSpot: () => lastCompanion, visitorThumb,
     focus: () => { keyboard = true; small.focus(); draw(); }, openBig, closeBig, openVisit,
-    // Pour les tests : état de la vue en grand (et la case sous le centre de l'écran), centre d'une case sur le canevas dessiné.
+    // Pour les tests : état de la vue en grand (et la case sous le centre de l'écran), centre d'une case sur le canevas dessiné,
+    // nombre de dessins faits depuis le chargement (le compte de frames).
     bigState: () => ({ open: big.open, zoom: big.zoom, visit: !!visit, focus: big.open && big.base ? cellUnder(W / 2, H / 2, big.shown, big.pan) : null }),
-    cellPoint: (x, y) => [ox + (x - y) * TW / 2, oy + (x + y + 1) * TW / 4] };
+    cellPoint: (x, y) => [ox + (x - y) * TW / 2, oy + (x + y + 1) * TW / 4], drawCount: () => frames };
 })();
 
 /* Placement / déplacement de bâtiments */

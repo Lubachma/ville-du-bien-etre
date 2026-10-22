@@ -547,9 +547,63 @@ async function imagesOwnCityUnderSky(browser, baseURL) {
   return 'Images : ma ville, sous le ciel du moment';
 }
 
+// Dans la vue en grand, un pincement ou une molette qui tourne vite change la vue aussitôt, mais la ville n'est dessinée qu'une fois, à
+// l'image suivante, quel que soit le nombre d'événements reçus d'ici là (avant : un dessin par événement). Les événements sont synthétiques
+// et partent d'un coup, dans la même tâche : aucune image ne passe entre eux.
+async function zoomDrawsOncePerFrame(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }), null);
+  // Joue un geste dans la page, puis rend la vue (zoom, place de la case (3, 3) à l'écran) et le nombre de dessins faits : au départ, juste
+  // après les événements, et deux images plus tard.
+  const play = gesture => page.evaluate(async gesture => {
+    const City = __ville.City, canvas = document.querySelector('#cityBigCanvas'), box = canvas.getBoundingClientRect();
+    const x = box.left + box.width / 2, y = box.top + box.height / 2;
+    const read = () => ({ zoom: City.bigState().zoom, cell: City.cellPoint(3, 3), draws: City.drawCount() });
+    const finger = (type, id, dx) => canvas.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', isPrimary: id === 1, clientX: x + dx, clientY: y, bubbles: true }));
+    canvas.setPointerCapture = () => {};   // un pointeur synthétique n'est pas « actif » : le navigateur refuserait de le capturer
+    if (gesture === 'pinch') { finger('pointerdown', 1, -50); finger('pointerdown', 2, 50); }
+    const start = read();
+    // Pincement : dix paires de déplacements, deux doigts qui s'écartent de 100 à 160 points (la vue zoome de 1,6).
+    if (gesture === 'pinch') for (let step = 1; step <= 10; step++) { finger('pointermove', 1, -50 - 3 * step); finger('pointermove', 2, 50 + 3 * step); }
+    // Molette : vingt crans de 15 points (la vue zoome d'environ 1,6).
+    else for (let notch = 0; notch < 20; notch++) canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: -15, clientX: x, clientY: y, bubbles: true, cancelable: true }));
+    const now = read();
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const later = read();
+    if (gesture === 'pinch') { finger('pointerup', 1, -80); finger('pointerup', 2, 80); }
+    return { start, now, later };
+  }, gesture);
+  // La vue a changé aussitôt (zoom et place de la ville à l'écran, pour que les touchers visent juste), le dessin fait une fois en deux
+  // images au plus, et rien n'a été dessiné avant l'image suivante.
+  const drawnOnce = (label, run) => {
+    assert.ok(run.now.zoom > run.start.zoom, `${label} : la vue ne zoome pas aussitôt (${run.start.zoom} puis ${run.now.zoom})`);
+    assert.notDeepEqual(run.now.cell, run.start.cell, `${label} : la ville ne bouge pas aussitôt à l'écran`);
+    const draws = run.later.draws - run.start.draws;
+    assert.ok(draws >= 1 && draws <= 2, `${label} : ${draws} dessins en deux images (de 1 à 2 attendus)`);
+    assert.equal(run.now.draws, run.start.draws, `${label} : ${run.now.draws - run.start.draws} dessins avant l'image suivante`);
+  };
+  try {
+    await page.locator('#cityExpand').click();
+    await page.locator('#cityBig').waitFor();
+    drawnOnce('pincement', await play('pinch'));
+    drawnOnce('molette', await play('wheel'));
+    // Les boutons gardent leur zoom en douceur : un dessin aussitôt, qui lance la transition, puis un par image tant qu'elle dure.
+    const button = await page.evaluate(async () => {
+      const City = __ville.City, before = City.drawCount();
+      document.querySelector('#cityBigOut').click();
+      const now = City.drawCount() - before;
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return { now, later: City.drawCount() - before };
+    });
+    assert.equal(button.now, 1, `bouton Dézoomer : ${button.now} dessins aussitôt au lieu d'un`);
+    assert.ok(button.later >= 2, `bouton Dézoomer : ${button.later} dessin en deux images, la transition ne se dessine pas image après image`);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Zoom : un seul dessin par image';
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn, imagesOwnCityUnderSky];
+  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
