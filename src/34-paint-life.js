@@ -127,8 +127,32 @@ function drawSeasonLife(g, amb, t, area, tiles) {
 }
 
 /* Habitants. Un personnage mesure environ 0,18 largeur de case ; (sx, sy) est le point sous ses pieds. */
-function drawPerson(g, sx, sy, color, pose = 'stand') {
-  const s = g.tw * .18, head = g.c('#f1c9a5'), body = color;
+// Cinq peaux, de la plus claire à la plus foncée. Chaque ville les fait tourner d'un cran qui lui est propre.
+const SKINS = ['#f6d5bf', '#e6b28c', '#c58a5c', '#8e5a3a', '#5b3a28'];
+// Peau de la personne n° n : cinq numéros qui se suivent ont cinq peaux différentes, dans toutes les villes.
+function personSkin(n) { return SKINS[(n + Math.floor(chance('habitants') * SKINS.length)) % SKINS.length]; }
+// Promeneur n° i : sa peau et son aide à la marche, tirées pour la ville : environ un promeneur sur sept va en fauteuil roulant,
+// et un sur cinq a une canne (le fauteuil l'emporte).
+function walkerLook(i) {
+  const chair = (i + Math.floor(chance('fauteuil') * 7)) % 7 === 0, cane = (i + Math.floor(chance('canne') * 5)) % 5 === 0;
+  return { skin: personSkin(i), aid: chair ? 'chair' : cane ? 'cane' : '' };
+}
+// pose : 'stand' debout, 'sit' assis par terre, 'chair' assis dans un fauteuil roulant. Renvoie l'épaule, où s'accrochent les accessoires.
+function drawPerson(g, sx, sy, color, pose = 'stand', skin = SKINS[0]) {
+  const s = g.tw * .18, head = g.c(skin), body = color;
+  if (pose === 'chair') {
+    // Fauteuil roulant, de profil : dossier et poignée à gauche, jambes vers l'avant, et la grande roue, tracée en cercle pour qu'on voie le corps
+    // à travers. Le cadre est gris foncé le jour et gris clair la nuit : un gris foncé disparaîtrait sur le sol sombre.
+    // at() place des points donnés en s, x vers la droite et y vers le haut depuis les pieds.
+    const frame = mix('#4b5159', '#707882', g.dark), ctx = g.ctx, at = pts => pts.map(([x, y]) => [sx + x * s, sy - y * s]);
+    g.poly(at([[-.27, .2], [-.17, .2], [-.17, .72], [-.35, .72], [-.35, .66], [-.27, .66]]), frame);
+    g.poly(at([[-.1, .3], [.34, .3], [.34, .04], [.26, .04], [.26, .22], [-.1, .22]]), shade(body, -.2));
+    g.poly(at([[-.17, .3], [.17, .3], [.14, .6], [-.14, .6]]), body);
+    ctx.beginPath(); ctx.arc(sx, sy - s * .25, s * .25, 0, Math.PI * 2);
+    ctx.strokeStyle = frame; ctx.lineWidth = Math.max(1, s * .09); ctx.stroke();
+    g.circle(sx, sy - s * .76, s * .17, head);
+    return [sx, sy - s * .6];
+  }
   if (pose === 'sit') {
     g.poly([[sx - s * .3, sy], [sx + s * .3, sy], [sx + s * .2, sy - s * .45], [sx - s * .2, sy - s * .45]], body);
     g.circle(sx, sy - s * .6, s * .17, head);
@@ -138,9 +162,11 @@ function drawPerson(g, sx, sy, color, pose = 'stand') {
   g.circle(sx, sy - s * .78, s * .17, head);
   return [sx, sy - s * .62];
 }
-// Promeneur : lanterne la nuit, parapluie sous la pluie, bonnet en hiver.
+// Promeneur : lanterne la nuit, parapluie sous la pluie, bonnet en hiver ; look.aid = 'cane' ou 'chair' (voir walkerLook).
 function drawWalker(g, sx, sy, look = {}) {
-  const s = g.tw * .18, [hx, hy] = drawPerson(g, sx, sy, g.c(look.color || '#7a8b6e'));
+  const s = g.tw * .18, [hx, hy] = drawPerson(g, sx, sy, g.c(look.color || '#7a8b6e'), look.aid === 'chair' ? 'chair' : 'stand', look.skin);
+  // La canne, tenue à la hanche du côté opposé à la lanterne, plantée au sol un peu plus loin ; plus claire la nuit, comme le fauteuil.
+  if (look.aid === 'cane') line(g, [[sx - s * .09, sy - s * .37], [sx - s * .18, sy - s * .37], [sx - s * .3, sy]], mix('#7a5a3a', '#9b7a55', g.dark), s * .09);
   if (look.hat) g.circle(sx, hy - s * .28, s * .14, g.c('#c4572f'));
   if (look.umbrella) {
     g.ctx.beginPath(); g.ctx.ellipse(sx, hy - s * .5, s * .45, s * .25, 0, Math.PI, Math.PI * 2);
@@ -153,25 +179,25 @@ function drawWalker(g, sx, sy, look = {}) {
 }
 // Habitant qui fait comme toi : lecture, course, méditation, arrosage ou peinture, au centre de sa case.
 function drawDoer(g, x, y, cat, t) {
-  const s = g.tw * .18, ctx = g.ctx;
+  const s = g.tw * .18, ctx = g.ctx, skin = personSkin(10 + CAT_ORDER.indexOf(cat));
   if (cat === 'corps') {
     const a = t * 2, [sx, sy] = g.P(x + .5 + Math.cos(a) * .2, y + .5 + Math.sin(a) * .2);
-    drawPerson(g, sx, sy, g.cat('corps'));
+    drawPerson(g, sx, sy, g.cat('corps'), 'stand', skin);
     return;
   }
   const [sx, sy] = g.P(x + .5, y + .5), color = g.cat(cat);
   if (cat === 'esprit') {
-    const [bx, by] = drawPerson(g, sx, sy, color, 'sit');
+    const [bx, by] = drawPerson(g, sx, sy, color, 'sit', skin);
     g.poly([[bx - s * .22, by + s * .05], [bx, by + s * .12], [bx + s * .22, by + s * .05], [bx, by - s * .02]], g.c('#ffffff'));
   } else if (cat === 'calme') {
-    drawPerson(g, sx, sy, color, 'sit');
+    drawPerson(g, sx, sy, color, 'sit', skin);
     g.ell(x + .5, y + .5, .12, 0, null, 'rgba(255,255,255,.55)', 1);
   } else if (cat === 'foyer') {
-    drawPerson(g, sx - s * .2, sy, color);
+    drawPerson(g, sx - s * .2, sy, color, 'stand', skin);
     g.poly([[sx + s * .05, sy - s * .3], [sx + s * .35, sy - s * .3], [sx + s * .3, sy - s * .05], [sx + s * .1, sy - s * .05]], g.c('#8a8f96'));
     for (let i = 0; i < 3; i++) g.circle(sx + s * (.45 + .08 * i), sy - s * (.2 - .12 * ((t * 2 + i / 3) % 1)), s * .04, g.c('#5fc0e0'));
   } else {
-    drawPerson(g, sx - s * .25, sy, color);
+    drawPerson(g, sx - s * .25, sy, color, 'stand', skin);
     ctx.strokeStyle = g.c('#8a6a4a'); ctx.lineWidth = Math.max(1, g.tw * .012);
     ctx.beginPath(); ctx.moveTo(sx + s * .1, sy); ctx.lineTo(sx + s * .3, sy - s * .7); ctx.lineTo(sx + s * .5, sy); ctx.stroke();
     g.poly([[sx + s * .12, sy - s * .75], [sx + s * .48, sy - s * .75], [sx + s * .48, sy - s * .38], [sx + s * .12, sy - s * .38]], g.c('#fbf8ef'));
@@ -307,7 +333,7 @@ const VISITOR_DRAW = {
     g.circle(sx - s * .035, sy - s * .145, s * .022, pink);
   },
   accordeon(g, sx, sy, look, t) {
-    const s = g.tw, [cx, cy] = drawPerson(g, sx - s * .03, sy, g.c('#3f78c4'));
+    const s = g.tw, [cx, cy] = drawPerson(g, sx - s * .03, sy, g.c('#3f78c4'), 'stand', personSkin(20));
     const squeeze = g.anim ? (1 + Math.sin(t * 4)) * s * .01 : s * .01;
     g.poly([[cx - s * .05 - squeeze, cy + s * .01], [cx + s * .05 + squeeze, cy + s * .01], [cx + s * .05 + squeeze, cy + s * .07], [cx - s * .05 - squeeze, cy + s * .07]], g.c('#c4572f'));
     for (const k of [-.02, 0, .02]) line(g, [[cx + k * s, cy + s * .015], [cx + k * s, cy + s * .065]], g.c('#f6f1e7'), s * .005);
@@ -319,7 +345,7 @@ const VISITOR_DRAW = {
   },
   artiste(g, sx, sy, look, t) {
     const s = g.tw;
-    const [hx, hy] = drawPerson(g, sx - s * .08, sy, g.c('#7a5aa8'));
+    const [hx, hy] = drawPerson(g, sx - s * .08, sy, g.c('#7a5aa8'), 'stand', personSkin(21));
     ellipseFill(g, hx + s * .005, hy - s * .062, s * .03, s * .012, g.c('#2c2c2c'));
     line(g, [[sx + s * .02, sy], [sx + s * .07, sy - s * .24], [sx + s * .12, sy]], g.c('#8a6a4a'), s * .01);
     g.poly([[sx + s * .015, sy - s * .27], [sx + s * .125, sy - s * .27], [sx + s * .125, sy - s * .13], [sx + s * .015, sy - s * .13]], g.c('#fbf8ef'));

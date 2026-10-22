@@ -7,7 +7,8 @@ const PAINT = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10
   '30-paint.js', '31-paint-buildings.js', '32-paint-decor.js', '33-paint-wonders.js', '34-paint-life.js'];
 const PALETTE = { night: false, esprit: '#3f78c4', corps: '#d9573b', calme: '#3a9a7a', foyer: '#e3a12f', crea: '#d0628f', prestige: '#b8862b', decor: '#7a8b6e', accent: '#2e6f4e', danger: '#b4452e' };
 // Chaque tâche ajoute ici les noms qu'elle crée.
-const EXPOSE = ['makePainter', 'drawSmoke', 'drawBeam', 'drawWeather', 'drawSeasonLife', 'drawWalker', 'drawDoer', 'VISITOR_DRAW', 'VISITORS', 'drawBunting', 'drawFestival', 'FESTIVALS'];
+const EXPOSE = ['makePainter', 'drawSmoke', 'drawBeam', 'drawWeather', 'drawSeasonLife', 'drawWalker', 'drawDoer', 'VISITOR_DRAW', 'VISITORS', 'drawBunting', 'drawFestival', 'FESTIVALS',
+  'SKINS', 'personSkin', 'walkerLook', 'drawPerson', 'CAT_ORDER'];
 const app = () => loadApp(PAINT, { expose: EXPOSE });
 // Une case de 100 px dont le sommet est en (200, 200) : centre en (200, 225), bas en 250.
 function draw(a, fn, look = {}) {
@@ -59,15 +60,99 @@ test("petites vies : la nuit est celle du dessin, même quand le ciel suit l'app
   assert.ok(birds(light) && !fireflies(light), 'ville claire');
 });
 
+// Chaque point tracé reste à 30 px du pied d'une personne (case de 100 px).
+const near = (points, x0, y0, label) => {
+  assert.ok(points.length > 0, label + ' : rien');
+  for (const [x, y] of points) assert.ok(Math.abs(x - x0) <= 30 && Math.abs(y - y0) <= 30, `${label} trop loin : ${x.toFixed(1)}, ${y.toFixed(1)}`);
+};
 test('habitants : chacun dessiné près de son point, promeneurs et habitants qui font comme toi', () => {
   const a = app();
-  const near = (points, x0, y0, label) => {
-    assert.ok(points.length > 0, label + ' : rien');
-    for (const [x, y] of points) assert.ok(Math.abs(x - x0) <= 30 && Math.abs(y - y0) <= 30, `${label} trop loin : ${x.toFixed(1)}, ${y.toFixed(1)}`);
-  };
   for (const look of [{}, { lantern: true }, { umbrella: true }, { hat: true }]) near(draw(a, g => a.drawWalker(g, 200, 220, { color: '#d9573b', ...look })), 200, 220, 'promeneur ' + JSON.stringify(look));
   const [cx, cy] = [200, 225];
   for (const cat of ['esprit', 'corps', 'calme', 'foyer', 'crea']) for (const t of [0, 2]) near(draw(a, g => a.drawDoer(g, 0, 0, cat, t)), cx, cy, `${cat} à ${t} s`);
+});
+
+// Habitants divers : cinq peaux qui tournent selon la ville, et au besoin une canne ou un fauteuil roulant.
+// Une autre ville : seule sa date de création change, et avec elle tous les tirages.
+const townNo = (a, k) => { a.state.createdAt = 1.7e12 + k * 7919e5; };
+// Couleurs de remplissage dans l'ordre du tracé (le contexte factice ne les garde pas), et le peintre qui les a produites.
+function fillColors(a, fn, look = {}) {
+  const ctx = fakeContext(), colors = [];
+  ctx.fill = () => { colors.push(ctx.fillStyle); };
+  const g = a.makePainter(ctx, 100, 200, 200, { ...PALETTE, ...look });
+  fn(g);
+  return { colors, g };
+}
+
+test('habitants : cinq promeneurs ont cinq couleurs de peau différentes, stables pour une ville', () => {
+  const a = app(), firstSkins = new Set();
+  assert.equal(a.SKINS.length, 5);
+  assert.equal(new Set(a.SKINS).size, 5, 'cinq couleurs toutes différentes');
+  const light = hex => [1, 3, 5].reduce((sum, i) => sum + parseInt(hex.slice(i, i + 2), 16), 0);
+  a.SKINS.forEach((hex, i) => { if (i) assert.ok(light(a.SKINS[i - 1]) > light(hex), `${hex} n'est pas plus foncée que ${a.SKINS[i - 1]}`); });
+  for (let k = 0; k < 30; k++) {
+    townNo(a, k);
+    const skins = [0, 1, 2, 3, 4].map(i => a.walkerLook(i).skin);
+    assert.equal(new Set(skins).size, 5, `ville ${k} : ${skins}`);
+    for (let i = 0; i < 6; i++) assert.deepEqual(a.walkerLook(i), a.walkerLook(i), `ville ${k}, promeneur ${i} : change d'un appel à l'autre`);
+    firstSkins.add(skins[0]);
+  }
+  assert.ok(firstSkins.size > 1, 'toutes les villes ont les mêmes peaux');
+});
+
+test('habitants : environ un promeneur sur sept en fauteuil et un sur cinq avec une canne', () => {
+  const a = app(), seen = { chair: 0, cane: 0, '': 0 }, towns = 300, walkers = 6;
+  for (let k = 0; k < towns; k++) {
+    townNo(a, k);
+    for (let i = 0; i < walkers; i++) seen[a.walkerLook(i).aid]++;
+  }
+  const chair = seen.chair / (towns * walkers), cane = seen.cane / (towns * walkers);
+  assert.equal(seen.chair + seen.cane + seen[''], towns * walkers, 'une aide inconnue');
+  assert.ok(chair >= .10 && chair <= .19, `fauteuils : ${chair.toFixed(3)}`);
+  assert.ok(cane >= .13 && cane <= .25, `cannes : ${cane.toFixed(3)}`);
+});
+
+test('habitants : canne et fauteuil restent dans le cadre de la personne', () => {
+  const a = app(), base = { color: '#d9573b', skin: a.SKINS[2] };
+  for (const aid of ['cane', 'chair']) {
+    // Seule, l'aide est vraiment dessinée, et elle pose sur le sol : son point le plus bas est celui des pieds, et rien ne passe dessous.
+    const bare = draw(a, g => a.drawWalker(g, 200, 220, base)), points = draw(a, g => a.drawWalker(g, 200, 220, { ...base, aid }));
+    const added = points.filter(([x, y]) => !bare.some(([bx, by]) => bx === x && by === y));
+    assert.ok(added.length > 0, aid + ' : rien de dessiné en plus');
+    assert.ok(Math.abs(Math.max(...added.map(p => p[1])) - 220) < 1e-6, aid + ' : ne touche pas le sol');
+    assert.ok(points.every(p => p[1] <= 220 + 1e-6), aid + ' : passe sous le sol');
+    for (const extra of [{}, { hat: true }, { umbrella: true }, { lantern: true }, { hat: true, umbrella: true, lantern: true }]) {
+      near(draw(a, g => a.drawWalker(g, 200, 220, { ...base, ...extra, aid })), 200, 220, `${aid} ${JSON.stringify(extra)}`);
+    }
+  }
+});
+
+test('habitants : la tête prend la couleur de peau donnée', () => {
+  const a = app(), skin = '#8e5a3a';
+  for (const pose of ['stand', 'sit', 'chair']) for (const dark of [0, 1]) {
+    const { colors, g } = fillColors(a, p => a.drawPerson(p, 200, 220, '#d9573b', pose, skin), { dark });
+    const head = g.c(skin);
+    // Sans nuit, la peau passée telle quelle ; la nuit, teintée comme le reste du dessin.
+    if (!dark) assert.equal(head, skin);
+    else assert.notEqual(head, skin, 'la nuit ne teinte pas la peau');
+    assert.equal(colors.filter(c => c === head).length, 1, `${pose}, obscurité ${dark} : une seule tête de couleur ${head}, vu ${colors}`);
+  }
+  assert.ok(fillColors(a, g => a.drawPerson(g, 200, 220, '#d9573b')).colors.includes(a.SKINS[0]), 'sans peau donnée, la plus claire');
+});
+
+test('habitants : ceux qui font comme toi et les deux musiciens de passage ont chacun leur peau', () => {
+  const a = app();
+  for (let k = 0; k < 30; k++) {
+    townNo(a, k);
+    a.CAT_ORDER.forEach((cat, i) => {
+      const skin = a.personSkin(10 + i);
+      assert.ok(fillColors(a, g => a.drawDoer(g, 0, 0, cat, 0)).colors.includes(skin), `ville ${k}, ${cat} : peau ${skin} attendue`);
+    });
+    for (const [id, n] of [['accordeon', 20], ['artiste', 21]]) {
+      const skin = a.personSkin(n);
+      assert.ok(fillColors(a, g => a.VISITOR_DRAW[id](g, 200, 225, { season: 'summer' }, 0)).colors.includes(skin), `ville ${k}, ${id} : peau ${skin} attendue`);
+    }
+  }
 });
 
 test('visiteurs : chacun dessiné sur sa case, de jour comme de nuit ; la montgolfière dans le ciel', () => {

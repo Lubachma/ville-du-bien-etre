@@ -582,7 +582,7 @@ const City = (() => {
         layer(() => {
           if (person.doer) { drawDoer(g, person.cell.x, person.cell.y, person.doer, g.anim ? pal.time : 0); return; }
           const [sx, sy] = g.P(person.pos.x, person.pos.y);
-          drawWalker(g, sx, sy, { color: WALKER_COLORS[person.walker % WALKER_COLORS.length], lantern: g.night, umbrella: amb.weather === 'rain', hat: amb.season === 'winter' });
+          drawWalker(g, sx, sy, { color: WALKER_COLORS[person.walker % WALKER_COLORS.length], lantern: g.night, umbrella: amb.weather === 'rain', hat: amb.season === 'winter', ...walkerLook(person.walker) });
         });
         continue;
       }
