@@ -221,6 +221,7 @@ test('souhaits : exaucé sans cadeau, rien n’est annoncé', () => {
     s.city = cityOf([['maison', 3, 3]]);
     s.townWish = { day: '2026-10-21', tile: 't0', item: 'fleurs' };
     s.gifts['wish:' + rewarded] = T0;
+    s.achievements['premier-souhait'] = T0;   // déjà mérité par le souhait récompensé : rien d'autre à annoncer
     const coins = s.coins;
     put(a, 'fleurs', 4, 3);
     const fresh = a.noticeProgress();
@@ -230,11 +231,11 @@ test('souhaits : exaucé sans cadeau, rien n’est annoncé', () => {
   // Le dernier souhait récompensé date du 25 (une heure avancée, puis remise) : celui du 21 est exaucé sans cadeau.
   const refused = grant('2026-10-25');
   assert.equal(refused.fresh.townWish, null);
-  assert.equal(refused.a.hasNews({ townWish: refused.fresh.townWish }), false);
+  assert.equal(refused.a.hasNews(refused.fresh), false);
   assert.equal(refused.s.coins, refused.coins);
   assert.ok(refused.s.townWish.done > 0, 'souhait rangé');
   assert.equal(refused.s.gifts['wish:2026-10-21'], undefined);
-  assert.deepEqual(refused.calls.filter(msg => /Souhait exaucé/.test(msg)), []);
+  assert.deepEqual(refused.calls, []);
   assert.deepEqual(refused.sparkles, []);
   // Le dernier date du 20 : celui du 21 est payé, annoncé et fêté.
   const paid = grant('2026-10-20');
