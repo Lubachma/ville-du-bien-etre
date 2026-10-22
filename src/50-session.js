@@ -6,6 +6,8 @@
    ========================================================================= */
 let run = null;
 let wakeLock = null;
+// Génération de l'écran allumé, avancée par endRun() : un verrou demandé avant la fin d'une séance et accordé après est relâché à son arrivée.
+let wakeGen = 0;
 let beginning = false;
 const RING = 2 * Math.PI * 108;
 const graceMs = () => S.settings.grace * 1000;
@@ -83,22 +85,45 @@ function checkActive() {
   if (typeof openPendingVisit === 'function') openPendingVisit();
 }
 
-/* Écran allumé : demandé au moment du tap, avant de lancer le chrono */
+/* Écran allumé : demandé au moment du tap, avant de lancer le chrono. iOS le relâche à chaque sortie, même brève : pendant une séance
+   Concentration, page visible, un verrou absent ou relâché est redemandé, au plus une fois toutes les 5 s (keepScreenOn). */
+const WAKE_RETRY_MS = 5000;
 function wakeAcked() { try { return localStorage.getItem(LS_WAKE_ACK) === '1'; } catch (e) { return false; } }
 function acquireWake() {
   if (!S.settings.keepAwake) return Promise.resolve('off');
   if (!navigator.wakeLock || typeof navigator.wakeLock.request !== 'function') return Promise.resolve('na');
   if (wakeLock && !wakeLock.released) return Promise.resolve('on');
+  const gen = wakeGen;
+  if (run) run.wakeAskedAt = performance.now();
   return navigator.wakeLock.request('screen').then(lock => {
+    // Arrivé après la fin de la séance qui l'a demandé : relâché aussitôt, l'écran ne reste pas allumé hors séance. Arrivé quand un
+    // autre verrou tient déjà (deux demandes croisées), relâché aussi : un seul suffit, celui que la fin de séance relâchera.
+    if (gen !== wakeGen || (wakeLock && !wakeLock.released)) {
+      dropWake(lock);
+      return gen === wakeGen ? 'on' : 'na';
+    }
     wakeLock = lock;
-    lock.addEventListener('release', () => { if (run && !run.ended && run.awayAt == null && document.visibilityState === 'visible') setWake('na'); });
+    // Relâché par le système pendant la séance : le statut le dit aussitôt. Page visible, il est redemandé tout de suite si la dernière
+    // demande date de plus de 5 s, sinon au tic qui suit ; page cachée, au retour.
+    lock.addEventListener('release', () => {
+      if (!run || run.ended) return;
+      setWake('na');
+      if (document.visibilityState === 'visible') keepScreenOn();
+    });
     return 'on';
   }, () => 'na');
 }
+function dropWake(lock) { try { lock.release(); } catch (e) { /* déjà libéré */ } }
 function releaseWake() {
   const w = wakeLock;
   wakeLock = null;
-  if (w && !w.released) { try { w.release(); } catch (e) { /* déjà libéré */ } }
+  if (w && !w.released) dropWake(w);
+}
+// Séance Concentration avec l'écran allumé demandé : un verrou absent ou relâché est redemandé, si la dernière demande date de plus de 5 s.
+function keepScreenOn() {
+  if (!run || run.ended || run.active.mode === 'free' || !S.settings.keepAwake || !navigator.wakeLock) return;
+  if (wakeLock && !wakeLock.released) return;
+  if (performance.now() - run.wakeAskedAt > WAKE_RETRY_MS) requestWake(true);
 }
 
 /* Son de fin : préparé au moment du tap (sur iPhone, le son n'est permis qu'après un geste),
@@ -118,7 +143,11 @@ const Chime = {
     if ((!S.settings.sound && !force) || !AC) return;
     try {
       clearTimeout(this.idle);
-      if (!this.ctx) this.ctx = new AC();
+      if (!this.ctx) {
+        this.ctx = new AC();
+        // Son interrompu pendant une séance (appel, Siri, verrouillage) : dès que son état change, page visible, la relance est demandée.
+        this.ctx.onstatechange = () => { if (document.visibilityState === 'visible' && typeof resumeSound === 'function') resumeSound(); };
+      }
       if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
       // Un échantillon muet joué pendant le geste débloque le son sur les iPhone plus anciens.
       const src = this.ctx.createBufferSource();
@@ -306,6 +335,7 @@ function startSessionLocked(o, resume) {
     lastNow: now, lastWall: Date.now(), awayAt: null, awayWall: 0, graceTimer: 0, interval: 0,
     exits: resume ? int(resume.exits, 0, 1e4, 0) : 0, ended: false, finishing: false, lastSec: -1, savedAt: Date.now(),
     focusSeen: document.hasFocus(), offscreen: false, beatAt: 0, io: null,
+    wakeAskedAt: now,   // l'écran allumé vient d'être demandé (au tap) ou va l'être juste en dessous
   };
   showRun(a);
   if (a.mode === 'free') setWake('free');
@@ -322,6 +352,8 @@ function startSessionLocked(o, resume) {
   writeBeat();
   tick();
   if (typeof Ambience !== 'undefined' && run) Ambience.start();
+  // Séance reprise (une Activité libre rouverte) : le son ne s'ouvre qu'au toucher, et le son de fin doit être prêt, même sans ambiance.
+  if (resume && run && S.settings.sound && typeof armSoundGesture === 'function') armSoundGesture();
   return true;
 }
 function persistRun(force = false) {
@@ -359,14 +391,15 @@ function showRun(a) {
   renderTimer(true);
   setTimeout(() => $('#sessName').focus({ preventScroll: true }), 30);
 }
+// Le chrono et l'anneau changent avec la seconde affichée (ou au rendu forcé) : l'anneau avance d'un cran par seconde, sans transition,
+// et rien ne se repeint entre deux.
 function renderTimer(force) {
   if (!run) return;
   const rem = Math.max(0, run.totalMs - run.elapsed);
   const sec = Math.ceil(rem / 1000);
-  if (sec !== run.lastSec || force) {
-    run.lastSec = sec;
-    $('#timer').textContent = pad2(Math.floor(sec / 60)) + ':' + pad2(sec % 60);
-  }
+  if (sec === run.lastSec && !force) return;
+  run.lastSec = sec;
+  $('#timer').textContent = pad2(Math.floor(sec / 60)) + ':' + pad2(sec % 60);
   $('#ringFill').style.strokeDashoffset = String(RING * (1 - clamp(run.elapsed / run.totalMs, 0, 1)));
 }
 function present() {
@@ -411,6 +444,8 @@ function tick() {
   if (!run) return;
   fadeAmbienceNearEnd();
   if (run.elapsed >= run.totalMs) { completeSession(); return; }
+  // Une courte sortie que seul ce tic a vue (le signal d'iOS arrive en retard, ou jamais) : le verrou relâché entre-temps est redemandé.
+  keepScreenOn();
   renderTimer();
 }
 // À 1,5 s de la fin, l'ambiance s'éteint en douceur : le son de fin arrive ensuite, seul.
@@ -463,6 +498,7 @@ function endRun() {
   if (!run) return null;
   const r = run;
   r.ended = true;
+  wakeGen++;   // un verrou d'écran encore en route sera relâché à son arrivée
   clearInterval(r.interval);
   clearTimeout(r.graceTimer);
   if (r.io) r.io.disconnect();
@@ -685,11 +721,14 @@ function setWake(state) {
   li.className = state === 'na' || state === 'off' ? 'warn' : '';
   li.replaceChildren(icon(msg[0]), h('span', {}, msg[1]));
 }
-async function requestWake() {
+// retry : une nouvelle demande en cours de séance (verrou perdu) garde le statut affiché jusqu'à la réponse ; un essai refusé toutes les 5 s
+// ne fait pas clignoter « Activation… ».
+async function requestWake(retry) {
   if (run && run.active.mode === 'free') { setWake('free'); return; }
   if (!S.settings.keepAwake) { setWake('off'); return; }
-  setWake('checking');
-  const res = await acquireWake();
-  if (run) setWake(res);
+  if (!retry) setWake('checking');
+  const asking = run, res = await acquireWake();
+  // La réponse ne vaut que pour la séance qui l'a demandée : une séance suivante a sa propre demande, et son propre statut.
+  if (run && run === asking) setWake(res);
 }
 

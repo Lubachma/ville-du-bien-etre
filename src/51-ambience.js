@@ -102,21 +102,24 @@ const Ambience = {
     if (kind === 'none') return;
     if (!this.whenRunning(() => { if (this.wanted()) this.play(kind, 3); }) || Chime.ctx.state !== 'running') this.waitForGesture();
   },
-  // Une séance tourne ici, avec une ambiance choisie, et rien ne joue encore.
-  wanted() { return typeof run !== 'undefined' && !!run && !this.graph && S.settings.ambience !== 'none'; },
+  // Une séance tourne ici, avec une ambiance choisie, et rien ne joue encore. Plus après son fondu de fin : le son de fin arrive seul.
+  wanted() { return typeof run !== 'undefined' && !!run && !run.ambienceFaded && !this.graph && S.settings.ambience !== 'none'; },
+  // Un doigt n'ouvre le son qu'à la fin du toucher (pointerup, click), pas dès pointerdown : chaque geste essaie, et l'écoute ne
+  // s'arrête qu'une fois l'ambiance lancée, ou plus voulue.
   waitForGesture() {
     if (this.waiting) return;
     this.waiting = true;
+    const types = ['pointerdown', 'pointerup', 'click', 'keydown'];
     const resume = () => {
-      document.removeEventListener('pointerdown', resume, true);
-      document.removeEventListener('keydown', resume, true);
+      if (this.wanted()) {
+        Chime.unlock(true);
+        this.whenRunning(() => { if (this.wanted()) this.play(S.settings.ambience, 1); });
+        if (this.wanted()) return;   // pas encore de son : le geste suivant réessaie
+      }
+      types.forEach(type => document.removeEventListener(type, resume, true));
       this.waiting = false;
-      if (!this.wanted()) return;
-      Chime.unlock(true);
-      this.whenRunning(() => { if (this.wanted()) this.play(S.settings.ambience, 1); });
     };
-    document.addEventListener('pointerdown', resume, true);
-    document.addEventListener('keydown', resume, true);
+    types.forEach(type => document.addEventListener(type, resume, true));
   },
   play(kind, fadeIn) {
     const c = Chime.ctx;
@@ -177,6 +180,33 @@ const Ambience = {
     return { peak, rms: Math.sqrt(sum / data.length) };
   },
 };
+
+const sessionRunning = () => typeof run !== 'undefined' && !!run && !run.ended;
+// Le son d'une séance, interrompu (appel, Siri, verrouillage) : sa relance est demandée au retour au premier plan (60-boot.js), et quand
+// son état change, page visible (Chime.unlock). Sans geste, le navigateur peut la refuser, ou la garder en attente sans jamais répondre
+// (iOS, tant que dure l'interruption) : tant que le son n'est pas rouvert, le prochain toucher s'en charge.
+function resumeSound() {
+  const c = Chime.ctx;
+  if (!c || !sessionRunning() || c.state === 'running') return;
+  try { c.resume().catch(armSoundGesture); } catch (e) { /* refusé : le toucher s'en charge */ }
+  if (c.state !== 'running') armSoundGesture();
+}
+// Repli au toucher, une seule fois : au prochain geste (fin du toucher, clic ou touche ; un doigt n'ouvre pas le son dès pointerdown), le
+// son s'ouvre, puis l'ambiance repart si elle attend encore. Une séance finie entre-temps ne rouvre rien.
+let soundGestureArmed = false;
+function armSoundGesture() {
+  if (soundGestureArmed) return;
+  soundGestureArmed = true;
+  const types = ['pointerup', 'click', 'keydown'];
+  const unlock = () => {
+    types.forEach(type => document.removeEventListener(type, unlock, true));
+    soundGestureArmed = false;
+    if (!sessionRunning()) return;
+    Chime.unlock(true);
+    if (Ambience.wanted()) Ambience.whenRunning(() => { if (Ambience.wanted()) Ambience.play(S.settings.ambience, 1); });
+  };
+  types.forEach(type => document.addEventListener(type, unlock, true));
+}
 
 // Bouton de l'écran de la séance : « Ambiance : Pluie ».
 function renderAmbienceButton() {

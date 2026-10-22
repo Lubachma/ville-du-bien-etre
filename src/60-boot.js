@@ -76,8 +76,8 @@ function bindEvents() {
     updatePresence();
     // En arrière-plan, l'état est enregistré, puis un onglet resté sur l'ancienne version se recharge (hors séance).
     if (document.visibilityState === 'hidden') { Store.flush(); reloadWhenIdle(); }
-    // Un onglet ouvert en arrière-plan : le bilan dû s'ouvre quand il devient visible.
-    else { Store.pull(); checkActive(); refreshDay(); City.wake(); maybeOpenRitual(); }
+    // Un onglet ouvert en arrière-plan : le bilan dû s'ouvre quand il devient visible. Le son d'une séance, interrompu entre-temps, est relancé.
+    else { Store.pull(); checkActive(); refreshDay(); City.wake(); maybeOpenRitual(); resumeSound(); }
   });
   // Chaque minute : la date, la légende (moment et météo) et la lumière et l'horloge d'une ville immobile.
   setInterval(() => {

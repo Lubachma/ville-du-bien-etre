@@ -628,7 +628,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-we
 .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring circle { fill: none; stroke-width: 12; }
 .ring-track { stroke: color-mix(in oklab, var(--c, var(--accent)) 18%, var(--surface)); }
-.ring-fill { stroke: var(--c, var(--accent)); stroke-linecap: round; transition: stroke-dashoffset .3s linear; }
+.ring-fill { stroke: var(--c, var(--accent)); stroke-linecap: round; }
 .ring-center { position: absolute; inset: 0; display: grid; place-content: center; gap: 4px; }
 .timer { font-size: clamp(54px, 17vw, 72px); font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1; }
 .timer-sub { font-size: 14px; color: var(--ink-2); font-weight: 600; }

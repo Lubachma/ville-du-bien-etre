@@ -445,8 +445,49 @@ async function ambienceClosedAtEnd(browser, baseURL) {
   return 'Ambiance : fermée à la fin, aucun son hors séance';
 }
 
+// Le son d'une séance, interrompu pendant que l'app était en arrière-plan (appel, verrouillage), repart au retour au premier plan, par le
+// vrai écouteur « visibilitychange » ; interrompu page visible (Siri), il repart aussitôt. Chromium n'interrompt jamais le son de lui-même :
+// le test le met en veille, comme iOS. Les tests unitaires (session-platform.test.cjs) couvrent le repli au toucher.
+async function soundResumedOnReturn(browser, baseURL) {
+  const { context, page, errors } = await sessionTown(browser, { ambience: 'rain' });
+  // Les contextes audio de l'app, gardés pour le test.
+  await page.addInitScript(() => {
+    const Native = window.AudioContext;
+    window.__audio = [];
+    window.AudioContext = class extends Native { constructor(...args) { super(...args); window.__audio.push(this); } };
+  });
+  const audioState = () => page.evaluate(() => window.__audio.map(c => c.state).join());
+  const interruptSound = () => page.evaluate(() => window.__audio[0].suspend().then(() => window.__audio[0].state));
+  const soundBack = async label => {
+    try { await page.waitForFunction(() => window.__audio.length === 1 && window.__audio[0].state === 'running', null, { timeout: 3000 }); }
+    catch (error) { assert.fail(`${label} : le son ne repart pas (${await audioState()})`); }
+  };
+  try {
+    await page.goto(baseURL);
+    await page.waitForFunction(() => !!window.__ville);
+    await startSession(page, 'Pratique calme', 5);
+    await soundBack('au départ');
+    assert.equal(await page.evaluate(() => __ville.ambience.kind()), 'rain');
+    // En arrière-plan, le son s'interrompt : rien ne le relance tant que la page est cachée.
+    await setVisibility(page, 'hidden');
+    assert.equal(await interruptSound(), 'suspended');
+    await page.waitForTimeout(300);
+    assert.equal(await audioState(), 'suspended', 'son relancé page cachée');
+    // Retour au premier plan : il repart, avec la pluie qui jouait.
+    await setVisibility(page, 'visible');
+    await soundBack('au retour au premier plan');
+    // Siri, page visible : il repart aussitôt.
+    assert.equal(await interruptSound(), 'suspended');
+    await soundBack('après une interruption page visible');
+    assert.equal(await page.evaluate(() => __ville.ambience.kind()), 'rain');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Son : relancé au retour au premier plan, et après une interruption';
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
-  lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd];
+  lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
+  soundResumedOnReturn];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

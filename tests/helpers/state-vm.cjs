@@ -28,8 +28,9 @@ function lockManager() {
   return { request(name, options, callback) { const job = queue.then(callback); queue = job.catch(() => {}); return job; } };
 }
 // Un onglet : les fichiers de src/ dans une VM, sur le stockage et les verrous donnés. L'horloge murale part du 17 octobre 2026
-// à midi ; `advance(ms)` l'avance, `setNow(iso)` la fixe.
-function stateApp(localStorage = storage(), locks = lockManager(), { files = FILES, expose = [] } = {}) {
+// à midi ; `advance(ms)` l'avance, `setNow(iso)` la fixe. `real` garde les vraies fonctions parmi STUBS (setWake, renderTimer…),
+// pour un test qui leur donne de quoi tourner (un faux DOM).
+function stateApp(localStorage = storage(), locks = lockManager(), { files = FILES, expose = [], real = [] } = {}) {
   let wall = Date.parse('2026-10-17T12:00:00Z');
   class Clock extends Date { constructor(...a) { super(...(a.length ? a : [wall])); } static now() { return wall; } }
   const element = { hidden: true, style: { setProperty() {} }, replaceChildren() {}, focus() {}, append() {}, querySelector() { return this; }, setAttribute() {} };
@@ -40,7 +41,7 @@ function stateApp(localStorage = storage(), locks = lockManager(), { files = FIL
     currentTab: 'activites', Mode: {}, Selection: {}, City: { relayout() {} }, sheetKeepOnSync: true,
     renderStorageStatus() {}, renderSyncStatus() {}, renderAll() {}, renderVille() {}, updateInert() {}, closeSheet() {}, toast() {}, bump() {},
   });
-  const stubs = STUBS.map(name => name + ' = () => {};').join(' ');
+  const stubs = STUBS.filter(name => !real.includes(name)).map(name => name + ' = () => {};').join(' ');
   const names = [...new Set([...API, ...expose])].join(', ');
   vm.runInContext(sourceOf(files) + `\n${stubs}\nthis.api = { ${names}, get state() { return S; }, set state(v) { S = normalize(v); }, get run() { return run; } };`, context);
   return { ...context.api, api: context.api, context, localStorage, advance(ms) { wall += ms; }, setNow(iso) { wall = Date.parse(iso); }, init() { context.api.Store.init(); } };
