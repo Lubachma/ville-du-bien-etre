@@ -136,7 +136,7 @@ function carnetVisits() {
   const postcard = ([id, card]) => {
     const cv = h('canvas', { 'aria-hidden': 'true' }), city = decodeCity(card.code), key = 'postcard:' + id;
     if (city) City.townThumb(cv, city, 48);
-    const back = () => { openCarnet('visits'); focusByKey(key); };
+    const back = () => { openCarnet('visits'); focusByKey(key, { scroll: true }); };
     return h('li', {}, h('button', { class: 'carnet-row carnet-postcard earned', type: 'button', 'data-focus-key': key, onclick: () => openVisitFromCode(card.code, { back }) }, cv,
       h('span', { class: 'carnet-text' }, h('strong', {}, card.name || t('visit.friendCity')), h('span', { class: 'note' }, t('carnet.visitedOn', { date: carnetDate(card.at) })))));
   };

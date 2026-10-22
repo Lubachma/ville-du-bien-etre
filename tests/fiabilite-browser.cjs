@@ -700,6 +700,11 @@ async function focusNeverLost(browser, baseURL) {
     await page.locator('#cityBig').waitFor({ state: 'hidden' });
     await page.waitForTimeout(100);   // le titre du carnet rouvert ne reprend pas le focus 30 ms plus tard
     assert.equal(await focused(), 'postcard:' + postcard, 'visite ouverte par une carte postale, fermée par Échap');
+    // Sous les visiteurs et les fêtes, la carte est montrée : le carnet a défilé jusqu'à elle.
+    assert.ok(await page.evaluate(() => {
+      const r = document.activeElement.getBoundingClientRect(), view = document.querySelector('#sheetBody').getBoundingClientRect();
+      return r.top >= view.top && r.bottom <= view.bottom;
+    }), 'carte postale hors de vue dans le carnet rouvert');
     assert.deepEqual(await page.evaluate(() => [!document.querySelector('#sheet').hidden, document.querySelector('#sheetTitle').textContent,
       document.querySelector('#sheetBody [role="radio"][aria-checked="true"]').textContent]), [true, 'Carnet', 'Visites']);
     await page.keyboard.press('Escape');
@@ -719,6 +724,18 @@ async function focusNeverLost(browser, baseURL) {
     assert.equal(await focused(), 'goalMinutes', 'rendu pendant une fenêtre ouverte');
     await page.keyboard.press('Escape');
     assert.equal(await focused(), 'goals:edit', '« Mon objectif » fermé par Échap');
+    // Garde : la page défilée loin du bouton de l'objectif, un rendu de fond (la minute, un autre onglet, une séance ailleurs toutes les
+    // 3 s) rend le focus à son remplaçant sans faire défiler la page.
+    const away = await page.evaluate(() => {
+      const main = document.querySelector('#main'), button = document.activeElement;
+      main.scrollTop += button.getBoundingClientRect().bottom - main.getBoundingClientRect().top + 40;
+      const r = button.getBoundingClientRect(), view = main.getBoundingClientRect();
+      return { top: main.scrollTop, hidden: r.bottom <= view.top || r.top >= view.bottom };
+    });
+    assert.ok(away.top > 0 && away.hidden, 'bouton de l’objectif encore visible : ' + JSON.stringify(away));
+    await page.evaluate(() => __ville.renderAll());
+    assert.deepEqual([await page.evaluate(() => document.querySelector('#main').scrollTop), await focused()], [away.top, 'goals:edit'],
+      'rendu de fond, la page défilée loin du focus');
     // Garde : quand rien n'a le focus, un rendu de fond (la minute, un autre onglet) ne le prend pas.
     await page.evaluate(() => { document.activeElement.blur(); __ville.renderAll(); });
     assert.equal(await focused(), 'BODY', 'rendu quand rien n’a le focus');

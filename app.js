@@ -8145,9 +8145,11 @@ function tryFocus(el, scroll = false) {
   el.focus({ preventScroll: !scroll });
   return document.activeElement === el;
 }
-// Le premier élément de cette clé qui peut prendre le focus le reçoit ; vrai s'il l'a.
-function focusByKey(key) {
-  return !!key && $$('[data-focus-key]').some(el => el.dataset.focusKey === key && tryFocus(el, true));
+// Le premier élément de cette clé qui peut prendre le focus le reçoit ; vrai s'il l'a. La page ne défile pas : un remplaçant est à la
+// place de l'ancien, et un rendu de fond ne doit pas ramener la page à lui. scroll : pour un geste de la personne dont la cible peut
+// être hors de vue (le voisin d'un élément supprimé, l'élément revenu par « Annuler », la carte postale d'où l'on revient).
+function focusByKey(key, { scroll = false } = {}) {
+  return !!key && $$('[data-focus-key]').some(el => el.dataset.focusKey === key && tryFocus(el, scroll));
 }
 // Le titre de la vue affichée (la Ville n'en a pas : la vue elle-même).
 function focusViewHeading() {
@@ -8158,9 +8160,9 @@ function focusViewHeading() {
 // Une fenêtre, l'écran de séance et la vue en grand ont leur propre focus.
 const LAYERS = '#sheet, #session, #cityBig';
 const layerOpen = () => $$(LAYERS).some(el => !el.hidden);
-// Après un dessin : le focus perdu en route (élément retiré ou caché, focus retombé sur body) va au remplaçant de même clé, sinon au
-// titre de la vue quand rien ne la couvre. Rien ne bouge pour un focus qui était, ou qui est, dans une fenêtre, l'écran de séance ou la
-// vue en grand, ni pour un focus déjà sur body avant le dessin : rien n'avait le focus.
+// Après un dessin : le focus perdu en route (élément retiré ou caché, focus retombé sur body) va au remplaçant de même clé, sans faire
+// défiler la page, sinon au titre de la vue quand rien ne la couvre. Rien ne bouge pour un focus qui était, ou qui est, dans une
+// fenêtre, l'écran de séance ou la vue en grand, ni pour un focus déjà sur body avant le dessin : rien n'avait le focus.
 function keepFocus(before, key) {
   if (!before || before === document.body || before.closest(LAYERS)) return;
   const now = document.activeElement;
@@ -8260,13 +8262,13 @@ function removeWithUndo(key, id) {
   const near = S[key][idx + 1] || S[key][idx - 1], del = DELETE_KEYS[key];
   const [item] = S[key].splice(idx, 1);
   commit();
-  if (!focusByKey(near && del && del + ':' + near.id) && !layerOpen()) focusViewHeading();
+  if (!focusByKey(near && del && del + ':' + near.id, { scroll: true }) && !layerOpen()) focusViewHeading();
   toast(t('ui.deleted', { name: displayName(item.name) }), { label: t('common.undo'), run: () => {
     if (S[key].some(x => x.id === item.id)) return;
     S[key].splice(Math.min(idx, S[key].length), 0, item);
     commit();
     // Revenu, il reprend le focus sur son bouton de suppression.
-    if (del) focusByKey(del + ':' + item.id);
+    if (del) focusByKey(del + ':' + item.id, { scroll: true });
   } });
 }
 
@@ -11198,7 +11200,7 @@ function carnetVisits() {
   const postcard = ([id, card]) => {
     const cv = h('canvas', { 'aria-hidden': 'true' }), city = decodeCity(card.code), key = 'postcard:' + id;
     if (city) City.townThumb(cv, city, 48);
-    const back = () => { openCarnet('visits'); focusByKey(key); };
+    const back = () => { openCarnet('visits'); focusByKey(key, { scroll: true }); };
     return h('li', {}, h('button', { class: 'carnet-row carnet-postcard earned', type: 'button', 'data-focus-key': key, onclick: () => openVisitFromCode(card.code, { back }) }, cv,
       h('span', { class: 'carnet-text' }, h('strong', {}, card.name || t('visit.friendCity')), h('span', { class: 'note' }, t('carnet.visitedOn', { date: carnetDate(card.at) })))));
   };
