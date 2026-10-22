@@ -678,7 +678,7 @@ DICT.fr = {
   'help.modesText': 'Concentration : garde cette app affichée pendant le chrono. Activité libre : tu peux verrouiller le téléphone ou utiliser une autre app. Le bilan apparaît à ton retour.',
   'help.installTitle': 'Installer sur ton téléphone',
   'help.installText': 'iPhone : ouvre le lien dans Safari, puis Partager → Sur l’écran d’accueil → Ajouter. Android : ouvre le menu de Chrome, puis Installer l’application ou Ajouter à l’écran d’accueil. Les libellés peuvent varier.',
-  'help.installFirst': 'Installe l’app avant de commencer. Si ta ville est déjà dans un autre navigateur, exporte-la puis restaure-la dans l’app installée.',
+  'help.installFirst': "Tu peux commencer ici, sans rien installer. Sur iPhone, installe l'app quand tu veux : copie ta ville avec « Copier ma ville », puis colle-la à la première ouverture de l'app.",
   'help.personalTitle': 'Ta ville reste personnelle',
   'help.personalText': 'Sur ce site, chaque personne a sa propre ville, enregistrée sur son appareil. Elle ne se synchronise pas entre téléphones. Effacer les données du navigateur peut la supprimer : garde une copie dans Réglages → Sauvegarde.',
   'help.offlineTitle': 'Hors connexion',

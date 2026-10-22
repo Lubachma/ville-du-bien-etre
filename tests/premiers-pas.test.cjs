@@ -158,3 +158,13 @@ test("séance : la respiration de la séance est enregistrée avec elle, et un r
   assert.equal(again.api.state.active.breathing, false);
   assert.equal(again.api.state.settings.breathing, false);
 });
+
+// L'aide « Bien démarrer » ne demande plus d'installer l'app avant de commencer : on commence ici, sans rien installer, et sur iPhone on
+// copie sa ville vers l'app installée pour la coller à sa première ouverture (« Copier ma ville » est le bouton de la carte d'installation).
+test("aide : on peut commencer ici, sans rien installer ; sur iPhone, la ville se copie vers l'app installée", () => {
+  const { DICT } = stateApp(undefined, undefined, { expose: ['DICT'] });
+  const fr = DICT.fr['help.installFirst'], en = DICT.en['help.installFirst'];
+  assert.equal(fr, "Tu peux commencer ici, sans rien installer. Sur iPhone, installe l'app quand tu veux : copie ta ville avec « Copier ma ville », puis colle-la à la première ouverture de l'app.");
+  assert.equal(en, 'You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with “Copy my town”, then paste it the first time you open the app.');
+  for (const text of [fr, en]) assert.doesNotMatch(text, /avant de commencer|before you start/);
+});

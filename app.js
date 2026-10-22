@@ -1202,7 +1202,7 @@ DICT.fr = {
   'help.modesText': 'Concentration : garde cette app affichée pendant le chrono. Activité libre : tu peux verrouiller le téléphone ou utiliser une autre app. Le bilan apparaît à ton retour.',
   'help.installTitle': 'Installer sur ton téléphone',
   'help.installText': 'iPhone : ouvre le lien dans Safari, puis Partager → Sur l’écran d’accueil → Ajouter. Android : ouvre le menu de Chrome, puis Installer l’application ou Ajouter à l’écran d’accueil. Les libellés peuvent varier.',
-  'help.installFirst': 'Installe l’app avant de commencer. Si ta ville est déjà dans un autre navigateur, exporte-la puis restaure-la dans l’app installée.',
+  'help.installFirst': "Tu peux commencer ici, sans rien installer. Sur iPhone, installe l'app quand tu veux : copie ta ville avec « Copier ma ville », puis colle-la à la première ouverture de l'app.",
   'help.personalTitle': 'Ta ville reste personnelle',
   'help.personalText': 'Sur ce site, chaque personne a sa propre ville, enregistrée sur son appareil. Elle ne se synchronise pas entre téléphones. Effacer les données du navigateur peut la supprimer : garde une copie dans Réglages → Sauvegarde.',
   'help.offlineTitle': 'Hors connexion',
@@ -2481,7 +2481,7 @@ DICT.en = {
   'help.modesText': 'Focus: keep this app on screen during the timer. Free activity: you can lock the phone or use another app. The summary appears when you come back.',
   'help.installTitle': 'Install it on your phone',
   'help.installText': 'iPhone: open the link in Safari, then Share → Add to Home Screen → Add. Android: open the Chrome menu, then Install app or Add to Home screen. The labels may vary.',
-  'help.installFirst': 'Install the app before you start. If your town is already in another browser, export it, then restore it in the installed app.',
+  'help.installFirst': 'You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with “Copy my town”, then paste it the first time you open the app.',
   'help.personalTitle': 'Your town stays personal',
   'help.personalText': 'On this site, each person has their own town, saved on their device. It does not sync between phones. Clearing the browser data can delete it: keep a copy in Settings → Backup.',
   'help.offlineTitle': 'Offline',
@@ -5303,9 +5303,11 @@ function townWishTile() {
 // Jour sans souhait possible : la recherche ne reprend qu'au changement suivant de l'état (sa révision), ou le lendemain.
 let wishless = '';
 // Souhait du jour, tiré pour la journée (le même dans tous les onglets) quand aucun n'est en cours et que le dernier date d'un
-// jour antérieur : un seul par jour. N'enregistre pas.
+// jour antérieur : un seul par jour. Il commence le lendemain de la première séance réussie : tant qu'aucune n'a eu lieu un jour antérieur
+// (stats.days ne compte que les séances réussies), la ville n'a encore rien fait et le souhait inviterait à dépenser. N'enregistre pas.
 function drawTownWish(day = today()) {
-  if (S.settings.townWishes === false || townWishTile() || (S.townWish && S.townWish.day >= day)) return false;
+  if (S.settings.townWishes === false || townWishTile() || (S.townWish && S.townWish.day >= day)
+    || !Object.keys(S.stats.days).some(d => d < day)) return false;
   const key = day + '|' + (S.revision || '');
   if (wishless === key) return false;
   const list = wishCandidates();
@@ -11575,11 +11577,15 @@ function noteSeason(day) {
 // À chaque affichage de la Ville : la saison vue, le souhait du jour, les fêtes du jour, puis ce qui vient d'être obtenu (défis,
 // souhait exaucé, étoiles, ensembles, succès). Un seul enregistrement : celui des fêtes quand il y en a, sinon un enregistrement
 // visible s'il y a du nouveau (des pièces), sinon discret pour la saison ou le souhait tiré.
+// Une ville sans séance ouvre en silence : les étoiles qu'elle mérite déjà au départ sont versées d'abord, sans message, un jour de fête
+// aussi (sans cela, le message des fêtes les annoncerait). Ce versement est un changement à enregistrer. Une étoile gagnée ensuite en
+// posant un bâtiment garde son message : c'est noticeProgress, après la pose, qui l'annonce. Sans le fichier de l'harmonie (tests), rien.
 function liveTick(day = today()) {
+  const quiet = isNewTown() && typeof claimStars === 'function' && claimStars().length > 0;
   const season = noteSeason(day), drawn = typeof drawTownWish === 'function' && drawTownWish(day);
   if (greetFestivals(day).length) return;
   const progress = progressNow(), news = typeof hasNews === 'function' && hasNews(progress);
-  if (!season && !drawn && !news) return;
+  if (!season && !drawn && !news && !quiet) return;
   commit(news ? {} : { silent: true });
   cheer(progress, '');
 }

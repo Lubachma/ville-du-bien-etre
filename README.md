@@ -81,7 +81,7 @@
 2. **iPhone**: in Safari, **Share → Add to Home Screen → Add**. **Android**: Chrome menu → **Install app** or **Add to Home screen**.
 3. Launch it from its icon. In the settings, wait for **“Available offline”** before relying on offline mode.
 
-Install it before you start: a city started in a browser tab doesn't move to the installed app by itself (transfer it with **Settings → Backup**). The in-app help lives in **Settings → Getting started and installing the app**.
+You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with **“Copy my town”**, then paste it the first time you open the installed app. The in-app help lives in **Settings → Getting started and installing the app**.
 
 ## 🔒 Data & privacy
 

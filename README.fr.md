@@ -81,7 +81,7 @@
 2. **iPhone** : dans Safari, **Partager → Sur l’écran d’accueil → Ajouter**. **Android** : menu de Chrome → **Installer l’application** ou **Ajouter à l’écran d’accueil**.
 3. Ouvrir l’app depuis son icône. Dans les réglages, attendre l’indication **Disponible hors connexion** avant de compter sur le mode hors ligne.
 
-Installer avant de commencer : une ville commencée dans un onglet ne passe pas seule dans l’app installée (la transférer avec **Réglages → Sauvegarde**). L’aide reste accessible dans **Réglages → Bien démarrer et installer l’app**.
+Tu peux commencer ici, sans rien installer. Sur iPhone, installe l’app quand tu veux : copie ta ville avec **Copier ma ville**, puis colle-la à la première ouverture de l’app installée. L’aide reste accessible dans **Réglages → Bien démarrer et installer l’app**.
 
 ## 🔒 Données et confidentialité
 

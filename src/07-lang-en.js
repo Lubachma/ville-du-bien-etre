@@ -678,7 +678,7 @@ DICT.en = {
   'help.modesText': 'Focus: keep this app on screen during the timer. Free activity: you can lock the phone or use another app. The summary appears when you come back.',
   'help.installTitle': 'Install it on your phone',
   'help.installText': 'iPhone: open the link in Safari, then Share → Add to Home Screen → Add. Android: open the Chrome menu, then Install app or Add to Home screen. The labels may vary.',
-  'help.installFirst': 'Install the app before you start. If your town is already in another browser, export it, then restore it in the installed app.',
+  'help.installFirst': 'You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with “Copy my town”, then paste it the first time you open the app.',
   'help.personalTitle': 'Your town stays personal',
   'help.personalText': 'On this site, each person has their own town, saved on their device. It does not sync between phones. Clearing the browser data can delete it: keep a copy in Settings → Backup.',
   'help.offlineTitle': 'Offline',

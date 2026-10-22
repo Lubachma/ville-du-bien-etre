@@ -393,8 +393,56 @@ async function resumedSessionKeepsBreathing(browser, baseURL) {
   return 'Respiration : une séance reprise après un rechargement relit son choix, qui l\'emporte sur le réglage';
 }
 
+// La première ouverture est calme : l'étoile que la ville de départ mérite déjà est versée sans message (ni dans le message affiché, ni
+// dans l'annonce faite aux lecteurs d'écran), et rien n'invite à dépenser. Le souhait du jour vient le lendemain de la première séance
+// réussie, pas avant. L'aide dit qu'on peut commencer ici, sans rien installer.
+async function quietFirstOpen(browser, baseURL) {
+  const { context, page, errors } = await freshTown(browser, baseURL);
+  try {
+    // Pendant 1,5 s, le message affiché ne parle jamais d'étoile (celui d'avant disait « Nouvelle étoile d'harmonie » pendant près de 3 s).
+    const seen = [];
+    for (let i = 0; i < 15; i++) { seen.push(await page.locator('#toast').textContent()); await page.waitForTimeout(100); }
+    assert.deepEqual(seen.filter(text => /étoile/i.test(text)), []);
+    assert.doesNotMatch(await page.locator('#live').textContent(), /étoile/i);
+    // L'étoile est bien versée (5 M de départ et 10 M), et enregistrée sans attendre un rechargement.
+    assert.deepEqual(await page.evaluate(() => [__ville.state.coins, !!__ville.state.gifts['star:verdure']]), [15e6, true]);
+    assert.deepEqual(await page.evaluate(() => { const saved = JSON.parse(localStorage.getItem('ville-bien-etre/v2')); return [saved.coins, !!saved.gifts['star:verdure']]; }), [15e6, true]);
+    // Aucun souhait du jour : ni tiré, ni carte.
+    assert.equal(await page.evaluate(() => __ville.state.townWish), null);
+    const wish = page.locator('#townWishCard');
+    assert.equal(await wish.count() === 0 || await wish.isHidden(), true);
+
+    // L'aide : on peut commencer ici ; sur iPhone, on copie sa ville vers l'app installée, puis on la colle à sa première ouverture.
+    await page.locator('#settingsBtn').click();
+    await page.getByRole('button', { name: /^Bien démarrer et installer/ }).click();
+    const help = await page.locator('#sheetBody').innerText();
+    assert.match(help, /Tu peux commencer ici, sans rien installer\./);
+    assert.match(help, /Sur iPhone, installe l.app quand tu veux\s: copie ta ville avec\s«\sCopier ma ville\s», puis colle-la à la première ouverture de l.app\./);
+    assert.doesNotMatch(help, /avant de commencer/);
+    await page.locator('#sheetClose').click();
+
+    // Le jour de la première séance réussie, le souhait n'est toujours pas là : il vient le lendemain.
+    await page.locator('#welcomeStart').click();
+    await confirmStart(page);
+    await page.clock.runFor('02:03');
+    await result(page).locator('.res-title', { hasText: 'Session réussie' }).waitFor();
+    await backToCity(page);
+    assert.equal(await page.evaluate(() => __ville.state.stats.ok), 1);
+    assert.equal(await page.evaluate(() => __ville.state.townWish), null);
+    assert.equal(await wish.count() === 0 || await wish.isHidden(), true);
+    await page.clock.fastForward('24:00:00');
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    assert.equal(await page.evaluate(() => __ville.state.townWish.day), '2026-10-22');
+    assert.equal(await page.locator('#townWishCard').isVisible(), true);
+    assert.match(await page.locator('#townWishCard').innerText(), /Souhait du jour[\s\S]*Maison[\s\S]*J'aimerais un banc juste à côté\./);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return "Première ouverture calme : l'étoile versée sans message, pas de souhait avant le lendemain de la première séance, l'aide dit de commencer ici";
+}
+
 const SCENARIOS = [welcomeForNewTown, welcomeCloseStays, welcomeCloseWithoutStorage, welcomeLanguage, welcomeLanguageClosesToast, welcomeChoose,
-  welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing];
+  welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing, quietFirstOpen];
 async function runPremiersPas(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

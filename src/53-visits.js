@@ -91,11 +91,15 @@ function noteSeason(day) {
 // À chaque affichage de la Ville : la saison vue, le souhait du jour, les fêtes du jour, puis ce qui vient d'être obtenu (défis,
 // souhait exaucé, étoiles, ensembles, succès). Un seul enregistrement : celui des fêtes quand il y en a, sinon un enregistrement
 // visible s'il y a du nouveau (des pièces), sinon discret pour la saison ou le souhait tiré.
+// Une ville sans séance ouvre en silence : les étoiles qu'elle mérite déjà au départ sont versées d'abord, sans message, un jour de fête
+// aussi (sans cela, le message des fêtes les annoncerait). Ce versement est un changement à enregistrer. Une étoile gagnée ensuite en
+// posant un bâtiment garde son message : c'est noticeProgress, après la pose, qui l'annonce. Sans le fichier de l'harmonie (tests), rien.
 function liveTick(day = today()) {
+  const quiet = isNewTown() && typeof claimStars === 'function' && claimStars().length > 0;
   const season = noteSeason(day), drawn = typeof drawTownWish === 'function' && drawTownWish(day);
   if (greetFestivals(day).length) return;
   const progress = progressNow(), news = typeof hasNews === 'function' && hasNews(progress);
-  if (!season && !drawn && !news) return;
+  if (!season && !drawn && !news && !quiet) return;
   commit(news ? {} : { silent: true });
   cheer(progress, '');
 }

@@ -120,10 +120,13 @@ test('étoiles : 10 M une seule fois, gardées après un retrait', () => {
   assert.equal(s.coins, coins + 10e6);
 });
 
-// Une ville amorcée pour les souhaits : date de création fixe, aucune minute (haie, potager… pas encore débloqués).
+// Une ville amorcée pour les souhaits : date de création fixe, aucune minute (haie, potager… pas encore débloqués). Une séance réussie a
+// eu lieu un jour antérieur à tous ceux des tests : le souhait du jour a commencé (voir « il commence le lendemain » plus bas).
 function wishTown(list) {
   const a = app();
   a.state.createdAt = Date.parse('2026-05-04T09:00:00Z');
+  a.state.stats.ok = 1;
+  a.state.stats.days = { '2026-10-01': 5 };
   a.state.city = cityOf(list);
   return a;
 }
@@ -164,6 +167,27 @@ test('souhaits : même tirage pour un même jour, un seul par jour', () => {
   assert.deepEqual(plain(a.state.townWish), plain(b.state.townWish));
   assert.equal(a.state.townWish.day, '2026-10-20');
   assert.equal(a.drawTownWish('2026-10-20'), false);
+});
+
+// Le jour de la première séance réussie, la ville n'a encore rien demandé : le souhait du jour, qui invite à dépenser, ne commence que le
+// lendemain. Seuls les jours de séances réussies comptent (stats.days) : une séance interrompue n'y change rien.
+test('souhait du jour : il commence le lendemain de la première séance réussie', () => {
+  const a = app(), s = a.state;
+  assert.deepEqual(plain(a.wishCandidates().map(candidate => candidate.item)), ['banc'], 'la ville de départ a de quoi souhaiter : seule la règle retient le souhait');
+  // Une ville neuve, ou qui n'a qu'une séance interrompue : rien.
+  assert.equal(a.drawTownWish('2026-10-21'), false);
+  s.stats.ko = 1;
+  assert.equal(a.drawTownWish('2026-10-21'), false);
+  assert.equal(s.townWish, null);
+  // Une séance réussie aujourd'hui : le souhait attend demain.
+  s.stats.ok = 1; s.stats.days = { '2026-10-21': 2 };
+  assert.equal(a.drawTownWish('2026-10-21'), false);
+  assert.equal(s.townWish, null);
+  // Une séance réussie la veille : le souhait du jour est tiré, un seul pour la journée.
+  s.stats.days = { '2026-10-20': 2 };
+  assert.equal(a.drawTownWish('2026-10-21'), true);
+  assert.deepEqual(plain([s.townWish.day, s.townWish.item]), ['2026-10-21', 'banc']);
+  assert.equal(a.drawTownWish('2026-10-21'), false);
 });
 
 test('souhaits : exaucé par un décor en diagonale, 3 M une fois, le suivant le lendemain', () => {
@@ -243,4 +267,68 @@ test('souhaits : exaucé sans cadeau, rien n’est annoncé', () => {
   assert.equal(paid.s.coins, paid.coins + 3e6);
   assert.ok(paid.calls.some(msg => /Souhait exaucé · Maison.*\+3\sM/.test(msg)), paid.calls.join(' | '));
   assert.deepEqual(paid.sparkles, ['t0']);
+});
+
+// La première ouverture d'une ville sans séance est calme : l'étoile que la ville de départ mérite déjà est versée tout de suite, sans
+// message, avant le reste du tic de la Ville (les fêtes aussi). Une fois une séance comptée, le message revient comme avant.
+function openedTown(done = false) {
+  const messages = [], saves = [];
+  const a = loadApp([...FILES, '52-carnet.js', '53-visits.js'], { expose: [...EXPOSE, 'liveTick', 'isNewTown', 'noticeProgress', 'celebrate', 't', 'fmt', 'GIFTS'],
+    now: '2026-10-21T10:00:00Z', globals: { toast: msg => messages.push(msg), commit: opts => { saves.push(opts); return true; }, City: { sparkle() {} }, Chime: { place() {} } } });
+  a.state.clock.tz = 'Europe/Zurich'; a.state.clock.maxSeen = 0;
+  if (done) a.state.stats.ok = 1;
+  return { a, s: a.state, messages, saves };
+}
+
+test("ville sans séance : l'étoile de départ est versée sans message", () => {
+  const { a, s, messages, saves } = openedTown();
+  assert.equal(a.isNewTown(), true);
+  a.liveTick('2026-10-21');
+  assert.ok(s.gifts['star:verdure'] > 0, "l'étoile est versée");
+  assert.equal(s.coins, 15e6, '5 M de départ et les 10 M de l’étoile');
+  assert.deepEqual(messages, [], 'aucun message');
+  assert.deepEqual(plain(saves), [{ silent: true }], 'un seul enregistrement, discret');
+  assert.equal(s.townWish, null, 'pas de souhait du jour avant la première séance');
+  // Rouverte, la ville n'a plus rien à verser ni à dire.
+  a.liveTick('2026-10-21');
+  assert.deepEqual([s.coins, messages, saves.length], [15e6, [], 1]);
+  // Une étoile gagnée ensuite en posant un bâtiment garde son message : c'est la pose qui l'annonce, pas le tic.
+  s.city.tiles.push({ id: 'lampe', item: 'lampadaire', x: 0, y: 0, at: T0, paid: 0 });
+  const fresh = a.noticeProgress();
+  assert.deepEqual(plain(fresh.stars), ['lumieres']);
+  a.celebrate(fresh);
+  assert.equal(s.coins, 25e6);
+  assert.deepEqual(messages, [a.t('harmony.star', { name: a.t('harmony.lumieres'), coins: a.fmt(a.GIFTS.star) })]);
+});
+
+// Même quand la saison est déjà vue et qu'aucun souhait n'est tiré, l'étoile versée est un changement à enregistrer.
+test("ville sans séance, saison déjà vue : l'étoile versée est quand même enregistrée", () => {
+  const { a, s, messages, saves } = openedTown();
+  s.seasons.autumn = T0;
+  a.liveTick('2026-10-21');
+  assert.ok(s.gifts['star:verdure'] > 0, "l'étoile est versée");
+  assert.deepEqual([s.coins, messages], [15e6, []]);
+  assert.deepEqual(plain(saves), [{ silent: true }], "l'étoile versée est enregistrée");
+});
+
+test("ville sans séance, un jour de fête : le message est celui de la fête, sans l'étoile", () => {
+  const { a, s, messages, saves } = openedTown();
+  a.liveTick('2027-03-21');
+  assert.ok(s.gifts['star:verdure'] > 0, "l'étoile est versée");
+  assert.equal(s.coins, 5e6 + 10e6 + 5e6, 'le départ, l’étoile et le cadeau de la Fête du printemps');
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /Fête du printemps/);
+  assert.doesNotMatch(messages[0], /étoile/);
+  assert.equal(saves.length, 1);
+});
+
+test("ville qui a une séance comptée : l'étoile garde son message", () => {
+  const { a, s, messages, saves } = openedTown(true);
+  assert.equal(a.isNewTown(), false);
+  a.liveTick('2026-10-21');
+  assert.equal(s.coins, 15e6);
+  // Un seul message : l'étoile, suivie du succès « Premier pas » que la séance comptée fait gagner.
+  assert.equal(messages.length, 1);
+  assert.ok(messages[0].startsWith(a.t('harmony.star', { name: a.t('harmony.verdure'), coins: a.fmt(a.GIFTS.star) })), messages[0]);
+  assert.deepEqual(plain(saves), [{}], 'un enregistrement visible : il y a du nouveau');
 });

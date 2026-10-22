@@ -66,9 +66,11 @@ function townWishTile() {
 // Jour sans souhait possible : la recherche ne reprend qu'au changement suivant de l'état (sa révision), ou le lendemain.
 let wishless = '';
 // Souhait du jour, tiré pour la journée (le même dans tous les onglets) quand aucun n'est en cours et que le dernier date d'un
-// jour antérieur : un seul par jour. N'enregistre pas.
+// jour antérieur : un seul par jour. Il commence le lendemain de la première séance réussie : tant qu'aucune n'a eu lieu un jour antérieur
+// (stats.days ne compte que les séances réussies), la ville n'a encore rien fait et le souhait inviterait à dépenser. N'enregistre pas.
 function drawTownWish(day = today()) {
-  if (S.settings.townWishes === false || townWishTile() || (S.townWish && S.townWish.day >= day)) return false;
+  if (S.settings.townWishes === false || townWishTile() || (S.townWish && S.townWish.day >= day)
+    || !Object.keys(S.stats.days).some(d => d < day)) return false;
   const key = day + '|' + (S.revision || '');
   if (wishless === key) return false;
   const list = wishCandidates();
