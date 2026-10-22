@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { strayAddresses } from './page-guard.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Only generated, public runtime files belong in the deployable directory.
 const output = path.join(root, 'dist');
@@ -10,5 +11,6 @@ for (const name of ['index.html', 'app.js', 'sw.js', 'styles.css', 'styles-activ
   await cp(path.join(root, name), path.join(output, name), { recursive: true });
 }
 const html = await readFile(path.join(output, 'index.html'), 'utf8');
-if (/https?:\/\//.test(html)) throw new Error('Unexpected absolute network dependency in index.html');
+const stray = strayAddresses(html);
+if (stray.length) throw new Error('Unexpected absolute network dependency in index.html: ' + stray.join(', '));
 console.log('GitHub Pages artifact prepared in dist/ (relative paths; no server required).');

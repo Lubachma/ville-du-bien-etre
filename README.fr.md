@@ -131,7 +131,7 @@ Les tests navigateur demandent `npx playwright install chromium`, ou `PLAYWRIGHT
 
 ## 🚢 Publication
 
-GitHub Pages, par le workflow **manuel** [`pages.yml`](.github/workflows/pages.yml) : **Actions → Déployer sur GitHub Pages → Run workflow**, ou `gh workflow run pages.yml`. Il construit, vérifie, lance les tests unitaires et navigateur, puis publie uniquement les fichiers statiques de `dist/` : un simple push ne publie rien. Tous les chemins sont relatifs, `dist/` fonctionne donc aussi à la racine de n’importe quel hébergement statique.
+GitHub Pages, par le workflow **manuel** [`pages.yml`](.github/workflows/pages.yml) : **Actions → Déployer sur GitHub Pages → Run workflow**, ou `gh workflow run pages.yml`. Il construit, vérifie, lance les tests unitaires et navigateur, puis publie uniquement les fichiers statiques de `dist/` : un simple push ne publie rien. Les fichiers de l’app sont en chemins relatifs ; seules trois adresses de `index.html` (canonical, `og:url`, `og:image`) nomment le site publié : les changer pour publier ailleurs.
 
 À chaque push et à chaque pull request, le workflow **Vérifier** ([`verify.yml`](.github/workflows/verify.yml)) construit l’app, vérifie que `app.js` et `sw.js` sont à jour dans le dépôt, lance `npm run check` et les tests unitaires, puis les tests navigateur sur Chromium et sur WebKit (le moteur de Safari), chacun dans sa propre tâche. Il ne publie rien : la publication reste manuelle, avec `pages.yml`.
 
