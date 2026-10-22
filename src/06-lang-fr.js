@@ -35,6 +35,8 @@ DICT.fr = {
   'tpl.chore.dishes': 'Faire la vaisselle',
   'tpl.chore.study': 'Réviser / travailler',
   'tpl.chore.mail': 'Trier le courrier',
+  // Le nom de la première séance, celle de la carte « Bienvenue » (displayName le traduit comme les exemples ci-dessus).
+  'tpl.breathe': 'Respirer',
 
   // Domaines (nom, « de … » et exemples) et rubriques de la boutique
   'cat.esprit': 'Esprit',
@@ -1259,4 +1261,16 @@ DICT.fr = {
   'ach.complices.desc': 'Atteins le niveau 5 de complicité avec ton compagnon.',
   'ach.inseparables.name': 'Inséparables',
   'ach.inseparables.desc': 'Atteins le niveau 10 de complicité avec ton compagnon.',
+  // Étape 8 : la carte « Bienvenue » d'une ville sans séance.
+  'welcome.title': 'Bienvenue dans ta ville',
+  'welcome.lede': 'Ici, chaque moment pour toi fait grandir une ville : un livre, une marche, quelques minutes de calme.',
+  'welcome.step1': 'Lance un chrono pour une vraie activité.',
+  'welcome.step2': 'Chaque minute terminée te rapporte des pièces.',
+  'welcome.step3': 'Construis ta ville avec tes pièces.',
+  'welcome.start': 'Commencer par 2 minutes de calme',
+  'welcome.choose': 'Choisir une activité',
+  'welcome.note': 'Gratuit, sans compte ni pub. Ta ville reste sur cet appareil.',
+  'welcome.close': "Fermer l'accueil",
+  'welcome.langs': "Langue de l'app",
+  'welcome.paste': "J'avais commencé dans Safari : coller ma ville",
 };

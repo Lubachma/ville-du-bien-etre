@@ -18,6 +18,7 @@ const LS_REMIND = 'ville-bien-etre/v1:backup-later';     // rappel de sauvegarde
 const LS_REMINDER = 'ville-bien-etre/v1:reminder-time';   // heure du rappel quotidien (agenda), propre à l'appareil
 const LS_CARNET_SEEN = 'ville-bien-etre/v1:carnet-seen';  // succès et ensembles déjà vus dans le carnet, sur cet appareil
 const LS_MOOD_CARD = 'ville-bien-etre/v1:mood-card';      // carte des moments difficiles : quand elle a été fermée, sur cet appareil
+const LS_WELCOME = 'ville-bien-etre/v1:welcome-closed';   // carte « Bienvenue » fermée ('1'), sur cet appareil
 const BACKUP_EVERY = 14 * 86400000;                       // rappel quand la dernière sauvegarde a plus de 14 jours
 const HISTORY_MAX = 150;
 const LIST_MAX = 60;
@@ -558,6 +559,8 @@ DICT.fr = {
   'tpl.chore.dishes': 'Faire la vaisselle',
   'tpl.chore.study': 'Réviser / travailler',
   'tpl.chore.mail': 'Trier le courrier',
+  // Le nom de la première séance, celle de la carte « Bienvenue » (displayName le traduit comme les exemples ci-dessus).
+  'tpl.breathe': 'Respirer',
 
   // Domaines (nom, « de … » et exemples) et rubriques de la boutique
   'cat.esprit': 'Esprit',
@@ -1782,6 +1785,18 @@ DICT.fr = {
   'ach.complices.desc': 'Atteins le niveau 5 de complicité avec ton compagnon.',
   'ach.inseparables.name': 'Inséparables',
   'ach.inseparables.desc': 'Atteins le niveau 10 de complicité avec ton compagnon.',
+  // Étape 8 : la carte « Bienvenue » d'une ville sans séance.
+  'welcome.title': 'Bienvenue dans ta ville',
+  'welcome.lede': 'Ici, chaque moment pour toi fait grandir une ville : un livre, une marche, quelques minutes de calme.',
+  'welcome.step1': 'Lance un chrono pour une vraie activité.',
+  'welcome.step2': 'Chaque minute terminée te rapporte des pièces.',
+  'welcome.step3': 'Construis ta ville avec tes pièces.',
+  'welcome.start': 'Commencer par 2 minutes de calme',
+  'welcome.choose': 'Choisir une activité',
+  'welcome.note': 'Gratuit, sans compte ni pub. Ta ville reste sur cet appareil.',
+  'welcome.close': "Fermer l'accueil",
+  'welcome.langs': "Langue de l'app",
+  'welcome.paste': "J'avais commencé dans Safari : coller ma ville",
 };
 
 
@@ -1823,6 +1838,8 @@ DICT.en = {
   'tpl.chore.dishes': 'Do the dishes',
   'tpl.chore.study': 'Study / work',
   'tpl.chore.mail': 'Sort the mail',
+  // The name of the first session, the one from the Welcome card (displayName translates it like the examples above).
+  'tpl.breathe': 'Breathe',
 
   // Domains (name, "of …" and examples) and shop sections
   'cat.esprit': 'Mind',
@@ -3047,6 +3064,18 @@ DICT.en = {
   'ach.complices.desc': 'Reach friendship level 5 with your companion.',
   'ach.inseparables.name': 'Inseparable',
   'ach.inseparables.desc': 'Reach friendship level 10 with your companion.',
+  // Step 8: the Welcome card for a town with no session.
+  'welcome.title': 'Welcome to your town',
+  'welcome.lede': 'Here, every moment you take for yourself grows a town: a book, a walk, a few minutes of calm.',
+  'welcome.step1': 'Start a timer for a real activity.',
+  'welcome.step2': 'Every minute you complete earns you coins.',
+  'welcome.step3': 'Build your town with your coins.',
+  'welcome.start': 'Start with 2 minutes of calm',
+  'welcome.choose': 'Choose an activity',
+  'welcome.note': 'Free, no account, no ads. Your town stays on this device.',
+  'welcome.close': 'Close the welcome',
+  'welcome.langs': 'App language',
+  'welcome.paste': 'I started in Safari: paste my town',
 };
 
 
@@ -3110,6 +3139,10 @@ function defaultState() {
     active: null,
   };
 }
+
+// Une ville sans séance : aucune réussie ni interrompue. Les compteurs décident, jamais l'historique : une ville amorcée par un test ou
+// une vieille sauvegarde a des séances comptées et un historique vide.
+function isNewTown() { return S.stats.ok + S.stats.ko === 0; }
 
 function cleanItem(x) {
   if (!x || typeof x !== 'object') return null;
@@ -8465,6 +8498,7 @@ function renderVille() {
   const before = document.activeElement, key = focusKeyOf(before);
   // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).
   liveTick();
+  if (typeof renderWelcome === 'function') renderWelcome();
   renderCityCaption();
   if (typeof renderCompanionInvite === 'function') { renderCompanionInvite(); renderCompanionButton(); }
   if (typeof renderTownWishCard === 'function') renderTownWishCard();
@@ -9361,12 +9395,19 @@ function refreshLang() {
   for (const id of ['#drawFilters', '#goalsCard', '#routinesCard', '#carnetCard']) { const el = $(id); if (el) el.remove(); }
   storageStatusSignature = '';
 }
-function changeLang(pref) {
-  if (!['auto', ...langs()].includes(pref)) return;
+// Applique une langue à toute l'interface : le choix est rangé dans la ville, les textes fixes, les listes et la vue sont refaits.
+// Faux, sans rien changer, pour une langue inconnue. Elle ne touche pas aux Réglages : la carte « Bienvenue » s'en sert aussi.
+function applyLang(pref) {
+  if (!['auto', ...langs()].includes(pref)) return false;
   S.settings.lang = pref;
   commit({ silent: true });
   refreshLang();
   renderAll();
+  return true;
+}
+// Réglages → Langue : la langue appliquée, puis les Réglages rouverts dans cette langue, le focus sur le choix qui vient d'être fait.
+function changeLang(pref) {
+  if (!applyLang(pref)) return;
   openSettings();
   setTimeout(() => { const radio = $('#settingsLang [aria-checked="true"]'); if (radio) radio.focus({ preventScroll: true }); }, 40);
 }
@@ -9648,6 +9689,8 @@ function settingsReset() {
     S = defaultState();
     S.settings.lang = lang;   // la langue choisie reste : une ville neuve doit rester lisible
     S.clock = { tz: clock.tz, maxSeen: clock.maxSeen, lastDay: clock.lastDay };
+    // La ville est neuve : l'accueil revient (sa fermeture est rangée sur l'appareil, pas dans la ville). Avant le rendu qui suit.
+    try { localStorage.removeItem(LS_WELCOME); } catch (e) { /* stockage indisponible */ }
     closeSheet();
     Mode.state = null;
     refreshLang();
@@ -12215,6 +12258,53 @@ function stopBreathing() {
 }
 
 
+/* ---- 59-first-steps.js ---- */
+/* =========================================================================
+   Premiers pas : la carte « Bienvenue » d'une ville sans séance
+   ========================================================================= */
+const FIRST_CALM_MIN = 2;   // la première séance proposée : deux minutes de calme
+
+// Fermée par la croix : rangée sur cet appareil ('1') jusqu'à « Tout recommencer » (45-settings.js), pas dans la ville.
+function welcomeClosed() { try { return localStorage.getItem(LS_WELCOME) === '1'; } catch (e) { return false; } }
+// Pour une ville sans séance que personne n'a fermée. Une première séance qui tourne (menée dans un autre onglet, ou ici) la cache aussi.
+function welcomeShown() { return isNewTown() && !S.active && !welcomeClosed(); }
+
+// La carte, première de la Ville (index.html). Cachée dès qu'une séance est comptée ou en cours, ou une fois fermée. Visible, elle propose
+// un bouton par langue connue autre que la langue affichée, écrite dans sa propre langue : il change la langue de l'app sans ouvrir les
+// Réglages. Refaits à chaque rendu de la Ville, ces boutons ont une clé de focus (keepFocus) ; le clic redonne aussi le focus à celui qui
+// reste, car tous les navigateurs ne le donnent pas au bouton cliqué (Safari) et applyLang redessine la carte.
+function renderWelcome() {
+  const card = $('#welcomeCard'), box = $('#welcomeLangs');
+  if (!card || !box) return;
+  card.hidden = !welcomeShown();
+  if (card.hidden) { box.replaceChildren(); return; }
+  box.replaceChildren(...langs().filter(code => code !== LANG).map(code => h('button', {
+    class: 'btn btn-ghost btn-sm', type: 'button', lang: code, 'data-focus-key': 'welcome:lang',
+    onclick: () => { applyLang(code); focusByKey('welcome:lang'); },
+  }, DICT[code]['lang.self'] || code)));
+}
+
+// La croix : l'accueil ne revient plus sur cet appareil. La carte disparaît, le focus passe à « Lancer une activité » sous la ville.
+function closeWelcome() {
+  lsSet(LS_WELCOME, '1');
+  renderWelcome();
+  $('#ctaStart').focus({ preventScroll: true });
+}
+
+// « Commencer par 2 minutes de calme » : la première séance, en Calme et en Concentration. Son nom est rangé dans la langue du moment
+// (displayName le traduit ensuite comme les exemples d'une ville neuve). Rend la promesse de beginSession.
+function startFirstCalm() {
+  return beginSession({ name: t('tpl.breathe'), cat: 'calme', min: FIRST_CALM_MIN, mode: 'focus' });
+}
+
+// Les boutons fixes de la carte (les boutons de langue sont créés par renderWelcome).
+function bindFirstSteps() {
+  $('#welcomeClose').addEventListener('click', closeWelcome);
+  $('#welcomeChoose').addEventListener('click', () => go('activites', true));
+  $('#welcomeStart').addEventListener('click', () => startFirstCalm());
+}
+
+
 /* ---- 60-boot.js ---- */
 /* =========================================================================
    Événements et démarrage
@@ -12252,6 +12342,7 @@ function bindEvents() {
   $('#backdrop').addEventListener('click', closeSheet);
   $('#sheetClose').addEventListener('click', closeSheet);
   bindShare();
+  bindFirstSteps();
   document.addEventListener('keydown', e => { if (e.key === 'Tab' || e.key.startsWith('Arrow') || e.key === 'Enter') kbdMode = true; }, true);
   document.addEventListener('pointerdown', () => { kbdMode = false; }, true);
   document.addEventListener('keydown', e => {

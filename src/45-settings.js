@@ -155,12 +155,19 @@ function refreshLang() {
   for (const id of ['#drawFilters', '#goalsCard', '#routinesCard', '#carnetCard']) { const el = $(id); if (el) el.remove(); }
   storageStatusSignature = '';
 }
-function changeLang(pref) {
-  if (!['auto', ...langs()].includes(pref)) return;
+// Applique une langue à toute l'interface : le choix est rangé dans la ville, les textes fixes, les listes et la vue sont refaits.
+// Faux, sans rien changer, pour une langue inconnue. Elle ne touche pas aux Réglages : la carte « Bienvenue » s'en sert aussi.
+function applyLang(pref) {
+  if (!['auto', ...langs()].includes(pref)) return false;
   S.settings.lang = pref;
   commit({ silent: true });
   refreshLang();
   renderAll();
+  return true;
+}
+// Réglages → Langue : la langue appliquée, puis les Réglages rouverts dans cette langue, le focus sur le choix qui vient d'être fait.
+function changeLang(pref) {
+  if (!applyLang(pref)) return;
   openSettings();
   setTimeout(() => { const radio = $('#settingsLang [aria-checked="true"]'); if (radio) radio.focus({ preventScroll: true }); }, 40);
 }
@@ -442,6 +449,8 @@ function settingsReset() {
     S = defaultState();
     S.settings.lang = lang;   // la langue choisie reste : une ville neuve doit rester lisible
     S.clock = { tz: clock.tz, maxSeen: clock.maxSeen, lastDay: clock.lastDay };
+    // La ville est neuve : l'accueil revient (sa fermeture est rangée sur l'appareil, pas dans la ville). Avant le rendu qui suit.
+    try { localStorage.removeItem(LS_WELCOME); } catch (e) { /* stockage indisponible */ }
     closeSheet();
     Mode.state = null;
     refreshLang();

@@ -58,6 +58,10 @@ function defaultState() {
   };
 }
 
+// Une ville sans séance : aucune réussie ni interrompue. Les compteurs décident, jamais l'historique : une ville amorcée par un test ou
+// une vieille sauvegarde a des séances comptées et un historique vide.
+function isNewTown() { return S.stats.ok + S.stats.ko === 0; }
+
 function cleanItem(x) {
   if (!x || typeof x !== 'object') return null;
   const name = str(x.name, 40);

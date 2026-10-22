@@ -35,6 +35,8 @@ DICT.en = {
   'tpl.chore.dishes': 'Do the dishes',
   'tpl.chore.study': 'Study / work',
   'tpl.chore.mail': 'Sort the mail',
+  // The name of the first session, the one from the Welcome card (displayName translates it like the examples above).
+  'tpl.breathe': 'Breathe',
 
   // Domains (name, "of …" and examples) and shop sections
   'cat.esprit': 'Mind',
@@ -1259,4 +1261,16 @@ DICT.en = {
   'ach.complices.desc': 'Reach friendship level 5 with your companion.',
   'ach.inseparables.name': 'Inseparable',
   'ach.inseparables.desc': 'Reach friendship level 10 with your companion.',
+  // Step 8: the Welcome card for a town with no session.
+  'welcome.title': 'Welcome to your town',
+  'welcome.lede': 'Here, every moment you take for yourself grows a town: a book, a walk, a few minutes of calm.',
+  'welcome.step1': 'Start a timer for a real activity.',
+  'welcome.step2': 'Every minute you complete earns you coins.',
+  'welcome.step3': 'Build your town with your coins.',
+  'welcome.start': 'Start with 2 minutes of calm',
+  'welcome.choose': 'Choose an activity',
+  'welcome.note': 'Free, no account, no ads. Your town stays on this device.',
+  'welcome.close': 'Close the welcome',
+  'welcome.langs': 'App language',
+  'welcome.paste': 'I started in Safari: paste my town',
 };

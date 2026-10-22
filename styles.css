@@ -755,6 +755,17 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .install-main .share-ic { width: 18px; height: 18px; vertical-align: -3px; color: var(--accent-ink); }
 .install-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
 .install-actions > .btn-ghost:first-child { margin-left: -14px; }
+/* Carte « Bienvenue » d'une ville sans séance : le titre et la croix en haut, une phrase, trois étapes, puis les boutons l'un sous l'autre sur
+   toute la largeur (un libellé long passe à la ligne, à 320 px comme en anglais) et les langues, centrées. */
+.welcome-card { display: grid; gap: 12px; }
+.welcome-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.welcome-head h3 { flex: 1; min-width: 0; padding-top: 2px; font-family: var(--font-display); font-weight: 400; font-size: 20px; line-height: 1.2; overflow-wrap: break-word; }
+.welcome-head .icon-btn { flex: none; margin: -8px -8px 0 0; }
+.welcome-steps { display: grid; gap: 6px; margin: 0; padding-left: 1.5em; color: var(--ink-2); }
+.welcome-steps li::marker { color: var(--accent-ink); font-weight: 700; }
+.welcome-actions { display: grid; gap: 10px; }
+.welcome-card .btn { white-space: normal; text-align: center; text-wrap: balance; overflow-wrap: anywhere; padding-block: 8px; }
+.welcome-langs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 /* Ajouts V3 */
 .remind { display: flex; gap: 12px; align-items: flex-start; }
 .remind > .ic { color: var(--accent); width: 22px; height: 22px; margin-top: 2px; }

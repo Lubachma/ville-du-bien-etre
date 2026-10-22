@@ -34,6 +34,7 @@ function bindEvents() {
   $('#backdrop').addEventListener('click', closeSheet);
   $('#sheetClose').addEventListener('click', closeSheet);
   bindShare();
+  bindFirstSteps();
   document.addEventListener('keydown', e => { if (e.key === 'Tab' || e.key.startsWith('Arrow') || e.key === 'Enter') kbdMode = true; }, true);
   document.addEventListener('pointerdown', () => { kbdMode = false; }, true);
   document.addEventListener('keydown', e => {
