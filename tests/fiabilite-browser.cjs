@@ -131,8 +131,8 @@ async function assertReloads(page, release, label) {
 }
 
 // Onglet en retard : au repos, l'annonce suffit pour qu'il se recharge. Une fenêtre ouverte, une séance qui tourne (et son écran de fin),
-// la visite d'une ville amie ou une pose le retiennent jusqu'à leur fermeture ; en arrière-plan, seule la séance le retient. La séance
-// libre suit l'horloge simulée, comme dans rituals-browser.cjs.
+// la visite d'une ville amie ou une pose le retiennent jusqu'à leur fermeture ; en arrière-plan, seuls la séance et son écran de fin le
+// retiennent (une fenêtre ouverte sans rien de tapé, non). La séance libre suit l'horloge simulée, comme dans rituals-browser.cjs.
 async function lateTabReloadsWhenIdle(browser, baseURL) {
   const code = await leaCode(browser, baseURL);
   const { context, page, errors } = await sessionTown(browser);
@@ -156,8 +156,11 @@ async function lateTabReloadsWhenIdle(browser, baseURL) {
     await setVisibility(page, 'visible');
     await page.clock.fastForward(4 * 60000 + 1000);
     await result(page).waitFor();
-    await markLate(page);   // le service worker le redit : l'écran de fin retient aussi l'onglet
+    await markLate(page);   // le service worker le redit : l'écran de fin retient aussi l'onglet, même en arrière-plan
     await assertStays(page, 'écran de fin');
+    await setVisibility(page, 'hidden');
+    await assertStays(page, 'écran de fin, page en arrière-plan');
+    await setVisibility(page, 'visible');
     await assertReloads(page, () => backToCity(page), 'retour à la ville');
     // La visite d'une ville amie, en grand.
     await page.evaluate(c => __ville.share.open(c), code);
@@ -172,7 +175,7 @@ async function lateTabReloadsWhenIdle(browser, baseURL) {
     await page.getByRole('button', { name: /^Placer Banc pour/ }).click();
     await assertStays(page, 'pose en cours');
     await assertReloads(page, () => page.locator('#placeCancel').click(), 'pose annulée');
-    // Une fenêtre encore ouverte, mais la page passe en arrière-plan : plus rien ne retient l'onglet.
+    // Une fenêtre encore ouverte, sans rien de tapé, mais la page passe en arrière-plan : plus rien ne retient l'onglet.
     await page.locator('#settingsBtn').click();
     await markLate(page);
     await assertStays(page, 'Réglages ouverts, page visible');
@@ -227,8 +230,9 @@ async function lateTabWaitsForWhatFollows(browser, baseURL) {
 }
 
 // Un texte saisi hors fenêtre et pas encore envoyé retient l'onglet visible, même si la personne change d'onglet : le recharger l'effacerait.
-// Envoyé, il est enregistré et l'onglet se recharge. Des espaces seuls, ou un texte laissé dans une fenêtre fermée, ne retiennent rien, et en
-// arrière-plan plus rien ne retient l'onglet (voulu : la personne est partie).
+// Envoyé, il est enregistré et l'onglet se recharge. Des espaces seuls, ou un texte laissé dans une fenêtre fermée, ne retiennent rien. En
+// arrière-plan, un texte tapé retient encore l'onglet, dans la page comme dans une fenêtre ouverte (la personne peut revenir le finir) ; un
+// champ prérempli laissé tel quel (le nom de la ville, le nom suggéré du compagnon) n'est pas une saisie.
 async function lateTabWaitsForTyping(browser, baseURL) {
   const { context, page, errors } = await sessionTown(browser);
   const wish = page.locator('#addWish [name="name"]');
@@ -258,12 +262,32 @@ async function lateTabWaitsForTyping(browser, baseURL) {
     await page.locator('[data-tab="tirage"]').click();
     await wish.fill('   ');
     await assertReloads(page, () => markLate(page), 'espaces seuls');
-    // La page passe en arrière-plan avec un texte non envoyé : plus rien ne retient l'onglet.
+    // La page passe en arrière-plan avec un texte non envoyé : il la retient encore. Revenue, la personne l'envoie, et l'onglet se recharge.
     await page.locator('[data-tab="tirage"]').click();
     await wish.fill('Encore une envie');
     await markLate(page);
-    await assertStays(page, 'autre envie à moitié écrite');
-    await assertReloads(page, () => setVisibility(page, 'hidden'), 'page en arrière-plan');
+    await setVisibility(page, 'hidden');
+    await assertStays(page, 'autre envie à moitié écrite, page en arrière-plan');
+    await setVisibility(page, 'visible');
+    await assertReloads(page, () => wish.press('Enter'), 'autre envie envoyée au retour');
+    // Dans une fenêtre ouverte : le nom de la ville prérempli, intact, ne retient pas l'onglet en arrière-plan ; changé, il le retient.
+    await page.locator('#personalizeCity').click();
+    await markLate(page);
+    await assertStays(page, 'nom de la ville ouvert');
+    await assertReloads(page, () => setVisibility(page, 'hidden'), 'nom de la ville prérempli, page en arrière-plan');
+    await page.locator('#personalizeCity').click();
+    await page.locator('#cityName').fill('Les Jardins');
+    await markLate(page);
+    await setVisibility(page, 'hidden');
+    await assertStays(page, 'nom de la ville changé, page en arrière-plan');
+    await setVisibility(page, 'visible');
+    await assertReloads(page, () => page.locator('#sheetBody button[type="submit"]').click(), 'nom de la ville enregistré');
+    assert.equal(await page.locator('.brand-name').innerText(), 'Les Jardins');
+    // Le nom suggéré du compagnon, laissé tel quel, ne retient pas non plus l'onglet en arrière-plan.
+    await page.locator('#companionInvite').getByRole('button', { name: 'Faire connaissance', exact: true }).click();
+    assert.equal(await page.locator('#companionName').inputValue(), 'Pompon');
+    await markLate(page);
+    await assertReloads(page, () => setVisibility(page, 'hidden'), 'nom suggéré du compagnon, page en arrière-plan');
     assert.deepEqual(errors, []);
   } finally { await context.close(); }
   return "Onglet en retard : attend la fin d'une saisie";

@@ -56,22 +56,35 @@ function renderPwaStatus() {
       pwa.activate();
     } }, t('pwa.updateButton')));
 }
-// Un texte saisi et pas encore envoyé dans un champ de la page (nouvelle activité, envie ou obligation) : le recharger l'effacerait. Les champs
-// d'une fenêtre ne comptent pas : ouverte, elle retient déjà l'onglet ; fermée, elle peut garder un texte que la personne a laissé.
-function hasTypedText() {
-  return $$('input:not([type]), input[type="text"], input[type="search"], textarea').some(field => !field.closest('#sheet') && field.value.trim());
+// Un texte tapé et pas encore envoyé (une nouvelle activité, envie ou obligation, un nom changé…) : le recharger l'effacerait. C'est un champ
+// de texte dont la valeur, sans les blancs du bord, n'est pas vide et n'est pas celle qu'il avait en s'affichant (defaultValue) : un champ
+// prérempli laissé tel quel (le nom de la ville, le nom suggéré du compagnon) n'est pas une saisie, ni un champ en lecture seule. Les champs
+// d'une fenêtre ne comptent que si elle est ouverte et que inSheet le demande : page visible, une fenêtre ouverte retient déjà l'onglet ;
+// fermée, elle peut garder un texte que la personne a laissé.
+function hasTypedText(inSheet = false) {
+  const sheetCounts = inSheet && !$('#sheet').hidden;
+  return $$('input:not([type]), input[type="text"], input[type="search"], textarea').some(field => {
+    if (field.readOnly || (field.closest('#sheet') && !sheetCounts)) return false;
+    const value = field.value.trim();
+    return value !== '' && value !== field.defaultValue.trim();
+  });
 }
+// L'écran de fin d'une séance (son résultat, le choix de l'humeur) est affiché.
+const endScreenShown = () => !$('#session').hidden && !$('#sessResult').hidden;
 // Un onglet resté sur l'ancienne version (la mise à jour a été acceptée dans un autre onglet) se recharge de lui-même dès qu'il est au repos.
 // Une séance qui tourne ou démarre ici le retient, comme le message « Annuler » qui reste après une suppression (body.toast-kept : recharger
 // ferait perdre l'annulation ; hideToast rappelle cette fonction quand il part). Page visible, il attend aussi qu'il n'y ait plus ni fenêtre,
-// ni écran de séance, ni vue en grand (donc ni visite d'une ville amie), ni pose, ni texte en cours de saisie ; en arrière-plan, rien de plus
-// ne le retient. Le bandeau « Mettre à jour » reste affiché. Chaque moment où l'une de ces attentes peut finir rappelle cette fonction, sans
-// risque : elle est idempotente.
+// ni écran de séance, ni vue en grand (donc ni visite d'une ville amie), ni pose, ni texte en cours de saisie dans la page. En arrière-plan,
+// seuls un texte tapé, dans la page ou dans une fenêtre ouverte, et l'écran de fin d'une séance le retiennent encore : une fenêtre ouverte
+// sans saisie, la vue en grand ou une pose, non. Le bandeau « Mettre à jour » reste affiché. Chaque moment où l'une de ces attentes peut
+// finir rappelle cette fonction, sans risque : elle est idempotente.
 function reloadWhenIdle() {
   const pwa = window.VillePWA;
   if (!pwa || !pwa.reloadAvailable || pwa.reloading) return;
   if (run || beginning || document.body.classList.contains('toast-kept')) return;
-  if (document.visibilityState === 'visible' && (['#sheet', '#session', '#cityBig', '#placebar'].some(selector => !$(selector).hidden) || hasTypedText())) return;
+  const visible = document.visibilityState === 'visible';
+  if (visible ? ['#sheet', '#session', '#cityBig', '#placebar'].some(selector => !$(selector).hidden) : endScreenShown()) return;
+  if (hasTypedText(!visible)) return;
   pwa.activate();
 }
 

@@ -36,7 +36,10 @@ function openCompanionChoice({ edit = false } = {}) {
   let species = c ? c.species : COMPANION_SPECIES[0], typed = !!(c && c.name);
   openSheet(t('companion.choiceTitle'), body => {
     const input = h('input', { class: 'input', id: 'companionName', type: 'text', maxlength: String(COMPANION_NAME_MAX), autocomplete: 'off', spellcheck: 'false' });
-    input.value = c && c.name ? c.name : t('companion.suggest.' + species);
+    // Le nom proposé (la suggestion, ou le nom actuel) est aussi la valeur de départ du champ : laissé tel quel, ce n'est pas une saisie
+    // qu'un onglet en retard devrait attendre (hasTypedText).
+    const propose = text => { input.value = input.defaultValue = text; };
+    propose(c && c.name ? c.name : t('companion.suggest.' + species));
     const group = h('div', { class: 'companion-choice', role: 'radiogroup', 'aria-label': t('companion.animal') });
     const go = h('button', { class: 'btn btn-primary btn-block companion-go', type: 'button' });
     // Le nom qui sera gardé : celui tapé, nettoyé ; rien de tapé (ou vidé), le nom suggéré, enregistré '' pour suivre la langue.
@@ -46,7 +49,7 @@ function openCompanionChoice({ edit = false } = {}) {
     const pick = next => {
       species = next;
       $$('button', group).forEach((b, i) => b.setAttribute('aria-checked', String(COMPANION_SPECIES[i] === next)));
-      if (!typed) input.value = t('companion.suggest.' + next);
+      if (!typed) propose(t('companion.suggest.' + next));
       sync();
     };
     for (const s of COMPANION_SPECIES) {
