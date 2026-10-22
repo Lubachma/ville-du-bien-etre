@@ -156,6 +156,16 @@ function reserveToastRoom() {
   document.body.style.setProperty('--toast-room', Math.max(0, Math.ceil(room)) + 'px');
 }
 window.addEventListener('resize', () => { if (document.body.classList.contains('toast-kept')) reserveToastRoom(); });
+// Certains navigateurs (WebKit sous Linux) n'appliquent pas scroll-padding quand le Tab amène un champ à l'écran : une fois leur défilement
+// fait (image suivante), un élément de #main qui reçoit le focus et passe encore sous le message est remonté juste assez, à 8 px au-dessus.
+document.addEventListener('focusin', e => {
+  if (!document.body.classList.contains('toast-kept') || !$('#main').contains(e.target)) return;
+  requestAnimationFrame(() => {
+    if (document.activeElement !== e.target || !document.body.classList.contains('toast-kept')) return;
+    const over = e.target.getBoundingClientRect().bottom + 8 - $('#toast').getBoundingClientRect().top;
+    if (over > 0) $('#main').scrollTop += Math.ceil(over);
+  });
+});
 // keptOnly : go(), openSheet() et l'ouverture d'une séance ne ferment que le message qui reste ; les autres gardent leur minuteur (« Un
 // nouveau jour commence », écrit juste avant que la fiche du visiteur ne se rouvre, doit encore se voir).
 function hideToast(keptOnly = false) {

@@ -1076,6 +1076,8 @@ async function keptMessageCoversNothing(browser, baseURL) {
     }, long);
     // Le message est posé : son entrée (un déplacement de 12 px) est finie, on mesure sa vraie place.
     const settled = () => page.waitForFunction(() => document.querySelector('#toast').getAnimations().length === 0);
+    // Deux images : le défilement du navigateur vers l'élément focalisé, puis le rattrapage de l'appli s'il est encore sous le message.
+    const twoFrames = () => page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
     const focusKey = () => page.evaluate(() => document.activeElement.dataset.focusKey || document.activeElement.id || document.activeElement.tagName);
     // Part de la surface de l'élément qui a le focus que le message recouvre, de 0 à 1 : ce qu'on en voit, dans la zone qui défile s'il en fait partie
     // (WebKit ne fait pas défiler le focus d'un champ de saisie : hors de la zone, il n'est pas sous le message, il est ailleurs).
@@ -1123,6 +1125,7 @@ async function keptMessageCoversNothing(browser, baseURL) {
       let stops = 0, reached = false;
       for (let press = 0; press < 40; press++) {
         await page.keyboard.press('Tab');
+        await twoFrames();
         const now = await where();
         if (now.out) break;
         if (now.undo) { reached = true; break; }
