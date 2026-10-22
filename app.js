@@ -8394,7 +8394,11 @@ function renderCityCaption() {
   // En visite, la vue en grand décrit la ville amie.
   if (!$('#cityBig').hidden && $('#cityVisitHead').hidden) $('#cityBigCanvas').setAttribute('aria-label', text);
 }
+// La Ville se redessine aussi seule, hors de renderAll : au retour dans l'onglet et après l'écriture d'un autre onglet (checkActive), au
+// battement d'une séance menée ailleurs, et quand le rappel de sauvegarde part. Ses cartes et sa liste sont refaites : le focus parti avec
+// un de leurs boutons va à son remplaçant de même clé, sinon à la vue (keepFocus). Dans renderAll, le focus est déjà rendu ici.
 function renderVille() {
+  const before = document.activeElement, key = focusKeyOf(before);
   // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).
   liveTick();
   renderCityCaption();
@@ -8445,6 +8449,7 @@ function renderVille() {
     const label = isWonder(tile.item) ? t('city.listItemStage', { ...params, stage: tile.stage || 1 }) : params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params);
     return h('li', {}, h('button', { type: 'button', 'data-focus-key': 'tile:' + tile.id, onclick: () => openBuildingSheet(tile) }, label));
   }));
+  keepFocus(before, key);
 }
 
 
@@ -9245,9 +9250,10 @@ function renderRemind() {
   rm.append(icon('shield'), h('div', { class: 'remind-main' },
     h('p', {}, h('strong', {}, t('backup.remindTitle'))),
     h('p', { class: 'note' }, at ? t('backup.remindLast', { ago: agoText(at) }) : t('backup.remindNone')),
+    // Refait à chaque rendu de la Ville : ses boutons ont une clé, pour y garder le focus (keepFocus).
     h('div', { class: 'remind-actions' },
-      h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => saveBackupFile() }, icon('download'), t('backup.save')),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => { lsSet(LS_REMIND, Date.now() + 7 * 86400000); renderVille(); } }, t('common.later')))));
+      h('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-focus-key': 'backup:save', onclick: () => saveBackupFile() }, icon('download'), t('backup.save')),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'backup:later', onclick: () => { lsSet(LS_REMIND, Date.now() + 7 * 86400000); renderVille(); } }, t('common.later')))));
 }
 function isIOS() {
   return /iPhone|iPad|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -11826,10 +11832,11 @@ function bindShare() {
 // Le décor d'un souhait, avec sa tournure (« un banc », « des fleurs »).
 const wishThing = item => t('wish.thing.' + item);
 // De quoi exaucer le souhait : « Placer un banc · 2 M », qui lance la pose. Sans assez de pièces, le bouton est désactivé et la
-// note dit ce qu'il faut encore, sans rien de plus.
+// note dit ce qu'il faut encore, sans rien de plus. La carte est refaite à chaque rendu de la Ville : ses boutons ont une clé, pour y
+// garder le focus (keepFocus).
 function wishPlaceButton(item) {
   const price = priceOf(item), short = price > S.coins, thing = wishThing(item);
-  return [h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, onclick: () => { closeSheet(); Mode.startPlace(item); } },
+  return [h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', 'data-focus-key': 'wish:place', disabled: short ? true : null, onclick: () => { closeSheet(); Mode.startPlace(item); } },
     price ? t('wish.place', { thing, price: fmt(price) }) : t('wish.placeFree', { thing })),
   short ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(price - S.coins) })) : null].filter(Boolean);
 }
@@ -11850,7 +11857,7 @@ function renderTownWishCard() {
     h('div', { class: 'wish-main' }, cv, h('div', { class: 'wish-text' },
       h('strong', {}, itemName(tile.item)), h('p', {}, t('wish.line', { thing: wishThing(item) })), h('p', { class: 'note' }, t('wish.hint')))),
     h('div', { class: 'wish-actions' }, ...wishPlaceButton(item),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'wish:skip', onclick: () => {
         if (!skipTownWish()) return;
         commit();
         $('#personalizeCity').focus({ preventScroll: true });   // la carte disparaît : le focus reste sous la ville
@@ -11910,7 +11917,7 @@ function renderCompanionInvite() {
     // Le compagnon accueilli, la carte disparaît : le focus passe au bouton du compagnon, de même clé.
     h('div', { class: 'wish-actions' },
       h('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-focus-key': 'companion:open', onclick: () => openCompanionChoice() }, t('companion.meet')),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'companion:later', onclick: () => {
         S.companionLater = nowTs();
         commit();
         $('#personalizeCity').focus({ preventScroll: true });   // la carte disparaît : le focus reste sous la ville

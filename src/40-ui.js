@@ -267,7 +267,11 @@ function renderCityCaption() {
   // En visite, la vue en grand décrit la ville amie.
   if (!$('#cityBig').hidden && $('#cityVisitHead').hidden) $('#cityBigCanvas').setAttribute('aria-label', text);
 }
+// La Ville se redessine aussi seule, hors de renderAll : au retour dans l'onglet et après l'écriture d'un autre onglet (checkActive), au
+// battement d'une séance menée ailleurs, et quand le rappel de sauvegarde part. Ses cartes et sa liste sont refaites : le focus parti avec
+// un de leurs boutons va à son remplaçant de même clé, sinon à la vue (keepFocus). Dans renderAll, le focus est déjà rendu ici.
 function renderVille() {
+  const before = document.activeElement, key = focusKeyOf(before);
   // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).
   liveTick();
   renderCityCaption();
@@ -318,5 +322,6 @@ function renderVille() {
     const label = isWonder(tile.item) ? t('city.listItemStage', { ...params, stage: tile.stage || 1 }) : params.level > 1 ? t('city.listItemLevel', params) : t('city.listItem', params);
     return h('li', {}, h('button', { type: 'button', 'data-focus-key': 'tile:' + tile.id, onclick: () => openBuildingSheet(tile) }, label));
   }));
+  keepFocus(before, key);
 }
 

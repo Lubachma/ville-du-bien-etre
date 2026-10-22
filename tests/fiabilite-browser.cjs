@@ -744,6 +744,59 @@ async function focusNeverLost(browser, baseURL) {
   return 'Focus : jamais perdu, au clavier';
 }
 
+// La Ville se redessine aussi en partie, hors de renderAll : au retour dans l'onglet, après l'écriture d'un autre onglet, au battement d'une
+// séance menée ailleurs (toutes les 2 s), et quand on remet à plus tard le rappel de sauvegarde. La carte de l'objectif (« Choisir »), la liste
+// des constructions, la carte du souhait et le rappel sont refaits : le focus restait sur body, pour de bon. Il revient au remplaçant de même
+// clé, sinon à la vue. Une deuxième page du même navigateur joue l'autre onglet. La maison reçoit un souhait, et trois séances amènent le rappel.
+async function villeFocusKeptOnPartialRenders(browser, baseURL) {
+  const house = { id: 'm', item: 'maison', x: 3, y: 3, at: at('2026-10-01T09:00:00Z'), paid: 1e6 };
+  const seed = town({ esprit: 30 }, [house], { createdAt: at('2026-05-04T09:00:00Z'), stats: { ok: 3, byCat: { esprit: 30 }, days: { '2026-10-16': 30 } },
+    achievements: { ...FIRST_STEP, 'premiere-pierre': at('2026-10-01T09:00:00Z') } });
+  const { context, page, errors } = await cityAt(browser, baseURL, seed, NOW);
+  const other = await context.newPage();
+  // La clé de l'élément focalisé, sinon son id ; BODY quand le focus est perdu.
+  const holder = () => page.evaluate(() => {
+    const el = document.activeElement;
+    return !el || el === document.body ? 'BODY' : el.dataset.focusKey || el.id || el.tagName;
+  });
+  // Le focus posé sur l'élément de cette clé, puis un rendu partiel : il y est encore (ou sur son remplaçant).
+  const keeps = async (key, render, label) => {
+    await page.locator(`[data-focus-key="${key}"]`).first().focus();
+    assert.equal(await holder(), key, label + ' : le focus n’a pas pu être posé');
+    await render();
+    await page.waitForTimeout(300);
+    assert.equal(await holder(), key, label);
+  };
+  // Le battement d'une séance menée dans l'autre onglet.
+  const beat = () => other.evaluate(() => localStorage.setItem('ville-bien-etre/v2:beat', JSON.stringify({ id: 'ailleurs', tab: 'autre', at: Date.now() })));
+  try {
+    await other.goto(baseURL);
+    await other.waitForFunction(() => !!window.__ville);
+    await page.waitForTimeout(300);   // ce que l'autre onglet écrit à son ouverture est passé ici
+    // Retour dans l'onglet : la page passe en arrière-plan, puis revient.
+    await keeps('goals:edit', async () => { await setVisibility(page, 'hidden'); await setVisibility(page, 'visible'); }, 'retour dans l’onglet');
+    // Une envie ajoutée dans l'autre onglet.
+    await keeps('goals:edit', async () => {
+      await other.locator('[data-tab="tirage"]').click();
+      await other.locator('#addWish [name="name"]').fill('Faire du pain');
+      await other.locator('#addWish [name="name"]').press('Enter');
+      await page.waitForFunction(() => __ville.state.wishes.some(entry => entry.name === 'Faire du pain'));
+    }, 'envie ajoutée dans un autre onglet');
+    await keeps('goals:edit', beat, 'battement d’une séance ailleurs');
+    // La liste des constructions, la carte du souhait et le rappel de sauvegarde, refaits au battement.
+    await page.locator('.city-list summary').click();
+    await keeps('tile:m', beat, 'liste des constructions');
+    await keeps('wish:skip', beat, 'carte du souhait');
+    await keeps('backup:later', beat, 'rappel de sauvegarde');
+    // « Plus tard » : le rappel disparaît, le focus va à la vue.
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#remind').isHidden(), true, 'rappel encore affiché après « Plus tard »');
+    assert.equal(await holder(), 'view-ville', '« Plus tard » du rappel de sauvegarde');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Focus : gardé quand la Ville se redessine en partie';
+}
+
 // Après une suppression, « Annuler » reste jusqu'à l'action suivante (un autre message, un autre onglet, une fenêtre qui s'ouvre, une séance
 // qui démarre), et l'annonce dit qu'on peut annuler. L'horloge de la page est simulée (sessionTown) : fastForward saute 10 s d'un coup, bien
 // au-delà des 6 s d'autrefois. Une routine de deux activités qu'on ne supprime pas donne un « Lancer » qui démarre une séance sans passer par
@@ -1208,7 +1261,7 @@ async function blankNamesReported(browser, baseURL) {
 
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost, undoLastsUntilNextAction, toastHeldByMouseAndFocus,
+  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost, villeFocusKeptOnPartialRenders, undoLastsUntilNextAction, toastHeldByMouseAndFocus,
   keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole, streakReadInFull, routineStepAnnounced, challengesNameFollowsLanguage, blankNamesReported];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];

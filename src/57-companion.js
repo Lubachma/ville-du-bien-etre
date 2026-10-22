@@ -21,7 +21,7 @@ function renderCompanionInvite() {
     // Le compagnon accueilli, la carte disparaît : le focus passe au bouton du compagnon, de même clé.
     h('div', { class: 'wish-actions' },
       h('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-focus-key': 'companion:open', onclick: () => openCompanionChoice() }, t('companion.meet')),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'companion:later', onclick: () => {
         S.companionLater = nowTs();
         commit();
         $('#personalizeCity').focus({ preventScroll: true });   // la carte disparaît : le focus reste sous la ville

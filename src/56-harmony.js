@@ -4,10 +4,11 @@
 // Le décor d'un souhait, avec sa tournure (« un banc », « des fleurs »).
 const wishThing = item => t('wish.thing.' + item);
 // De quoi exaucer le souhait : « Placer un banc · 2 M », qui lance la pose. Sans assez de pièces, le bouton est désactivé et la
-// note dit ce qu'il faut encore, sans rien de plus.
+// note dit ce qu'il faut encore, sans rien de plus. La carte est refaite à chaque rendu de la Ville : ses boutons ont une clé, pour y
+// garder le focus (keepFocus).
 function wishPlaceButton(item) {
   const price = priceOf(item), short = price > S.coins, thing = wishThing(item);
-  return [h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', disabled: short ? true : null, onclick: () => { closeSheet(); Mode.startPlace(item); } },
+  return [h('button', { class: 'btn ' + (short ? 'btn-secondary' : 'btn-primary') + ' btn-sm', type: 'button', 'data-focus-key': 'wish:place', disabled: short ? true : null, onclick: () => { closeSheet(); Mode.startPlace(item); } },
     price ? t('wish.place', { thing, price: fmt(price) }) : t('wish.placeFree', { thing })),
   short ? h('p', { class: 'note' }, t('shop.missing', { coins: fmt(price - S.coins) })) : null].filter(Boolean);
 }
@@ -28,7 +29,7 @@ function renderTownWishCard() {
     h('div', { class: 'wish-main' }, cv, h('div', { class: 'wish-text' },
       h('strong', {}, itemName(tile.item)), h('p', {}, t('wish.line', { thing: wishThing(item) })), h('p', { class: 'note' }, t('wish.hint')))),
     h('div', { class: 'wish-actions' }, ...wishPlaceButton(item),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'wish:skip', onclick: () => {
         if (!skipTownWish()) return;
         commit();
         $('#personalizeCity').focus({ preventScroll: true });   // la carte disparaît : le focus reste sous la ville

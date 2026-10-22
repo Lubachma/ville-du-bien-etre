@@ -108,9 +108,10 @@ function renderRemind() {
   rm.append(icon('shield'), h('div', { class: 'remind-main' },
     h('p', {}, h('strong', {}, t('backup.remindTitle'))),
     h('p', { class: 'note' }, at ? t('backup.remindLast', { ago: agoText(at) }) : t('backup.remindNone')),
+    // Refait à chaque rendu de la Ville : ses boutons ont une clé, pour y garder le focus (keepFocus).
     h('div', { class: 'remind-actions' },
-      h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => saveBackupFile() }, icon('download'), t('backup.save')),
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => { lsSet(LS_REMIND, Date.now() + 7 * 86400000); renderVille(); } }, t('common.later')))));
+      h('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-focus-key': 'backup:save', onclick: () => saveBackupFile() }, icon('download'), t('backup.save')),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'backup:later', onclick: () => { lsSet(LS_REMIND, Date.now() + 7 * 86400000); renderVille(); } }, t('common.later')))));
 }
 function isIOS() {
   return /iPhone|iPad|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
