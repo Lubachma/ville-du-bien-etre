@@ -634,6 +634,7 @@ DICT.fr = {
   'common.close': 'Fermer',
   'ui.confirmAgain': '{action} : touche encore pour confirmer.',
   'ui.deleted': 'Supprimé : « {name} ».',
+  'ui.deletedUndo': "Supprimé : « {name} ». Tu peux annuler avec le bouton Annuler, en bas de l'écran.",
   'header.balance': 'Ton solde',
   'header.coins': ' pièces',
   'unit.streakDays': '{n}\u00a0j',
@@ -1896,6 +1897,7 @@ DICT.en = {
   'common.close': 'Close',
   'ui.confirmAgain': '{action}: tap again to confirm.',
   'ui.deleted': 'Deleted: “{name}”.',
+  'ui.deletedUndo': 'Deleted: “{name}”. You can undo it with the Undo button at the bottom of the screen.',
   'header.balance': 'Your balance',
   'header.coins': ' coins',
   'unit.streakDays': '{n}\u00a0d',
@@ -8125,6 +8127,7 @@ function companionBounds(look, size) {
 let currentTab = 'ville';
 function go(tab, focusDestination = false) {
   const origin = document.activeElement;
+  hideToast(true);
   currentTab = tab;
   for (const v of $$('.view')) v.hidden = v.id !== 'view-' + tab;
   for (const t of $$('.tab')) { if (t.dataset.tab === tab) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); }
@@ -8177,9 +8180,13 @@ function updateInert() {
   $('#app').inert = sheetOpen || sessOpen || bigOpen;
   $('#session').inert = sheetOpen;
   $('#cityBig').inert = sheetOpen || sessOpen;
+  // Le message qui reste (« Annuler » après une suppression) ne couvre pas la séance ni la vue en grand, qui s'ouvrent sans passer par
+  // go() ni par openSheet() (le « Lancer » d'une routine, par exemple).
+  if (sessOpen || bigOpen) hideToast(true);
 }
 let sheetOnClose = null, sheetOpener = null, sheetKeepOnSync = false;
 function openSheet(title, build, opts = {}) {
+  hideToast(true);
   if ($('#sheet').hidden) sheetOpener = document.activeElement;
   // Une fenêtre qui en remplace une autre : ce que l'ancienne devait faire à sa fermeture est fait d'abord (son indicateur retiré…).
   else if (sheetOnClose) { const cb = sheetOnClose; sheetOnClose = null; cb(); }
@@ -8217,9 +8224,13 @@ function announce(msg) {
   live.textContent = '';
   setTimeout(() => { live.textContent = frTypo(msg); }, 40);
 }
-let toastTimer = 0;
+// Le message affiché : son minuteur, sa durée en ms (0 : il reste), et ce qui le retient (souris, focus ; null s'il ne peut pas l'être).
+let toastTimer = 0, toastMs = 0, toastHeld = null;
 // « spoken » : ce que les lecteurs d'écran entendent, quand il dit plus que le message affiché.
-function toast(msg, action, spoken = msg) {
+// opts.keep : aucun minuteur, le message reste jusqu'au prochain message, à go() ou à openSheet() (« Annuler » après une suppression).
+// Sinon il dure 6 s avec une action, 2,8 s sans ; un message avec action ne se ferme pas tant qu'il a le focus ou la souris, et ses 6 s
+// repartent quand les deux l'ont quitté.
+function toast(msg, action, spoken = msg, opts = {}) {
   const t = $('#toast');
   t.replaceChildren(h('span', {}, msg));
   if (action) t.append(h('button', { class: 'toast-btn', type: 'button', onclick: () => { hideToast(); action.run(); } }, action.label));
@@ -8228,10 +8239,33 @@ function toast(msg, action, spoken = msg) {
   void t.offsetWidth;
   t.classList.add('show');
   announce(spoken);
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(hideToast, action ? 6000 : 2800);
+  toastMs = opts.keep ? 0 : action ? 6000 : 2800;
+  toastHeld = action && !opts.keep ? { mouse: false, focus: false } : null;
+  armToast();
 }
-function hideToast() { $('#toast').hidden = true; }
+function armToast() {
+  clearTimeout(toastTimer);
+  if (toastMs) toastTimer = setTimeout(hideToast, toastMs);
+}
+// La souris ou le focus arrive sur le message (on) ou le quitte : le minuteur s'arrête tant que l'un des deux y est, puis repart de zéro.
+function holdToast(by, on) {
+  if (!toastHeld || toastHeld[by] === on) return;
+  toastHeld[by] = on;
+  clearTimeout(toastTimer);
+  if (!toastHeld.mouse && !toastHeld.focus) armToast();
+}
+$('#toast').addEventListener('mouseenter', () => holdToast('mouse', true));
+$('#toast').addEventListener('mouseleave', () => holdToast('mouse', false));
+$('#toast').addEventListener('focusin', () => holdToast('focus', true));
+$('#toast').addEventListener('focusout', () => holdToast('focus', false));
+// keptOnly : go(), openSheet() et l'ouverture d'une séance ne ferment que le message qui reste ; les autres gardent leur minuteur (« Un
+// nouveau jour commence », écrit juste avant que la fiche du visiteur ne se rouvre, doit encore se voir).
+function hideToast(keptOnly = false) {
+  if (keptOnly && toastMs) return;
+  clearTimeout(toastTimer);
+  toastHeld = null;
+  $('#toast').hidden = true;
+}
 function bump() { const c = $('#balanceChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
 // Les libellés peuvent être des fonctions : un bouton créé au démarrage suit alors la langue affichée.
 function twoStep(btn, label, confirmLabel, action) {
@@ -8263,13 +8297,15 @@ function removeWithUndo(key, id) {
   const [item] = S[key].splice(idx, 1);
   commit();
   if (!focusByKey(near && del && del + ':' + near.id, { scroll: true }) && !layerOpen()) focusViewHeading();
-  toast(t('ui.deleted', { name: displayName(item.name) }), { label: t('common.undo'), run: () => {
+  // Le message reste jusqu'à l'action suivante, et l'annonce dit qu'on peut annuler.
+  const name = displayName(item.name);
+  toast(t('ui.deleted', { name }), { label: t('common.undo'), run: () => {
     if (S[key].some(x => x.id === item.id)) return;
     S[key].splice(Math.min(idx, S[key].length), 0, item);
     commit();
     // Revenu, il reprend le focus sur son bouton de suppression.
     if (del) focusByKey(del + ':' + item.id, { scroll: true });
-  } });
+  } }, t('ui.deletedUndo', { name }), { keep: true });
 }
 
 /* =========================================================================

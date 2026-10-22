@@ -114,6 +114,7 @@ DICT.en = {
   'common.close': 'Close',
   'ui.confirmAgain': '{action}: tap again to confirm.',
   'ui.deleted': 'Deleted: “{name}”.',
+  'ui.deletedUndo': 'Deleted: “{name}”. You can undo it with the Undo button at the bottom of the screen.',
   'header.balance': 'Your balance',
   'header.coins': ' coins',
   'unit.streakDays': '{n}\u00a0d',

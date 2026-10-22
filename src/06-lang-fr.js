@@ -114,6 +114,7 @@ DICT.fr = {
   'common.close': 'Fermer',
   'ui.confirmAgain': '{action} : touche encore pour confirmer.',
   'ui.deleted': 'Supprimé : « {name} ».',
+  'ui.deletedUndo': "Supprimé : « {name} ». Tu peux annuler avec le bouton Annuler, en bas de l'écran.",
   'header.balance': 'Ton solde',
   'header.coins': ' pièces',
   'unit.streakDays': '{n}\u00a0j',

@@ -744,9 +744,133 @@ async function focusNeverLost(browser, baseURL) {
   return 'Focus : jamais perdu, au clavier';
 }
 
+// Après une suppression, « Annuler » reste jusqu'à l'action suivante (un autre message, un autre onglet, une fenêtre qui s'ouvre, une séance
+// qui démarre), et l'annonce dit qu'on peut annuler. L'horloge de la page est simulée (sessionTown) : fastForward saute 10 s d'un coup, bien
+// au-delà des 6 s d'autrefois. Une routine de deux activités qu'on ne supprime pas donne un « Lancer » qui démarre une séance sans passer par
+// un onglet ni par une fenêtre.
+async function undoLastsUntilNextAction(browser, baseURL) {
+  const { context, page, errors } = await sessionTown(browser);
+  await page.addInitScript(() => {
+    const key = 'ville-bien-etre/v2', saved = JSON.parse(localStorage.getItem(key));
+    saved.routines = [{ id: 'r1', name: 'Matin', activityIds: ['a-esprit', 'a-corps'] }];
+    localStorage.setItem(key, JSON.stringify(saved));
+  });
+  const message = page.locator('#toast'), live = page.locator('#live');
+  const ids = () => page.evaluate(() => __ville.state.activities.map(a => a.id));
+  const remove = name => page.getByRole('button', { name: 'Supprimer ' + name, exact: true }).click();
+  try {
+    await page.goto(baseURL);
+    await page.waitForFunction(() => !!window.__ville);
+    await page.locator('[data-tab="activites"]').click();
+    await page.locator('#editActs').click();
+    const all = await ids();
+    // Supprimée, puis 10 s plus tard : le message est encore là, et l'annonce dit qu'on peut annuler.
+    await remove('Pratique crea');
+    await page.clock.fastForward(10000);
+    assert.equal(await message.isVisible(), true, 'suppression : le message est caché après 10 s');
+    assert.match(await live.textContent(), /Tu peux annuler avec le bouton Annuler, en bas de l.écran/);
+    // « Annuler » : l'activité revient, à sa place.
+    await message.getByRole('button', { name: 'Annuler', exact: true }).click();
+    assert.deepEqual(await ids(), all, 'activité non revenue à sa place');
+    assert.equal(await message.isHidden(), true, 'message encore là après « Annuler »');
+    // Supprimée de nouveau, puis un autre onglet : le message se ferme.
+    await remove('Pratique crea');
+    assert.equal(await message.isVisible(), true, 'deuxième suppression : pas de message');
+    await page.locator('[data-tab="journal"]').click();
+    assert.equal(await message.isHidden(), true, 'message encore là après un changement d’onglet');
+    // Une fenêtre qui s'ouvre le ferme aussi.
+    await page.locator('[data-tab="activites"]').click();
+    await remove('Pratique foyer');
+    assert.equal(await message.isVisible(), true, 'troisième suppression : pas de message');
+    await page.locator('#settingsBtn').click();
+    assert.equal(await message.isHidden(), true, 'message encore là après l’ouverture d’une fenêtre');
+    await page.locator('#sheetClose').click();
+    // Un autre message le remplace ; court, il se ferme seul : rien ne reste « gardé » de la suppression. Un onglet ou une fenêtre qui s'ouvre
+    // ne ferme que le message gardé : celui-ci garde son minuteur (comme la fiche du visiteur qui se rouvre juste après « Un nouveau jour commence »).
+    await remove('Pratique calme');
+    await page.locator('#actName').fill('Lecture');
+    await page.locator('#actName').press('Enter');
+    await page.waitForFunction(() => /Activité ajoutée/.test(document.querySelector('#toast').textContent));
+    assert.equal(await message.getByRole('button').count(), 0, 'le message court garde le bouton de la suppression');
+    await page.evaluate(() => { document.querySelector('[data-tab="journal"]').click(); document.querySelector('#settingsBtn').click(); });
+    assert.equal(await message.isVisible(), true, 'message court fermé par un onglet ou une fenêtre qui s’ouvre');
+    await page.locator('#sheetClose').click();
+    await page.clock.fastForward(3000);
+    assert.equal(await message.isHidden(), true, 'message court encore là après 3 s');
+    await page.locator('[data-tab="activites"]').click();
+    // Une séance qui démarre (« Lancer » de la routine, au clavier) : le message ne reste pas sur son écran.
+    await remove('Lecture');
+    assert.equal(await message.isVisible(), true, 'quatrième suppression : pas de message');
+    await page.locator('#routinesCard').getByRole('button', { name: 'Lancer', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await page.locator('#session').waitFor();
+    assert.equal(await message.isHidden(), true, 'message resté sur l’écran de séance');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  // En anglais, la même annonce.
+  {
+    const en = await sessionTown(browser, { lang: 'en' });
+    try {
+      await en.page.goto(baseURL);
+      await en.page.waitForFunction(() => !!window.__ville);
+      await en.page.locator('[data-tab="activites"]').click();
+      await en.page.locator('#editActs').click();
+      await en.page.getByRole('button', { name: 'Delete Pratique crea', exact: true }).click();
+      await en.page.clock.fastForward(10000);
+      assert.equal(await en.page.locator('#toast').isVisible(), true, 'en anglais : le message est caché après 10 s');
+      assert.match(await en.page.locator('#live').textContent(), /You can undo it with the Undo button at the bottom of the screen\./);
+      assert.deepEqual(en.errors, []);
+    } finally { await en.context.close(); }
+  }
+  return "Annuler : le temps qu'il faut";
+}
+
+// Un message avec bouton (ici « Ouvrir le carnet », au démarrage d'une ville d'avant la mise à jour) garde ses 6 s, mais ni la souris ni le
+// focus ne le ferment : tant que l'un des deux y est, rien ne le ferme, et il repart pour 6 s quand ils l'ont quitté.
+async function toastHeldByMouseAndFocus(browser, baseURL) {
+  const open = async () => {
+    const opened = await sessionTown(browser);
+    await opened.page.goto(baseURL);
+    await opened.page.waitForFunction(() => !!window.__ville);
+    await opened.page.locator('#toast .toast-btn').waitFor();
+    return opened;
+  };
+  // Le message est-il encore là après ces ms, sautées d'un coup ?
+  const stillShown = async (page, ms) => { await page.clock.fastForward(ms); return page.locator('#toast').isVisible(); };
+  // La souris seule : sur le message 10 s, puis ailleurs.
+  {
+    const { context, page, errors } = await open();
+    try {
+      await page.locator('#toast').hover();
+      assert.equal(await stillShown(page, 10000), true, 'souris sur le message : fermé après 10 s');
+      await page.mouse.move(0, 0);
+      assert.equal(await stillShown(page, 3000), true, 'souris partie : fermé avant 6 s');
+      assert.equal(await stillShown(page, 4000), false, 'souris partie : encore là après 7 s');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  // Le focus sur le bouton : la souris passe et repart, le focus le retient encore ; il part, et les 6 s repartent.
+  {
+    const { context, page, errors } = await open();
+    try {
+      const button = page.locator('#toast .toast-btn');
+      await button.focus();
+      assert.equal(await stillShown(page, 10000), true, 'focus sur le bouton : fermé après 10 s');
+      await page.locator('#toast').hover();
+      await page.mouse.move(0, 0);
+      assert.equal(await stillShown(page, 10000), true, 'souris partie, focus resté : fermé');
+      await button.blur();
+      assert.equal(await stillShown(page, 3000), true, 'focus parti : fermé avant 6 s');
+      assert.equal(await stillShown(page, 4000), false, 'focus parti : encore là après 7 s');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Message avec bouton : ni la souris ni le focus ne le ferment';
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost];
+  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost, undoLastsUntilNextAction, toastHeldByMouseAndFocus];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
