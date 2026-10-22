@@ -99,9 +99,9 @@ test('noms : invisibles retirés, coupure entière', () => {
   assert.equal(a.cleanName('\u{3164}', 40), '');
   assert.equal(a.cleanName('\u{2800}\u{2800}', 40), '');
   assert.equal(a.cleanName('\u{ad}', 40), '');
-  // Une marque de direction arabe, un séparateur de ligne (retiré, pas remplacé par une espace), une étiquette invisible.
+  // Une marque de direction arabe, un séparateur de ligne (une espace, comme tout blanc : les mots ne se collent pas), une étiquette invisible.
   assert.equal(a.cleanName('Jardin\u{61c}', 40), 'Jardin');
-  assert.equal(a.cleanName('a\u{2028}b', 40), 'ab');
+  assert.equal(a.cleanName('a\u{2028}b', 40), 'a b');
   assert.equal(a.cleanName('Ville \u{E0041}🌳', 40), 'Ville 🌳');
   // 45 émojis coupés à 40 points de code : aucune moitié de paire.
   const cut = a.cleanName('😀'.repeat(45), 40);
@@ -118,6 +118,12 @@ test('noms : tous les invisibles, les blancs en série, les liants d’émojis, 
     assert.equal(a.cleanName(hidden, 40), '', JSON.stringify(hidden));
   }
   for (const other of [undefined, null, 42, {}, ['Léa']]) assert.equal(a.cleanName(other, 40), '', String(other));
+  // Tout blanc devient une espace avant les retraits : une tabulation, un retour à la ligne (CR, LF, NEL), un séparateur de paragraphe
+  // ne collent pas les mots. U+FEFF, une espace de largeur nulle (caractère de format), est retiré sans rien laisser.
+  assert.equal(a.cleanName('Les\tJardins', 40), 'Les Jardins');
+  assert.equal(a.cleanName('a\nb', 40), 'a b');
+  assert.equal(a.cleanName('Les\r\nJardins\u{85}du\u{2029}lac\u{b}\u{c}bleu', 40), 'Les Jardins du lac bleu');
+  assert.equal(a.cleanName('Le\u{feff}jardin', 40), 'Lejardin');
   // Les blancs en série deviennent une espace, sans blanc au début ni à la fin ; les retraits se font avant.
   assert.equal(a.cleanName('  Le   jardin \u{a0} calme\u{3000}', 40), 'Le jardin calme');
   assert.equal(a.cleanName('Le \u{200b} jardin', 40), 'Le jardin');
@@ -181,6 +187,8 @@ test('noms : un état enregistré ou importé garde des noms propres (ville, car
   assert.equal(personal(' Le jardin '), 'Le jardin');
   assert.equal(personal('\u{3164}'), '');
   assert.equal(personal('Lac\u{2028} \u{200b}Bleu'), 'Lac Bleu');
+  // Un nom enregistré avec une tabulation ou un retour à la ligne (avant ce nettoyage) garde ses mots séparés à la lecture.
+  assert.equal(personal('Les\tJardins\ndu lac'), 'Les Jardins du lac');
   const long = personal('a' + '😀'.repeat(45));
   assert.equal(Array.from(long).length, 40);
   assert.doesNotMatch(long, HALF_PAIR);
@@ -188,8 +196,8 @@ test('noms : un état enregistré ou importé garde des noms propres (ville, car
   assert.equal(personal(12), '');
   // Une carte postale gardée avant ce nettoyage se nettoie aussi à la lecture.
   const card = name => ({ code: 'AAAAAAAAAAAA', name, size: 7, count: 3, at });
-  const cards = a.normalize({ postcards: { '0123456789ab': card('\u{3164}'), fedcba987654: card('Jardin\u{61c} d\u{2028}Éli'), '00112233aabb': card('Léa') } }).postcards;
-  assert.deepEqual([cards['0123456789ab'].name, cards.fedcba987654.name, cards['00112233aabb'].name], ['', 'Jardin dÉli', 'Léa']);
+  const cards = a.normalize({ postcards: { '0123456789ab': card('\u{3164}'), fedcba987654: card('Jardin\u{61c}\u{2028}d’Éli'), '00112233aabb': card('Léa') } }).postcards;
+  assert.deepEqual([cards['0123456789ab'].name, cards.fedcba987654.name, cards['00112233aabb'].name], ['', 'Jardin d’Éli', 'Léa']);
 });
 
 test('sources : aucun caractère invisible ou de direction écrit tel quel (ils s’écrivent \\u…)', () => {

@@ -53,9 +53,11 @@ test('compagnon : un nom sans rien de visible donne la suggestion de l’animal'
     a.editCompanion('ourson', hidden);
     assert.deepEqual([a.state.companion.name, a.companionName()], ['', 'Caramel'], JSON.stringify(hidden));
   }
-  // Les invisibles à l'intérieur d'un nom s'en vont, les blancs en série n'en font qu'un, un émoji reste entier.
+  // Les invisibles à l'intérieur d'un nom s'en vont, les blancs en série (un séparateur de ligne en est un) n'en font qu'un, un émoji
+  // reste entier.
   assert.equal(known(pal('lapin', { name: 'Lu\u{200b}ne\u{2800}' })).name, 'Lune');
-  assert.equal(known(pal('lapin', { name: ' Petit   Lu\u{2028}ne ' })).name, 'Petit Lune');
+  assert.equal(known(pal('lapin', { name: ' Petit \u{2028}  Lune ' })).name, 'Petit Lune');
+  assert.equal(known(pal('lapin', { name: 'Petit\tLune' })).name, 'Petit Lune');
   assert.equal(known(pal('lapin', { name: 'Lune 🌙' })).name, 'Lune 🌙');
   assert.equal(known(pal('lapin', { name: 'Lune \u{2764}\u{FE0F}' })).name, 'Lune \u{2764}\u{FE0F}');
   // Vingt points de code au plus : 20 émojis (40 unités) tiennent, un 21e fait revenir la suggestion.

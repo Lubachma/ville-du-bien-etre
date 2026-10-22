@@ -343,6 +343,9 @@ const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 //   (U+200C, U+200D) et les sélecteurs de présentation des émojis (U+FE0E en texte, U+FE0F en couleur) : le clavier des émojis écrit
 //   U+FE0F après un cœur ou un soleil, et sans lui l'émoji perd sa couleur, un drapeau arc-en-ciel se défait. Seuls, ils ne font pas
 //   un nom (aucune lettre, ni chiffre, ni symbole, ni ponctuation).
+// - Tout blanc (Unicode White_Space : espaces, tabulation, retours à la ligne CR, LF et NEL, séparateurs de ligne et de paragraphe)
+//   devient d'abord une espace : retiré avec les caractères de contrôle, il collerait les mots (« Les\tJardins »). U+FEFF n'en est pas
+//   un : c'est un caractère de format, de largeur nulle, retiré sans rien laisser.
 // - Les blancs en série n'en font plus qu'une espace, sans blanc au début ni à la fin.
 // - Le nom est coupé à `max` points de code : jamais au milieu d'un caractère, un émoji simple compris (un émoji composé peut perdre sa fin).
 // - Sans lettre, chiffre, symbole ni ponctuation, rien de visible ne reste : le nom compte comme vide ('').
@@ -351,7 +354,7 @@ const NAME_VISIBLE = /[\p{L}\p{N}\p{S}\p{P}]/u;
 const NAME_KEPT = new Set(['\u{200c}', '\u{200d}', '\u{fe0e}', '\u{fe0f}']);
 function cleanName(raw, max) {
   if (typeof raw !== 'string') return '';
-  const text = raw.replace(NAME_HIDDEN, ch => (NAME_KEPT.has(ch) ? ch : '')).replace(/\s+/g, ' ').trim();
+  const text = raw.replace(/\p{White_Space}/gu, ' ').replace(NAME_HIDDEN, ch => (NAME_KEPT.has(ch) ? ch : '')).replace(/\s+/g, ' ').trim();
   const name = Array.from(text).slice(0, max).join('').trim();
   return NAME_VISIBLE.test(name) ? name : '';
 }
