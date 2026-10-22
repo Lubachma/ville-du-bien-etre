@@ -11,15 +11,25 @@ function setReminderTime(value) {
   if (!isClockTime(value)) return;
   try { localStorage.setItem(LS_REMINDER, value); } catch (e) { /* pas de stockage */ }
 }
-// Prochain passage de l'heure « time » à partir de « now », en heure locale.
+// Prochain passage de l'heure « time » (HH:MM) à partir de « now » : aujourd'hui, en heure locale, si elle est encore à venir, sinon demain.
+// Le résultat est un jour et une heure écrits (« AAAAMMJJ », « HHMM »), jamais un instant Date : le jour du passage à l'heure d'été,
+// 02:30 n'existe pas à Zurich, et un Date l'aurait décalé à 03:30 pour toujours.
 function nextReminder(time, now) {
-  const [hh, mm] = time.split(':').map(Number);
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
-  if (start <= now) start.setDate(start.getDate() + 1);
-  return start;
+  const hhmm = time.replace(':', ''), today = now.getFullYear() + pad2(now.getMonth() + 1) + pad2(now.getDate());
+  return { day: hhmm > pad2(now.getHours()) + pad2(now.getMinutes()) ? today : icsAddDays(today, 1), hhmm };
+}
+// L'heure plus « n » minutes, sur l'horloge écrite : après 23:59, c'est le jour suivant.
+function addMinutes({ day, hhmm }, n) {
+  const [h, m] = hhmm.match(/../g).map(Number), total = h * 60 + m + n, days = Math.floor(total / 1440), minutes = total - days * 1440;
+  return { day: days ? icsAddDays(day, days) : day, hhmm: pad2(Math.floor(minutes / 60)) + pad2(minutes % 60) };
+}
+// Jour « AAAAMMJJ » décalé de « n » jours. Le calcul porte sur la date seule, en UTC : un jour local ne dure pas toujours 24 heures.
+function icsAddDays(day, n) {
+  const [y, m, d] = day.match(/^(\d{4})(\d\d)(\d\d)$/).slice(1).map(Number), date = new Date(Date.UTC(y, m - 1, d + n));
+  return date.getUTCFullYear() + pad2(date.getUTCMonth() + 1) + pad2(date.getUTCDate());
 }
 // Heure « flottante » : l'agenda garde la même heure locale, quel que soit le fuseau.
-function icsLocal(d) { return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + pad2(d.getMinutes()) + '00'; }
+function icsLocal({ day, hhmm }) { return day + 'T' + hhmm + '00'; }
 function icsUtc(d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
 // RFC 5545 : textes échappés, lignes repliées à 75 octets (retour à la ligne puis une espace).
 function icsText(text) { return String(text).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
@@ -43,7 +53,7 @@ function buildReminderIcs(time, now, device = 'appareil') {
     'END:VEVENT', 'END:VCALENDAR'].map(icsFold).join('\r\n') + '\r\n';
 }
 function googleCalendarUrl(time, now) {
-  const start = nextReminder(time, now), end = new Date(start.getTime() + REMINDER_MINUTES * 60000);
+  const start = nextReminder(time, now), end = addMinutes(start, REMINDER_MINUTES);
   return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
     + '&text=' + encodeURIComponent(t('reminder.summary'))
     + '&details=' + encodeURIComponent(t('reminder.description'))
