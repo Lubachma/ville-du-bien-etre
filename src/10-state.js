@@ -1165,6 +1165,8 @@ function afterReplace({ light } = {}) {
       Selection.id = null;
       if (!$('#sheet').hidden && !sheetKeepOnSync) closeSheet();
     }
+    // Une autre ville : le message « Annuler » de l'ancienne se ferme (voir removeWithUndo).
+    if (typeof hideToastOfOtherCity === 'function') hideToastOfOtherCity();
     // Langue changée sur un autre écran : celui-ci suit.
     if (typeof refreshLang === 'function' && resolveLang(S.settings.lang) !== LANG) refreshLang();
     City.relayout();

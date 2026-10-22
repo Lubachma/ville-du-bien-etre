@@ -920,6 +920,43 @@ async function undoLastsUntilNextAction(browser, baseURL) {
   return "Annuler : le temps qu'il faut";
 }
 
+// « Annuler » parle de la ville d'où l'élément a été supprimé. Une autre ville adoptée entre-temps (« Tout recommencer » dans un autre onglet,
+// ici une deuxième page du même navigateur) ferme le message, et son bouton, même touché quand même, ne ramène rien de l'ancienne ville dans
+// la nouvelle.
+async function undoStaysInItsCity(browser, baseURL) {
+  const activities = ['esprit', 'corps', 'crea'].map(cat => ({ id: 'a-' + cat, name: 'Pratique ' + cat, cat, min: 5, mode: 'free' }));
+  const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }, [], { createdAt: at('2026-05-04T09:00:00Z'), activities, achievements: FIRST_STEP }), NOW);
+  const other = await context.newPage();
+  const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('ville-bien-etre/v2')));
+  try {
+    await page.locator('[data-tab="activites"]').click();
+    await page.locator('#editActs').click();
+    await page.getByRole('button', { name: 'Supprimer Pratique crea', exact: true }).click();
+    assert.equal(await page.locator('#toast').isVisible(), true, 'pas de message après la suppression');
+    // « Tout recommencer » dans l'autre onglet : une ville neuve, née à une autre date.
+    await other.goto(baseURL);
+    await other.waitForFunction(() => !!window.__ville);
+    await other.locator('#settingsBtn').click();
+    await other.getByRole('button', { name: 'Tout recommencer', exact: true }).click();
+    await other.getByRole('button', { name: 'Confirmer : tout effacer', exact: true }).click();
+    const fresh = await other.evaluate(() => __ville.state.createdAt);
+    await page.waitForFunction(createdAt => __ville.state.createdAt === createdAt, fresh);
+    await page.waitForTimeout(300);
+    assert.equal(await page.locator('#toast').isHidden(), true, 'le message « Annuler » de l’ancienne ville reste affiché');
+    // Le bouton du message caché, touché tout de même : rien ne revient.
+    const before = await stored();
+    await page.evaluate(() => document.querySelector('#toast .toast-btn').click());
+    await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(() => __ville.state.activities.some(entry => entry.id === 'a-crea')), false, 'l’activité de l’ancienne ville est revenue');
+    const after = await stored();
+    assert.equal(after.createdAt, fresh);
+    assert.equal(after.activities.some(entry => entry.id === 'a-crea'), false, 'l’activité de l’ancienne ville est enregistrée dans la nouvelle');
+    assert.equal(after.revision, before.revision, 'quelque chose a été enregistré');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Annuler : rien ne revient dans une autre ville';
+}
+
 // Un message avec bouton (ici « Ouvrir le carnet », au démarrage d'une ville d'avant la mise à jour) garde ses 6 s, mais ni la souris ni le
 // focus ne le ferment : tant que l'un des deux y est, rien ne le ferme, et il repart pour 6 s quand ils l'ont quitté.
 async function toastHeldByMouseAndFocus(browser, baseURL) {
@@ -1303,7 +1340,7 @@ async function blankNamesReported(browser, baseURL) {
 
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn, imagesOwnCityUnderSky, recapFiguresReadable, zoomDrawsOncePerFrame, focusNeverLost, villeFocusKeptOnPartialRenders, undoLastsUntilNextAction, toastHeldByMouseAndFocus,
+  soundResumedOnReturn, imagesOwnCityUnderSky, recapFiguresReadable, zoomDrawsOncePerFrame, focusNeverLost, villeFocusKeptOnPartialRenders, undoLastsUntilNextAction, undoStaysInItsCity, toastHeldByMouseAndFocus,
   keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole, streakReadInFull, routineStepAnnounced, challengesNameFollowsLanguage, blankNamesReported];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];

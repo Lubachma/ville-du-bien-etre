@@ -101,8 +101,9 @@ function announce(msg) {
   live.textContent = '';
   setTimeout(() => { live.textContent = frTypo(msg); }, 40);
 }
-// Le message affiché : son minuteur, sa durée en ms (0 : il reste), et ce qui le retient (souris, focus ; null s'il ne peut pas l'être).
-let toastTimer = 0, toastMs = 0, toastHeld = null;
+// Le message affiché : son minuteur, sa durée en ms (0 : il reste), ce qui le retient (souris, focus ; null s'il ne peut pas l'être), et la
+// ville où le message qui reste est apparu (sa date de création ; 0 pour un autre message).
+let toastTimer = 0, toastMs = 0, toastHeld = null, toastCity = 0;
 // « spoken » : ce que les lecteurs d'écran entendent, quand il dit plus que le message affiché.
 // opts.keep : aucun minuteur, le message reste jusqu'au prochain message ; go(), openSheet() et updateInert() (la séance ou la vue en grand qui
 // s'ouvre) le ferment (« Annuler » après une suppression), et la page lui laisse sa place (reserveToastRoom).
@@ -119,6 +120,7 @@ function toast(msg, action, spoken = msg, opts = {}) {
   announce(spoken);
   toastMs = opts.keep ? 0 : action ? 6000 : 2800;
   toastHeld = action && !opts.keep ? { mouse: false, focus: false } : null;
+  toastCity = opts.keep ? S.createdAt : 0;
   armToast();
   document.body.classList.toggle('toast-kept', !!opts.keep);
   if (opts.keep) reserveToastRoom();
@@ -155,9 +157,13 @@ function hideToast(keptOnly = false) {
   if (keptOnly && toastMs) return;
   clearTimeout(toastTimer);
   toastHeld = null;
+  toastCity = 0;
   $('#toast').hidden = true;
   document.body.classList.remove('toast-kept');
 }
+// Une autre ville adoptée (« Tout recommencer » ou une restauration faite dans un autre onglet, voir afterReplace) : le message qui reste
+// parlait de l'ancienne, il se ferme.
+function hideToastOfOtherCity() { if (toastCity && toastCity !== S.createdAt) hideToast(true); }
 function bump() { const c = $('#balanceChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
 // Les libellés peuvent être des fonctions : un bouton créé au démarrage suit alors la langue affichée.
 function twoStep(btn, label, confirmLabel, action) {
@@ -186,13 +192,14 @@ function removeWithUndo(key, id) {
   if (idx < 0) return;
   // Le voisin qui prendra le focus, noté avant la suppression : le suivant, sinon le précédent.
   const near = S[key][idx + 1] || S[key][idx - 1], del = DELETE_KEYS[key];
-  const [item] = S[key].splice(idx, 1);
+  const [item] = S[key].splice(idx, 1), city = S.createdAt;
   commit();
   // Le message reste jusqu'à l'action suivante, et l'annonce dit qu'on peut annuler. Il vient avant le focus du voisin : la page lui laisse sa
   // place d'abord, et le navigateur amène alors le voisin au-dessus de lui.
   const name = displayName(item.name);
   toast(t('ui.deleted', { name }), { label: t('common.undo'), run: () => {
-    if (S[key].some(x => x.id === item.id)) return;
+    // Rien ne revient en double, ni dans une autre ville adoptée entre-temps (« Tout recommencer » ou une restauration ailleurs).
+    if (S.createdAt !== city || S[key].some(x => x.id === item.id)) return;
     S[key].splice(Math.min(idx, S[key].length), 0, item);
     commit();
     // Revenu, il reprend le focus sur son bouton de suppression.
