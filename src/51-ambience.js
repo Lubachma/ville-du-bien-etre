@@ -183,7 +183,10 @@ function renderAmbienceButton() {
   const btn = $('#ambienceBtn');
   if (btn) btn.lastChild.textContent = frTypo(t('ambience.button', { name: t('ambience.' + S.settings.ambience) }));
 }
-// Petite fenêtre de choix pendant la séance : le choix s'entend aussitôt et devient celui des prochaines séances.
+// La fenêtre « Ambiance » est ouverte : posé à son ouverture, retiré à sa fermeture (onClose).
+let ambienceSheetOpen = false;
+// Petite fenêtre de choix pendant la séance : le choix s'entend aussitôt et devient celui des prochaines séances. Hors séance, il est seulement
+// enregistré : seul l'aperçu des réglages fait entendre une ambiance là, et il s'arrête de lui-même.
 function openAmbienceSheet() {
   openSheet(t('ambience.title'), body => {
     const chips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': t('ambience.title') });
@@ -191,10 +194,17 @@ function openAmbienceSheet() {
       S.settings.ambience = kind;
       commit({ silent: true });
       $$('.chip', chips).forEach((b, i) => b.setAttribute('aria-checked', String(AMBIENCES[i] === kind)));
-      Chime.unlock(true);   // dans le geste : le son peut s'ouvrir
-      if (kind === 'none') Ambience.stop(); else Ambience.switch(kind);
+      if (typeof run !== 'undefined' && run) {
+        Chime.unlock(true);   // dans le geste : le son peut s'ouvrir
+        if (kind === 'none') Ambience.stop(); else Ambience.switch(kind);
+      }
       renderAmbienceButton();
     } }, t('ambience.' + kind)));
     body.append(chips, h('p', { class: 'note' }, t('ambience.note')));
-  });
+  }, { onClose: () => { ambienceSheetOpen = false; } });
+  ambienceSheetOpen = true;
+}
+// Ferme la fenêtre « Ambiance » si c'est elle qui est ouverte : la séance est finie, et ses choix n'ont plus lieu d'être.
+function closeAmbienceSheet() {
+  if (ambienceSheetOpen) closeSheet();
 }

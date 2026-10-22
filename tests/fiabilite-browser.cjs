@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const { town } = require('./content-browser.cjs');
 const { cityAt } = require('./ambient-browser.cjs');
 const { sessionTown, startSession, setVisibility, leaCode } = require('./rituals-browser.cjs');
+const { sessionPage, sources } = require('./harmony-browser.cjs');
 
 // Étape 7, la fiabilité : chaque scénario est une fonction à part, qu'on peut lancer seule. Les tâches suivantes y ajoutent les leurs.
 const NOW = '2026-10-21T10:00:00Z';
@@ -398,8 +399,54 @@ async function weekReviewWithFullJournal(browser, baseURL) {
   return 'Bilan de la semaine : un journal plein ne montre pas de chiffres faux';
 }
 
+// La fenêtre « Ambiance », ouverte pendant la séance, se ferme avec elle (réussie ou interrompue) : l'écran de fin répond, et plus rien ne joue.
+// Hors séance, la même fenêtre (rouverte par le crochet de test) enregistre seulement le choix : une boucle lancée là, rien ne l'arrêterait.
+// sessionPage (harmony-browser.cjs) simule l'horloge et compte les sources sonores de plus d'une seconde, c'est-à-dire les ambiances.
+async function ambienceClosedAtEnd(browser, baseURL) {
+  const { context, page, errors } = await sessionPage(browser, baseURL, { ambience: 'rain' });
+  // La séance tourne avec son ambiance, et la fenêtre « Ambiance » est ouverte par-dessus.
+  const withSheetOpen = async begin => {
+    const { started } = await sources(page);
+    await begin();
+    await page.waitForFunction(count => window.__sources.started > count, started);
+    await page.locator('#ambienceBtn').click();
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Ambiance');
+  };
+  // La séance a pris fin : la fenêtre est fermée, l'écran de fin répond (« Retour à la ville »), aucune ambiance ne joue plus.
+  const endedClosed = async (title, label) => {
+    await result(page).waitFor();
+    assert.equal(await result(page).locator('.res-title').innerText(), title);
+    assert.equal(await page.locator('#sheet').isHidden(), true, label + " : la fenêtre « Ambiance » est restée ouverte sur l'écran de fin");
+    const audio = await sources(page);
+    assert.equal(audio.stopped, audio.started, label + ' : une ambiance joue encore ' + JSON.stringify(audio));
+    await backToCity(page);
+  };
+  try {
+    await withSheetOpen(() => startSession(page, 'Pratique calme', 5));
+    await page.clock.fastForward(5 * 60000 + 1000);
+    await endedClosed('Session réussie', 'séance réussie');
+    // Hors séance : « Vagues » est enregistré et le bouton le dit, mais rien ne démarre, même une fois le son rouvert.
+    const before = await sources(page);
+    await page.evaluate(() => __ville.ambience.open());
+    await page.locator('#sheetBody').getByRole('radio', { name: 'Vagues', exact: true }).click();
+    assert.equal(await page.evaluate(() => __ville.state.settings.ambience), 'waves');
+    assert.match((await page.locator('#ambienceBtn').textContent()).trim(), /^Ambiance\s:\sVagues$/);
+    await page.waitForTimeout(300);
+    assert.equal(await page.evaluate(() => __ville.ambience.kind()), 'none', 'une ambiance joue hors séance');
+    assert.deepEqual(await sources(page), before, 'une boucle a démarré hors séance');
+    await page.locator('#sheetClose').click();
+    // Une séance interrompue en Concentration ferme la fenêtre de la même façon, avec l'ambiance choisie entre-temps.
+    await withSheetOpen(() => startFocus(page, 'Pratique calme', 5));
+    await page.clock.fastForward('05:02');
+    await endedClosed('Session interrompue', 'séance interrompue');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Ambiance : fermée à la fin, aucun son hors séance';
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
-  lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal];
+  lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

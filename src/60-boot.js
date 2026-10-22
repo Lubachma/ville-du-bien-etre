@@ -148,7 +148,7 @@ function boot(hotData) {
     rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
     harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
-    ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume) },
+    ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume), open: () => openAmbienceSheet() },
     companion: { state: () => S.companion, name: () => companionName(), level: () => companionLevel(), word: day => companionWord(day), spot: () => City.companionSpot(), box: () => City.companionBox(), session: () => sessionCompanionState(), bounds: (look, size) => companionBounds(look, size), paint: (cv, look, size, opts) => paintCompanion(cv, look, size, opts) } };
 }
 

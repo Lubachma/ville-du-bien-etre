@@ -467,8 +467,10 @@ function endRun() {
   clearTimeout(r.graceTimer);
   if (r.io) r.io.disconnect();
   releaseWake();
-  // Fin, abandon, interruption ou séance finie ailleurs : l'ambiance s'arrête aussitôt (déjà éteinte si la séance est allée au bout).
+  // Fin, abandon, interruption ou séance finie ailleurs : l'ambiance s'arrête aussitôt (déjà éteinte si la séance est allée au bout), et sa
+  // fenêtre se ferme : restée ouverte sur l'écran de fin, un choix y relancerait des boucles que rien n'arrêterait.
   if (typeof Ambience !== 'undefined') Ambience.stop();
+  if (typeof closeAmbienceSheet === 'function') closeAmbienceSheet();
   if (typeof stopSessionCompanion === 'function') { stopSessionCompanion(); stopBreathing(); }
   Chime.rest(3000);
   run = null;

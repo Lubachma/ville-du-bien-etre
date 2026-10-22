@@ -420,4 +420,4 @@ async function runHarmony(browser, baseURL) {
   return { scenarios };
 }
 
-module.exports = { runHarmony, SCENARIOS, seed, tile, NOW };
+module.exports = { runHarmony, SCENARIOS, seed, tile, NOW, sessionPage, sources };

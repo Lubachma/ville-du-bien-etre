@@ -10380,8 +10380,10 @@ function endRun() {
   clearTimeout(r.graceTimer);
   if (r.io) r.io.disconnect();
   releaseWake();
-  // Fin, abandon, interruption ou séance finie ailleurs : l'ambiance s'arrête aussitôt (déjà éteinte si la séance est allée au bout).
+  // Fin, abandon, interruption ou séance finie ailleurs : l'ambiance s'arrête aussitôt (déjà éteinte si la séance est allée au bout), et sa
+  // fenêtre se ferme : restée ouverte sur l'écran de fin, un choix y relancerait des boucles que rien n'arrêterait.
   if (typeof Ambience !== 'undefined') Ambience.stop();
+  if (typeof closeAmbienceSheet === 'function') closeAmbienceSheet();
   if (typeof stopSessionCompanion === 'function') { stopSessionCompanion(); stopBreathing(); }
   Chime.rest(3000);
   run = null;
@@ -10792,7 +10794,10 @@ function renderAmbienceButton() {
   const btn = $('#ambienceBtn');
   if (btn) btn.lastChild.textContent = frTypo(t('ambience.button', { name: t('ambience.' + S.settings.ambience) }));
 }
-// Petite fenêtre de choix pendant la séance : le choix s'entend aussitôt et devient celui des prochaines séances.
+// La fenêtre « Ambiance » est ouverte : posé à son ouverture, retiré à sa fermeture (onClose).
+let ambienceSheetOpen = false;
+// Petite fenêtre de choix pendant la séance : le choix s'entend aussitôt et devient celui des prochaines séances. Hors séance, il est seulement
+// enregistré : seul l'aperçu des réglages fait entendre une ambiance là, et il s'arrête de lui-même.
 function openAmbienceSheet() {
   openSheet(t('ambience.title'), body => {
     const chips = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': t('ambience.title') });
@@ -10800,12 +10805,19 @@ function openAmbienceSheet() {
       S.settings.ambience = kind;
       commit({ silent: true });
       $$('.chip', chips).forEach((b, i) => b.setAttribute('aria-checked', String(AMBIENCES[i] === kind)));
-      Chime.unlock(true);   // dans le geste : le son peut s'ouvrir
-      if (kind === 'none') Ambience.stop(); else Ambience.switch(kind);
+      if (typeof run !== 'undefined' && run) {
+        Chime.unlock(true);   // dans le geste : le son peut s'ouvrir
+        if (kind === 'none') Ambience.stop(); else Ambience.switch(kind);
+      }
       renderAmbienceButton();
     } }, t('ambience.' + kind)));
     body.append(chips, h('p', { class: 'note' }, t('ambience.note')));
-  });
+  }, { onClose: () => { ambienceSheetOpen = false; } });
+  ambienceSheetOpen = true;
+}
+// Ferme la fenêtre « Ambiance » si c'est elle qui est ouverte : la séance est finie, et ses choix n'ont plus lieu d'être.
+function closeAmbienceSheet() {
+  if (ambienceSheetOpen) closeSheet();
 }
 
 
@@ -11941,7 +11953,7 @@ function boot(hotData) {
     rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
     harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
-    ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume) },
+    ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume), open: () => openAmbienceSheet() },
     companion: { state: () => S.companion, name: () => companionName(), level: () => companionLevel(), word: day => companionWord(day), spot: () => City.companionSpot(), box: () => City.companionBox(), session: () => sessionCompanionState(), bounds: (look, size) => companionBounds(look, size), paint: (cv, look, size, opts) => paintCompanion(cv, look, size, opts) } };
 }
 
