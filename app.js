@@ -7004,6 +7004,39 @@ function applySky(amb, byTime) {
     sky.style.setProperty('--star-opacity', c.stars.toFixed(2));
   }
 }
+// Ciel des images (celle de la ville, celle du récapitulatif) : celui de la ville affichée. Selon l'heure, sa lumière, son
+// assombrissement par la pluie ou les nuages, et ses étoiles la nuit ; selon l'apparence (ou sans ambiance lisible), celui du thème.
+function imageSky() {
+  let amb = null;
+  if (S.settings.sky !== 'theme') {
+    try { amb = ambientAt(); } catch (e) { /* ciel du thème, comme la ville affichée */ }
+  }
+  if (amb) return skyColors(amb);
+  return { top: cssVar('--sky-top') || '#d3e8e0', bottom: cssVar('--sky-bottom') || '#f3f6ec', stars: cssVar('--night') === '1' ? 1 : 0 };
+}
+// Le ciel d'une image : un dégradé sur tout le canevas, puis les étoiles du ciel de la carte, placées sur la zone de la ville
+// (area = { x, y, w, h }) et plus ou moins visibles selon le ciel. Rend le ciel peint, pour choisir l'encre des textes posés dessus.
+const IMAGE_STARS = [[.12, .18, 1.2], [.28, .09, 1], [.47, .15, 1.4], [.63, .06, 1], [.78, .2, 1.3], [.9, .1, 1], [.08, .32, 1], [.94, .34, 1.1]];
+function paintImageSky(ctx, width, height, area) {
+  const sky = imageSky(), gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, sky.top);
+  gradient.addColorStop(1, sky.bottom);
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height);
+  if (sky.stars > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, sky.stars); ctx.fillStyle = '#ffffff';
+    for (const [x, y, r] of IMAGE_STARS) { ctx.beginPath(); ctx.arc(area.x + x * area.w, area.y + y * area.h, r * area.w / 360, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+  return sky;
+}
+// Encres d'un texte posé sur le ciel d'une image, à la hauteur k (0 en haut, 1 en bas) : l'encre du thème sombre sur un ciel sombre,
+// celle du thème clair sinon, et une encre douce qui tire vers le ciel (moins quand le ciel est entre les deux, à l'aube et au
+// crépuscule). Le ciel suit l'heure, pas le thème : chaque texte garde ainsi un contraste d'au moins 3:1, de jour comme de nuit.
+function imageInk(sky, k) {
+  const bg = mix(sky.top, sky.bottom, k), { r, g, b } = hexToRgb(bg), luma = .2126 * r + .7152 * g + .0722 * b, ink = luma < 128 ? '#e6ede7' : '#1d2721';
+  return { ink, muted: mix(ink, bg, .3 * Math.min(1, Math.abs(luma - 128) / 64)) };
+}
 
 const City = (() => {
   // Un seul canevas dessiné à la fois : la carte de la ville, ou la vue en grand tant qu'elle est ouverte.
@@ -7156,20 +7189,21 @@ const City = (() => {
   // la lit ; sa propre ville n'est jamais touchée.
   let visit = null;
   const town = () => (visit ? visit.city : S.city);
+  // Carte de la ville, pour une largeur donnée et un terrain de N cases de côté : l'île entière, avec la place au-dessus pour les
+  // éléments du fond.
+  function cardGeometry(width) {
+    const w = Math.max(240, width), tw = Math.min(76, (w - 28) / N), top = tw * 1.35 + 8;
+    return { W: w, H: Math.round(top + N * tw / 2 + tw * .45 + 14), TW: tw, ox: w / 2, oy: top };
+  }
   function layout() {
     N = town().size;
     if (big.open) { layoutBig(); return; }
     const rect = canvas.getBoundingClientRect();
-    W = Math.max(240, rect.width || canvas.parentElement.clientWidth || 360);
-    TW = Math.min(76, (W - 28) / N);
-    const top = TW * 1.35 + 8;
-    H = Math.round(top + N * TW / 2 + TW * .45 + 14);
+    ({ W, H, TW, ox, oy } = cardGeometry(rect.width || canvas.parentElement.clientWidth || 360));
     dpr = Math.min(3, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     canvas.style.height = H + 'px';
-    ox = W / 2;
-    oy = top;
     cursor.x = clamp(cursor.x, 0, N - 1);
     cursor.y = clamp(cursor.y, 0, N - 1);
   }
@@ -7617,18 +7651,22 @@ const City = (() => {
       g.poly([top, [top[0] + g.tw * .16, top[1] + g.tw * .06], [top[0], top[1] + g.tw * .13]], g.c('#efc451'));
     }
   }
+  // Image de sa propre ville, mise en page comme sa carte (à la largeur de la carte, ou 360 points si elle est cachée), sur un canevas
+  // à part d'au moins minWidth pixels de large. Jamais la ville d'une visite ni la vue en grand, quelle que soit la vue ouverte : le
+  // module est remis tel quel ensuite, et la vue courante redessinée (ses zones touchables avec elle).
   function snapshot(minWidth = 1200) {
-    const original = { width: canvas.width, height: canvas.height, dpr };
+    const saved = { canvas, ctx, W, H, dpr, TW, ox, oy, N, visit, open: big.open }, image = document.createElement('canvas');
     try {
-      dpr = Math.max(dpr, minWidth / W);
-      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+      visit = null; big.open = false; N = S.city.size;
+      ({ W, H, TW, ox, oy } = cardGeometry(small.getBoundingClientRect().width || 360));
+      dpr = Math.max(saved.dpr, minWidth / W);
+      image.width = Math.round(W * dpr); image.height = Math.round(H * dpr);
+      canvas = image; ctx = image.getContext('2d');
       draw({ clean: true });
-      const result = document.createElement('canvas');
-      result.width = canvas.width; result.height = canvas.height;
-      result.getContext('2d').drawImage(canvas, 0, 0);
-      return result;
+      return image;
     } finally {
-      dpr = original.dpr; canvas.width = original.width; canvas.height = original.height;
+      ({ canvas, ctx, W, H, dpr, TW, ox, oy, N, visit } = saved);
+      big.open = saved.open;
       draw();
     }
   }
@@ -9675,34 +9713,31 @@ function openCityPersonalization() {
       h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: exportCityImage }, icon('download'), t('city.saveImage')));
   });
 }
+// Image de sa ville, au moins 1 200 pixels de large : son nom, sa ville (jamais celle d'une visite) sous le ciel du moment, puis le
+// temps pris pour soi.
+async function cityImageCanvas() {
+  const source = typeof City.snapshot === 'function' ? City.snapshot() : $('#city');
+  const width = Math.max(1200, source.width), ratio = width / source.width, margin = Math.round(width * .05), head = Math.round(width * .12), foot = Math.round(width * .065);
+  const cityH = Math.round(source.height * ratio);
+  const out = document.createElement('canvas');
+  out.width = width; out.height = cityH + head + foot;
+  const ctx = out.getContext('2d');
+  // Le dessin de la ville est transparent : on remet son ciel, et ses étoiles la nuit.
+  const sky = paintImageSky(ctx, width, out.height, { x: 0, y: head, w: width, h: cityH });
+  const titleFont = '400 ' + Math.round(width * .036) + 'px "Young Serif", Georgia, serif';
+  const footFont = '600 ' + Math.round(width * .019) + 'px Figtree, system-ui, sans-serif';
+  if (document.fonts && document.fonts.load) await Promise.all([document.fonts.load(titleFont), document.fonts.load(footFont)]).catch(() => {});
+  ctx.fillStyle = imageInk(sky, head * .55 / out.height).ink; ctx.textBaseline = 'middle'; ctx.font = titleFont;
+  ctx.fillText(frTypo(cityName()), margin, head * .55, width - margin * 2);
+  ctx.drawImage(source, 0, head, width, cityH);
+  ctx.fillStyle = imageInk(sky, 1 - foot * .5 / out.height).muted; ctx.font = footFont;
+  ctx.fillText(frTypo(t('png.footer', { time: fmtEffort(totalEffortMinutes()) })), margin, out.height - foot * .5, width - margin * 2);
+  return out;
+}
+// « Enregistrer une image de ma ville » : par le partage de l'iPhone s'il accepte les fichiers, sinon par un téléchargement.
 async function exportCityImage() {
   try {
-    const source = typeof City.snapshot === 'function' ? City.snapshot() : $('#city');
-    const width = Math.max(1200, source.width), ratio = width / source.width, margin = Math.round(width * .05), head = Math.round(width * .12), foot = Math.round(width * .065);
-    const cityH = Math.round(source.height * ratio);
-    const out = document.createElement('canvas');
-    out.width = width; out.height = cityH + head + foot;
-    const ctx = out.getContext('2d');
-    // Le dessin de la ville est transparent : on remet le ciel de l'app (et ses étoiles la nuit).
-    const sky = ctx.createLinearGradient(0, 0, 0, out.height);
-    sky.addColorStop(0, cssVar('--sky-top') || '#d3e8e0');
-    sky.addColorStop(1, cssVar('--sky-bottom') || '#f3f6ec');
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, out.width, out.height);
-    if (cssVar('--night') === '1') {
-      ctx.fillStyle = '#ffffff';
-      for (const [x, y, r] of [[.12, .18, 1.2], [.28, .09, 1], [.47, .15, 1.4], [.63, .06, 1], [.78, .2, 1.3], [.9, .1, 1], [.08, .32, 1], [.94, .34, 1.1]]) {
-        ctx.beginPath(); ctx.arc(x * width, head + y * cityH, r * width / 360, 0, Math.PI * 2); ctx.fill();
-      }
-    }
-    const titleFont = '400 ' + Math.round(width * .036) + 'px "Young Serif", Georgia, serif';
-    const footFont = '600 ' + Math.round(width * .019) + 'px Figtree, system-ui, sans-serif';
-    if (document.fonts && document.fonts.load) await Promise.all([document.fonts.load(titleFont), document.fonts.load(footFont)]).catch(() => {});
-    ctx.fillStyle = cssVar('--ink') || '#20332a'; ctx.textBaseline = 'middle'; ctx.font = titleFont;
-    ctx.fillText(frTypo(cityName()), margin, head * .55, width - margin * 2);
-    ctx.drawImage(source, 0, head, width, cityH);
-    ctx.fillStyle = cssVar('--muted') || '#536459'; ctx.font = footFont;
-    ctx.fillText(frTypo(t('png.footer', { time: fmtEffort(totalEffortMinutes()) })), margin, out.height - foot * .5, width - margin * 2);
-    const blob = await new Promise(resolve => out.toBlob(resolve, 'image/png'));
+    const out = await cityImageCanvas(), blob = await new Promise(resolve => out.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('toBlob');
     const filename = 'ma-ville-' + today() + '.png';
     if (isIOS() && typeof File === 'function') {
@@ -11444,7 +11479,7 @@ function openRecap(kind, key) {
       h('button', { class: 'btn btn-primary', type: 'button', onclick: closeSheet }, t('common.close'))));
   }, { keep: true });   // une lecture, comme le bilan de la semaine
 }
-// Image du récapitulatif, 1080 × 1350 : la période, le nom de la ville, la ville sur son ciel, trois chiffres (temps de
+// Image du récapitulatif, 1080 × 1350 : la période, le nom de la ville, la ville sous le ciel du moment, trois chiffres (temps de
 // pratique, jours actifs, éléments posés) et le domaine favori. Jamais l'humeur.
 async function recapCanvas(r) {
   const W = 1080, H = 1350, M = 72, out = document.createElement('canvas');
@@ -11452,20 +11487,15 @@ async function recapCanvas(r) {
   const ctx = out.getContext('2d'), ink = cssVar('--ink') || '#20332a', muted = cssVar('--muted') || '#536459';
   const serif = size => '400 ' + size + 'px "Young Serif", Georgia, serif', sans = (weight, size) => weight + ' ' + size + 'px Figtree, system-ui, sans-serif';
   if (document.fonts && document.fonts.load) await Promise.all([serif(84), sans(700, 64), sans(600, 40)].map(font => document.fonts.load(font))).catch(() => {});
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, cssVar('--sky-top') || '#d3e8e0');
-  sky.addColorStop(1, cssVar('--sky-bottom') || '#f3f6ec');
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = ink; ctx.font = serif(84);
+  // La ville au milieu, dans un cadre de 936 × 620, sous son ciel : ses étoiles, la nuit, sont placées sur elle. Les textes posés
+  // sur le ciel prennent l'encre qui s'y lit, à leur hauteur.
+  const source = City.snapshot(), scale = Math.min((W - M * 2) / source.width, 620 / source.height), dw = source.width * scale, dh = source.height * scale;
+  const area = { x: (W - dw) / 2, y: 260 + (620 - dh) / 2, w: dw, h: dh }, sky = paintImageSky(ctx, W, H, area), skyInk = y => imageInk(sky, y / H);
+  ctx.fillStyle = skyInk(158).ink; ctx.font = serif(84);
   ctx.fillText(frTypo(recapTitle(r.kind, r.key)), M, 158, W - M * 2);
-  ctx.fillStyle = muted; ctx.font = sans(600, 40);
+  ctx.fillStyle = skyInk(222).muted; ctx.font = sans(600, 40);
   ctx.fillText(frTypo(cityName()), M, 222, W - M * 2);
-  // La ville au milieu, dans un cadre de 936 × 620 (une ville jamais affichée n'a pas encore de taille).
-  const source = City.snapshot();
-  if (source.width && source.height) {
-    const scale = Math.min((W - M * 2) / source.width, 620 / source.height), dw = source.width * scale, dh = source.height * scale;
-    ctx.drawImage(source, (W - dw) / 2, 260 + (620 - dh) / 2, dw, dh);
-  }
+  ctx.drawImage(source, area.x, area.y, dw, dh);
   const figures = [[fmtEffort(r.minutes), t('recap.imageMinutes')], [String(r.activeDays), t('recap.imageDays')], [String(r.built), t('recap.imageBuilt')]];
   const cw = (W - M * 2 - 48) / 3;
   ctx.textAlign = 'center';
@@ -11482,10 +11512,10 @@ async function recapCanvas(r) {
   if (r.favorite) {
     ctx.fillStyle = cssVar('--cat-' + r.favorite) || ink;
     ctx.beginPath(); ctx.arc(M + 14, 1180, 14, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = ink; ctx.font = sans(600, 40);
+    ctx.fillStyle = skyInk(1194).ink; ctx.font = sans(600, 40);
     ctx.fillText(frTypo(t('recap.imageFavorite', { cat: catName(r.favorite) })), M + 44, 1194, W - M * 2 - 44);
   }
-  ctx.fillStyle = muted; ctx.font = sans(600, 28);
+  ctx.fillStyle = skyInk(1292).muted; ctx.font = sans(600, 28);
   ctx.fillText(frTypo(t('recap.imageFooter')), M, 1292, W - M * 2);
   return out;
 }
@@ -12053,8 +12083,9 @@ function boot(hotData) {
     if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (run && !run.ended ? { run: { id: run.id, elapsed: run.elapsed, exits: run.exits } } : {}));
   } catch (e) { /* pas de rechargement à chaud ici */ }
   if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
-    ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors },
-    rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
+    ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors, imageSky: () => imageSky() },
+    rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual(), recapCanvas: (kind, key) => recapCanvas(recapSummary(kind, key)) },
+    png: { canvas: () => cityImageCanvas() },
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
     harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
     ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume), open: () => openAmbienceSheet() },

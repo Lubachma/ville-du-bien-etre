@@ -194,7 +194,7 @@ function openRecap(kind, key) {
       h('button', { class: 'btn btn-primary', type: 'button', onclick: closeSheet }, t('common.close'))));
   }, { keep: true });   // une lecture, comme le bilan de la semaine
 }
-// Image du récapitulatif, 1080 × 1350 : la période, le nom de la ville, la ville sur son ciel, trois chiffres (temps de
+// Image du récapitulatif, 1080 × 1350 : la période, le nom de la ville, la ville sous le ciel du moment, trois chiffres (temps de
 // pratique, jours actifs, éléments posés) et le domaine favori. Jamais l'humeur.
 async function recapCanvas(r) {
   const W = 1080, H = 1350, M = 72, out = document.createElement('canvas');
@@ -202,20 +202,15 @@ async function recapCanvas(r) {
   const ctx = out.getContext('2d'), ink = cssVar('--ink') || '#20332a', muted = cssVar('--muted') || '#536459';
   const serif = size => '400 ' + size + 'px "Young Serif", Georgia, serif', sans = (weight, size) => weight + ' ' + size + 'px Figtree, system-ui, sans-serif';
   if (document.fonts && document.fonts.load) await Promise.all([serif(84), sans(700, 64), sans(600, 40)].map(font => document.fonts.load(font))).catch(() => {});
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, cssVar('--sky-top') || '#d3e8e0');
-  sky.addColorStop(1, cssVar('--sky-bottom') || '#f3f6ec');
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = ink; ctx.font = serif(84);
+  // La ville au milieu, dans un cadre de 936 × 620, sous son ciel : ses étoiles, la nuit, sont placées sur elle. Les textes posés
+  // sur le ciel prennent l'encre qui s'y lit, à leur hauteur.
+  const source = City.snapshot(), scale = Math.min((W - M * 2) / source.width, 620 / source.height), dw = source.width * scale, dh = source.height * scale;
+  const area = { x: (W - dw) / 2, y: 260 + (620 - dh) / 2, w: dw, h: dh }, sky = paintImageSky(ctx, W, H, area), skyInk = y => imageInk(sky, y / H);
+  ctx.fillStyle = skyInk(158).ink; ctx.font = serif(84);
   ctx.fillText(frTypo(recapTitle(r.kind, r.key)), M, 158, W - M * 2);
-  ctx.fillStyle = muted; ctx.font = sans(600, 40);
+  ctx.fillStyle = skyInk(222).muted; ctx.font = sans(600, 40);
   ctx.fillText(frTypo(cityName()), M, 222, W - M * 2);
-  // La ville au milieu, dans un cadre de 936 × 620 (une ville jamais affichée n'a pas encore de taille).
-  const source = City.snapshot();
-  if (source.width && source.height) {
-    const scale = Math.min((W - M * 2) / source.width, 620 / source.height), dw = source.width * scale, dh = source.height * scale;
-    ctx.drawImage(source, (W - dw) / 2, 260 + (620 - dh) / 2, dw, dh);
-  }
+  ctx.drawImage(source, area.x, area.y, dw, dh);
   const figures = [[fmtEffort(r.minutes), t('recap.imageMinutes')], [String(r.activeDays), t('recap.imageDays')], [String(r.built), t('recap.imageBuilt')]];
   const cw = (W - M * 2 - 48) / 3;
   ctx.textAlign = 'center';
@@ -232,10 +227,10 @@ async function recapCanvas(r) {
   if (r.favorite) {
     ctx.fillStyle = cssVar('--cat-' + r.favorite) || ink;
     ctx.beginPath(); ctx.arc(M + 14, 1180, 14, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = ink; ctx.font = sans(600, 40);
+    ctx.fillStyle = skyInk(1194).ink; ctx.font = sans(600, 40);
     ctx.fillText(frTypo(t('recap.imageFavorite', { cat: catName(r.favorite) })), M + 44, 1194, W - M * 2 - 44);
   }
-  ctx.fillStyle = muted; ctx.font = sans(600, 28);
+  ctx.fillStyle = skyInk(1292).muted; ctx.font = sans(600, 28);
   ctx.fillText(frTypo(t('recap.imageFooter')), M, 1292, W - M * 2);
   return out;
 }

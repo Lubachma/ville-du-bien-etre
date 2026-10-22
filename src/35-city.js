@@ -33,6 +33,39 @@ function applySky(amb, byTime) {
     sky.style.setProperty('--star-opacity', c.stars.toFixed(2));
   }
 }
+// Ciel des images (celle de la ville, celle du récapitulatif) : celui de la ville affichée. Selon l'heure, sa lumière, son
+// assombrissement par la pluie ou les nuages, et ses étoiles la nuit ; selon l'apparence (ou sans ambiance lisible), celui du thème.
+function imageSky() {
+  let amb = null;
+  if (S.settings.sky !== 'theme') {
+    try { amb = ambientAt(); } catch (e) { /* ciel du thème, comme la ville affichée */ }
+  }
+  if (amb) return skyColors(amb);
+  return { top: cssVar('--sky-top') || '#d3e8e0', bottom: cssVar('--sky-bottom') || '#f3f6ec', stars: cssVar('--night') === '1' ? 1 : 0 };
+}
+// Le ciel d'une image : un dégradé sur tout le canevas, puis les étoiles du ciel de la carte, placées sur la zone de la ville
+// (area = { x, y, w, h }) et plus ou moins visibles selon le ciel. Rend le ciel peint, pour choisir l'encre des textes posés dessus.
+const IMAGE_STARS = [[.12, .18, 1.2], [.28, .09, 1], [.47, .15, 1.4], [.63, .06, 1], [.78, .2, 1.3], [.9, .1, 1], [.08, .32, 1], [.94, .34, 1.1]];
+function paintImageSky(ctx, width, height, area) {
+  const sky = imageSky(), gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, sky.top);
+  gradient.addColorStop(1, sky.bottom);
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height);
+  if (sky.stars > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, sky.stars); ctx.fillStyle = '#ffffff';
+    for (const [x, y, r] of IMAGE_STARS) { ctx.beginPath(); ctx.arc(area.x + x * area.w, area.y + y * area.h, r * area.w / 360, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+  return sky;
+}
+// Encres d'un texte posé sur le ciel d'une image, à la hauteur k (0 en haut, 1 en bas) : l'encre du thème sombre sur un ciel sombre,
+// celle du thème clair sinon, et une encre douce qui tire vers le ciel (moins quand le ciel est entre les deux, à l'aube et au
+// crépuscule). Le ciel suit l'heure, pas le thème : chaque texte garde ainsi un contraste d'au moins 3:1, de jour comme de nuit.
+function imageInk(sky, k) {
+  const bg = mix(sky.top, sky.bottom, k), { r, g, b } = hexToRgb(bg), luma = .2126 * r + .7152 * g + .0722 * b, ink = luma < 128 ? '#e6ede7' : '#1d2721';
+  return { ink, muted: mix(ink, bg, .3 * Math.min(1, Math.abs(luma - 128) / 64)) };
+}
 
 const City = (() => {
   // Un seul canevas dessiné à la fois : la carte de la ville, ou la vue en grand tant qu'elle est ouverte.
@@ -185,20 +218,21 @@ const City = (() => {
   // la lit ; sa propre ville n'est jamais touchée.
   let visit = null;
   const town = () => (visit ? visit.city : S.city);
+  // Carte de la ville, pour une largeur donnée et un terrain de N cases de côté : l'île entière, avec la place au-dessus pour les
+  // éléments du fond.
+  function cardGeometry(width) {
+    const w = Math.max(240, width), tw = Math.min(76, (w - 28) / N), top = tw * 1.35 + 8;
+    return { W: w, H: Math.round(top + N * tw / 2 + tw * .45 + 14), TW: tw, ox: w / 2, oy: top };
+  }
   function layout() {
     N = town().size;
     if (big.open) { layoutBig(); return; }
     const rect = canvas.getBoundingClientRect();
-    W = Math.max(240, rect.width || canvas.parentElement.clientWidth || 360);
-    TW = Math.min(76, (W - 28) / N);
-    const top = TW * 1.35 + 8;
-    H = Math.round(top + N * TW / 2 + TW * .45 + 14);
+    ({ W, H, TW, ox, oy } = cardGeometry(rect.width || canvas.parentElement.clientWidth || 360));
     dpr = Math.min(3, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     canvas.style.height = H + 'px';
-    ox = W / 2;
-    oy = top;
     cursor.x = clamp(cursor.x, 0, N - 1);
     cursor.y = clamp(cursor.y, 0, N - 1);
   }
@@ -646,18 +680,22 @@ const City = (() => {
       g.poly([top, [top[0] + g.tw * .16, top[1] + g.tw * .06], [top[0], top[1] + g.tw * .13]], g.c('#efc451'));
     }
   }
+  // Image de sa propre ville, mise en page comme sa carte (à la largeur de la carte, ou 360 points si elle est cachée), sur un canevas
+  // à part d'au moins minWidth pixels de large. Jamais la ville d'une visite ni la vue en grand, quelle que soit la vue ouverte : le
+  // module est remis tel quel ensuite, et la vue courante redessinée (ses zones touchables avec elle).
   function snapshot(minWidth = 1200) {
-    const original = { width: canvas.width, height: canvas.height, dpr };
+    const saved = { canvas, ctx, W, H, dpr, TW, ox, oy, N, visit, open: big.open }, image = document.createElement('canvas');
     try {
-      dpr = Math.max(dpr, minWidth / W);
-      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+      visit = null; big.open = false; N = S.city.size;
+      ({ W, H, TW, ox, oy } = cardGeometry(small.getBoundingClientRect().width || 360));
+      dpr = Math.max(saved.dpr, minWidth / W);
+      image.width = Math.round(W * dpr); image.height = Math.round(H * dpr);
+      canvas = image; ctx = image.getContext('2d');
       draw({ clean: true });
-      const result = document.createElement('canvas');
-      result.width = canvas.width; result.height = canvas.height;
-      result.getContext('2d').drawImage(canvas, 0, 0);
-      return result;
+      return image;
     } finally {
-      dpr = original.dpr; canvas.width = original.width; canvas.height = original.height;
+      ({ canvas, ctx, W, H, dpr, TW, ox, oy, N, visit } = saved);
+      big.open = saved.open;
       draw();
     }
   }

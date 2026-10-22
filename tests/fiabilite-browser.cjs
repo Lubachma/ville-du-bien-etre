@@ -485,9 +485,71 @@ async function soundResumedOnReturn(browser, baseURL) {
   return 'Son : relancé au retour au premier plan, et après une interruption';
 }
 
+// La ville d'un ami : 9 × 9, trois éléments, une autre ville que la sienne (créée à une autre date, avec son propre identifiant de
+// partage). Son code est lu dans un premier navigateur, comme celui de Léa.
+const FRIEND_TILES = [['maison', 1, 1], ['arbre', 4, 2], ['fontaine', 7, 7]].map(([item, x, y], i) => ({ id: 'f' + i, item, x, y, at: at('2026-10-01T09:00:00Z'), paid: 1e6 }));
+async function nineByNineCode(browser, baseURL) {
+  const seed = town({ esprit: 5 }, FRIEND_TILES, { createdAt: at('2026-03-02T09:00:00Z'), city: { size: 9, tiles: FRIEND_TILES } });
+  const { context, page } = await cityAt(browser, baseURL, seed, NOW);
+  try { return await page.evaluate(() => __ville.share.encode()); } finally { await context.close(); }
+}
+// L'image de la ville montre toujours sa propre ville, avec la mise en page de sa carte : prise pendant la visite d'une ville amie de
+// 9 × 9, elle garde les proportions de celle prise hors visite et le même dessin (l'heure est figée, et une image ne bouge pas), et la
+// visite reste telle quelle. Les deux images, celle de la ville et celle du récapitulatif, prennent le ciel du moment : la nuit à 22 h
+// (Zurich) même en thème clair, avec un titre clair pour rester lisible ; avec « Ciel selon l'apparence », le ciel clair du thème et
+// son encre foncée.
+async function imagesOwnCityUnderSky(browser, baseURL) {
+  const code = await nineByNineCode(browser, baseURL);
+  const seed = town({ esprit: 5 }, [{ id: 'b', item: 'banc', x: 3, y: 3, at: at('2026-10-20T09:00:00Z'), paid: 2e6 }],
+    { createdAt: at('2026-05-04T09:00:00Z'), settings: { lang: 'fr', theme: 'light' } });
+  const { context, page, errors } = await cityAt(browser, baseURL, seed, '2026-10-21T20:00:00Z');
+  // Le dessin de la ville, sans ciel : ses proportions (largeur / hauteur) et ses pixels. État de la vue en grand : ouverte, en visite,
+  // place de la case (4, 4) à l'écran.
+  const drawing = () => page.evaluate(() => { const image = __ville.City.snapshot(); return { ratio: image.width / image.height, png: image.toDataURL() }; });
+  const view = () => page.evaluate(() => { const big = __ville.City.bigState(); return [big.open, big.visit, __ville.City.cellPoint(4, 4)]; });
+  // Luminance (0 à 255) du pixel (4, 4) de chaque image, le haut de son ciel, et de l'encre de son titre (le premier texte écrit).
+  const images = () => page.evaluate(async () => {
+    const luma = ([r, g, b]) => Math.round(.2126 * r + .7152 * g + .0722 * b), rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const fillText = CanvasRenderingContext2D.prototype.fillText, inks = [];
+    CanvasRenderingContext2D.prototype.fillText = function (...args) { inks.push(this.fillStyle); return fillText.apply(this, args); };
+    const read = async make => {
+      inks.length = 0;
+      const image = await make();
+      return { sky: luma(image.getContext('2d').getImageData(4, 4, 1, 1).data), title: luma(rgb(inks[0])) };
+    };
+    try { return { png: await read(() => __ville.png.canvas()), recap: await read(() => __ville.rituals.recapCanvas('month', '2026-09')) }; }
+    finally { CanvasRenderingContext2D.prototype.fillText = fillText; }
+  });
+  try {
+    // Ma ville, même pendant une visite : ni la vue en grand, ni la ville amie.
+    const alone = await drawing();
+    assert.equal(await page.evaluate(c => __ville.share.open(c), code), true);
+    await page.locator('#cityBig').waitFor();
+    const shown = await view();
+    assert.deepEqual(shown.slice(0, 2), [true, true]);
+    const visiting = await drawing();
+    assert.ok(Math.abs(visiting.ratio - alone.ratio) <= .01, `image prise pendant la visite : proportions ${visiting.ratio.toFixed(3)} au lieu de ${alone.ratio.toFixed(3)}`);
+    assert.ok(visiting.png === alone.png, "image prise pendant la visite : ce n'est pas le dessin de sa propre ville");
+    assert.deepEqual(await view(), shown, "la visite n'est plus la même après l'image");
+    await page.locator('#cityBigClose').click();
+    await page.locator('#cityBig').waitFor({ state: 'hidden' });
+    // Le ciel du moment : la nuit à 22 h, même en thème clair.
+    const night = await images();
+    assert.ok(night.png.sky < 60 && night.recap.sky < 60, 'ciel des images à 22 h : ' + JSON.stringify(night));
+    assert.ok(night.png.title > 180 && night.recap.title > 180, 'titre des images sur le ciel de nuit : ' + JSON.stringify(night));
+    // « Ciel selon l'apparence » : le ciel du thème clair.
+    await page.evaluate(() => { __ville.state.settings.sky = 'theme'; __ville.City.draw(); });
+    const theme = await images();
+    assert.ok(theme.png.sky > 180 && theme.recap.sky > 180, 'ciel du thème clair : ' + JSON.stringify(theme));
+    assert.ok(theme.png.title < 60 && theme.recap.title < 60, 'titre des images sur le ciel du thème clair : ' + JSON.stringify(theme));
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Images : ma ville, sous le ciel du moment';
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn];
+  soundResumedOnReturn, imagesOwnCityUnderSky];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

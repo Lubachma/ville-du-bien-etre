@@ -144,8 +144,9 @@ function boot(hotData) {
     if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (run && !run.ended ? { run: { id: run.id, elapsed: run.elapsed, exits: run.exits } } : {}));
   } catch (e) { /* pas de rechargement à chaud ici */ }
   if (window.__VILLE_DEBUG__ || location.hash === '#debug') window.__ville = { get state() { return S; }, Store, activeState, City, log: [],
-    ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors },
-    rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual() },
+    ambient: { at: () => ambientAt(), force: f => { ambientForce = f; City.draw(); }, sky: skyColors, imageSky: () => imageSky() },
+    rituals: { challenges: () => weekChallenges(), pending: () => pendingRitual(), recapCanvas: (kind, key) => recapCanvas(recapSummary(kind, key)) },
+    png: { canvas: () => cityImageCanvas() },
     share: { encode: () => encodeCity(), decode: decodeCity, open: openVisitFromCode, pending: () => pendingVisit },
     harmony: { criteria: () => harmonyCriteria(), wish: () => S.townWish, stars: () => starsEarned() },
     ambience: { kind: () => Ambience.kind, measure: (kind, volume) => Ambience.measure(kind, volume), open: () => openAmbienceSheet() },
