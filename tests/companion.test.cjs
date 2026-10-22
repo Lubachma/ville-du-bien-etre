@@ -46,7 +46,7 @@ test('compagnon : validation', () => {
 test('compagnon : un nom sans rien de visible donne la suggestion de l’animal', () => {
   const a = app(), known = raw => plain(a.normalize({ companion: raw }).companion);
   a.setLang('fr');
-  for (const hidden of ['\u{2800}', '\u{3164}', '\u{115f}\u{1160}', '\u{ffa0}', '\u{2028}', '\u{E0041}', '\u{ad}']) {
+  for (const hidden of ['\u{2800}', '\u{3164}', '\u{115f}\u{1160}', '\u{ffa0}', '\u{2028}', '\u{E0041}', '\u{ad}', '\u{FE0F}', '\u{FE0E}\u{200D}']) {
     assert.equal(known(pal('lapin', { name: hidden })).name, '', JSON.stringify(hidden));
     a.adoptCompanion('lapin', hidden);
     assert.deepEqual([a.state.companion.name, a.companionName()], ['', 'Pompon'], JSON.stringify(hidden));
@@ -57,6 +57,7 @@ test('compagnon : un nom sans rien de visible donne la suggestion de l’animal'
   assert.equal(known(pal('lapin', { name: 'Lu\u{200b}ne\u{2800}' })).name, 'Lune');
   assert.equal(known(pal('lapin', { name: ' Petit   Lu\u{2028}ne ' })).name, 'Petit Lune');
   assert.equal(known(pal('lapin', { name: 'Lune 🌙' })).name, 'Lune 🌙');
+  assert.equal(known(pal('lapin', { name: 'Lune \u{2764}\u{FE0F}' })).name, 'Lune \u{2764}\u{FE0F}');
   // Vingt points de code au plus : 20 émojis (40 unités) tiennent, un 21e fait revenir la suggestion.
   assert.equal(known(pal('lapin', { name: '🌙'.repeat(20) })).name, '🌙'.repeat(20));
   assert.equal(known(pal('lapin', { name: '🌙'.repeat(21) })).name, '');

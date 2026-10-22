@@ -137,6 +137,26 @@ test('noms : tous les invisibles, les blancs en série, les liants d’émojis, 
   assert.equal(a.cleanName('é'.repeat(41), 40), 'é'.repeat(40));
 });
 
+// Les sélecteurs de présentation des émojis (U+FE0F en couleur, U+FE0E en texte) sont ignorables, mais le clavier des émojis écrit U+FE0F
+// après ceux qui existent aussi en texte : sans lui, un cœur perd sa couleur et un drapeau arc-en-ciel se défait. Ils restent, comme les liants.
+test('noms : les sélecteurs de présentation des émojis restent, seuls ils ne font pas un nom', () => {
+  const a = app(), heart = '\u{2764}\u{FE0F}', sun = '\u{2600}\u{FE0F}', rainbow = '\u{1F3F3}\u{FE0F}\u{200D}\u{1F308}';
+  assert.equal(a.cleanName(heart + ' Ville', 40), heart + ' Ville');
+  assert.equal(a.cleanName(sun, 40), sun);
+  assert.equal(a.cleanName('Fierté ' + rainbow, 40), 'Fierté ' + rainbow);
+  assert.equal(a.cleanName('1\u{FE0F}\u{20E3}', 40), '1\u{FE0F}\u{20E3}');
+  assert.equal(a.cleanName('\u{2600}\u{FE0E}', 40), '\u{2600}\u{FE0E}');
+  // Seuls, ou avec des liants, ils ne font pas un nom.
+  for (const alone of ['\u{FE0F}', '\u{FE0E}', '\u{FE0F}\u{200D}', '\u{FE0E}\u{FE0F}\u{200C}\u{200D}', ' \u{FE0F} ']) {
+    assert.equal(a.cleanName(alone, 40), '', JSON.stringify(alone));
+  }
+  // Les autres sélecteurs (variantes d'idéogrammes, mongols) et les étiquettes restent retirés.
+  assert.equal(a.cleanName('A\u{FE00}\u{FE0D}\u{E0100}\u{180B}B', 40), 'AB');
+  assert.equal(a.cleanName('\u{1F3F4}\u{E0067}\u{E0062}\u{E007F}', 40), '\u{1F3F4}');
+  // Un sélecteur compte pour un point de code dans la coupure.
+  assert.equal(a.cleanName(heart.repeat(25), 40), heart.repeat(20));
+});
+
 test('lien de ville : un nom fait seulement de caractères invisibles s’affiche « Une ville amie »', () => {
   const a = app();
   for (const name of ['\u{3164}', '\u{2800}\u{2800}', '\u{ad}', '\u{E0041}\u{E0042}', ' \u{115f}\u{1160} ']) {

@@ -339,16 +339,19 @@ const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 // Un nom tapé ou reçu par un lien (sa ville, une ville amie, le compagnon), nettoyé de la même façon partout.
 // - Retirés : les caractères de format et ignorables (marques de direction, étiquettes, trait d'union conditionnel…), de contrôle,
 //   les séparateurs de ligne et de paragraphe, les remplissages hangeul et le blanc braille (qui ressemblent à un caractère), et
-//   les moitiés de paire de substitution (reste d'une ancienne coupure en unités UTF-16). Les liants des émojis composés (U+200C,
-//   U+200D) restent.
+//   les moitiés de paire de substitution (reste d'une ancienne coupure en unités UTF-16). Restent les liants des émojis composés
+//   (U+200C, U+200D) et les sélecteurs de présentation des émojis (U+FE0E en texte, U+FE0F en couleur) : le clavier des émojis écrit
+//   U+FE0F après un cœur ou un soleil, et sans lui l'émoji perd sa couleur, un drapeau arc-en-ciel se défait. Seuls, ils ne font pas
+//   un nom (aucune lettre, ni chiffre, ni symbole, ni ponctuation).
 // - Les blancs en série n'en font plus qu'une espace, sans blanc au début ni à la fin.
 // - Le nom est coupé à `max` points de code : jamais au milieu d'un caractère, un émoji simple compris (un émoji composé peut perdre sa fin).
 // - Sans lettre, chiffre, symbole ni ponctuation, rien de visible ne reste : le nom compte comme vide ('').
 const NAME_HIDDEN = /[\p{Cf}\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cs}\u{2028}\u{2029}\u{3164}\u{2800}\u{115f}\u{1160}\u{ffa0}]/gu;
 const NAME_VISIBLE = /[\p{L}\p{N}\p{S}\p{P}]/u;
+const NAME_KEPT = new Set(['\u{200c}', '\u{200d}', '\u{fe0e}', '\u{fe0f}']);
 function cleanName(raw, max) {
   if (typeof raw !== 'string') return '';
-  const text = raw.replace(NAME_HIDDEN, ch => (ch === '\u{200c}' || ch === '\u{200d}' ? ch : '')).replace(/\s+/g, ' ').trim();
+  const text = raw.replace(NAME_HIDDEN, ch => (NAME_KEPT.has(ch) ? ch : '')).replace(/\s+/g, ' ').trim();
   const name = Array.from(text).slice(0, max).join('').trim();
   return NAME_VISIBLE.test(name) ? name : '';
 }
