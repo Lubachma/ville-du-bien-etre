@@ -1,6 +1,6 @@
 function openShop() {
   openSheet(t('shop.title'), body => {
-    body.append(h('p', { class: 'note' }, t('shop.intro', { coins: fmt(S.coins) })));
+    body.append(h('p', { class: 'note' }, t('shop.intro', { coins: fmtBalance(S.coins) })));
     // Raccourcis vers les rubriques, sur une ligne qui défile
     const nav = h('div', { class: 'chips shop-nav', role: 'navigation', 'aria-label': t('shop.nav') });
     for (const gk of GROUPS) {

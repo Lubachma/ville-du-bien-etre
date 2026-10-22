@@ -50,3 +50,31 @@ test('damaged or unsupported backups are rejected, active sessions are excluded 
   assert.ok(a.readBackup(a.sign({ v: 1 }, 2)).error);
   assert.ok(a.readBackup('un texte sans sauvegarde').error);
 });
+test('sauvegarde : un texte coupé en lignes est accepté', () => {
+  const a = api();
+  a.state.personal.name = 'La ville des amis';
+  a.state.goals = { minutes: 90, days: 4, cat: 'esprit', building: 'ecole' };
+  const text = a.exportBackup(), whole = a.readBackup(text);
+  assert.equal(whole.error, undefined);
+  assert.ok(text.length > 76 * 10, 'assez long pour être coupé en plusieurs lignes');
+  // Coupé tous les 76 caractères, comme le font un courriel ou une messagerie ; puis avec des espaces, des tabulations et des
+  // retours de ligne Windows autour et entre les lignes, y compris une espace insécable.
+  const lines = text.match(/.{1,76}/g), cut = lines.join('\n'), spaced = '  \n' + lines.map((line, i) => (i % 2 ? '\t' : '  ') + line + ' ').join('\r\n') + '\u00a0\n\n';
+  assert.ok(cut.split('\n').length > 10 && /\s/.test(spaced));
+  for (const pasted of [cut, spaced]) {
+    const res = a.readBackup(pasted);
+    assert.equal(res.error, undefined);
+    // Même état, pièce par pièce : rien n'a été perdu en route.
+    assert.deepEqual(Object.keys(res.state), Object.keys(whole.state));
+    assert.equal(res.state.personal.name, 'La ville des amis');
+    assert.deepEqual(res.state.goals, whole.state.goals);
+    assert.equal(JSON.stringify(res.state), JSON.stringify(whole.state));
+  }
+  // Les blancs retirés ne désarment pas la vérification : un caractère changé en route reste refusé.
+  const damaged = cut.replace(/(?<=\n\w{10})\w/, ch => (ch === 'A' ? 'B' : 'A'));
+  assert.notEqual(damaged, cut);
+  assert.ok(a.readBackup(damaged).error);
+  assert.ok(a.readBackup('VBE2.\n.\n').error);
+  assert.ok(a.readBackup(' \n\t ').error);
+  assert.ok(a.readBackup(null).error);
+});

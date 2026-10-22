@@ -296,13 +296,31 @@ function dec1(x) {
   const s = Number.isInteger(r) ? String(r) : r.toFixed(1);
   return s.replace('.', t('fmt.decimal'));
 }
+// Un montant, arrondi au plus proche (prix, gains) : « 999 », « 12 k », « 7,5 M », « 2 Md ». On passe à l'unité suivante dès que l'arrondi
+// atteindrait 1000 de l'unité d'en dessous : les seuils sont 999,5 (« 1 k »), 999,5 k (« 1 M ») et 999,5 M (« 1 Md »), jamais « 1000 k ».
 function fmt(n) {
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);
-  if (a >= 1e9) return dec1(n / 1e9) + NB + t('fmt.billion');
-  if (a >= 1e6) return dec1(n / 1e6) + NB + t('fmt.million');
-  if (a >= 1e3) return Math.round(n / 1e3) + NB + t('fmt.thousand');
+  if (a >= 999.5e6) return dec1(n / 1e9) + NB + t('fmt.billion');
+  if (a >= 999.5e3) return dec1(n / 1e6) + NB + t('fmt.million');
+  if (a >= 999.5) return Math.round(n / 1e3) + NB + t('fmt.thousand');
   return String(Math.round(n));
+}
+// Le solde : la même présentation, mais arrondie vers le bas à la précision affichée (une décimale en dessous de 100 M ou de 100 Md, aucune
+// au-delà), pour ne jamais montrer plus que ce qu'on a : « 3 M » seulement à partir de 3 M. Arrondi vers le bas, il n'atteint jamais 1000.
+function fmtBalance(n) {
+  if (!Number.isFinite(n)) return '0';
+  const a = Math.abs(n);
+  if (a >= 1e9) return dec1Floor(n / 1e9) + NB + t('fmt.billion');
+  if (a >= 1e6) return dec1Floor(n / 1e6) + NB + t('fmt.million');
+  if (a >= 1e3) return Math.floor(n / 1e3) + NB + t('fmt.thousand');
+  return String(Math.floor(n));
+}
+// Comme dec1, mais vers le bas : une décimale en dessous de 100, aucune ensuite.
+function dec1Floor(x) {
+  if (Math.abs(x) >= 100) return String(Math.floor(x));
+  const r = Math.floor(x * 10) / 10;
+  return (Number.isInteger(r) ? String(r) : r.toFixed(1)).replace('.', t('fmt.decimal'));
 }
 function fmtMin(m) {
   m = Math.round(m);
@@ -4920,8 +4938,13 @@ function periodDays(from, to) {
 const inPeriod = (day, from, to) => typeof day === 'string' && day >= from && day <= to;
 const tsInPeriod = (ts, from, to) => validTs(ts) && inPeriod(dayOf(ts), from, to);
 
+// Le journal ne garde que les HISTORY_MAX dernières séances, la plus récente en tête. Plein, il couvre une période seulement si sa plus
+// ancienne séance date d'avant son premier jour : sinon des séances de la période ont pu en sortir. Pas plein, il n'a rien perdu.
+const historyCovers = from => S.history.length < HISTORY_MAX || S.history[S.history.length - 1].day < from;
+
 // Ce qu'une période a apporté : temps de pratique, jours actifs, séances, domaines (et leurs minutes), beaux moments, nouveautés de la ville,
-// défis et succès, humeurs notées (sur l'écran seulement).
+// défis et succès, humeurs notées (sur l'écran seulement). Le nombre de séances, la plus longue et les humeurs ne viennent que du journal :
+// quand il ne couvre pas toute la période, ils valent null plutôt qu'un chiffre faux. Le reste vient des statistiques, qui gardent tout.
 function periodSummary(from, to) {
   const stats = S.stats.effort || S.stats, daily = S.stats.dailyCats || {}, days = periodDays(from, to);
   const minutesOn = day => stats.days[day] || 0, catMinutes = cat => days.reduce((sum, day) => sum + (obj(daily[day])[cat] || 0), 0);
@@ -4929,21 +4952,21 @@ function periodSummary(from, to) {
   const longest = sessions.reduce((best, e) => (!best || e.min > best.min ? e : best), null);
   const bestDay = days.reduce((best, day) => (minutesOn(day) > (best ? best.minutes : 0) ? { day, minutes: minutesOn(day) } : best), null);
   const gifts = prefix => Object.entries(S.gifts || {}).filter(([key, at]) => key.startsWith(prefix) && tsInPeriod(at, from, to)).length;
-  const moods = sessions.filter(e => e.mood);
+  const moods = sessions.filter(e => e.mood), covered = historyCovers(from);
   return {
     from, to,
     minutes: days.reduce((sum, day) => sum + minutesOn(day), 0),
     activeDays: days.filter(day => minutesOn(day) >= 1).length,
-    sessions: sessions.length, cats, byCat: Object.fromEntries(cats.map(cat => [cat, catMinutes(cat)])),
+    sessions: covered ? sessions.length : null, cats, byCat: Object.fromEntries(cats.map(cat => [cat, catMinutes(cat)])),
     favorite: cats.length ? cats.reduce((best, cat) => (catMinutes(cat) > catMinutes(best) ? cat : best)) : null,
-    longest: longest ? { name: longest.name, min: longest.min } : null, bestDay,
+    longest: covered && longest ? { name: longest.name, min: longest.min } : null, bestDay,
     // Éléments posés (sauf ceux du départ), ensembles découverts, visiteurs rencontrés pour la première fois.
     built: S.city.tiles.filter(tile => tile.at > S.createdAt + 60000 && tsInPeriod(tile.at, from, to)).length,
     sets: Object.values(S.sets || {}).filter(at => tsInPeriod(at, from, to)).length,
     visitors: Object.values(S.visits || {}).filter(v => tsInPeriod(v.first, from, to)).length,
     festivals: gifts('fest:'), challenges: gifts('chal:'),
     achievements: Object.values(S.achievements || {}).filter(at => tsInPeriod(at, from, to)).length,
-    moods: { good: moods.filter(e => e.mood >= 4).length, total: moods.length },
+    moods: covered ? { good: moods.filter(e => e.mood >= 4).length, total: moods.length } : null,
   };
 }
 
@@ -8139,7 +8162,7 @@ function applyTheme() {
 }
 function renderHeader() {
   $('.brand-name').textContent = frTypo(cityName());
-  $('#balance').textContent = fmt(S.coins);
+  $('#balance').textContent = fmtBalance(S.coins);
   const chip = $('#streakChip');
   chip.hidden = S.settings.hideStreak;
   if (chip.hidden) return;
@@ -8726,7 +8749,7 @@ function renderHistory() {
 /* ---- 44-shop.js ---- */
 function openShop() {
   openSheet(t('shop.title'), body => {
-    body.append(h('p', { class: 'note' }, t('shop.intro', { coins: fmt(S.coins) })));
+    body.append(h('p', { class: 'note' }, t('shop.intro', { coins: fmtBalance(S.coins) })));
     // Raccourcis vers les rubriques, sur une ligne qui défile
     const nav = h('div', { class: 'chips shop-nav', role: 'navigation', 'aria-label': t('shop.nav') });
     for (const gk of GROUPS) {
@@ -8927,7 +8950,9 @@ function exportBackup() {
   return 'VBE2.' + body + '.' + hash53(BACKUP_SALT + body);
 }
 function readBackup(text) {
-  const m = String(text || '').trim().match(/^VBE([12])\.([A-Za-z0-9_-]+)\.([0-9a-z]+)$/);
+  // Le texte d'une sauvegarde n'a aucun blanc : collé après un courriel ou une messagerie, il arrive souvent coupé en lignes ou avec des
+  // espaces en trop. On les ignore tous ; l'empreinte vérifie ensuite que rien d'autre n'a changé.
+  const m = String(text || '').replace(/\s+/g, '').match(/^VBE([12])\.([A-Za-z0-9_-]+)\.([0-9a-z]+)$/);
   if (!m) return { error: t('backup.notBackupText') };
   if (hash53(BACKUP_SALT + m[2]) !== m[3]) return { error: t('backup.tampered') };
   try {
@@ -10511,7 +10536,7 @@ function showSuccess(a, total, fresh, earned = [], challenges = [], companion = 
       a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, t('unit.bonusPct', { pct: a.drawPct }))) : null,
       a.streakPct ? h('li', {}, h('span', {}, S.settings.hideStreak ? t('result.consistency') : t('result.streak', { n: a.streakDays })), h('span', {}, t('unit.bonusPct', { pct: a.streakPct }))) : null,
       a.returnPct ? h('li', {}, h('span', {}, t('result.welcomeBack')), h('span', {}, t('unit.bonusPct', { pct: a.returnPct }))) : null,
-      h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmt(S.coins))));
+      h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmtBalance(S.coins))));
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });
       City.thumb(cv, k, 56);
@@ -11214,7 +11239,7 @@ const reviewDay = day => dayFmt('short').format(keyToUTC(day));
 const reviewFigure = (label, value) => h('div', { class: 'review-figure' }, h('strong', {}, value), h('span', {}, label));
 // Les pastilles des domaines pratiqués.
 const reviewCats = cats => h('div', { class: 'review-cats' }, ...cats.map(cat => h('span', { class: 'pill' }, h('i', { class: 'review-dot', vars: { '--c': 'var(--cat-' + cat + ')' } }), catName(cat))));
-// Les beaux moments d'une période, sans rien qui manque ni qui baisse.
+// Les beaux moments d'une période, sans rien qui manque ni qui baisse. Une partie que le journal ne peut pas dire (null) ne s'affiche pas.
 function reviewMoments(r) {
   return [
     r.longest && t('review.longest', { name: displayName(r.longest.name), min: r.longest.min }),
@@ -11223,7 +11248,7 @@ function reviewMoments(r) {
     r.visitors && t('review.visitors', { n: r.visitors }),
     r.festivals && t('review.festivals', { n: r.festivals }),
     r.challenges && t('review.challenges', { n: r.challenges }),
-    r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),   // jamais « 0 séance »
+    r.moods && r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),   // jamais « 0 séance »
   ].filter(Boolean);
 }
 // Le chemin fait vers l'objectif de la semaine, sur ce qui n'est pas encore atteint : les minutes, puis les jours actifs.
@@ -11241,8 +11266,10 @@ function openWeekReview(week) {
     if (r.minutes > 0) {
       const moments = [...reviewMoments(r), r.goal.done ? t('review.goalDone') : goalPath(r.goal),
         r.gain > 0 && t('review.gain', { time: fmtMin(r.gain) })].filter(Boolean);
-      body.append(h('div', { class: 'review-figures' }, reviewFigure(t('review.minutes'), fmtEffort(r.minutes)), reviewFigure(t('review.days'), String(r.activeDays)),
-        reviewFigure(t('review.sessions'), String(r.sessions))), reviewCats(r.cats), h('ul', { class: 'review-moments' }, ...moments.map(text => h('li', {}, text))));
+      const figures = [reviewFigure(t('review.minutes'), fmtEffort(r.minutes)), reviewFigure(t('review.days'), String(r.activeDays))];
+      if (r.sessions != null) figures.push(reviewFigure(t('review.sessions'), String(r.sessions)));
+      body.append(h('div', { class: 'review-figures', vars: { '--n': figures.length } }, ...figures), reviewCats(r.cats),
+        h('ul', { class: 'review-moments' }, ...moments.map(text => h('li', {}, text))));
     }
     const next = h('section', { class: 'review-next' }, h('h3', { class: 'section-title' }, t('review.next')));
     if (S.settings.challenges !== false) {
@@ -11265,7 +11292,9 @@ const recapTitle = (kind, key) => (kind === 'year' ? key : monthTitle(key));
 // Une liste de beaux moments, ou rien s'il n'y en a pas.
 const recapList = items => (items.some(Boolean) ? h('ul', { class: 'review-moments' }, ...items.filter(Boolean).map(text => h('li', {}, text))) : null);
 // Fenêtre du récapitulatif d'un mois ou d'une année : les chiffres, les domaines en barres, les beaux moments, la ville, puis
-// l'image à partager. L'humeur reste à l'écran, et seulement pour un mois : le journal ne garde pas toutes les séances d'une année.
+// l'image à partager. L'humeur reste à l'écran, et seulement pour un mois : le journal ne garde pas toutes les séances d'une année. Le nombre
+// de séances, la plus longue et l'humeur ne s'affichent que si le journal couvre tout le mois (sinon null) ; le temps de pratique, les jours
+// actifs et les domaines viennent des statistiques et sont toujours là.
 function openRecap(kind, key) {
   const r = recapSummary(kind, key), month = kind === 'month';
   openSheet(recapTitle(kind, key), body => {
@@ -11284,7 +11313,7 @@ function openRecap(kind, key) {
       r.longest && t('review.longest', { name: displayName(r.longest.name), min: r.longest.min }),
       r.challenges && t('review.challenges', { n: r.challenges }),
       r.achievements && t('recap.achievements', { n: r.achievements }),
-      month && r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
+      month && r.moods && r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
     ])].filter(Boolean));
     const city = recapList([r.built && t('review.built', { n: r.built }), r.sets && t('recap.sets', { n: r.sets }),
       r.visitors && t('review.visitors', { n: r.visitors }), r.festivals && t('review.festivals', { n: r.festivals })]);

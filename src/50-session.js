@@ -623,7 +623,7 @@ function showSuccess(a, total, fresh, earned = [], challenges = [], companion = 
       a.drawPct ? h('li', {}, h('span', {}, t('result.drawBonus')), h('span', {}, t('unit.bonusPct', { pct: a.drawPct }))) : null,
       a.streakPct ? h('li', {}, h('span', {}, S.settings.hideStreak ? t('result.consistency') : t('result.streak', { n: a.streakDays })), h('span', {}, t('unit.bonusPct', { pct: a.streakPct }))) : null,
       a.returnPct ? h('li', {}, h('span', {}, t('result.welcomeBack')), h('span', {}, t('unit.bonusPct', { pct: a.returnPct }))) : null,
-      h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmt(S.coins))));
+      h('li', {}, h('span', {}, t('result.newBalance')), h('span', {}, fmtBalance(S.coins))));
     const unlocks = fresh.map(k => {
       const cv = h('canvas', { 'aria-hidden': 'true' });
       City.thumb(cv, k, 56);

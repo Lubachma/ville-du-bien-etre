@@ -105,7 +105,7 @@ const reviewDay = day => dayFmt('short').format(keyToUTC(day));
 const reviewFigure = (label, value) => h('div', { class: 'review-figure' }, h('strong', {}, value), h('span', {}, label));
 // Les pastilles des domaines pratiqués.
 const reviewCats = cats => h('div', { class: 'review-cats' }, ...cats.map(cat => h('span', { class: 'pill' }, h('i', { class: 'review-dot', vars: { '--c': 'var(--cat-' + cat + ')' } }), catName(cat))));
-// Les beaux moments d'une période, sans rien qui manque ni qui baisse.
+// Les beaux moments d'une période, sans rien qui manque ni qui baisse. Une partie que le journal ne peut pas dire (null) ne s'affiche pas.
 function reviewMoments(r) {
   return [
     r.longest && t('review.longest', { name: displayName(r.longest.name), min: r.longest.min }),
@@ -114,7 +114,7 @@ function reviewMoments(r) {
     r.visitors && t('review.visitors', { n: r.visitors }),
     r.festivals && t('review.festivals', { n: r.festivals }),
     r.challenges && t('review.challenges', { n: r.challenges }),
-    r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),   // jamais « 0 séance »
+    r.moods && r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),   // jamais « 0 séance »
   ].filter(Boolean);
 }
 // Le chemin fait vers l'objectif de la semaine, sur ce qui n'est pas encore atteint : les minutes, puis les jours actifs.
@@ -132,8 +132,10 @@ function openWeekReview(week) {
     if (r.minutes > 0) {
       const moments = [...reviewMoments(r), r.goal.done ? t('review.goalDone') : goalPath(r.goal),
         r.gain > 0 && t('review.gain', { time: fmtMin(r.gain) })].filter(Boolean);
-      body.append(h('div', { class: 'review-figures' }, reviewFigure(t('review.minutes'), fmtEffort(r.minutes)), reviewFigure(t('review.days'), String(r.activeDays)),
-        reviewFigure(t('review.sessions'), String(r.sessions))), reviewCats(r.cats), h('ul', { class: 'review-moments' }, ...moments.map(text => h('li', {}, text))));
+      const figures = [reviewFigure(t('review.minutes'), fmtEffort(r.minutes)), reviewFigure(t('review.days'), String(r.activeDays))];
+      if (r.sessions != null) figures.push(reviewFigure(t('review.sessions'), String(r.sessions)));
+      body.append(h('div', { class: 'review-figures', vars: { '--n': figures.length } }, ...figures), reviewCats(r.cats),
+        h('ul', { class: 'review-moments' }, ...moments.map(text => h('li', {}, text))));
     }
     const next = h('section', { class: 'review-next' }, h('h3', { class: 'section-title' }, t('review.next')));
     if (S.settings.challenges !== false) {
@@ -156,7 +158,9 @@ const recapTitle = (kind, key) => (kind === 'year' ? key : monthTitle(key));
 // Une liste de beaux moments, ou rien s'il n'y en a pas.
 const recapList = items => (items.some(Boolean) ? h('ul', { class: 'review-moments' }, ...items.filter(Boolean).map(text => h('li', {}, text))) : null);
 // Fenêtre du récapitulatif d'un mois ou d'une année : les chiffres, les domaines en barres, les beaux moments, la ville, puis
-// l'image à partager. L'humeur reste à l'écran, et seulement pour un mois : le journal ne garde pas toutes les séances d'une année.
+// l'image à partager. L'humeur reste à l'écran, et seulement pour un mois : le journal ne garde pas toutes les séances d'une année. Le nombre
+// de séances, la plus longue et l'humeur ne s'affichent que si le journal couvre tout le mois (sinon null) ; le temps de pratique, les jours
+// actifs et les domaines viennent des statistiques et sont toujours là.
 function openRecap(kind, key) {
   const r = recapSummary(kind, key), month = kind === 'month';
   openSheet(recapTitle(kind, key), body => {
@@ -175,7 +179,7 @@ function openRecap(kind, key) {
       r.longest && t('review.longest', { name: displayName(r.longest.name), min: r.longest.min }),
       r.challenges && t('review.challenges', { n: r.challenges }),
       r.achievements && t('recap.achievements', { n: r.achievements }),
-      month && r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
+      month && r.moods && r.moods.good && t('review.mood', { n: r.moods.good, good: r.moods.good, total: r.moods.total }),
     ])].filter(Boolean));
     const city = recapList([r.built && t('review.built', { n: r.built }), r.sets && t('recap.sets', { n: r.sets }),
       r.visitors && t('review.visitors', { n: r.visitors }), r.festivals && t('review.festivals', { n: r.festivals })]);

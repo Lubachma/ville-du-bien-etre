@@ -291,13 +291,31 @@ function dec1(x) {
   const s = Number.isInteger(r) ? String(r) : r.toFixed(1);
   return s.replace('.', t('fmt.decimal'));
 }
+// Un montant, arrondi au plus proche (prix, gains) : « 999 », « 12 k », « 7,5 M », « 2 Md ». On passe à l'unité suivante dès que l'arrondi
+// atteindrait 1000 de l'unité d'en dessous : les seuils sont 999,5 (« 1 k »), 999,5 k (« 1 M ») et 999,5 M (« 1 Md »), jamais « 1000 k ».
 function fmt(n) {
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);
-  if (a >= 1e9) return dec1(n / 1e9) + NB + t('fmt.billion');
-  if (a >= 1e6) return dec1(n / 1e6) + NB + t('fmt.million');
-  if (a >= 1e3) return Math.round(n / 1e3) + NB + t('fmt.thousand');
+  if (a >= 999.5e6) return dec1(n / 1e9) + NB + t('fmt.billion');
+  if (a >= 999.5e3) return dec1(n / 1e6) + NB + t('fmt.million');
+  if (a >= 999.5) return Math.round(n / 1e3) + NB + t('fmt.thousand');
   return String(Math.round(n));
+}
+// Le solde : la même présentation, mais arrondie vers le bas à la précision affichée (une décimale en dessous de 100 M ou de 100 Md, aucune
+// au-delà), pour ne jamais montrer plus que ce qu'on a : « 3 M » seulement à partir de 3 M. Arrondi vers le bas, il n'atteint jamais 1000.
+function fmtBalance(n) {
+  if (!Number.isFinite(n)) return '0';
+  const a = Math.abs(n);
+  if (a >= 1e9) return dec1Floor(n / 1e9) + NB + t('fmt.billion');
+  if (a >= 1e6) return dec1Floor(n / 1e6) + NB + t('fmt.million');
+  if (a >= 1e3) return Math.floor(n / 1e3) + NB + t('fmt.thousand');
+  return String(Math.floor(n));
+}
+// Comme dec1, mais vers le bas : une décimale en dessous de 100, aucune ensuite.
+function dec1Floor(x) {
+  if (Math.abs(x) >= 100) return String(Math.floor(x));
+  const r = Math.floor(x * 10) / 10;
+  return (Number.isInteger(r) ? String(r) : r.toFixed(1)).replace('.', t('fmt.decimal'));
 }
 function fmtMin(m) {
   m = Math.round(m);

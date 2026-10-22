@@ -4,7 +4,7 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
   '25-challenges.js', '26-summaries.js', '46-features.js'];
-const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay', 'pendingRitual', 'markRitual', 'setMood', 'moodInsights', 'moodDifficult', 'periodActive'];
+const EXPOSE = ['periodSummary', 'weekReview', 'recapSummary', 'periodRange', 'monthKey', 'shiftDay', 'pendingRitual', 'markRitual', 'setMood', 'moodInsights', 'moodDifficult', 'periodActive', 'HISTORY_MAX'];
 function app(now = '2026-10-27T12:00:00Z') {
   const a = loadApp(FILES, { expose: EXPOSE, now });
   a.state.clock.tz = 'Europe/Zurich'; a.state.clock.maxSeen = 0; a.state.createdAt = Date.parse('2026-05-04T09:00:00Z');
@@ -56,6 +56,58 @@ test('récapitulatifs : bornes du mois et de l’année, chiffres du mois, pas d
   assert.deepEqual(m.byCat, { esprit: 35, corps: 45, calme: 40 });
   assert.deepEqual([a.periodActive('month', '2026-10'), a.periodActive('month', '2026-09')], [true, false]);
   assert.equal(a.recapSummary('year', '2026').sessions, null);
+});
+
+// Octobre 2026 à 6 séances de 10 min par jour (« count » séances en tout, depuis le 1er). Comme dans l'app, chaque séance s'ajoute en tête
+// du journal, qui ne garde que les HISTORY_MAX dernières, et aux statistiques, qui gardent tout.
+function busyMonth(a, count) {
+  const s = a.state;
+  for (let i = 0; i < count; i++) {
+    const day = '2026-10-' + String(1 + Math.floor(i / 6)).padStart(2, '0');
+    s.history.unshift({ id: 's' + i, name: 'Séance ' + i, cat: 'calme', min: 10, ok: true, reward: 1e7, at: Date.parse(day + 'T10:00:00Z') + (i % 6) * 6e5, day,
+      source: 'direct', mode: 'focus', ...(i % 5 === 0 ? { mood: 5 } : {}) });
+    if (s.history.length > a.HISTORY_MAX) s.history.length = a.HISTORY_MAX;
+    for (const stats of [s.stats, s.stats.effort]) stats.days[day] = (stats.days[day] || 0) + 10;
+    const dc = s.stats.dailyCats[day] || (s.stats.dailyCats[day] = {}); dc.calme = (dc.calme || 0) + 10;
+  }
+}
+test('récapitulatif : un journal plein ne donne pas de chiffres faux', () => {
+  const a = app('2026-11-02T12:00:00Z'); busyMonth(a, 186);
+  // 186 séances ont eu lieu, le journal en garde 150 : la plus ancienne est du 7 octobre.
+  assert.deepEqual([a.state.history.length, a.state.history[149].day], [a.HISTORY_MAX, '2026-10-07']);
+  const m = plain(a.recapSummary('month', '2026-10'));
+  assert.deepEqual([m.sessions, m.longest, m.moods], [null, null, null]);
+  // Le reste ne dépend pas du journal : il vient des statistiques, et reste complet.
+  assert.deepEqual([m.minutes, m.activeDays, m.byCat, m.favorite], [1860, 31, { calme: 1860 }, 'calme']);
+  // Avec 20 séances seulement, le journal couvre tout le mois : il garde ses chiffres.
+  const b = app('2026-11-02T12:00:00Z'); busyMonth(b, 20);
+  const few = plain(b.recapSummary('month', '2026-10'));
+  assert.equal(few.sessions, 20);
+  assert.equal(few.longest && few.longest.min, 10);
+  assert.deepEqual(few.moods, { good: 4, total: 4 });
+  assert.equal(few.minutes, 200);
+});
+test('bilan : une semaine que le journal plein ne couvre plus suit la même règle', () => {
+  const a = app('2026-11-02T12:00:00Z'); busyMonth(a, 186);
+  // Le journal remonte au 7 octobre : la semaine du 5 n'y est qu'en partie, celle du 12 y est en entier.
+  const partial = plain(a.weekReview('2026-10-05')), whole = plain(a.weekReview('2026-10-12'));
+  assert.deepEqual([partial.sessions, partial.longest, partial.moods], [null, null, null]);
+  assert.deepEqual([partial.minutes, partial.activeDays], [420, 7]);
+  assert.deepEqual([whole.sessions, whole.minutes, whole.moods], [42, 420, { good: 8, total: 8 }]);
+});
+test('récapitulatif : plein, le journal couvre une période si sa plus ancienne séance la précède strictement', () => {
+  const entry = (id, day) => ({ id, name: id, cat: 'calme', min: 10, ok: true, reward: 1, at: Date.parse(day + 'T10:00:00Z'), day, source: 'direct', mode: 'focus' });
+  // « count » séances du 20 octobre, la plus ancienne datée « oldest » ; la période est tout octobre.
+  const sessions = (count, oldest) => {
+    const a = app('2026-11-02T12:00:00Z');
+    a.state.history = [...Array.from({ length: count - 1 }, (_, i) => entry('n' + i, '2026-10-20')), entry('old', oldest)];
+    return a.periodSummary('2026-10-01', '2026-10-31').sessions;
+  };
+  assert.equal(sessions(150, '2026-09-30'), 149);   // la veille : rien d'octobre n'a pu sortir (la séance du 30 septembre n'en fait pas partie)
+  assert.equal(sessions(150, '2026-10-01'), null);   // le premier jour : des séances de ce jour ont pu sortir
+  assert.equal(sessions(150, '2026-10-02'), null);
+  assert.equal(sessions(149, '2026-10-01'), 149);    // pas plein : le journal n'a rien perdu
+  assert.equal(sessions(1, '2026-10-01'), 1);
 });
 
 test('bilan dû : une fois par semaine, jamais pour une ville de la semaine, ni deux fois en changeant le début de semaine', () => {

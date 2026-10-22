@@ -140,7 +140,7 @@ function applyTheme() {
 }
 function renderHeader() {
   $('.brand-name').textContent = frTypo(cityName());
-  $('#balance').textContent = fmt(S.coins);
+  $('#balance').textContent = fmtBalance(S.coins);
   const chip = $('#streakChip');
   chip.hidden = S.settings.hideStreak;
   if (chip.hidden) return;

@@ -294,8 +294,112 @@ async function lateTabReloadsWhenStartIsRefused(browser, baseURL) {
   return 'Onglet en retard : un démarrage refusé le libère';
 }
 
+// Le solde est arrondi vers le bas : « 3 M » s'affiche seulement à partir de 3 M. L'en-tête, la boutique et l'écran de fin le disent
+// pareil (les prix gardent leur arrondi au plus proche).
+const NBSP = '\u00a0';
+// Le solde attendu entre 1 M et 100 M : une décimale, vers le bas (2 950 000 → « 2,9 M »).
+function floored(coins) {
+  assert.ok(coins >= 1e6 && coins < 1e8, 'solde hors de la plage de ce test : ' + coins);
+  const tenths = Math.floor(coins / 1e5);
+  return Math.floor(tenths / 10) + (tenths % 10 ? ',' + (tenths % 10) : '') + NBSP + 'M';
+}
+async function balanceRoundsDown(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, town({}, [], { coins: 2950000 }), NOW);
+  const coins = () => page.evaluate(() => __ville.state.coins);
+  try {
+    assert.equal(await page.locator('#balance').innerText(), '2,9' + NBSP + 'M');
+    await page.locator('#buildBtn').click();
+    assert.match(await page.locator('#sheetBody .note').first().innerText(), /^Solde\s:\s2,9\sM\./);
+    await page.locator('#sheetClose').click();
+    await succeed(page);
+    const after = await coins();
+    assert.ok(after > 2950000 && after < 1e8, 'solde après la séance : ' + after);
+    assert.equal(await result(page).locator('.res-lines li').last().locator('span').last().innerText(), floored(after));
+    assert.equal(await page.locator('#balance').innerText(), floored(after));
+    await backToCity(page);
+    assert.equal(await page.locator('#balance').innerText(), floored(after));
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Solde : arrondi vers le bas dans l’en-tête, la boutique et l’écran de fin';
+}
+
+// Octobre 2026 à « count » séances de 10 min, 6 par jour depuis le 1er. Le journal en garde 150 au plus, les statistiques tout.
+const at = iso => Date.parse(iso);
+function busyOctober(count, extra = {}) {
+  const history = [], days = {}, dailyCats = {};
+  for (let i = 0; i < count; i++) {
+    const day = '2026-10-' + String(1 + Math.floor(i / 6)).padStart(2, '0');
+    history.unshift({ id: 'b' + i, name: 'Pratique calme', cat: 'calme', min: 10, ok: true, reward: 1e7, at: at(day + 'T06:00:00Z') + (i % 6) * 6e5, day, source: 'direct',
+      mode: 'focus', ...(i % 5 === 0 ? { mood: 5 } : {}) });
+    days[day] = (days[day] || 0) + 10;
+    dailyCats[day] = { calme: days[day] };
+  }
+  history.length = Math.min(history.length, 150);
+  return town({ calme: count * 10 }, [], { createdAt: at('2026-05-04T09:00:00Z'), history, stats: { ok: count, byCat: { calme: count * 10 }, days, dailyCats },
+    rituals: { week: '', month: '', year: '' }, ...extra });
+}
+const sheet = page => page.locator('#sheetBody');
+// Un journal plein ne couvre plus tout le mois : le récapitulatif n'affiche ni nombre de séances, ni plus longue séance, ni humeur, mais le
+// temps de pratique et les jours actifs (venus des statistiques). Le bilan de la semaine d'après, que le journal couvre, garde tous les siens.
+async function recapWithFullJournal(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, busyOctober(186), '2026-11-02T09:00:00Z');
+  try {
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Octobre 2026');
+    const month = await sheet(page).innerText();
+    assert.match(month, /Temps de pratique[\s\S]*31\sh/);
+    assert.match(month, /Jours actifs[\s\S]*31/);
+    assert.match(month, /Tes domaines/);
+    assert.doesNotMatch(month, /Séances réussies|plus longue séance|tu te sentais bien/);
+    assert.equal(await page.locator('#sheetBody .review-figure').count(), 2);
+    await assertNoTechText(page, '#sheetBody');
+    // Le bilan de la semaine du 26 octobre au 1er novembre : le journal remonte au 7 octobre, il la couvre.
+    await page.locator('#sheetClose').click();
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Ta semaine');
+    const week = await sheet(page).innerText();
+    assert.match(week, /Séances réussies/);
+    assert.match(week, /Après 8 séances sur 8, tu te sentais bien/);
+    assert.equal(await page.locator('#sheetBody .review-figure').count(), 3);
+    await assertNoTechText(page, '#sheetBody');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Récapitulatif du mois : un journal plein ne montre pas de chiffres faux';
+}
+
+// Le bilan d'une semaine que le journal plein ne couvre pas en entier (150 séances en 5 jours) : deux chiffres, pas de séances.
+async function weekReviewWithFullJournal(browser, baseURL) {
+  const history = [], days = {}, dailyCats = {};
+  for (let i = 0; i < 150; i++) {
+    const day = '2026-10-' + String(21 + Math.floor(i / 30));
+    history.unshift({ id: 'w' + i, name: 'Pratique calme', cat: 'calme', min: 10, ok: true, reward: 1e7, at: at(day + 'T06:00:00Z') + (i % 30) * 6e5, day, source: 'direct',
+      mode: 'focus', mood: 5 });
+    days[day] = (days[day] || 0) + 10;
+    dailyCats[day] = { calme: days[day] };
+  }
+  const seed = town({ calme: 1500 }, [], { createdAt: at('2026-05-04T09:00:00Z'), history, stats: { ok: 150, byCat: { calme: 1500 }, days, dailyCats },
+    rituals: { week: '', month: '', year: '' } });
+  const { context, page, errors } = await cityAt(browser, baseURL, seed, '2026-10-26T09:00:00Z', { viewport: { width: 320, height: 640 } });
+  try {
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#sheetTitle').innerText(), 'Ta semaine');
+    const week = await sheet(page).innerText();
+    assert.match(week, /Temps de pratique[\s\S]*25\sh/);
+    assert.match(week, /Jours actifs[\s\S]*5/);
+    assert.doesNotMatch(week, /Séances réussies|plus longue séance|tu te sentais bien/);
+    // Deux chiffres qui se partagent la ligne, sans case vide.
+    assert.equal(await page.locator('#sheetBody .review-figure').count(), 2);
+    assert.equal(await page.locator('#sheetBody .review-figures').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length), 2);
+    await assertNoTechText(page, '#sheetBody');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Bilan de la semaine : un journal plein ne montre pas de chiffres faux';
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
-  lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused];
+  lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

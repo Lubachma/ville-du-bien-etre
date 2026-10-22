@@ -34,7 +34,9 @@ function exportBackup() {
   return 'VBE2.' + body + '.' + hash53(BACKUP_SALT + body);
 }
 function readBackup(text) {
-  const m = String(text || '').trim().match(/^VBE([12])\.([A-Za-z0-9_-]+)\.([0-9a-z]+)$/);
+  // Le texte d'une sauvegarde n'a aucun blanc : collé après un courriel ou une messagerie, il arrive souvent coupé en lignes ou avec des
+  // espaces en trop. On les ignore tous ; l'empreinte vérifie ensuite que rien d'autre n'a changé.
+  const m = String(text || '').replace(/\s+/g, '').match(/^VBE([12])\.([A-Za-z0-9_-]+)\.([0-9a-z]+)$/);
   if (!m) return { error: t('backup.notBackupText') };
   if (hash53(BACKUP_SALT + m[2]) !== m[3]) return { error: t('backup.tampered') };
   try {

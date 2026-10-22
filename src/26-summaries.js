@@ -11,8 +11,13 @@ function periodDays(from, to) {
 const inPeriod = (day, from, to) => typeof day === 'string' && day >= from && day <= to;
 const tsInPeriod = (ts, from, to) => validTs(ts) && inPeriod(dayOf(ts), from, to);
 
+// Le journal ne garde que les HISTORY_MAX dernières séances, la plus récente en tête. Plein, il couvre une période seulement si sa plus
+// ancienne séance date d'avant son premier jour : sinon des séances de la période ont pu en sortir. Pas plein, il n'a rien perdu.
+const historyCovers = from => S.history.length < HISTORY_MAX || S.history[S.history.length - 1].day < from;
+
 // Ce qu'une période a apporté : temps de pratique, jours actifs, séances, domaines (et leurs minutes), beaux moments, nouveautés de la ville,
-// défis et succès, humeurs notées (sur l'écran seulement).
+// défis et succès, humeurs notées (sur l'écran seulement). Le nombre de séances, la plus longue et les humeurs ne viennent que du journal :
+// quand il ne couvre pas toute la période, ils valent null plutôt qu'un chiffre faux. Le reste vient des statistiques, qui gardent tout.
 function periodSummary(from, to) {
   const stats = S.stats.effort || S.stats, daily = S.stats.dailyCats || {}, days = periodDays(from, to);
   const minutesOn = day => stats.days[day] || 0, catMinutes = cat => days.reduce((sum, day) => sum + (obj(daily[day])[cat] || 0), 0);
@@ -20,21 +25,21 @@ function periodSummary(from, to) {
   const longest = sessions.reduce((best, e) => (!best || e.min > best.min ? e : best), null);
   const bestDay = days.reduce((best, day) => (minutesOn(day) > (best ? best.minutes : 0) ? { day, minutes: minutesOn(day) } : best), null);
   const gifts = prefix => Object.entries(S.gifts || {}).filter(([key, at]) => key.startsWith(prefix) && tsInPeriod(at, from, to)).length;
-  const moods = sessions.filter(e => e.mood);
+  const moods = sessions.filter(e => e.mood), covered = historyCovers(from);
   return {
     from, to,
     minutes: days.reduce((sum, day) => sum + minutesOn(day), 0),
     activeDays: days.filter(day => minutesOn(day) >= 1).length,
-    sessions: sessions.length, cats, byCat: Object.fromEntries(cats.map(cat => [cat, catMinutes(cat)])),
+    sessions: covered ? sessions.length : null, cats, byCat: Object.fromEntries(cats.map(cat => [cat, catMinutes(cat)])),
     favorite: cats.length ? cats.reduce((best, cat) => (catMinutes(cat) > catMinutes(best) ? cat : best)) : null,
-    longest: longest ? { name: longest.name, min: longest.min } : null, bestDay,
+    longest: covered && longest ? { name: longest.name, min: longest.min } : null, bestDay,
     // Éléments posés (sauf ceux du départ), ensembles découverts, visiteurs rencontrés pour la première fois.
     built: S.city.tiles.filter(tile => tile.at > S.createdAt + 60000 && tsInPeriod(tile.at, from, to)).length,
     sets: Object.values(S.sets || {}).filter(at => tsInPeriod(at, from, to)).length,
     visitors: Object.values(S.visits || {}).filter(v => tsInPeriod(v.first, from, to)).length,
     festivals: gifts('fest:'), challenges: gifts('chal:'),
     achievements: Object.values(S.achievements || {}).filter(at => tsInPeriod(at, from, to)).length,
-    moods: { good: moods.filter(e => e.mood >= 4).length, total: moods.length },
+    moods: covered ? { good: moods.filter(e => e.mood >= 4).length, total: moods.length } : null,
   };
 }
 
