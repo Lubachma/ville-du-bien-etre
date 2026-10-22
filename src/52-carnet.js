@@ -195,12 +195,14 @@ function hasNews(fresh = {}) {
 }
 // Ville d'avant la mise à jour ou sauvegarde restaurée : tout ce qui était déjà mérité, en un seul message.
 // Au démarrage (defer), le message attend : il rejoint le premier message de la ville (une fête), sinon flushCarnetNote l'affiche.
+// save: false (avec defer) n'enregistre rien : c'est la restauration, que l'enregistrement « replace » qui suit écrit telle quelle. Un
+// enregistrement ordinaire avant lui fusionnerait dans la ville restaurée ce qu'un autre onglet aurait écrit entre-temps.
 let carnetNote = '';
-function catchUpCarnet({ defer = false } = {}) {
+function catchUpCarnet({ defer = false, save = true } = {}) {
   const now = Date.now(), sets = discoverSets(now), achievements = checkAchievements(now, { retro: true });
   if (!sets.length && !achievements.length) return { achievements, sets };
   const text = t('carnet.catchUp', { n: achievements.length }) + (sets.length ? ' ' + t('carnet.catchUpSets', { n: sets.length }) : '');
-  if (defer) { commit({ silent: true }); carnetNote = text; return { achievements, sets }; }
+  if (defer) { if (save) commit({ silent: true }); carnetNote = text; return { achievements, sets }; }
   commit();       // affiché tout de suite, même si le Journal est ouvert (restauration)
   toast(text, { label: t('carnet.open'), run: () => openCarnet() });
   return { achievements, sets };

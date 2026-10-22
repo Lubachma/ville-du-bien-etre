@@ -64,8 +64,9 @@ function restoreBackup(st) {
   closeSheet();
   refreshLang();
   // Une sauvegarde d'avant la mise à jour reçoit ses succès d'un coup, datés, avant que la Ville réaffichée ne note la saison
-  // (qui les donnerait sinon à la date du jour). Leur message remplace celui de la restauration.
-  const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet({ defer: true }) : null;
+  // (qui les donnerait sinon à la date du jour). Leur message remplace celui de la restauration. Rien n'est enregistré avant la ligne
+  // qui suit (save: false) : un enregistrement ordinaire y mêlerait ce qu'un autre onglet aurait écrit entre-temps.
+  const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet({ defer: true, save: false }) : null;
   // La sauvegarde remplace tout : ni fusion avec un autre onglet, ni reprise de ce que gardait l'ancienne ville.
   const saved = commit({ flush: true, replace: true });
   City.relayout();

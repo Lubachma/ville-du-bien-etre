@@ -356,11 +356,14 @@ test('fusion : une remise à zéro faite ailleurs l\'emporte', () => {
     assert.equal(s.createdAt, fresh.createdAt);
     assert.equal(s.revision, fresh.revision);
   };
-  // B reçoit l'écriture de A : la ville neuve l'emporte entière, sans fusion ni écriture.
+  // B reçoit l'écriture de A : la ville neuve l'emporte entière, sans fusion ni écriture, et l'alerte d'écriture impossible s'efface :
+  // plus rien n'attend d'être écrit.
+  assert.notEqual(b.Store.localError, '');
   b.Store.pullLocal();
   assertFresh(b.api.state);
   assert.equal(b.api.state.settings.sound, true);
   assert.equal(disk.getItem(KEY), text);
+  assert.equal(b.Store.localError, '');
   // C écrit à nouveau avant d'avoir vu l'écriture de A : rien n'est écrit, la ville neuve l'emporte aussi, et l'alerte
   // d'écriture impossible s'efface, puisque plus rien n'attend d'être écrit.
   assert.notEqual(c.Store.localError, '');
@@ -378,6 +381,32 @@ test('fusion : une remise à zéro faite ailleurs l\'emporte', () => {
   assert.equal(out.personal.name, 'Nouveau départ');
   assert.equal(out.createdAt, fresh.createdAt);
   assert.equal(out.companion, null);
+});
+
+test('restauration : ce qu\'un autre onglet écrit entre-temps n\'entre pas dans la ville restaurée', () => {
+  // L'ancienne ville, ouverte dans deux onglets. A va restaurer une sauvegarde de cette même ville, plus ancienne : sans succès noté,
+  // elle reçoit ses succès au moment de la restauration (catchUpCarnet), avant l'écriture qui la remplace.
+  const RESTORE = { files: ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js',
+    '45-settings.js', '46-features.js', '50-session.js', '52-carnet.js'], expose: ['restoreBackup'] };
+  const v = copy(stateApp().defaultState()), disk = storage();
+  v.createdAt = Date.parse('2025-03-01T09:00:00Z');
+  disk.setItem(KEY, JSON.stringify(v));
+  const a = stateApp(disk, undefined, RESTORE), b = stateApp(disk);
+  a.init(); b.init();
+  Object.assign(a.context, { refreshLang() {} });
+  const backup = a.normalize({ ...copy(v), coins: 5e6, personal: { name: 'Sauvegarde' }, stats: { ...v.stats, ok: 2 },
+    city: { size: 7, tiles: [{ id: 'bib', item: 'bibliotheque', x: 0, y: 0, at: Date.parse('2026-09-01T09:00:00Z'), paid: 10e6 }] } });
+  // B écrit l'ancienne ville avec une envie de plus ; A ne l'a pas encore vue quand il restaure.
+  b.api.state.wishes.push({ id: 'envie-b', name: 'Peindre', cat: 'crea', min: 20 });
+  assert.equal(b.commit({ silent: true }), true);
+  a.restoreBackup(backup);
+  const out = stored(disk);
+  assert.equal(out.personal.name, 'Sauvegarde');
+  assert.equal(out.coins, 5e6);
+  assert.ok(out.achievements['premiere-pierre'] > 0, 'succès rattrapés à la restauration');
+  assert.equal(out.wishes.some(w => w.id === 'envie-b'), false, 'l’envie écrite ailleurs est entrée dans la ville restaurée');
+  assert.deepEqual(out.wishes.map(w => w.id), Array.from(backup.wishes, w => w.id));
+  assert.equal(a.api.state.wishes.some(w => w.id === 'envie-b'), false);
 });
 
 test('fusion : deux onglets neufs gardent la fusion actuelle', () => {

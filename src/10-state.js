@@ -928,6 +928,8 @@ const Store = {
       S = other;
       this.lsBase = clone(other);
       this.lsAt = other.updatedAt;
+      // Ville remplacée ailleurs : plus rien d'ici n'attend d'être écrit, l'alerte d'écriture impossible s'efface (comme dans saveLocal).
+      if (replaced) this.reportLocal('');
     } else {
       S = merge3(this.lsBase || other, S, other);
       markChanged(other.updatedAt);
