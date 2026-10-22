@@ -1267,7 +1267,7 @@ DICT.en = {
   'welcome.step1': 'Start a timer for a real activity.',
   'welcome.step2': 'Every minute you complete earns you coins.',
   'welcome.step3': 'Build your town with your coins.',
-  'welcome.start': 'Start with 2 minutes of calm',
+  'welcome.start': 'Start with 2\u00a0minutes of calm',
   'welcome.choose': 'Choose an activity',
   'welcome.note': 'Free, no account, no ads. Your town stays on this device.',
   'welcome.close': 'Close the welcome',

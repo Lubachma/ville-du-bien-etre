@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { storage, stateApp } = require('./helpers/state-vm.cjs');
+const { storage, stateApp, FILES } = require('./helpers/state-vm.cjs');
 
 // Étape 8, les premiers pas : « ville sans séance » se lit dans les compteurs (S.stats), jamais dans l'historique.
 // Les villes amorcées des tests, et les vieilles sauvegardes, ont des séances comptées et un historique vide.
@@ -28,12 +28,13 @@ test("ville sans séance : ni réussie ni interrompue, l'historique ne compte pa
 });
 
 // La carte « Bienvenue » : montrée à une ville sans séance que personne n'a fermée, tant qu'aucune séance ne tourne.
-const WELCOME_FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '50-session.js', '59-first-steps.js'];
+// La VM charge les fichiers par défaut du helper, et celui de la carte.
 const CLOSED = 'ville-bien-etre/v1:welcome-closed';
+const welcomeApp = disk => stateApp(disk, undefined, { files: [...FILES, '59-first-steps.js'], expose: ['welcomeShown', 'closeWelcome', 'resetWelcome'] });
 
 test("accueil : une ville sans séance, ni fermée sur l'appareil, ni en séance", () => {
   const disk = storage();
-  const a = stateApp(disk, undefined, { files: WELCOME_FILES, expose: ['welcomeShown'] });
+  const a = welcomeApp(disk);
   assert.equal(a.welcomeShown(), true, 'une ville neuve');
 
   // La croix range « 1 » sur l'appareil, et rien d'autre ne ferme la carte.
@@ -61,4 +62,30 @@ test("accueil : une ville sans séance, ni fermée sur l'appareil, ni en séance
   a.api.state = a.defaultState();
   disk.getItem = () => { throw new Error('SecurityError'); };
   assert.equal(a.welcomeShown(), true, 'stockage illisible');
+});
+
+test("accueil : la croix cache la carte pour la page même si le stockage refuse l'écriture, « Tout recommencer » la rend", () => {
+  const disk = storage();
+  const a = welcomeApp(disk);
+  disk.fail = true;   // stockage plein : setItem lève une erreur
+  assert.equal(a.welcomeShown(), true);
+  a.closeWelcome();
+  assert.equal(disk.data.size, 0, "rien n'a pu être rangé");
+  assert.equal(a.welcomeShown(), false, 'cachée pour le reste de la page');
+  assert.equal(a.welcomeShown(), false, 'et au rendu suivant');
+  a.resetWelcome();
+  assert.equal(a.welcomeShown(), true, '« Tout recommencer » la rend à la page');
+
+  // Avec un stockage qui marche : la croix range « 1 », « Tout recommencer » l'efface, et la page l'oublie aussi.
+  disk.fail = false;
+  a.closeWelcome();
+  assert.equal(disk.getItem(CLOSED), '1');
+  assert.equal(a.welcomeShown(), false);
+  a.resetWelcome();
+  assert.equal(disk.getItem(CLOSED), null);
+  assert.equal(a.welcomeShown(), true);
+
+  // Un stockage qui refuse d'effacer ne fait pas échouer « Tout recommencer ».
+  disk.removeItem = () => { throw new Error('SecurityError'); };
+  assert.doesNotThrow(() => a.resetWelcome());
 });

@@ -450,7 +450,7 @@ function settingsReset() {
     S.settings.lang = lang;   // la langue choisie reste : une ville neuve doit rester lisible
     S.clock = { tz: clock.tz, maxSeen: clock.maxSeen, lastDay: clock.lastDay };
     // La ville est neuve : l'accueil revient (sa fermeture est rangée sur l'appareil, pas dans la ville). Avant le rendu qui suit.
-    try { localStorage.removeItem(LS_WELCOME); } catch (e) { /* stockage indisponible */ }
+    if (typeof resetWelcome === 'function') resetWelcome();
     closeSheet();
     Mode.state = null;
     refreshLang();

@@ -1267,7 +1267,7 @@ DICT.fr = {
   'welcome.step1': 'Lance un chrono pour une vraie activité.',
   'welcome.step2': 'Chaque minute terminée te rapporte des pièces.',
   'welcome.step3': 'Construis ta ville avec tes pièces.',
-  'welcome.start': 'Commencer par 2 minutes de calme',
+  'welcome.start': 'Commencer par 2\u00a0minutes de calme',
   'welcome.choose': 'Choisir une activité',
   'welcome.note': 'Gratuit, sans compte ni pub. Ta ville reste sur cet appareil.',
   'welcome.close': "Fermer l'accueil",

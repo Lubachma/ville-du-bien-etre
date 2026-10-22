@@ -47,4 +47,4 @@ function stateApp(localStorage = storage(), locks = lockManager(), { files = FIL
   return { ...context.api, api: context.api, context, localStorage, advance(ms) { wall += ms; }, setNow(iso) { wall = Date.parse(iso); }, init() { context.api.Store.init(); } };
 }
 
-module.exports = { storage, lockManager, stateApp };
+module.exports = { storage, lockManager, stateApp, FILES };
