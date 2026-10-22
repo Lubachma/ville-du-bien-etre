@@ -8247,11 +8247,12 @@ function announce(msg) {
 let toastTimer = 0, toastMs = 0, toastHeld = null, toastCity = 0;
 // « spoken » : ce que les lecteurs d'écran entendent, quand il dit plus que le message affiché.
 // opts.keep : aucun minuteur, le message reste jusqu'au prochain message ; go(), openSheet() et updateInert() (la séance ou la vue en grand qui
-// s'ouvre) le ferment (« Annuler » après une suppression), et la page lui laisse sa place (reserveToastRoom).
+// s'ouvre) le ferment (« Annuler » après une suppression), la page lui laisse sa place (reserveToastRoom), et un onglet en retard attend son
+// départ pour se recharger (reloadWhenIdle).
 // Sinon il dure 6 s avec une action, 2,8 s sans ; un message avec action ne se ferme pas tant qu'il a le focus ou la souris, et ses 6 s
 // repartent quand les deux l'ont quitté.
 function toast(msg, action, spoken = msg, opts = {}) {
-  const t = $('#toast');
+  const t = $('#toast'), wasKept = document.body.classList.contains('toast-kept');
   t.replaceChildren(h('span', {}, msg));
   if (action) t.append(h('button', { class: 'toast-btn', type: 'button', onclick: () => { hideToast(); action.run(); } }, action.label));
   t.hidden = false;
@@ -8265,7 +8266,11 @@ function toast(msg, action, spoken = msg, opts = {}) {
   armToast();
   document.body.classList.toggle('toast-kept', !!opts.keep);
   if (opts.keep) reserveToastRoom();
+  else if (wasKept) keptToastGone();
 }
+// Le message qui reste est parti (fermé, ou remplacé par un autre) : un onglet en retard qu'il retenait se recharge, au tour suivant (après
+// ce que le même geste lance ensuite), s'il est alors au repos (reloadWhenIdle).
+function keptToastGone() { if (typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0); }
 // Le minuteur n'envoie rien à hideToast, dont le paramètre est un booléen.
 function armToast() {
   clearTimeout(toastTimer);
@@ -8296,11 +8301,13 @@ window.addEventListener('resize', () => { if (document.body.classList.contains('
 // nouveau jour commence », écrit juste avant que la fiche du visiteur ne se rouvre, doit encore se voir).
 function hideToast(keptOnly = false) {
   if (keptOnly && toastMs) return;
+  const kept = document.body.classList.contains('toast-kept');
   clearTimeout(toastTimer);
   toastHeld = null;
   toastCity = 0;
   $('#toast').hidden = true;
   document.body.classList.remove('toast-kept');
+  if (kept) keptToastGone();
 }
 // Une autre ville adoptée (« Tout recommencer » ou une restauration faite dans un autre onglet, voir afterReplace) : le message qui reste
 // parlait de l'ancienne, il se ferme.
@@ -10085,13 +10092,15 @@ function hasTypedText() {
   return $$('input:not([type]), input[type="text"], input[type="search"], textarea').some(field => !field.closest('#sheet') && field.value.trim());
 }
 // Un onglet resté sur l'ancienne version (la mise à jour a été acceptée dans un autre onglet) se recharge de lui-même dès qu'il est au repos.
-// Une séance qui tourne ou démarre ici le retient. Page visible, il attend aussi qu'il n'y ait plus ni fenêtre, ni écran de séance, ni vue en
-// grand (donc ni visite d'une ville amie), ni pose, ni texte en cours de saisie ; en arrière-plan, seule la séance le retient. Le bandeau
-// « Mettre à jour » reste affiché. Chaque moment où l'une de ces attentes peut finir rappelle cette fonction, sans risque : elle est idempotente.
+// Une séance qui tourne ou démarre ici le retient, comme le message « Annuler » qui reste après une suppression (body.toast-kept : recharger
+// ferait perdre l'annulation ; hideToast rappelle cette fonction quand il part). Page visible, il attend aussi qu'il n'y ait plus ni fenêtre,
+// ni écran de séance, ni vue en grand (donc ni visite d'une ville amie), ni pose, ni texte en cours de saisie ; en arrière-plan, rien de plus
+// ne le retient. Le bandeau « Mettre à jour » reste affiché. Chaque moment où l'une de ces attentes peut finir rappelle cette fonction, sans
+// risque : elle est idempotente.
 function reloadWhenIdle() {
   const pwa = window.VillePWA;
   if (!pwa || !pwa.reloadAvailable || pwa.reloading) return;
-  if (run || beginning) return;
+  if (run || beginning || document.body.classList.contains('toast-kept')) return;
   if (document.visibilityState === 'visible' && (['#sheet', '#session', '#cityBig', '#placebar'].some(selector => !$(selector).hidden) || hasTypedText())) return;
   pwa.activate();
 }

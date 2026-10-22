@@ -269,6 +269,39 @@ async function lateTabWaitsForTyping(browser, baseURL) {
   return "Onglet en retard : attend la fin d'une saisie";
 }
 
+// Le message qui reste après une suppression (« Annuler ») retient aussi l'onglet en retard, page visible ou en arrière-plan : le recharger
+// ferait perdre l'annulation. Le message parti (un changement d'onglet de l'app, « Annuler »), l'onglet se recharge au repos, et ce qu'« Annuler »
+// a remis est enregistré avant.
+async function lateTabWaitsForUndo(browser, baseURL) {
+  const { context, page, errors } = await sessionTown(browser);
+  const remove = async name => {
+    await page.locator('[data-tab="activites"]').click();
+    if (await page.locator('#editActs').getAttribute('aria-pressed') !== 'true') await page.locator('#editActs').click();
+    await page.getByRole('button', { name: 'Supprimer ' + name, exact: true }).click();
+    assert.equal(await page.locator('#toast').isVisible(), true, name + ' : pas de message après la suppression');
+  };
+  try {
+    await page.goto(baseURL);
+    await page.waitForFunction(() => !!window.__ville);
+    await remove('Pratique crea');
+    await markLate(page);
+    await assertStays(page, 'message « Annuler » affiché');
+    await setVisibility(page, 'hidden');
+    await assertStays(page, 'message « Annuler » affiché, page en arrière-plan');
+    await setVisibility(page, 'visible');
+    await assertReloads(page, () => page.locator('[data-tab="journal"]').click(), 'message fermé par un changement d’onglet');
+    // « Annuler » ferme le message et remet l'activité : elle est là après le rechargement.
+    await remove('Pratique foyer');
+    await markLate(page);
+    await assertStays(page, 'deuxième message « Annuler » affiché');
+    await assertReloads(page, () => page.locator('#toast').getByRole('button', { name: 'Annuler', exact: true }).click(), '« Annuler »');
+    assert.deepEqual(await page.evaluate(() => ['a-crea', 'a-foyer'].map(id => __ville.state.activities.some(entry => entry.id === id))), [false, true],
+      'activités après le rechargement (supprimée, puis remise par « Annuler »)');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Onglet en retard : attend qu’« Annuler » ne soit plus offert';
+}
+
 // Un démarrage refusé libère l'onglet qu'il retenait : ici l'activité n'existe plus quand on touche « Commencer » (supprimée ailleurs).
 // En séance libre, puis en Concentration derrière la mise en garde « écran allumé » (réglage coupé).
 async function lateTabReloadsWhenStartIsRefused(browser, baseURL) {
@@ -1339,7 +1372,7 @@ async function blankNamesReported(browser, baseURL) {
 }
 
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
-  lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
+  lateTabWaitsForTyping, lateTabWaitsForUndo, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
   soundResumedOnReturn, imagesOwnCityUnderSky, recapFiguresReadable, zoomDrawsOncePerFrame, focusNeverLost, villeFocusKeptOnPartialRenders, undoLastsUntilNextAction, undoStaysInItsCity, toastHeldByMouseAndFocus,
   keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole, streakReadInFull, routineStepAnnounced, challengesNameFollowsLanguage, blankNamesReported];
 async function runFiabilite(browser, baseURL) {

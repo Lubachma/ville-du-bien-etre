@@ -106,11 +106,12 @@ function announce(msg) {
 let toastTimer = 0, toastMs = 0, toastHeld = null, toastCity = 0;
 // « spoken » : ce que les lecteurs d'écran entendent, quand il dit plus que le message affiché.
 // opts.keep : aucun minuteur, le message reste jusqu'au prochain message ; go(), openSheet() et updateInert() (la séance ou la vue en grand qui
-// s'ouvre) le ferment (« Annuler » après une suppression), et la page lui laisse sa place (reserveToastRoom).
+// s'ouvre) le ferment (« Annuler » après une suppression), la page lui laisse sa place (reserveToastRoom), et un onglet en retard attend son
+// départ pour se recharger (reloadWhenIdle).
 // Sinon il dure 6 s avec une action, 2,8 s sans ; un message avec action ne se ferme pas tant qu'il a le focus ou la souris, et ses 6 s
 // repartent quand les deux l'ont quitté.
 function toast(msg, action, spoken = msg, opts = {}) {
-  const t = $('#toast');
+  const t = $('#toast'), wasKept = document.body.classList.contains('toast-kept');
   t.replaceChildren(h('span', {}, msg));
   if (action) t.append(h('button', { class: 'toast-btn', type: 'button', onclick: () => { hideToast(); action.run(); } }, action.label));
   t.hidden = false;
@@ -124,7 +125,11 @@ function toast(msg, action, spoken = msg, opts = {}) {
   armToast();
   document.body.classList.toggle('toast-kept', !!opts.keep);
   if (opts.keep) reserveToastRoom();
+  else if (wasKept) keptToastGone();
 }
+// Le message qui reste est parti (fermé, ou remplacé par un autre) : un onglet en retard qu'il retenait se recharge, au tour suivant (après
+// ce que le même geste lance ensuite), s'il est alors au repos (reloadWhenIdle).
+function keptToastGone() { if (typeof reloadWhenIdle === 'function') setTimeout(reloadWhenIdle, 0); }
 // Le minuteur n'envoie rien à hideToast, dont le paramètre est un booléen.
 function armToast() {
   clearTimeout(toastTimer);
@@ -155,11 +160,13 @@ window.addEventListener('resize', () => { if (document.body.classList.contains('
 // nouveau jour commence », écrit juste avant que la fiche du visiteur ne se rouvre, doit encore se voir).
 function hideToast(keptOnly = false) {
   if (keptOnly && toastMs) return;
+  const kept = document.body.classList.contains('toast-kept');
   clearTimeout(toastTimer);
   toastHeld = null;
   toastCity = 0;
   $('#toast').hidden = true;
   document.body.classList.remove('toast-kept');
+  if (kept) keptToastGone();
 }
 // Une autre ville adoptée (« Tout recommencer » ou une restauration faite dans un autre onglet, voir afterReplace) : le message qui reste
 // parlait de l'ancienne, il se ferme.
