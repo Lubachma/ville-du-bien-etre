@@ -922,7 +922,8 @@ const Store = {
     dbg('pullLocal ' + (other && other.updatedAt) + ' active=' + !!(other && other.active));
     if (this.migrationPending) return;
     if (!other || sameVersion(other, S) || sameVersion(other, this.lsBase)) return;
-    if (sameVersion(S, this.lsBase) || this.replacedBy(other)) {
+    const previous = S, replaced = this.replacedBy(other);
+    if (sameVersion(S, this.lsBase) || replaced) {
       S = other;
       this.lsBase = clone(other);
       this.lsAt = other.updatedAt;
@@ -934,7 +935,11 @@ const Store = {
       this.saveLocal();
       this.schedule(400);
     }
-    afterReplace();
+    // Seule la séance en cours a bougé (son point de reprise, voir onlySessionMoved) : la fenêtre ouverte et la pose restent. L'ancien
+    // état peut avoir gardé la forme où l'interface l'a laissé (champs par défaut absents, clés dans un autre ordre) : il est aussi
+    // comparé tel que le stockage le relirait, sinon le premier point de reprise après un ajout fait ici fermerait quand même la
+    // fenêtre. Une ville remplacée ailleurs se réaffiche toujours entièrement.
+    afterReplace({ light: !replaced && (onlySessionMoved(previous, S) || onlySessionMoved(normalize(previous), S)) });
   },
   setBase(R) {
     this.base = clone(R);
@@ -1110,9 +1115,24 @@ function commit(opts = {}) {
   if (!opts.silent) renderAll();
   return saved;
 }
-// Après un remplacement de l'état par une autre version (compte ou autre onglet).
-let replacePending = false;
-function afterReplace() {
+// Vrai quand deux états ne diffèrent que par ce qu'écrit une séance en cours à chaque point de reprise : la date et la révision de
+// l'état, et, dans la séance, le temps écoulé, le point de reprise et le propriétaire (qu'une reprise par un autre onglet change
+// aussi). Tout le reste compte, y compris le départ ou la fin d'une séance.
+function onlySessionMoved(a, b) {
+  const unlike = (x, y) => JSON.stringify(x) !== JSON.stringify(y);
+  // La séance sans ce qu'un point de reprise écrit (aucune séance : rien à comparer).
+  const quiet = active => active && { ...active, elapsedSec: 0, checkpointAt: 0, owner: '' };
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (key === 'updatedAt' || key === 'revision') continue;
+    if (key === 'active' ? unlike(quiet(a.active), quiet(b.active)) : unlike(a[key], b[key])) return false;
+  }
+  return true;
+}
+// Après un remplacement de l'état par une autre version (compte ou autre onglet). `light` (voir onlySessionMoved) : seule la séance
+// en cours a changé, la fenêtre ouverte, la pose en cours et la case choisie restent. Les remplacements d'un même tour ne font qu'un
+// rendu, et il n'est léger que s'ils le sont tous (replaceFull : l'un d'eux ne l'était pas).
+let replacePending = false, replaceFull = false;
+function afterReplace({ light } = {}) {
   if (run && !run.ended && (!S.active || S.active.id !== run.id || (S.active.owner && S.active.owner !== Store.tab))) {
     // Le résultat ou le propriétaire partagé fait autorité. Ne jamais ressusciter
     // un chrono local : deux onglets pourraient sinon se réécrire sans fin.
@@ -1123,13 +1143,18 @@ function afterReplace() {
     if (typeof updateInert === 'function') updateInert();
     setTimeout(() => toast(t('session.endedElsewhere')), 0);
   }
+  if (!light) replaceFull = true;
   if (replacePending) return;
   replacePending = true;
   setTimeout(() => {
-    replacePending = false;
-    Mode.state = null;
-    Selection.id = null;
-    if (!$('#sheet').hidden && !sheetKeepOnSync) closeSheet();
+    // Lus et remis à zéro avant tout rendu : checkActive(), plus bas, peut relire le stockage et en demander un autre.
+    const full = replaceFull;
+    replacePending = replaceFull = false;
+    if (full) {
+      Mode.state = null;
+      Selection.id = null;
+      if (!$('#sheet').hidden && !sheetKeepOnSync) closeSheet();
+    }
     // Langue changée sur un autre écran : celui-ci suit.
     if (typeof refreshLang === 'function' && resolveLang(S.settings.lang) !== LANG) refreshLang();
     City.relayout();

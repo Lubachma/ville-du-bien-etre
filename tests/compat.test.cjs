@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { performance } = require('node:perf_hooks');
-const { storage, stateApp } = require('./helpers/state-vm.cjs');
+const { storage, lockManager, stateApp } = require('./helpers/state-vm.cjs');
 
 const KEY = 'ville-bien-etre/v2';
 const EXPOSE = ['unknownParts', 'graftUnknown', 'normalize'];
@@ -427,4 +427,279 @@ test('fusion : un document sans date de création valide n\'est pas une ville re
     assert.equal(two.a.api.state.personal.name, 'Lumière');
     assert.equal(stored(two.disk).personal.name, 'Lumière');
   }
+});
+
+// Deux onglets sur la même ville. A tient une séance libre de 30 min ; B est au repos. afterReplace() travaille au tour de
+// minuterie qui suit une relecture : settle() le laisse passer.
+const settle = () => new Promise(resolve => setTimeout(resolve, 10));
+async function sessionTabs(seed) {
+  const disk = storage(), locks = lockManager(), a = stateApp(disk, locks), b = stateApp(disk, locks);
+  if (seed) disk.setItem(KEY, JSON.stringify(seed));
+  a.init();
+  a.commit({ silent: true });
+  b.init();
+  await a.startSession({ name: 'Marche', cat: 'corps', min: 30, mode: 'free' });
+  // B a déjà vu le départ de la séance : seuls les points de reprise suivent.
+  b.Store.pullLocal();
+  await settle();
+  // Un point de reprise de A, 5 s plus tard (le temps de la séance avance avec l'horloge), que B relit aussitôt.
+  const beat = () => {
+    a.advance(5000);
+    b.advance(5000);
+    a.api.run.elapsed += 5000;
+    a.persistRun(true);
+    b.Store.pullLocal();
+  };
+  return { disk, locks, a, b, beat, checkpoint: async () => { beat(); await settle(); } };
+}
+// Dans cet onglet : une fenêtre ouverte (le bouchon closeSheet compte les fermetures), une pose en cours (Mode.state) et une case
+// choisie (Selection.id).
+function showing(tab) {
+  const shown = { closed: 0, placement: { kind: 'place' }, tile: 'case-1' };
+  tab.context.closeSheet = () => { shown.closed++; };
+  tab.context.sheetKeepOnSync = false;
+  tab.context.document.querySelector('#sheet').hidden = false;
+  tab.context.Mode.state = shown.placement;
+  tab.context.Selection.id = shown.tile;
+  return shown;
+}
+const stillShowing = (tab, shown, label) => {
+  assert.equal(shown.closed, 0, label);
+  assert.equal(tab.context.Mode.state, shown.placement, label);
+  assert.equal(tab.context.Selection.id, shown.tile, label);
+};
+const cleared = (tab, shown, label) => {
+  assert.equal(shown.closed, 1, label);
+  assert.equal(tab.context.Mode.state, null, label);
+  assert.equal(tab.context.Selection.id, null, label);
+};
+
+test('onglets : un point de reprise ne ferme pas la fenêtre de l\'autre onglet', async () => {
+  const { a, b, checkpoint } = await sessionTabs();
+  const shown = showing(b), seen = [];
+  for (let i = 0; i < 6; i++) {
+    await checkpoint();
+    seen.push([b.api.state.active.elapsedSec, b.api.state.active.checkpointAt]);
+  }
+  // La fenêtre reste ouverte, la pose et la case choisie aussi.
+  assert.equal(shown.closed, 0);
+  assert.equal(b.context.Mode.state, shown.placement);
+  assert.equal(b.context.Selection.id, shown.tile);
+  // Et B suit pourtant la séance : le temps et le point de reprise de A, à chaque fois.
+  assert.deepEqual(seen, [5, 10, 15, 20, 25, 30].map((sec, i) => [sec, NOW + (i + 1) * 5000]));
+  assert.equal(b.api.state.active.id, a.api.state.active.id);
+  assert.equal(b.activeState(), 'elsewhere');
+});
+
+test('onglets : un autre changement ferme encore la fenêtre et annule la pose, avec ou sans point de reprise', async () => {
+  const changes = {
+    'un réglage': s => { s.settings.sound = false; },
+    'une envie': s => { s.wishes.push({ id: 'envie-a', name: 'Peindre', cat: 'crea', min: 20 }); },
+    'des pièces': s => { s.coins += 1e6; },
+    'un objectif': s => { s.goals.minutes = 90; },
+  };
+  for (const [name, change] of Object.entries(changes)) {
+    // Le changement part avec le point de reprise de A.
+    const one = await sessionTabs(), withBeat = showing(one.b);
+    change(one.a.api.state);
+    await one.checkpoint();
+    cleared(one.b, withBeat, name);
+    // Il n'y a plus rien de spécial ensuite : le point de reprise suivant, seul, laisse de nouveau tout en place.
+    const again = showing(one.b);
+    await one.checkpoint();
+    stillShowing(one.b, again, name + ', puis un point de reprise');
+    // Le changement part seul, sans nouveau point de reprise.
+    const two = await sessionTabs(), alone = showing(two.b);
+    change(two.a.api.state);
+    two.a.commit({ silent: true });
+    two.b.Store.pullLocal();
+    await settle();
+    cleared(two.b, alone, name + ', seul');
+  }
+});
+
+test('onglets : la fin de la séance ferme encore la fenêtre et annule la pose', async () => {
+  const { a, b, checkpoint } = await sessionTabs();
+  const shown = showing(b);
+  await checkpoint();
+  stillShowing(b, shown, 'en cours');
+  await a.failSession('abandon', 0);
+  b.Store.pullLocal();
+  await settle();
+  assert.equal(b.api.state.active, null);
+  assert.equal(b.api.state.history.length, 1);
+  cleared(b, shown, 'fin');
+});
+
+test('onglets : un point de reprise et un vrai changement du même tour ferment la fenêtre, dans les deux ordres', async () => {
+  for (const order of ['reprise puis changement', 'changement puis reprise']) {
+    const { a, b, beat } = await sessionTabs();
+    const shown = showing(b), change = () => { a.api.state.settings.sound = false; a.advance(1000); b.advance(1000); a.persistRun(true); b.Store.pullLocal(); };
+    if (order === 'reprise puis changement') { beat(); change(); } else { change(); beat(); }
+    // Rien n'a encore été refait : une seule fermeture, à la fin du tour.
+    assert.equal(shown.closed, 0, order);
+    await settle();
+    cleared(b, shown, order);
+  }
+});
+
+test('onglets : un point de reprise fusionné avec un changement pas encore écrit laisse aussi la fenêtre', async () => {
+  const { disk, b, checkpoint } = await sessionTabs();
+  const shown = showing(b);
+  // B a un changement que le stockage a refusé : sa version n'est pas celle de sa base, la relecture fusionne.
+  b.api.state.settings.sound = false;
+  disk.fail = true;
+  assert.equal(b.commit({ silent: true }), false);
+  disk.fail = false;
+  await checkpoint();
+  stillShowing(b, shown, 'fusion');
+  assert.equal(b.api.state.settings.sound, false);
+  assert.equal(b.api.state.active.elapsedSec, 5);
+  assert.equal(stored(disk).settings.sound, false);
+  assert.equal(stored(disk).active.elapsedSec, 5);
+});
+
+test('onglets : le point de reprise qui suit un changement fait ici ne ferme pas non plus la fenêtre', async () => {
+  const { b, checkpoint } = await sessionTabs();
+  const shown = showing(b);
+  // Une activité ajoutée telle que l\'interface la pose (sans ses champs par défaut), écrite aussitôt : l\'onglet A la fusionne à son
+  // point de reprise suivant, et B relit sa propre activité sous sa forme complète.
+  b.api.state.activities.push({ id: 'yoga', name: 'Yoga', cat: 'calme', min: 15 });
+  assert.equal(b.commit({ silent: true }), true);
+  await checkpoint();
+  stillShowing(b, shown, 'après un ajout');
+  assert.deepEqual(copy(b.api.state.activities.find(x => x.id === 'yoga')), { id: 'yoga', name: 'Yoga', cat: 'calme', min: 15, mode: 'focus', energy: 'medium', place: 'any', repeat: 'always', completedAt: 0 });
+  assert.equal(b.api.state.active.elapsedSec, 5);
+});
+
+test('onglets : le point de reprise reste léger avec les parties inconnues d\'une version plus récente', async () => {
+  const doc = future(stateApp());
+  const { disk, b, checkpoint } = await sessionTabs(doc);
+  const shown = showing(b);
+  for (let i = 0; i < 3; i++) await checkpoint();
+  stillShowing(b, shown, 'parties inconnues');
+  assert.equal(b.api.state.active.elapsedSec, 15);
+  // Et chaque point de reprise écrit les parties inconnues avec le reste.
+  assertKept(stored(disk), doc);
+});
+
+test('onglets : une ville remplacée ailleurs ferme encore la fenêtre et annule la pose', async () => {
+  const disk = storage(), a = stateApp(disk), b = stateApp(disk);
+  a.init();
+  a.commit({ silent: true });
+  b.init();
+  const shown = showing(b);
+  // A fait « Tout recommencer » : une ville neuve, écrite telle quelle. B l\'adopte entière.
+  a.advance(60000);
+  b.advance(60000);
+  a.api.state = a.defaultState();
+  assert.equal(a.commit({ silent: true, replace: true }), true);
+  b.Store.pullLocal();
+  assert.equal(b.api.state.createdAt, a.api.state.createdAt);
+  await settle();
+  cleared(b, shown, 'ville remplacée');
+});
+
+test('onglets : une ville jugée remplacée n\'est jamais légère, même si seule la séance y diffère', async () => {
+  const { b, checkpoint } = await sessionTabs();
+  const shown = showing(b);
+  // La base de B garde une autre date de création que sa ville : pour lui, le document relu est celui d\'une autre ville.
+  b.Store.lsBase.createdAt -= 1000;
+  await checkpoint();
+  cleared(b, shown, 'ville remplacée');
+  assert.equal(b.api.state.active.elapsedSec, 5);
+});
+
+test('onglets : un propriétaire changé ailleurs arrête toujours le chrono d\'ici, sans fermer la fenêtre', async () => {
+  const { disk, a } = await sessionTabs();
+  const shown = showing(a);
+  assert.ok(a.api.run);
+  // Un autre onglet reprend la séance, et il bat : seuls le propriétaire, le point de reprise et la révision changent.
+  const doc = stored(disk);
+  doc.active.owner = 'onglet-c';
+  doc.active.checkpointAt += 1000;
+  doc.updatedAt += 1000;
+  doc.revision = 'rev-c';
+  disk.setItem(KEY, JSON.stringify(doc));
+  disk.setItem(KEY + ':beat', JSON.stringify({ id: doc.active.id, tab: 'onglet-c', at: NOW }));
+  a.Store.pullLocal();
+  // Le chrono d\'ici s\'arrête sans attendre le tour de minuterie.
+  assert.equal(a.api.run, null);
+  await settle();
+  stillShowing(a, shown, 'propriétaire');
+  assert.equal(a.api.state.active.owner, 'onglet-c');
+});
+
+test('onglets : la reprise d\'une séance libre par un troisième onglet laisse aussi la fenêtre', async () => {
+  const { disk, locks, a, b, checkpoint } = await sessionTabs();
+  const shown = showing(b);
+  await checkpoint();
+  // L\'onglet A se ferme ; plus de 15 s après son dernier point de reprise, un onglet C reprend la séance (voir checkActive).
+  a.endRun();
+  disk.removeItem(KEY + ':beat');
+  const c = stateApp(disk, locks);
+  c.setNow(new Date(NOW + 5000 + 20000).toISOString());
+  b.advance(20000);
+  c.init();
+  c.checkActive();
+  await settle();
+  await settle();
+  assert.equal(stored(disk).active.owner, c.Store.tab);
+  b.Store.pullLocal();
+  await settle();
+  assert.equal(b.api.state.active.owner, c.Store.tab);
+  stillShowing(b, shown, 'reprise');
+});
+
+test('onglets : onlySessionMoved ne voit que le point de reprise, le propriétaire et la révision', () => {
+  const { onlySessionMoved, normalize, defaultState } = stateApp(undefined, undefined, { expose: ['onlySessionMoved'] });
+  const doc = copy(defaultState());
+  doc.active = { id: 's1', name: 'Marche', cat: 'corps', min: 30, mode: 'free', owner: 'onglet-a', startedAt: NOW, elapsedSec: 0, checkpointAt: NOW };
+  const started = copy(normalize(doc)), idle = copy(started);
+  idle.active = null;
+  const moved = (from, change) => { const s = copy(from); change(s); return s; };
+  // Ce que le point de reprise d\'une séance écrit : la date et la révision de l\'état, le temps, le point de reprise, le propriétaire.
+  const sessionOnly = {
+    'une copie': () => {},
+    'la date et la révision': s => { s.updatedAt += 5000; s.revision = 'autre-révision'; },
+    'le temps écoulé': s => { s.active.elapsedSec = 12; },
+    'le point de reprise': s => { s.active.checkpointAt += 5000; },
+    'le propriétaire': s => { s.active.owner = 'onglet-b'; },
+    'un propriétaire absent': s => { s.active.owner = ''; },
+    'tout à la fois': s => { s.updatedAt += 1; s.revision = 'r'; s.active.elapsedSec = 30; s.active.checkpointAt += 30000; s.active.owner = 'onglet-c'; },
+  };
+  for (const [name, change] of Object.entries(sessionOnly)) {
+    const after = moved(started, change), before = copy(started), later = copy(after);
+    assert.equal(onlySessionMoved(started, after), true, name);
+    assert.equal(onlySessionMoved(after, started), true, name + ', à l\'envers');
+    // Les deux états sont laissés tels quels.
+    assert.deepEqual(started, before, name);
+    assert.deepEqual(after, later, name);
+  }
+  assert.equal(onlySessionMoved(idle, moved(idle, s => { s.updatedAt += 1; s.revision = 'r'; })), true, 'sans séance');
+  // Tout le reste compte, y compris le départ ou la fin de la séance, ou une autre séance.
+  const anythingElse = {
+    'la fin de la séance': s => { s.active = null; },
+    'une autre séance': s => { s.active.id = 's2'; },
+    'la durée de la séance': s => { s.active.min = 25; },
+    'le départ de la séance': s => { s.active.startedAt += 1; },
+    'un réglage': s => { s.settings.sound = false; },
+    'des pièces': s => { s.coins += 1; },
+    'une séance du journal': s => { s.history.push({ id: 'h1', name: 'Lecture' }); },
+    'une case de la ville': s => { s.city.tiles.pop(); },
+    'les statistiques': s => { s.stats.ok += 1; },
+    'une autre ville': s => { s.createdAt += 1; },
+    'une clé de plus': s => { s.nouveau = 1; },
+  };
+  for (const [name, change] of Object.entries(anythingElse)) {
+    const after = moved(started, change);
+    assert.equal(onlySessionMoved(started, after), false, name);
+    assert.equal(onlySessionMoved(after, started), false, name + ', à l\'envers');
+    // Avec le point de reprise en plus, c\'est pareil.
+    after.updatedAt += 1;
+    if (after.active) after.active.checkpointAt += 1;
+    assert.equal(onlySessionMoved(started, after), false, name + ' et un point de reprise');
+  }
+  assert.equal(onlySessionMoved(idle, started), false, 'le départ de la séance');
+  assert.equal(onlySessionMoved(started, idle), false, 'la fin de la séance');
 });
