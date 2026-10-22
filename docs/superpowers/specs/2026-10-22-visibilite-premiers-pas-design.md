@@ -116,10 +116,10 @@ Cette étape ouvre ces deux portes, en cinq parties : être trouvable (A), les p
   - **Sur iPhone**, dans l'app installée et avec une ville sans séance, un bouton de plus : « J'avais commencé dans Safari : coller ma ville » (partie D).
 - **La première séance** proposée par l'accueil :
   - **Réglages de la séance** : nommée « Respirer » (le nom suit la langue, comme les modèles d'activités), domaine Calme, mode Concentration, **2 minutes**.
-  - **Respiration guidée** : allumée pour cette séance seulement, par le champ `breathing` de la séance en cours. Elle survit à un rechargement. Le bouton de respiration de cette séance ne change que la séance ; le réglage de la personne ne change pas.
+  - **Respiration guidée** : allumée pour cette séance seulement, par le champ `breathing` de la séance en cours. Elle suit la séance : « Recommencer » la garde, comme une séance reprise après un rechargement. En Concentration, un rechargement interrompt la séance, comme toujours ; « Recommencer » relance alors la respiration. Le bouton de respiration de cette séance ne change que la séance ; le réglage de la personne ne change pas.
   - **Récompense** : 2 M, comme toute séance de 2 minutes.
   - **Suite** : l'écran de fin habituel (succès « Premier pas », Jardin zen débloqué), puis la carte d'invitation du compagnon dans la ville, comme aujourd'hui. La carte « Prochain déblocage » annonce déjà le Jardin zen après la première séance Calme.
-  - Avec l'étoile de départ (+10 M) et les 2 M gagnés, la ville a 17 M : le Jardin zen (8 M) peut être construit tout de suite.
+  - Avec l'étoile de départ (+10 M) et les 2 M gagnés, la ville a au moins 17 M (un défi de la semaine relevé par cette séance peut s'y ajouter) : le Jardin zen (8 M) peut être construit tout de suite.
 - **Avant la première séance, rien ne détourne de l'accueil** :
   - **Étoile d'harmonie de la ville de départ** : versée à la première ouverture sans message. Une étoile gagnée en posant un bâtiment garde son message.
   - **Souhait du jour** : il commence le lendemain de la première séance réussie. Le premier jour reste simple ; le deuxième apporte une nouveauté.
@@ -202,7 +202,7 @@ Cette étape ouvre ces deux portes, en cinq parties : être trouvable (A), les p
   - À 320 px, rien ne déborde, en français et en anglais.
 - **Première séance**
   - « Commencer par 2 minutes de calme » lance une séance Calme de 2 minutes en Concentration, avec la respiration guidée.
-  - Après un rechargement en cours de séance, la respiration est toujours là.
+  - « Recommencer » après une interruption, et une séance reprise après un rechargement, gardent la respiration de la séance.
   - Le réglage `breathing` de la personne est inchangé après la séance.
   - 2 M sont gagnés, et le Jardin zen est débloqué et payable.
 - **Avant la première séance** : pas de souhait du jour, pas de message d'étoile (mais l'étoile est versée), pas de carte d'installation. Après la séance, la carte d'installation vient ; le souhait vient le lendemain.

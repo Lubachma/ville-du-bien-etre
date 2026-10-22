@@ -45,7 +45,7 @@
 ## Review Focus
 
 1. **Une ville qui a des séances mais un historique vide** (villes amorcées, vieilles sauvegardes) ne voit jamais l'accueil, et garde son souhait, son étoile et sa visite comme avant. Tests : tâche 3 (accueil caché pour `town({}, [])`), tâche 5 (souhait tiré pour `ok: 1` avec un jour antérieur), tâche 9 (visite inchangée).
-2. **Un rechargement pendant la première séance de 2 minutes** garde la respiration guidée et laisse le réglage de la personne éteint. Test : tâche 4.
+2. **La respiration de la première séance suit la séance** : « Recommencer » après une interruption (un rechargement interrompt toute séance en Concentration) et la reprise d'une séance la gardent ; le réglage de la personne reste éteint. Test : tâche 4.
 3. **Changer de langue depuis l'accueil à 320 px** : rien ne déborde, le focus reste sur le lien de langue, les Réglages ne s'ouvrent pas. Test : tâche 3.
 4. **Un presse-papiers vide, refusé ou abîmé** : un message doux qui mène à Réglages → Sauvegarde, rien n'est remplacé, aucune feuille ne s'ouvre. Tests : tâche 7 (et tâche 6 pour une copie refusée).
 5. **Un nouveau venu qui ferme la visite d'un ami** par Échap ou le geste retour arrive sur l'accueil. Le fragment `#ville=` est retiré : un rechargement ne rouvre pas la visite. Test : tâche 9.
@@ -274,10 +274,10 @@
 
 - [ ] **Step 2: Write the failing browser scenario** `firstCalmBreathes` (`freshTown` ; il tourne sur les deux moteurs).
   - Clic `#welcomeStart` (accepter la fenêtre de verrouillage si elle s'ouvre) : `#breathBtn` visible avec `aria-pressed="true"`, et `__ville.state.settings.breathing === false`.
-  - `page.reload()` puis attente de l'écran de séance : `#breathBtn` a toujours `aria-pressed="true"`.
+  - `page.reload()` : la séance en Concentration est interrompue (règle existante) ; « Recommencer » relance une séance dont `#breathBtn` a `aria-pressed="true"`. Une séance libre reprise après un rechargement garde aussi sa respiration (scénario `resumedSessionKeepsBreathing`).
   - Clic `#breathBtn` : `aria-pressed="false"`, `__ville.state.active.breathing === false`, `settings.breathing` toujours `false`. Second clic : de nouveau `true`.
   - `clock.runFor('02:03')` : `#sessResult` contient « Jardin zen » et « Premier pas ».
-  - « Retour à la ville » : `__ville.state.coins === 17e6`, `#nextCard` contient « Jardin zen (8 M) », `settings.breathing === false`.
+  - « Retour à la ville » : `history[0].reward === 2e6`, `__ville.state.coins === 17e6 + 5e6 × (nombre de cadeaux « chal: »)` (un défi de la semaine peut être relevé), `#nextCard` contient « Jardin zen (8 M) », `settings.breathing === false`.
 
 - [ ] **Step 3: Run** les tests. Expected: FAIL.
 
