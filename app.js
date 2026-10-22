@@ -3952,11 +3952,18 @@ const Store = {
             markChanged(other.updatedAt);
             afterReplace();
           }
-          if (other.createdAt === S.createdAt) patch = this.unknownFor(raw, read.parsed, other);
+          if (other.createdAt === S.createdAt) {
+            try { patch = this.unknownFor(raw, read.parsed, other); } catch (e) { patch = undefined; }
+          }
         }
       }
-      // Cas courant, sans partie inconnue : l'état est écrit sans copie.
-      const doc = patch ? clone(S) : S, put = patch && graftUnknown(doc, patch);
+      // Cas courant, sans partie inconnue : l'état est écrit sans copie. Repli : si le calcul des parties inconnues (ci-dessus) ou leur
+      // remise lève (une donnée qu'il ne sait pas parcourir), l'état est écrit seul, sans elles, plutôt que de refuser cette écriture
+      // et toutes les suivantes. Un calcul qui lève ne laisse rien en cache.
+      let doc = S, put;
+      if (patch) {
+        try { doc = clone(S); put = graftUnknown(doc, patch); } catch (e) { doc = S; put = undefined; }
+      }
       const json = JSON.stringify(doc);
       localStorage.setItem(LS_KEY, json);
       if (localStorage.getItem(LS_KEY) !== json) throw new Error('write-not-confirmed');

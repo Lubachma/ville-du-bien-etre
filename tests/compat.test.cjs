@@ -155,6 +155,27 @@ test('compat : coût d\'une ville d\'un an', () => {
   assert.equal(grafts, 0);
 });
 
+test('compat : un calcul des parties inconnues qui échoue ne bloque pas les écritures', () => {
+  // Une donnée qu'il ne saurait pas parcourir, ou une erreur dans son code : le calcul des parties inconnues (unknownParts) ou leur
+  // remise dans le texte (graftUnknown) lève. L'état est alors écrit seul, sans elles, plutôt que de refuser toutes les écritures.
+  for (const name of ['unknownParts', 'graftUnknown']) {
+    const doc = future(stateApp());
+    const { disk, a } = opened(doc, { expose: EXPOSE });
+    let calls = 0;
+    a.context[name] = () => { calls++; throw new Error(name + ' en panne'); };
+    a.api.state.personal.name = 'Lumière';
+    assert.equal(a.commit({ silent: true }), true, name);
+    assert.equal(calls, 1, name);
+    assert.equal(stored(disk).personal.name, 'Lumière', name);
+    assert.equal(a.Store.localError, '', name);
+    // L'écriture suivante aussi.
+    a.api.state.goals.minutes = 90;
+    assert.equal(a.commit({ silent: true }), true, name);
+    assert.equal(stored(disk).goals.minutes, 90, name);
+    assert.equal(a.Store.localError, '', name);
+  }
+});
+
 test('compat : lecture, fusion entre onglets, écriture et nouvelle lecture ne perdent rien', () => {
   const doc = future(stateApp()), disk = storage();
   disk.setItem(KEY, JSON.stringify(doc));
