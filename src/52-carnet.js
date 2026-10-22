@@ -184,7 +184,8 @@ function celebrate({ achievements = [], sets = [], challenges = [], townWish = n
 // même message.
 function noticeProgress() {
   const challenges = typeof claimChallenges === 'function' ? claimChallenges() : [];
-  const townWish = typeof claimTownWish === 'function' ? claimTownWish() : null;
+  // Un souhait exaucé sans cadeau (voir claimTownWish) n'a rien à fêter : ni « +3 M », ni étincelles, et le message de la pose reste.
+  const wish = typeof claimTownWish === 'function' ? claimTownWish() : null, townWish = wish && wish.paid ? wish : null;
   const stars = typeof claimStars === 'function' ? claimStars() : [];
   const sets = discoverSets();
   return { sets, achievements: checkAchievements(), challenges, townWish, stars };

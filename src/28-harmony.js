@@ -78,17 +78,17 @@ function drawTownWish(day = today()) {
   return true;
 }
 // Souhait exaucé quand le décor voulu est dans une case voisine du bâtiment : 3 M, une seule fois, et jamais pour un jour antérieur
-// au dernier souhait récompensé. N'enregistre pas.
+// au dernier souhait récompensé (exaucé quand même, sans cadeau : paid est faux). N'enregistre pas.
 function claimTownWish() {
   const tile = townWishTile(), w = S.townWish;
   if (!tile || !neighbourTiles(S.city, tile).some(other => other.item === w.item)) return null;
   w.done = nowTs();
-  const key = 'wish:' + w.day;
-  if (lastGiftDay('wish:') < w.day) {
+  const key = 'wish:' + w.day, paid = lastGiftDay('wish:') < w.day;
+  if (paid) {
     S.gifts[key] = w.done;
     S.coins = clamp(S.coins + GIFTS.townWish, 0, COINS_MAX);
   }
-  return { tile: tile.id, item: w.item, day: w.day, building: tile.item };
+  return { tile: tile.id, item: w.item, day: w.day, building: tile.item, paid };
 }
 // « Pas maintenant » : le souhait est rangé, sans rien de plus ; un autre viendra le lendemain. N'enregistre pas.
 function skipTownWish() {

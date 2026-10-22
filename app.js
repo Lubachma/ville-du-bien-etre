@@ -5278,17 +5278,17 @@ function drawTownWish(day = today()) {
   return true;
 }
 // Souhait exaucé quand le décor voulu est dans une case voisine du bâtiment : 3 M, une seule fois, et jamais pour un jour antérieur
-// au dernier souhait récompensé. N'enregistre pas.
+// au dernier souhait récompensé (exaucé quand même, sans cadeau : paid est faux). N'enregistre pas.
 function claimTownWish() {
   const tile = townWishTile(), w = S.townWish;
   if (!tile || !neighbourTiles(S.city, tile).some(other => other.item === w.item)) return null;
   w.done = nowTs();
-  const key = 'wish:' + w.day;
-  if (lastGiftDay('wish:') < w.day) {
+  const key = 'wish:' + w.day, paid = lastGiftDay('wish:') < w.day;
+  if (paid) {
     S.gifts[key] = w.done;
     S.coins = clamp(S.coins + GIFTS.townWish, 0, COINS_MAX);
   }
-  return { tile: tile.id, item: w.item, day: w.day, building: tile.item };
+  return { tile: tile.id, item: w.item, day: w.day, building: tile.item, paid };
 }
 // « Pas maintenant » : le souhait est rangé, sans rien de plus ; un autre viendra le lendemain. N'enregistre pas.
 function skipTownWish() {
@@ -11369,7 +11369,8 @@ function celebrate({ achievements = [], sets = [], challenges = [], townWish = n
 // même message.
 function noticeProgress() {
   const challenges = typeof claimChallenges === 'function' ? claimChallenges() : [];
-  const townWish = typeof claimTownWish === 'function' ? claimTownWish() : null;
+  // Un souhait exaucé sans cadeau (voir claimTownWish) n'a rien à fêter : ni « +3 M », ni étincelles, et le message de la pose reste.
+  const wish = typeof claimTownWish === 'function' ? claimTownWish() : null, townWish = wish && wish.paid ? wish : null;
   const stars = typeof claimStars === 'function' ? claimStars() : [];
   const sets = discoverSets();
   return { sets, achievements: checkAchievements(), challenges, townWish, stars };
@@ -11432,8 +11433,10 @@ function openVisitor() {
     const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
     City.visitorThumb(cv, v.id, 96);
     const line = t('visitor.' + v.id + '.line' + (1 + Math.floor(chance(amb.day + ':line') * 3)));
+    // Le cadeau offert, ou « Cadeau reçu aujourd'hui. » s'il l'a vraiment été ; refusé (le cadeau d'un jour plus tardif a déjà été reçu,
+    // l'heure avancée puis remise), rien.
     const gift = !visitGiftOpen(amb.day)
-      ? h('p', { class: 'note' }, t('visit.giftDone'))
+      ? S.gifts['visit:' + amb.day] ? h('p', { class: 'note' }, t('visit.giftDone')) : null
       : h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => {
         if (!claimVisitGift(amb.day)) {
           // Minuit est passé pendant que la fiche était ouverte, ou le cadeau a été reçu ailleurs : la fiche se refait pour aujourd'hui.
@@ -11447,7 +11450,8 @@ function openVisitor() {
         closeSheet(); commit(); bump();
         cheer(progress, t('visit.thanks', { coins: fmt(GIFTS.visit) }));
       } }, icon('sparkle'), t('visit.gift', { coins: fmt(GIFTS.visit) }));
-    body.append(h('div', { class: 'bsheet' }, cv, h('div', { class: 'bsheet-text' }, h('p', {}, line), h('span', { class: 'note' }, t('visit.count', { n: S.visits[v.id].count })))), gift);
+    // append() écrirait null en toutes lettres : sans cadeau à dire, rien n'est ajouté.
+    body.append(h('div', { class: 'bsheet' }, cv, h('div', { class: 'bsheet-text' }, h('p', {}, line), h('span', { class: 'note' }, t('visit.count', { n: S.visits[v.id].count })))), ...[gift].filter(Boolean));
   });
   if (first) cheer(fresh, t('visit.new', { name: lowerFirst(name) }));
 }

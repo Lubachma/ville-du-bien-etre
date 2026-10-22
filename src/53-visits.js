@@ -33,8 +33,10 @@ function openVisitor() {
     const cv = h('canvas', { 'aria-hidden': 'true', style: 'width:96px;height:96px' });
     City.visitorThumb(cv, v.id, 96);
     const line = t('visitor.' + v.id + '.line' + (1 + Math.floor(chance(amb.day + ':line') * 3)));
+    // Le cadeau offert, ou « Cadeau reçu aujourd'hui. » s'il l'a vraiment été ; refusé (le cadeau d'un jour plus tardif a déjà été reçu,
+    // l'heure avancée puis remise), rien.
     const gift = !visitGiftOpen(amb.day)
-      ? h('p', { class: 'note' }, t('visit.giftDone'))
+      ? S.gifts['visit:' + amb.day] ? h('p', { class: 'note' }, t('visit.giftDone')) : null
       : h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => {
         if (!claimVisitGift(amb.day)) {
           // Minuit est passé pendant que la fiche était ouverte, ou le cadeau a été reçu ailleurs : la fiche se refait pour aujourd'hui.
@@ -48,7 +50,8 @@ function openVisitor() {
         closeSheet(); commit(); bump();
         cheer(progress, t('visit.thanks', { coins: fmt(GIFTS.visit) }));
       } }, icon('sparkle'), t('visit.gift', { coins: fmt(GIFTS.visit) }));
-    body.append(h('div', { class: 'bsheet' }, cv, h('div', { class: 'bsheet-text' }, h('p', {}, line), h('span', { class: 'note' }, t('visit.count', { n: S.visits[v.id].count })))), gift);
+    // append() écrirait null en toutes lettres : sans cadeau à dire, rien n'est ajouté.
+    body.append(h('div', { class: 'bsheet' }, cv, h('div', { class: 'bsheet-text' }, h('p', {}, line), h('span', { class: 'note' }, t('visit.count', { n: S.visits[v.id].count })))), ...[gift].filter(Boolean));
   });
   if (first) cheer(fresh, t('visit.new', { name: lowerFirst(name) }));
 }

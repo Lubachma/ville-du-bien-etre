@@ -1395,10 +1395,71 @@ async function blankNamesReported(browser, baseURL) {
   return "Noms faits d'espaces : le message « champ à remplir »";
 }
 
+// Un cadeau refusé par la règle des jours (jamais pour un jour antérieur au dernier cadeau du même genre : une heure avancée, puis remise)
+// n'est ni annoncé, ni dit reçu. Le souhait du 21, exaucé quand celui du 25 a déjà été récompensé : la pose garde son message, sans « +3 M ».
+// La fiche du visiteur du 21, quand celui du 25 a déjà donné son cadeau : ni bouton, ni « Cadeau reçu aujourd'hui. », qui ne se dit qu'une
+// fois le cadeau du jour vraiment reçu.
+async function refusedGiftsNotAnnounced(browser, baseURL) {
+  const late = at('2026-10-25T09:00:00Z');
+  {
+    const house = { id: 'm', item: 'maison', x: 3, y: 3, at: at('2026-10-01T09:00:00Z'), paid: 1e6 };
+    const seed = town({ esprit: 5 }, [house], { createdAt: at('2026-05-04T09:00:00Z'), settings: { lang: 'fr', challenges: false }, gifts: { 'wish:2026-10-25': late },
+      achievements: { ...FIRST_STEP, 'premiere-pierre': late, 'premier-souhait': late } });
+    const { context, page, errors } = await cityAt(browser, baseURL, seed, NOW);
+    try {
+      const wish = await page.evaluate(() => __ville.harmony.wish());
+      assert.equal(wish && wish.day, '2026-10-21', 'souhait du jour : ' + JSON.stringify(wish));
+      const names = { fleurs: 'Massif de fleurs', banc: 'Banc' }, prices = { fleurs: 1e6, banc: 2e6 }, coins = await page.evaluate(() => __ville.state.coins);
+      await page.locator('#buildBtn').click();
+      await page.getByRole('button', { name: new RegExp('^Placer ' + names[wish.item] + ' pour') }).click();
+      await page.locator('#city').press('ArrowRight');   // (4, 3), juste à côté de la maison (3, 3)
+      await page.locator('#city').press('Enter');
+      await page.locator('#placeConfirm').click();
+      await page.waitForFunction(() => !document.querySelector('#toast').hidden && document.querySelector('#toast').textContent);
+      const message = await page.locator('#toast').innerText();
+      assert.match(message, /construit/, 'message de la pose : ' + message);
+      assert.doesNotMatch(message, /Souhait exaucé|\+3/);
+      assert.deepEqual(await page.evaluate(() => [__ville.state.coins, __ville.state.townWish.done > 0, Object.keys(__ville.state.gifts).filter(key => key.startsWith('wish:'))]),
+        [coins - prices[wish.item], true, ['wish:2026-10-25']]);
+      assert.equal(await page.locator('#townWishCard').isHidden(), true, 'la carte du souhait exaucé reste affichée');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    // Le chat, déjà rencontré : sa fiche s'ouvre sans le message d'une première rencontre, qui passerait devant ses boutons.
+    const bench = { id: 'b', item: 'banc', x: 2, y: 2, at: at('2026-10-01T09:00:00Z'), paid: 2e6 };
+    const seed = town({ esprit: 5 }, [bench], { createdAt: at('2026-05-04T09:00:00Z'), gifts: { 'visit:2026-10-25': late },
+      visits: { chat: { first: at('2026-10-01T09:00:00Z'), count: 2, last: '2026-10-20' } }, achievements: { ...FIRST_STEP, 'premiere-pierre': late, 'premiere-visite': late } });
+    const { context, page, errors } = await cityAt(browser, baseURL, seed, NOW);
+    // La fiche du visiteur, ouverte depuis la liste de la ville.
+    const openVisitor = async () => {
+      if (!(await page.locator('.city-list').evaluate(el => el.open))) await page.locator('.city-list summary').click();
+      await page.locator('[data-focus-key="visitor:open"]').click();
+      await page.locator('#sheet').waitFor();
+    };
+    try {
+      await page.evaluate(() => { __ville.ambient.force({ visitor: { id: 'chat', spot: { x: 2, y: 2, on: 'banc' } } }); __ville.renderAll(); });
+      await openVisitor();
+      assert.equal(await page.locator('#sheetTitle').innerText(), 'Le chat voyageur');
+      assert.equal(await page.locator('#sheetBody').getByRole('button', { name: /^Recevoir/ }).count(), 0, 'cadeau offert pour un jour antérieur au dernier reçu');
+      assert.doesNotMatch(await page.locator('#sheetBody').innerText(), /Cadeau reçu/, 'cadeau refusé dit reçu');
+      await assertNoTechText(page, '#sheetBody');
+      // Le cadeau du jour vraiment reçu : la fiche le dit.
+      await page.keyboard.press('Escape');
+      await page.evaluate(() => { __ville.state.gifts['visit:2026-10-21'] = Date.now(); });
+      await openVisitor();
+      assert.match(await page.locator('#sheetBody').innerText(), /Cadeau reçu aujourd.hui\./);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Cadeaux refusés : ni annoncés, ni dits reçus';
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabWaitsForUndo, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
   soundResumedOnReturn, imagesOwnCityUnderSky, recapFiguresReadable, zoomDrawsOncePerFrame, focusNeverLost, villeFocusKeptOnPartialRenders, undoLastsUntilNextAction, undoStaysInItsCity, toastHeldByMouseAndFocus,
-  keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole, streakReadInFull, routineStepAnnounced, challengesNameFollowsLanguage, blankNamesReported];
+  keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole, streakReadInFull, routineStepAnnounced, challengesNameFollowsLanguage, blankNamesReported,
+  refusedGiftsNotAnnounced];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
