@@ -275,8 +275,126 @@ async function welcomeGoneAfterFirstSession(browser, baseURL) {
   return "Accueil : la séance de 2 minutes de calme, puis plus d'accueil (réussie ou interrompue)";
 }
 
+// La respiration guidée de la première séance est celle de la séance (S.active.breathing) : jamais le réglage de la personne. Ce que le
+// bouton, la séance, le stockage, le réglage et le dessin en disent à cet instant (null : pas de champ).
+const breathing = page => page.evaluate(() => {
+  const saved = JSON.parse(localStorage.getItem('ville-bien-etre/v2')).active;
+  return { pressed: document.querySelector('#breathBtn').getAttribute('aria-pressed'), session: __ville.state.active ? __ville.state.active.breathing ?? null : null,
+    saved: saved ? saved.breathing ?? null : null, setting: __ville.state.settings.breathing, moving: document.querySelector('.ring-wrap').classList.contains('breathing') };
+});
+
+// « Commencer par 2 minutes de calme » respire : le bouton de respiration est enfoncé et le dessin bouge, sans que le réglage de la personne
+// change. Un rechargement en Concentration met fin à la séance (quitter la page est une sortie) : la personne arrive sur « Session
+// interrompue », et « Recommencer » relance la même séance avec le même choix de respiration, allumée ou éteinte pour cette séance. Le
+// bouton ne change que la séance. Après les deux minutes : le Jardin zen et le succès « Premier pas », 17 M (5 de départ, 10 de l'étoile,
+// 2 gagnés), le réglage toujours éteint.
+async function firstCalmBreathes(browser, baseURL) {
+  const { context, page, errors } = await freshTown(browser, baseURL);
+  try {
+    const button = page.locator('#breathBtn');
+    const on = { pressed: 'true', session: true, saved: true, setting: false, moving: true };
+    const off = { pressed: 'false', session: false, saved: false, setting: false, moving: false };
+    // Recharger la page met fin à la séance de Concentration ; « Recommencer » en lance une autre, au même choix de respiration.
+    const reloadAndRestart = async () => {
+      await page.reload();
+      await page.waitForFunction(() => !!window.__ville);
+      await result(page).waitFor();
+      assert.equal(await result(page).locator('.res-title').innerText(), 'Session interrompue');
+      assert.equal(await page.evaluate(() => __ville.state.settings.breathing), false);
+      await result(page).getByRole('button', { name: 'Recommencer', exact: true }).click();
+      await confirmStart(page);
+      assert.equal(await button.isVisible(), true);
+    };
+    // L'écran allumé n'est pas disponible ici (comme souvent sur iPhone) : la mise en garde s'ouvre avant la séance, qui part ensuite en
+    // respirant. Après chaque rechargement, le navigateur est rendu à lui-même (confirmStart accepte la mise en garde si elle s'ouvre).
+    await page.evaluate(() => Object.defineProperty(navigator, 'wakeLock', { value: undefined, configurable: true }));
+    await page.locator('#welcomeStart').click();
+    await page.locator('#sheet #wakeAck').waitFor();
+    await page.getByRole('button', { name: "C'est réglé, commencer", exact: true }).click();
+    await page.waitForFunction(() => window.__ville.activeState() === 'mine');
+    assert.equal(await button.isVisible(), true);
+    assert.deepEqual(await breathing(page), on);
+
+    // Rechargée, la séance recommence en respirant.
+    await reloadAndRestart();
+    assert.deepEqual(await breathing(page), on);
+
+    // Le bouton éteint la respiration de la séance, la rallume, et l'éteint : le réglage de la personne reste éteint.
+    await button.click();
+    assert.deepEqual(await breathing(page), off);
+    await button.click();
+    assert.deepEqual(await breathing(page), on);
+    await button.click();
+    assert.deepEqual(await breathing(page), off);
+
+    // Éteinte pour cette séance, elle reste éteinte au « Recommencer » qui suit un rechargement, et se rallume d'un clic.
+    await reloadAndRestart();
+    assert.deepEqual(await breathing(page), off);
+    await button.click();
+    assert.deepEqual(await breathing(page), on);
+
+    await page.clock.runFor('02:03');
+    await result(page).locator('.res-title', { hasText: 'Session réussie' }).waitFor();
+    assert.match(await result(page).innerText(), /Jardin zen/);
+    assert.match(await result(page).innerText(), /Premier pas/);
+    await backToCity(page);
+    // 17 M : 5 de départ, 10 de l'étoile, 2 gagnés. Un défi de la semaine que cette séance relève rapporte 5 M de plus, et la graine de la
+    // ville (donc l'instant où elle a été créée, qui change d'une ouverture à l'autre) décide des défis : « Une séance en Concentration »
+    // tombe environ une fois sur quatre. Les défis payés sont comptés à part, et plus rien d'autre ne doit s'ajouter aux 17 M.
+    const earned = await page.evaluate(() => ({ coins: __ville.state.coins, reward: __ville.state.history[0].reward,
+      challenges: Object.keys(__ville.state.gifts).filter(key => key.startsWith('chal:')).length }));
+    assert.equal(earned.reward, 2e6);
+    assert.equal(earned.coins, 17e6 + earned.challenges * 5e6);
+    assert.equal(await page.locator('#nextCard').isVisible(), true);
+    assert.match(await page.locator('#nextCard').innerText(), /Jardin zen \(8\sM\)/);
+    assert.equal(await page.evaluate(() => __ville.state.settings.breathing), false);
+    assert.equal(await page.evaluate(() => __ville.state.active), null);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Première séance : elle respire, le bouton ne change que la séance, le réglage reste éteint, 17 M et le Jardin zen à la fin';
+}
+
+// Une séance reprise après un rechargement (une Activité libre : la Concentration, elle, ne reprend pas) lit sa respiration dans la séance
+// enregistrée. Le choix de la séance l'emporte sur le réglage, « oui » comme « non » ; sans choix de la séance, le réglage décide et le
+// bouton le change, comme avant.
+async function resumedSessionKeepsBreathing(browser, baseURL) {
+  const cases = [
+    { own: true, setting: false, start: { pressed: 'true', session: true, saved: true, setting: false, moving: true }, click: { pressed: 'false', session: false, saved: false, setting: false, moving: false } },
+    { own: false, setting: true, start: { pressed: 'false', session: false, saved: false, setting: true, moving: false }, click: { pressed: 'true', session: true, saved: true, setting: true, moving: true } },
+    { own: null, setting: true, start: { pressed: 'true', session: null, saved: null, setting: true, moving: true }, click: { pressed: 'false', session: null, saved: null, setting: false, moving: false } },
+  ];
+  for (const { own, setting, start, click } of cases) {
+    const { context, page, errors } = await freshTown(browser, baseURL);
+    try {
+      // La ville telle qu'elle est, avec une séance libre commencée il y a 30 s, posée avant le chargement qui suit.
+      const seed = await page.evaluate(({ own, setting }) => {
+        const state = JSON.parse(JSON.stringify(__ville.state)), now = Date.now();
+        state.settings.breathing = setting;
+        state.active = { id: 'reprise', name: 'Respirer', cat: 'calme', min: 2, mode: 'free', source: 'direct', startedAt: now - 30000, checkpointAt: now - 30000, elapsedSec: 30 };
+        if (own !== null) state.active.breathing = own;
+        return state;
+      }, { own, setting });
+      await page.addInitScript(state => {
+        try {
+          if (sessionStorage.getItem('seeded')) return;
+          sessionStorage.setItem('seeded', '1');
+          localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state));
+        } catch (e) { /* stockage indisponible : le test échouera plus loin */ }
+      }, seed);
+      await page.reload();
+      await page.waitForFunction(() => window.__ville && window.__ville.activeState() === 'mine');
+      assert.equal(await page.locator('#breathBtn').isVisible(), true);
+      assert.deepEqual(await breathing(page), start, `séance reprise avec breathing ${own} et réglage ${setting}`);
+      await page.locator('#breathBtn').click();
+      assert.deepEqual(await breathing(page), click, `après un clic, breathing ${own} et réglage ${setting}`);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Respiration : une séance reprise après un rechargement relit son choix, qui l\'emporte sur le réglage';
+}
+
 const SCENARIOS = [welcomeForNewTown, welcomeCloseStays, welcomeCloseWithoutStorage, welcomeLanguage, welcomeLanguageClosesToast, welcomeChoose,
-  welcomeGoneAfterFirstSession];
+  welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing];
 async function runPremiersPas(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

@@ -53,8 +53,14 @@ function companionFail() {
 
 // Respiration guidée, seulement dans les séances Calme : « Respirer avec Pompon » (ou « Respiration guidée » sans compagnon visible).
 // Allumée, elle alterne toutes les 5 s « Inspire » et « Expire » sous le minuteur ; le compagnon (ou un disque léger) grandit à
-// l'inspiration. Le choix revient aux séances Calme suivantes.
+// l'inspiration. Le choix revient aux séances Calme suivantes (le réglage de la personne), sauf pour une séance qui porte sa propre
+// respiration (`breathing` de la séance enregistrée : la première séance de l'accueil) : son bouton ne change que cette séance, jamais
+// le réglage, et le choix de la séance suit un rechargement et un « Recommencer ».
 let breath = { timer: 0, phase: '' };
+// Une séance qui porte sa propre respiration : un booléen, oui ou non (voir cleanActive).
+const hasOwnBreathing = a => !!a && typeof a.breathing === 'boolean';
+// La respiration de la séance : son propre choix s'il en porte un, sinon le réglage de la personne.
+const breathingOn = a => (hasOwnBreathing(a) ? a.breathing : S.settings.breathing === true);
 function renderBreathing(a) {
   stopBreathing();
   const btn = $('#breathBtn');
@@ -63,13 +69,27 @@ function renderBreathing(a) {
   if (btn.hidden) return;
   const pet = !!S.companion && S.settings.companionShown !== false;
   btn.lastChild.textContent = frTypo(pet ? t('breath.with', { name: companionName() }) : t('breath.guided'));
-  btn.setAttribute('aria-pressed', String(S.settings.breathing === true));
-  btn.onclick = () => setBreathing(S.settings.breathing !== true);
+  const on = breathingOn(a);
+  btn.setAttribute('aria-pressed', String(on));
+  // La séance enregistrée est relue au clic : l'état du moment, pas celui du dessin.
+  btn.onclick = () => {
+    const cur = S.active;
+    if (hasOwnBreathing(cur)) setSessionBreathing(!cur.breathing);
+    else setBreathing(!breathingOn(cur));
+  };
   $('#breathDisc').hidden = pet;
-  if (S.settings.breathing === true) startBreathing();
+  if (on) startBreathing();
 }
 function setBreathing(on) {
   S.settings.breathing = on;
+  commit({ silent: true });
+  $('#breathBtn').setAttribute('aria-pressed', String(on));
+  if (on) startBreathing(); else stopBreathing();
+}
+// Le bouton d'une séance qui porte sa propre respiration : il change la séance enregistrée, pas le réglage de la personne.
+function setSessionBreathing(on) {
+  if (!S.active) return;
+  S.active.breathing = on;
   commit({ silent: true });
   $('#breathBtn').setAttribute('aria-pressed', String(on));
   if (on) startBreathing(); else stopBreathing();

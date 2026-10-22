@@ -3205,7 +3205,7 @@ function cleanActive(a) {
   if (!a || typeof a !== 'object') return null;
   const name = str(a.name, 60);
   if (!name || !isCat(a.cat) || !validTs(a.startedAt)) return null;
-  return {
+  const active = {
     id: idOf(a.id), name, cat: a.cat, min: int(a.min, 1, 180, 10),
     source: ['direct', 'wishes', 'chores', 'routine'].includes(a.source) ? a.source : 'direct',
     sourceId: str(a.sourceId, 40), mode: a.mode === 'free' ? 'free' : 'focus',
@@ -3224,6 +3224,10 @@ function cleanActive(a) {
     draw: cleanDraw(a.draw),
     drawRerolls: int(a.drawRerolls, 0, 10, 0),
   };
+  // Respiration guidée de cette séance seulement (la première séance de l'accueil) : un booléen, et pas de clé pour les autres séances,
+  // qui suivent le réglage de la personne. Un « non » est un choix : il est gardé.
+  if (typeof a.breathing === 'boolean') active.breathing = a.breathing;
+  return active;
 }
 
 // Toute donnée venue de l'extérieur (stockage, compte, sauvegarde) passe par ici.
@@ -10594,6 +10598,7 @@ function startSessionLocked(o, resume) {
       startedAt: now, day, promised: r.total, streakPct: r.streakPct, streakDays: r.streakDays, returnPct: r.returnPct,
       dev: Store.device, draw: o.draw || null, drawRerolls: o.drawRerolls || 0,
       routineRunId: o.routineRunId || '', routineStep: o.routineStep || 0,
+      breathing: o.breathing,   // la respiration propre à cette séance (voir cleanActive) ; absente, le réglage de la personne décide
     });
   } else if (S.active) {
     S.active.owner = Store.tab;
@@ -10988,7 +10993,7 @@ function showFail(a, reason, awayMs, elapsed) {
       h('p', {}, why),
       h('p', { class: 'note' }, a.draw ? t('result.noCoinsDraw') : t('result.noCoins')),
       h('div', { class: 'res-actions' },
-        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); if (a.draw && S.draw.current && S.draw.current.id === a.draw.id) acceptDraw(); else beginSession({ name: a.name, cat: a.cat, min: a.min, mode: a.mode, source: a.source, sourceId: a.sourceId, routineRunId: a.routineRunId, routineStep: a.routineStep }); } }, icon('reroll'), t('result.restart')),
+        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); if (a.draw && S.draw.current && S.draw.current.id === a.draw.id) acceptDraw(); else beginSession({ name: a.name, cat: a.cat, min: a.min, mode: a.mode, source: a.source, sourceId: a.sourceId, routineRunId: a.routineRunId, routineStep: a.routineStep, breathing: a.breathing }); } }, icon('reroll'), t('result.restart')),
         h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity')))].filter(Boolean));
   });
 }
@@ -12210,8 +12215,14 @@ function companionFail() {
 
 // Respiration guidée, seulement dans les séances Calme : « Respirer avec Pompon » (ou « Respiration guidée » sans compagnon visible).
 // Allumée, elle alterne toutes les 5 s « Inspire » et « Expire » sous le minuteur ; le compagnon (ou un disque léger) grandit à
-// l'inspiration. Le choix revient aux séances Calme suivantes.
+// l'inspiration. Le choix revient aux séances Calme suivantes (le réglage de la personne), sauf pour une séance qui porte sa propre
+// respiration (`breathing` de la séance enregistrée : la première séance de l'accueil) : son bouton ne change que cette séance, jamais
+// le réglage, et le choix de la séance suit un rechargement et un « Recommencer ».
 let breath = { timer: 0, phase: '' };
+// Une séance qui porte sa propre respiration : un booléen, oui ou non (voir cleanActive).
+const hasOwnBreathing = a => !!a && typeof a.breathing === 'boolean';
+// La respiration de la séance : son propre choix s'il en porte un, sinon le réglage de la personne.
+const breathingOn = a => (hasOwnBreathing(a) ? a.breathing : S.settings.breathing === true);
 function renderBreathing(a) {
   stopBreathing();
   const btn = $('#breathBtn');
@@ -12220,13 +12231,27 @@ function renderBreathing(a) {
   if (btn.hidden) return;
   const pet = !!S.companion && S.settings.companionShown !== false;
   btn.lastChild.textContent = frTypo(pet ? t('breath.with', { name: companionName() }) : t('breath.guided'));
-  btn.setAttribute('aria-pressed', String(S.settings.breathing === true));
-  btn.onclick = () => setBreathing(S.settings.breathing !== true);
+  const on = breathingOn(a);
+  btn.setAttribute('aria-pressed', String(on));
+  // La séance enregistrée est relue au clic : l'état du moment, pas celui du dessin.
+  btn.onclick = () => {
+    const cur = S.active;
+    if (hasOwnBreathing(cur)) setSessionBreathing(!cur.breathing);
+    else setBreathing(!breathingOn(cur));
+  };
   $('#breathDisc').hidden = pet;
-  if (S.settings.breathing === true) startBreathing();
+  if (on) startBreathing();
 }
 function setBreathing(on) {
   S.settings.breathing = on;
+  commit({ silent: true });
+  $('#breathBtn').setAttribute('aria-pressed', String(on));
+  if (on) startBreathing(); else stopBreathing();
+}
+// Le bouton d'une séance qui porte sa propre respiration : il change la séance enregistrée, pas le réglage de la personne.
+function setSessionBreathing(on) {
+  if (!S.active) return;
+  S.active.breathing = on;
   commit({ silent: true });
   $('#breathBtn').setAttribute('aria-pressed', String(on));
   if (on) startBreathing(); else stopBreathing();
@@ -12305,10 +12330,11 @@ function resetWelcome() {
   try { localStorage.removeItem(LS_WELCOME); } catch (e) { /* stockage indisponible */ }
 }
 
-// « Commencer par 2 minutes de calme » : la première séance, en Calme et en Concentration. Son nom est rangé dans la langue du moment
+// « Commencer par 2 minutes de calme » : la première séance, en Calme et en Concentration, avec la respiration guidée allumée pour cette
+// séance seulement (`breathing` de la séance en cours : le réglage de la personne ne change pas). Son nom est rangé dans la langue du moment
 // (displayName le traduit ensuite comme les exemples d'une ville neuve). Rend la promesse de beginSession.
 function startFirstCalm() {
-  return beginSession({ name: t('tpl.breathe'), cat: 'calme', min: FIRST_CALM_MIN, mode: 'focus' });
+  return beginSession({ name: t('tpl.breathe'), cat: 'calme', min: FIRST_CALM_MIN, mode: 'focus', breathing: true });
 }
 
 // Les boutons fixes de la carte (les boutons de langue sont créés par renderWelcome).

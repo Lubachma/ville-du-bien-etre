@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { storage, stateApp, FILES } = require('./helpers/state-vm.cjs');
+const { storage, lockManager, stateApp, FILES } = require('./helpers/state-vm.cjs');
 
 // Étape 8, les premiers pas : « ville sans séance » se lit dans les compteurs (S.stats), jamais dans l'historique.
 // Les villes amorcées des tests, et les vieilles sauvegardes, ont des séances comptées et un historique vide.
@@ -88,4 +88,73 @@ test("accueil : la croix cache la carte pour la page même si le stockage refuse
   // Un stockage qui refuse d'effacer ne fait pas échouer « Tout recommencer ».
   disk.removeItem = () => { throw new Error('SecurityError'); };
   assert.doesNotThrow(() => a.resetWelcome());
+});
+
+// La première séance respire : la respiration guidée est un champ facultatif de la séance en cours (S.active.breathing), posé par la
+// première séance de l'accueil. Le réglage de la personne (S.settings.breathing) n'est jamais touché.
+const START = Date.parse('2026-10-17T12:00:00Z');   // l'instant où part l'horloge de la VM (state-vm.cjs), valide pour une séance
+const settle = () => new Promise(resolve => setTimeout(resolve, 10));
+// Une séance de Concentration menée jusqu'à sa fin, une seconde à la fois : un saut de deux minutes compterait comme une sortie.
+async function runToEnd(a, min) {
+  for (let second = 0; second < min * 60; second++) { a.advance(1000); a.tick(); }
+  await settle(); await settle();
+}
+// Un onglet ouvert sur une ville neuve, où la séance donnée vient de démarrer.
+async function started(options) {
+  const a = stateApp(); a.init();
+  await a.startSession(options);
+  return a;
+}
+
+test("séance : le champ breathing n'est gardé que s'il est booléen", () => {
+  const a = stateApp(undefined, undefined, { expose: ['cleanActive'] });
+  const clean = extra => a.cleanActive({ name: 'Respirer', cat: 'calme', startedAt: START, ...extra });
+  assert.equal(clean({ breathing: true }).breathing, true);
+  assert.equal(clean({ breathing: false }).breathing, false);
+  assert.equal('breathing' in clean({}), false, 'sans le champ : pas de clé');
+  for (const odd of ['oui', 'true', 1, 0, null, {}, []]) assert.equal('breathing' in clean({ breathing: odd }), false, `${JSON.stringify(odd)} n'est pas un booléen`);
+  // Relue du stockage, la séance garde le champ de la même façon.
+  assert.equal(a.normalize({ active: { name: 'Respirer', cat: 'calme', startedAt: START, breathing: true } }).active.breathing, true);
+  assert.equal('breathing' in a.normalize({ active: { name: 'Respirer', cat: 'calme', startedAt: START, breathing: 'oui' } }).active, false);
+});
+
+test('première séance : respiration de la séance, réglage inchangé, 2 M gagnés', async () => {
+  const a = await started({ name: 'Respirer', cat: 'calme', min: 2, mode: 'focus', breathing: true });
+  assert.equal(a.api.state.active.breathing, true);
+  assert.equal(a.api.state.settings.breathing, false);
+  await runToEnd(a, 2);
+  assert.equal(a.api.state.active, null, 'la séance est finie');
+  assert.equal(a.api.state.history[0].ok, true);
+  assert.equal(a.api.state.history[0].reward, 2e6);
+  assert.equal(a.api.state.stats.byCat.calme, 2);
+  assert.equal(a.api.state.settings.breathing, false, 'le réglage de la personne reste éteint');
+});
+
+test("séance : sans respiration propre, aucun champ ; un « non » de la séance reste un choix", async () => {
+  // Une séance ordinaire ne porte rien : c'est le réglage de la personne qui décide, comme avant.
+  assert.equal('breathing' in (await started({ name: 'Lecture', cat: 'esprit', min: 5, mode: 'focus' })).api.state.active, false);
+  assert.equal('breathing' in (await started({ name: 'Respirer', cat: 'calme', min: 5, mode: 'focus' })).api.state.active, false);
+  // Ce qui n'est pas un booléen n'est pas une respiration de séance.
+  assert.equal('breathing' in (await started({ name: 'Respirer', cat: 'calme', min: 5, mode: 'focus', breathing: 'oui' })).api.state.active, false);
+  // « Recommencer » redonne le choix de la séance interrompue, y compris quand la personne l'avait éteint pour cette séance.
+  assert.equal((await started({ name: 'Respirer', cat: 'calme', min: 5, mode: 'focus', breathing: false })).api.state.active.breathing, false);
+  assert.equal((await started({ name: 'Respirer', cat: 'calme', min: 5, mode: 'focus', breathing: true })).api.state.active.breathing, true);
+});
+
+test("séance : la respiration de la séance est enregistrée avec elle, et un rechargement la relit", async () => {
+  const disk = storage(), locks = lockManager(), a = stateApp(disk, locks);
+  a.init();
+  await a.startSession({ name: 'Respirer', cat: 'calme', min: 2, mode: 'free', breathing: true });
+  assert.equal(JSON.parse(disk.getItem('ville-bien-etre/v2')).active.breathing, true, 'écrite avec la séance');
+  const reloaded = stateApp(disk, locks);
+  reloaded.init();
+  assert.equal(reloaded.api.state.active.breathing, true, 'relue après un rechargement');
+  assert.equal(reloaded.api.state.settings.breathing, false, 'le réglage de la personne reste éteint');
+  // Le bouton de la séance change la séance, enregistrée aussitôt : un rechargement relit ce choix-là.
+  a.api.state.active.breathing = false;
+  a.api.commit({ silent: true });
+  const again = stateApp(disk, locks);
+  again.init();
+  assert.equal(again.api.state.active.breathing, false);
+  assert.equal(again.api.state.settings.breathing, false);
 });

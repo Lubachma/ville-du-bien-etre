@@ -123,7 +123,7 @@ function cleanActive(a) {
   if (!a || typeof a !== 'object') return null;
   const name = str(a.name, 60);
   if (!name || !isCat(a.cat) || !validTs(a.startedAt)) return null;
-  return {
+  const active = {
     id: idOf(a.id), name, cat: a.cat, min: int(a.min, 1, 180, 10),
     source: ['direct', 'wishes', 'chores', 'routine'].includes(a.source) ? a.source : 'direct',
     sourceId: str(a.sourceId, 40), mode: a.mode === 'free' ? 'free' : 'focus',
@@ -142,6 +142,10 @@ function cleanActive(a) {
     draw: cleanDraw(a.draw),
     drawRerolls: int(a.drawRerolls, 0, 10, 0),
   };
+  // Respiration guidée de cette séance seulement (la première séance de l'accueil) : un booléen, et pas de clé pour les autres séances,
+  // qui suivent le réglage de la personne. Un « non » est un choix : il est gardé.
+  if (typeof a.breathing === 'boolean') active.breathing = a.breathing;
+  return active;
 }
 
 // Toute donnée venue de l'extérieur (stockage, compte, sauvegarde) passe par ici.

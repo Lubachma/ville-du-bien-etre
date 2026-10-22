@@ -310,6 +310,7 @@ function startSessionLocked(o, resume) {
       startedAt: now, day, promised: r.total, streakPct: r.streakPct, streakDays: r.streakDays, returnPct: r.returnPct,
       dev: Store.device, draw: o.draw || null, drawRerolls: o.drawRerolls || 0,
       routineRunId: o.routineRunId || '', routineStep: o.routineStep || 0,
+      breathing: o.breathing,   // la respiration propre à cette séance (voir cleanActive) ; absente, le réglage de la personne décide
     });
   } else if (S.active) {
     S.active.owner = Store.tab;
@@ -704,7 +705,7 @@ function showFail(a, reason, awayMs, elapsed) {
       h('p', {}, why),
       h('p', { class: 'note' }, a.draw ? t('result.noCoinsDraw') : t('result.noCoins')),
       h('div', { class: 'res-actions' },
-        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); if (a.draw && S.draw.current && S.draw.current.id === a.draw.id) acceptDraw(); else beginSession({ name: a.name, cat: a.cat, min: a.min, mode: a.mode, source: a.source, sourceId: a.sourceId, routineRunId: a.routineRunId, routineStep: a.routineStep }); } }, icon('reroll'), t('result.restart')),
+        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { closeSession(); if (a.draw && S.draw.current && S.draw.current.id === a.draw.id) acceptDraw(); else beginSession({ name: a.name, cat: a.cat, min: a.min, mode: a.mode, source: a.source, sourceId: a.sourceId, routineRunId: a.routineRunId, routineStep: a.routineStep, breathing: a.breathing }); } }, icon('reroll'), t('result.restart')),
         h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { closeSession(); go('ville'); } }, t('result.backToCity')))].filter(Boolean));
   });
 }

@@ -44,10 +44,11 @@ function resetWelcome() {
   try { localStorage.removeItem(LS_WELCOME); } catch (e) { /* stockage indisponible */ }
 }
 
-// « Commencer par 2 minutes de calme » : la première séance, en Calme et en Concentration. Son nom est rangé dans la langue du moment
+// « Commencer par 2 minutes de calme » : la première séance, en Calme et en Concentration, avec la respiration guidée allumée pour cette
+// séance seulement (`breathing` de la séance en cours : le réglage de la personne ne change pas). Son nom est rangé dans la langue du moment
 // (displayName le traduit ensuite comme les exemples d'une ville neuve). Rend la promesse de beginSession.
 function startFirstCalm() {
-  return beginSession({ name: t('tpl.breathe'), cat: 'calme', min: FIRST_CALM_MIN, mode: 'focus' });
+  return beginSession({ name: t('tpl.breathe'), cat: 'calme', min: FIRST_CALM_MIN, mode: 'focus', breathing: true });
 }
 
 // Les boutons fixes de la carte (les boutons de langue sont créés par renderWelcome).
