@@ -11697,9 +11697,11 @@ async function recapCanvas(r) {
   const figures = [[fmtEffort(r.minutes), t('recap.imageMinutes')], [String(r.activeDays), t('recap.imageDays')], [String(r.built), t('recap.imageBuilt')]];
   const cw = (W - M * 2 - 48) / 3;
   ctx.textAlign = 'center';
+  // Les encadrés laissent à peine voir le ciel (.95) : leurs libellés (--muted) gardent au moins 4,5:1 sous tous les ciels, dans les deux
+  // thèmes (4,8:1 au pire, en thème sombre sous un ciel de jour ; à .82, ils tombaient à 3,2:1).
   figures.forEach(([value, label], i) => {
     const x = M + i * (cw + 24);
-    ctx.globalAlpha = .82; ctx.fillStyle = cssVar('--surface') || '#fafbf6';
+    ctx.globalAlpha = .95; ctx.fillStyle = cssVar('--surface') || '#fafbf6';
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x, 910, cw, 190, 28); else ctx.rect(x, 910, cw, 190);
     ctx.fill(); ctx.globalAlpha = 1;

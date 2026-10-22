@@ -548,6 +548,48 @@ async function imagesOwnCityUnderSky(browser, baseURL) {
   return 'Images : ma ville, sous le ciel du moment';
 }
 
+// Les trois chiffres de l'image du récapitulatif sont posés dans des encadrés couleur de carte (--surface), un peu transparents sur le ciel
+// du moment. À .82 d'opacité, leurs libellés (--muted) n'avaient que 3,8:1 en thème clair sous le ciel de nuit, et 3,2:1 en thème sombre
+// sous un ciel de jour. Mesuré sur l'image elle-même : chaque libellé a au moins 4,5:1 contre le fond de son encadré, juste à sa gauche, à
+// mi-hauteur, dans les deux thèmes, sous les ciels de nuit, de crépuscule (au milieu et à sa fin) et de jour, par beau temps (le plus contrasté).
+async function recapFiguresReadable(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }, [], { createdAt: at('2026-05-04T09:00:00Z') }), NOW);
+  const LABELS = ['Temps de pratique', 'Jours actifs', 'Éléments posés'];
+  const SKIES = { nuit: { name: 'night', t: 0 }, crépuscule: { name: 'dusk', t: .5 }, 'fin du crépuscule': { name: 'dusk', t: .9 }, jour: { name: 'day', t: 0 } };
+  // Le contraste de chaque libellé de l'image : son encre (fillStyle au moment de l'écrire) contre le pixel du fond à sa gauche.
+  const measure = () => page.evaluate(async labels => {
+    const lum = ([r, g, b]) => { const c = [r, g, b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+    const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const fillText = CanvasRenderingContext2D.prototype.fillText, written = [];
+    CanvasRenderingContext2D.prototype.fillText = function (text, x, y, max) {
+      if (labels.includes(text)) written.push({ text, x, y, ink: this.fillStyle, width: Math.min(this.measureText(text).width, max || Infinity), size: parseFloat(/(\d+)px/.exec(this.font)[1]) });
+      return fillText.apply(this, arguments);
+    };
+    try {
+      const ctx = (await __ville.rituals.recapCanvas('month', '2026-09')).getContext('2d');
+      return written.map(({ text, x, y, ink, width, size }) => {
+        const back = ctx.getImageData(Math.round(x - width / 2 - 6), Math.round(y - size * .3), 1, 1).data, [a, b] = [lum(rgb(ink)), lum(back)].sort((p, q) => q - p);
+        return { text, ink, back: Array.from(back.slice(0, 3)), ratio: (a + .05) / (b + .05) };
+      });
+    } finally { CanvasRenderingContext2D.prototype.fillText = fillText; }
+  }, LABELS);
+  try {
+    const weak = [];
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => { __ville.state.settings.theme = theme; __ville.renderAll(); }, theme);
+      for (const [name, moment] of Object.entries(SKIES)) {
+        await page.evaluate(moment => __ville.ambient.force({ moment, weather: 'sun' }), moment);
+        const found = await measure(), where = `thème ${theme === 'light' ? 'clair' : 'sombre'}, ciel ${name}`;
+        assert.deepEqual(found.map(label => label.text), LABELS, where + " : les libellés de l'image");
+        for (const label of found) if (label.ratio < 4.5) weak.push(`${where} : « ${label.text} » à ${label.ratio.toFixed(2)}:1 (${label.ink} sur rgb(${label.back}))`);
+      }
+    }
+    assert.deepEqual(weak, [], 'libellés à moins de 4,5:1');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Image du récapitulatif : des libellés lisibles sous tous les ciels';
+}
+
 // Dans la vue en grand, un pincement ou une molette qui tourne vite change la vue aussitôt, mais la ville n'est dessinée qu'une fois, à
 // l'image suivante, quel que soit le nombre d'événements reçus d'ici là (avant : un dessin par événement). Les événements sont synthétiques
 // et partent d'un coup, dans la même tâche : aucune image ne passe entre eux.
@@ -1261,7 +1303,7 @@ async function blankNamesReported(browser, baseURL) {
 
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
-  soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost, villeFocusKeptOnPartialRenders, undoLastsUntilNextAction, toastHeldByMouseAndFocus,
+  soundResumedOnReturn, imagesOwnCityUnderSky, recapFiguresReadable, zoomDrawsOncePerFrame, focusNeverLost, villeFocusKeptOnPartialRenders, undoLastsUntilNextAction, toastHeldByMouseAndFocus,
   keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole, streakReadInFull, routineStepAnnounced, challengesNameFollowsLanguage, blankNamesReported];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
