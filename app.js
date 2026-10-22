@@ -1202,7 +1202,7 @@ DICT.fr = {
   'help.modesText': 'Concentration : garde cette app affichée pendant le chrono. Activité libre : tu peux verrouiller le téléphone ou utiliser une autre app. Le bilan apparaît à ton retour.',
   'help.installTitle': 'Installer sur ton téléphone',
   'help.installText': 'iPhone : ouvre le lien dans Safari, puis Partager → Sur l’écran d’accueil → Ajouter. Android : ouvre le menu de Chrome, puis Installer l’application ou Ajouter à l’écran d’accueil. Les libellés peuvent varier.',
-  'help.installFirst': "Tu peux commencer ici, sans rien installer. Sur iPhone, installe l'app quand tu veux : copie ta ville avec « Copier ma ville », puis colle-la à la première ouverture de l'app.",
+  'help.installFirst': 'Tu peux commencer ici, sans rien installer. Sur iPhone, installe l’app quand tu veux : copie ta ville avec « Copier ma ville », puis colle-la à la première ouverture de l’app.',
   'help.personalTitle': 'Ta ville reste personnelle',
   'help.personalText': 'Sur ce site, chaque personne a sa propre ville, enregistrée sur son appareil. Elle ne se synchronise pas entre téléphones. Effacer les données du navigateur peut la supprimer : garde une copie dans Réglages → Sauvegarde.',
   'help.offlineTitle': 'Hors connexion',
@@ -11576,17 +11576,20 @@ function noteSeason(day) {
 }
 // À chaque affichage de la Ville : la saison vue, le souhait du jour, les fêtes du jour, puis ce qui vient d'être obtenu (défis,
 // souhait exaucé, étoiles, ensembles, succès). Un seul enregistrement : celui des fêtes quand il y en a, sinon un enregistrement
-// visible s'il y a du nouveau (des pièces), sinon discret pour la saison ou le souhait tiré.
+// visible s'il y a du nouveau (des pièces) ou des étoiles versées sans message, sinon discret pour la saison ou le souhait tiré.
 // Une ville sans séance ouvre en silence : les étoiles qu'elle mérite déjà au départ sont versées d'abord, sans message, un jour de fête
-// aussi (sans cela, le message des fêtes les annoncerait). Ce versement est un changement à enregistrer. Une étoile gagnée ensuite en
-// posant un bâtiment garde son message : c'est noticeProgress, après la pose, qui l'annonce. Sans le fichier de l'harmonie (tests), rien.
+// aussi (sans cela, le message des fêtes les annoncerait). Sans séance comptée, toute étoile que le tic trouve est ainsi versée sans
+// message, pas seulement celle du départ : par exemple celle qu'une démolition fait gagner, que noticeProgress n'a pas annoncée. Ce
+// versement change le solde, que l'en-tête a déjà dessiné avant ce tic : son enregistrement est visible (il redessine), et le tic suivant
+// ne trouve plus rien. Une étoile gagnée en posant un bâtiment garde son message : c'est noticeProgress, après la pose, qui l'annonce.
+// Sans le fichier de l'harmonie (tests), rien.
 function liveTick(day = today()) {
   const quiet = isNewTown() && typeof claimStars === 'function' && claimStars().length > 0;
   const season = noteSeason(day), drawn = typeof drawTownWish === 'function' && drawTownWish(day);
   if (greetFestivals(day).length) return;
   const progress = progressNow(), news = typeof hasNews === 'function' && hasNews(progress);
   if (!season && !drawn && !news && !quiet) return;
-  commit(news ? {} : { silent: true });
+  commit(news || quiet ? {} : { silent: true });
   cheer(progress, '');
 }
 // Début de la légende de la ville : moment, météo (et arc-en-ciel), visiteur de passage et fêtes du jour.

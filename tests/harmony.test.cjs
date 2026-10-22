@@ -287,7 +287,7 @@ test("ville sans séance : l'étoile de départ est versée sans message", () =>
   assert.ok(s.gifts['star:verdure'] > 0, "l'étoile est versée");
   assert.equal(s.coins, 15e6, '5 M de départ et les 10 M de l’étoile');
   assert.deepEqual(messages, [], 'aucun message');
-  assert.deepEqual(plain(saves), [{ silent: true }], 'un seul enregistrement, discret');
+  assert.deepEqual(plain(saves), [{}], 'un seul enregistrement, visible : les pièces versées changent le solde de l’en-tête, déjà dessiné');
   assert.equal(s.townWish, null, 'pas de souhait du jour avant la première séance');
   // Rouverte, la ville n'a plus rien à verser ni à dire.
   a.liveTick('2026-10-21');
@@ -301,6 +301,21 @@ test("ville sans séance : l'étoile de départ est versée sans message", () =>
   assert.deepEqual(messages, [a.t('harmony.star', { name: a.t('harmony.lumieres'), coins: a.fmt(a.GIFTS.star) })]);
 });
 
+// Sans séance comptée, toute étoile que le tic trouve est versée sans message, pas seulement celle du départ : par exemple celle qu'une
+// démolition fait gagner, que noticeProgress n'a pas annoncée. Chaque versement est enregistré, de façon visible, une seule fois.
+test("ville sans séance : une étoile trouvée plus tard par le tic est versée sans message, elle aussi", () => {
+  const { a, s, messages, saves } = openedTown();
+  a.liveTick('2026-10-21');
+  s.city.tiles.push({ id: 'lampe', item: 'lampadaire', x: 0, y: 0, at: T0, paid: 0 });
+  a.liveTick('2026-10-21');
+  assert.ok(s.gifts['star:lumieres'] > 0, "l'étoile des lumières est versée");
+  assert.deepEqual([s.coins, messages], [25e6, []]);
+  assert.deepEqual(plain(saves), [{}, {}]);
+  // Un tic de plus ne trouve plus rien : pas de nouvel enregistrement, donc pas de boucle de rendu.
+  a.liveTick('2026-10-21');
+  assert.deepEqual([s.coins, messages, saves.length], [25e6, [], 2]);
+});
+
 // Même quand la saison est déjà vue et qu'aucun souhait n'est tiré, l'étoile versée est un changement à enregistrer.
 test("ville sans séance, saison déjà vue : l'étoile versée est quand même enregistrée", () => {
   const { a, s, messages, saves } = openedTown();
@@ -308,7 +323,7 @@ test("ville sans séance, saison déjà vue : l'étoile versée est quand même 
   a.liveTick('2026-10-21');
   assert.ok(s.gifts['star:verdure'] > 0, "l'étoile est versée");
   assert.deepEqual([s.coins, messages], [15e6, []]);
-  assert.deepEqual(plain(saves), [{ silent: true }], "l'étoile versée est enregistrée");
+  assert.deepEqual(plain(saves), [{}], "l'étoile versée est enregistrée, par un enregistrement visible");
 });
 
 test("ville sans séance, un jour de fête : le message est celui de la fête, sans l'étoile", () => {

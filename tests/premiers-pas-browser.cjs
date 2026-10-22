@@ -404,8 +404,10 @@ async function quietFirstOpen(browser, baseURL) {
     for (let i = 0; i < 15; i++) { seen.push(await page.locator('#toast').textContent()); await page.waitForTimeout(100); }
     assert.deepEqual(seen.filter(text => /étoile/i.test(text)), []);
     assert.doesNotMatch(await page.locator('#live').textContent(), /étoile/i);
-    // L'étoile est bien versée (5 M de départ et 10 M), et enregistrée sans attendre un rechargement.
+    // L'étoile est bien versée (5 M de départ et 10 M), l'en-tête montre le solde versé (il est dessiné avant le tic qui verse l'étoile :
+    // l'enregistrement du tic doit le redessiner), et le tout est enregistré sans attendre un rechargement.
     assert.deepEqual(await page.evaluate(() => [__ville.state.coins, !!__ville.state.gifts['star:verdure']]), [15e6, true]);
+    assert.match(await page.locator('#balance').textContent(), /^15\sM$/);
     assert.deepEqual(await page.evaluate(() => { const saved = JSON.parse(localStorage.getItem('ville-bien-etre/v2')); return [saved.coins, !!saved.gifts['star:verdure']]; }), [15e6, true]);
     // Aucun souhait du jour : ni tiré, ni carte.
     assert.equal(await page.evaluate(() => __ville.state.townWish), null);
