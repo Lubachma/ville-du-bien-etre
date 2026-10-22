@@ -19,6 +19,17 @@ async function cityAt(browser, baseURL, seed, time, options = {}) {
 }
 const skyTop = page => page.evaluate(() => getComputedStyle(document.querySelector('#sky')).getPropertyValue('--sky-top').trim());
 const luma = hex => { const n = parseInt(hex.slice(1), 16); return (.2126 * (n >> 16) + .7152 * (n >> 8 & 255) + .0722 * (n & 255)) / 255; };
+// Molette sur la grande ville. Playwright la refuse dans WebKit mobile (« Mouse wheel is not supported ») :
+// on y envoie alors l'événement lui-même, en pixels, au centre de la vue, là où le test pose la souris.
+async function wheelAt(page, dy) {
+  try { await page.mouse.wheel(0, dy); } catch (error) {
+    if (!/not supported/.test(error.message)) throw error;
+    await page.evaluate(dy => {
+      const canvas = document.querySelector('#cityBigCanvas'), box = canvas.getBoundingClientRect();
+      canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: dy, deltaMode: 0, clientX: box.left + box.width / 2, clientY: box.top + box.height / 2, bubbles: true, cancelable: true }));
+    }, dy);
+  }
+}
 
 async function runAmbient(browser, baseURL) {
   const scenarios = [];
@@ -234,9 +245,9 @@ async function runAmbient(browser, baseURL) {
       assert.equal((await state()).zoom, 1.5);
       const box = await page.locator('#cityBigCanvas').boundingBox(), mid = [box.x + box.width / 2, box.y + box.height / 2];
       await page.mouse.move(...mid);
-      await page.mouse.wheel(0, -200);
+      await wheelAt(page, -200);
       await page.waitForFunction(() => __ville.City.bigState().zoom > 1.5);
-      for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -400);
+      for (let i = 0; i < 8; i++) await wheelAt(page, -400);
       await page.waitForFunction(() => __ville.City.bigState().zoom === 3);
       assert.equal(await page.locator('#cityBigIn').getAttribute('aria-disabled'), 'true');
       // Un glissement très long : le centre de l'écran reste sur l'île.

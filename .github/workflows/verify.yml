@@ -1,0 +1,62 @@
+name: Vérifier
+
+# Les tests tournent à chaque push et à chaque pull request.
+# Les deux navigateurs (Chromium et WebKit, le moteur de Safari) passent chacun dans leur tâche, après les tests rapides.
+# La publication reste manuelle : voir pages.yml.
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Installer les outils
+        run: npm ci
+      - name: Construire
+        run: npm run build
+      # Si cette étape échoue : lancer npm run build en local, puis committer app.js et sw.js avec les sources.
+      - name: Vérifier que app.js et sw.js sont à jour
+        run: git diff --exit-code app.js sw.js
+      - name: Vérifier la syntaxe
+        run: npm run check
+      - name: Lancer les tests unitaires
+        run: npm test
+
+  chromium:
+    needs: unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Installer les outils
+        run: npm ci
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Lancer les tests du navigateur sur Chromium
+        run: npm run test:browser
+
+  webkit:
+    needs: unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Installer les outils
+        run: npm ci
+      - name: Installer WebKit
+        run: npx playwright install --with-deps webkit
+      - name: Lancer les tests du navigateur sur WebKit
+        run: BROWSER=webkit npm run test:browser
