@@ -1068,10 +1068,148 @@ async function shopFocusRingWhole(browser, baseURL) {
   return 'Boutique : contour de focus entier';
 }
 
+// Les petites annonces : ce qu'un lecteur d'écran lit ou annonce, et le message d'un nom fait seulement d'espaces.
+// Une série de 7 jours finie hier : des séances du 14 au 20 octobre, la page ouverte le 21 (NOW).
+const dayBefore = back => new Date(at(NOW) - back * 864e5).toISOString().slice(0, 10);
+const weekStreak = (extra = {}) => {
+  const days = {};
+  for (let back = 1; back <= 7; back++) days[dayBefore(back)] = 10;
+  return town({ calme: 70 }, [], { stats: { ok: 7, byCat: { calme: 70 }, days }, ...extra });
+};
+// Le seul succès que mérite une ville de ces tests (une séance réussie), déjà noté : le démarrage ne le rattrape pas, et le message « Ta ville a
+// déjà 1 succès » ne reste pas 6 s au bas de l'écran, par-dessus les boutons des fenêtres que le test touche.
+const FIRST_STEP = { 'premier-pas': at('2026-10-16T09:00:00Z') };
+// Le texte que lit un lecteur d'écran dans la pastille de série : la pastille sans ses nœuds aria-hidden, l'espace insécable remplacée par
+// une espace.
+const streakReading = async page => (await page.evaluate(() => {
+  const copy = document.querySelector('#streakChip').cloneNode(true);
+  for (const node of copy.querySelectorAll('[aria-hidden="true"]')) node.remove();
+  return copy.textContent.trim();
+})).replaceAll(NBSP, ' ');
+
+// La pastille de série affiche « 7 j » ; un lecteur d'écran en lit une phrase entière, « 7 jours de série » : le texte affiché lui est caché
+// (aria-hidden) et un texte réservé aux lecteurs d'écran le remplace, au singulier pour un seul jour et à jour à chaque rendu.
+async function streakReadInFull(browser, baseURL) {
+  for (const [lang, shown, seven, one] of [['fr', '7' + NBSP + 'j', '7 jours de série', '1 jour de série'], ['en', '7' + NBSP + 'd', '7-day streak', '1-day streak']]) {
+    const { context, page, errors } = await cityAt(browser, baseURL, weekStreak({ settings: { lang } }), NOW);
+    try {
+      assert.equal(await page.locator('#streak').innerText(), shown, lang + ' : le texte affiché de la pastille a changé');
+      assert.equal(await streakReading(page), seven, lang + ' : texte lu de la pastille pour une série de 7 jours');
+      await page.evaluate(day => { __ville.state.stats.days = { [day]: 10 }; __ville.renderAll(); }, dayBefore(1));
+      assert.equal(await streakReading(page), one, lang + ' : texte lu de la pastille pour une série d’un jour');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Série : la pastille est lue en entier';
+}
+
+// Ajouter une étape dans l'éditeur de routine ne disait rien : la liste change sous le bouton « Ajouter », qui garde le focus. Chaque étape
+// ajoutée est annoncée avec son numéro et son nom, tel qu'il s'affiche (l'exemple « Lecture » devient « Reading » en anglais).
+async function routineStepAnnounced(browser, baseURL) {
+  const activities = [['esprit', 'Pratique esprit'], ['corps', 'Pratique corps'], ['lecture', 'Lecture'], ['foyer', 'Pratique foyer']]
+    .map(([id, name]) => ({ id: 'a-' + id, name, cat: id === 'lecture' ? 'esprit' : id, min: 5, mode: 'free' }));
+  const routines = [{ id: 'r1', name: 'Matin', activityIds: ['a-esprit', 'a-corps'] }];
+  for (const [lang, manage, edit, add, third, fourth] of [
+    ['fr', 'Gérer', 'Modifier', 'Ajouter', /^Étape 3 ajoutée\s:\sLecture\.$/, /^Étape 4 ajoutée\s:\sPratique foyer\.$/],
+    ['en', 'Manage', 'Edit', 'Add', /^Step 3 added: Reading\.$/, /^Step 4 added: Pratique foyer\.$/]]) {
+    const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }, [], { settings: { lang }, activities, routines, achievements: FIRST_STEP }), NOW);
+    // L'annonce arrive un instant après le geste (announce la diffère de 40 ms).
+    const announced = async (pattern, label) => {
+      try { await page.waitForFunction(source => new RegExp(source).test(document.querySelector('#live').textContent), pattern.source, { timeout: 5000 }); }
+      catch (error) { assert.fail(`${lang} : ${label} n'est pas annoncée (la zone d'annonce dit « ${await page.locator('#live').textContent()} »)`); }
+    };
+    try {
+      await page.locator('[data-tab="activites"]').click();
+      await page.locator('#routinesCard').getByRole('button', { name: manage, exact: true }).click();
+      await sheet(page).getByRole('button', { name: edit, exact: true }).click();
+      await page.locator('#routineActivity').selectOption('a-lecture');
+      await sheet(page).getByRole('button', { name: add, exact: true }).click();
+      await announced(third, 'la 3e étape');
+      await page.locator('#routineActivity').selectOption('a-foyer');
+      await sheet(page).getByRole('button', { name: add, exact: true }).click();
+      await announced(fourth, 'la 4e étape');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Routine : chaque étape ajoutée est annoncée';
+}
+
+// La carte « Défis de la semaine » est construite une fois, au premier passage dans le Journal : son nom pour les lecteurs d'écran (c'est une
+// région) restait dans la langue d'avant un changement de langue, alors que son titre suivait. Elle prend maintenant le nom de son titre.
+async function challengesNameFollowsLanguage(browser, baseURL) {
+  const { context, page, errors } = await cityAt(browser, baseURL, weekStreak(), NOW);
+  const region = name => page.getByRole('region', { name, exact: true });
+  try {
+    await page.locator('[data-tab="journal"]').click();
+    assert.equal(await region('Défis de la semaine').count(), 1, 'région des défis, en français');
+    await page.locator('#settingsBtn').click();
+    await page.locator('#settingsLang').getByRole('radio', { name: 'English', exact: true }).click();
+    await page.locator('#sheetClose').click();
+    assert.equal(await region('Weekly challenges').count(), 1, 'région des défis, après le passage en anglais');
+    assert.equal(await region('Défis de la semaine').count(), 0, 'région des défis encore en français après le passage en anglais');
+    // La pastille de série, redessinée avec l'en-tête, change de langue aussi.
+    assert.equal(await streakReading(page), '7-day streak', 'pastille de série, après le passage en anglais');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Défis : le nom de la carte suit la langue';
+}
+
+// Un nom fait seulement d'espaces passe la validation du navigateur (le champ n'est pas vide) : le formulaire ne disait rien. Il vide maintenant
+// le champ et affiche « Ce champ est à remplir. » dessous, comme pour un champ laissé vide ; rien n'est ajouté ni changé. Envie, obligation,
+// activité (ajout et modification), routine et ville ; un vrai nom passe toujours.
+async function blankNamesReported(browser, baseURL) {
+  const activities = ['esprit', 'corps'].map(cat => ({ id: 'a-' + cat, name: 'Pratique ' + cat, cat, min: 5, mode: 'free' }));
+  const routines = [{ id: 'r1', name: 'Matin', activityIds: ['a-esprit', 'a-corps'] }];
+  const { context, page, errors } = await cityAt(browser, baseURL, town({ esprit: 5 }, [], { activities, routines, achievements: FIRST_STEP, personal: { name: 'Mon hameau' } }), NOW);
+  // Tout ce que ces formulaires pourraient changer.
+  const kept = () => page.evaluate(() => JSON.stringify(['activities', 'wishes', 'chores', 'routines', 'personal'].map(key => __ville.state[key])));
+  // Des espaces seuls, puis l'envoi : le message sous le champ, le champ vide et au focus, rien d'enregistré.
+  const refuse = async (label, field, scope, send) => {
+    const before = await kept(), error = page.locator(scope + ' .field-error');
+    await field.fill('   ');
+    await send();
+    try { await error.waitFor({ timeout: 5000 }); } catch (failure) { assert.fail(label + ' : aucun message « champ à remplir »'); }
+    assert.equal(await error.innerText(), 'Ce champ est à remplir.', label);
+    assert.equal(await field.inputValue(), '', label + " : le champ n'est pas vidé");
+    assert.equal(await field.evaluate(el => el === document.activeElement), true, label + " : le champ n'a pas le focus");
+    assert.equal(await kept(), before, label + ' : quelque chose a été enregistré');
+  };
+  const submit = () => page.locator('#sheetBody button[type="submit"]').click();
+  try {
+    // Envie et obligation, dans l'onglet Tirage ; un vrai nom passe ensuite, et le message s'efface dès qu'on tape.
+    await page.locator('[data-tab="tirage"]').click();
+    const wish = page.locator('#addWish [name="name"]'), chore = page.locator('#addChore [name="name"]');
+    await refuse('envie', wish, '#addWish', () => wish.press('Enter'));
+    await wish.fill('Faire du pain');
+    assert.equal(await page.locator('#addWish .field-error').count(), 0, 'le message reste affiché quand on tape un vrai nom');
+    await wish.press('Enter');
+    assert.ok(await page.evaluate(() => __ville.state.wishes.some(entry => entry.name === 'Faire du pain')), 'un vrai nom, après le message, est refusé');
+    await refuse('obligation', chore, '#addChore', () => chore.press('Enter'));
+    // Activité : l'ajout, puis la modification d'une activité (en mode Modifier) ; la routine.
+    await page.locator('[data-tab="activites"]').click();
+    await page.locator('#editActs').click();
+    const added = page.locator('#actName');
+    await refuse("ajout d'une activité", added, '#addActForm', () => added.press('Enter'));
+    await page.locator('#actsGrid .act').first().click();
+    await refuse("modification d'une activité", page.locator('#editName'), '#sheetBody', submit);
+    await page.locator('#sheetClose').click();
+    await page.locator('#routinesCard').getByRole('button', { name: 'Gérer', exact: true }).click();
+    await sheet(page).getByRole('button', { name: 'Modifier', exact: true }).click();
+    await refuse('routine', page.locator('#routineName'), '#sheetBody', submit);
+    await page.locator('#sheetClose').click();
+    // Le nom de la ville.
+    await page.locator('[data-tab="ville"]').click();
+    await page.locator('#personalizeCity').click();
+    await refuse('nom de la ville', page.locator('#cityName'), '#sheetBody', submit);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return "Noms faits d'espaces : le message « champ à remplir »";
+}
+
 const SCENARIOS = [endScreenWithoutCompanion, endScreenHiddenCompanion, screensWithoutTechText, lateTabReloadsWhenIdle, lateTabWaitsForWhatFollows,
   lateTabWaitsForTyping, lateTabReloadsWhenStartIsRefused, balanceRoundsDown, recapWithFullJournal, weekReviewWithFullJournal, ambienceClosedAtEnd,
   soundResumedOnReturn, imagesOwnCityUnderSky, zoomDrawsOncePerFrame, focusNeverLost, undoLastsUntilNextAction, toastHeldByMouseAndFocus,
-  keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole];
+  keptMessageCoversNothing, headerFitsAt320, shopFocusRingWhole, streakReadInFull, routineStepAnnounced, challengesNameFollowsLanguage, blankNamesReported];
 async function runFiabilite(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

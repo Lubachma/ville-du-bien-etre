@@ -165,7 +165,7 @@ function openEditSheet(key, id) {
       const cur = S[key].find(x => x.id === id);
       if (!cur) { closeSheet(); toast(t('act.gone')); return; }
       const nm = name.value.trim().slice(0, 40);
-      if (!nm) { name.focus(); return; }
+      if (!nm) { rejectBlank(name); return; }
       cur.name = nm;
       if (isCat(cat.value)) cur.cat = cat.value;
       cur.min = int(Number(min.value), 1, 180, cur.min);

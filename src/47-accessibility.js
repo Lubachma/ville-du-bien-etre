@@ -27,6 +27,12 @@ function showFieldError(field) {
   field.setAttribute('aria-describedby', note.id);
   field.addEventListener('input', () => { note.remove(); field.removeAttribute('aria-invalid'); field.removeAttribute('aria-describedby'); }, { once: true });
 }
+// Un nom fait seulement d'espaces passe la validation du navigateur (le champ n'est pas vide), mais ce n'est pas un nom. Le formulaire vide alors
+// le champ et rejoue la validation : « Ce champ est à remplir » s'affiche sous le champ, comme pour un champ laissé vide.
+function rejectBlank(field) {
+  field.value = '';
+  field.form.reportValidity();
+}
 function setupAccessibility() {
   syncRadioGroups();
   let focusing = false;

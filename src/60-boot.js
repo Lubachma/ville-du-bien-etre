@@ -46,7 +46,7 @@ function bindEvents() {
   $('#addActForm').addEventListener('submit', e => {
     e.preventDefault();
     const name = $('#actName').value.trim().slice(0, 40);
-    if (!name) return;
+    if (!name) { rejectBlank($('#actName')); return; }
     if (S.activities.length >= LIST_MAX) { toast(t('act.listFull', { max: LIST_MAX })); return; }
     S.activities.push(Object.assign({ id: uid(), name, cat: $('#actCat').value, min: Number($('#actMin').value) }, readActivityFields($('#addActForm'))));
     $('#actName').value = '';
@@ -57,7 +57,7 @@ function bindEvents() {
     f.addEventListener('submit', e => {
       e.preventDefault();
       const name = f.elements.name.value.trim().slice(0, 40);
-      if (!name) return;
+      if (!name) { rejectBlank(f.elements.name); return; }
       const key = f.dataset.list;
       if (S[key].length >= LIST_MAX) { toast(t('draw.listFull', { max: LIST_MAX })); return; }
       S[key].push(Object.assign({ id: uid(), name, cat: f.elements.cat.value, min: Number(f.elements.min.value) }, readActivityFields(f)));

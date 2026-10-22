@@ -9,7 +9,8 @@ function renderChallengesCard() {
   if (!$('#view-journal')) return;
   let card = $('#challengesCard');
   if (S.settings.challenges === false) { if (card) card.remove(); return; }
-  if (!card) card = h('section', { id: 'challengesCard', class: 'card feature-card', 'aria-label': t('chal.title') });
+  // Construite une fois, mais redessinée à chaque rendu : son nom est celui de son titre, qui suit la langue.
+  if (!card) card = h('section', { id: 'challengesCard', class: 'card feature-card', 'aria-labelledby': 'challengesTitle' });
   // Juste sous l'objectif de la semaine, même si la carte du carnet s'y glisse ensuite.
   const anchor = $('#goalsCard') || $('#kpis');
   if (card.previousElementSibling !== anchor) anchor.after(card);
@@ -25,7 +26,7 @@ function renderChallengesCard() {
       swapped || done ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'chal-swap:' + i, 'aria-label': t('chal.swapLabel', { text }),
         onclick: () => { if (swapChallenge(i)) commit(); } }, t('chal.swap')));
   });
-  card.replaceChildren(h('h3', {}, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));
+  card.replaceChildren(h('h3', { id: 'challengesTitle' }, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));
 }
 
 // Humeur sur l'écran de fin : cinq visages, un toucher suffit et on peut changer d'avis. « Passer » retire la question ;

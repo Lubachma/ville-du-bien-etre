@@ -244,6 +244,8 @@ function renderHeader() {
   if (chip.hidden) return;
   const st = streak(), pause = pauseActive();
   $('#streak').textContent = t('unit.streakDays', { n: st });
+  // Un lecteur d'écran lit la phrase entière (« 7 jours de série »), pas l'abréviation affichée (« 7 j »), que le HTML lui cache.
+  $('#streakSpoken').textContent = t('streak.spoken', { n: st });
   $('use', chip).setAttribute('href', pause ? '#i-pause' : '#i-flame');
   chip.title = pause ? t('streak.pausedSince', { date: dayLabel(pause.from) }) : st ? t('header.streakTitle', { n: st }) : t('header.noStreak');
 }

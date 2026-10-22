@@ -151,7 +151,14 @@ function openRoutineEditor(id) {
     const choices = h('select', { class: 'select', id: 'routineActivity', 'aria-label': t('routine.activityToAdd') }, S.activities.filter(a => !a.repeat || a.repeat === 'always').map(a => h('option', { value: a.id }, displayName(a.name) + ' · ' + a.min + NB + 'min')));
     const steps = h('ol', { class: 'routine-steps', 'aria-label': t('routine.stepsLabel') });
     const error = h('p', { class: 'note', role: 'status' });
-    const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { if (selected.length < 6 && S.activities.some(a => a.id === choices.value && (!a.repeat || a.repeat === 'always'))) { selected.push(choices.value); drawSteps(); } } }, icon('plus'), t('routine.add'));
+    const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => {
+      const chosen = S.activities.find(a => a.id === choices.value && (!a.repeat || a.repeat === 'always'));
+      if (selected.length >= 6 || !chosen) return;
+      selected.push(chosen.id);
+      drawSteps();
+      // La liste change sous le bouton, qui garde le focus : l'étape ajoutée est annoncée.
+      announce(t('routine.stepAdded', { n: selected.length, name: displayName(chosen.name) }));
+    } }, icon('plus'), t('routine.add'));
     const total = h('p', { class: 'note' });
     function drawSteps() {
       steps.replaceChildren();
@@ -170,7 +177,7 @@ function openRoutineEditor(id) {
     body.append(h('form', { class: 'add-form', onsubmit: e => {
       e.preventDefault();
       const title = name.value.trim().slice(0, 40);
-      if (!title) { name.focus(); return; }
+      if (!title) { rejectBlank(name); return; }
       if (selected.length < 2 || selected.length > 6) { error.textContent = t('routine.errorCount'); return; }
       if (selected.some(key => !S.activities.some(a => a.id === key && (!a.repeat || a.repeat === 'always')))) { error.textContent = t('routine.errorInvalid'); return; }
       S.routines = S.routines || [];
@@ -266,7 +273,7 @@ function buildingLevelText(key) {
 function openCityPersonalization() {
   openSheet(t('city.personalTitle'), body => {
     const name = h('input', { class: 'input', id: 'cityName', maxlength: '40', value: cityName(), required: true });
-    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = cleanName(name.value, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast(t('city.renamed')); } },
+    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = cleanName(name.value, 40); if (!title) { rejectBlank(name); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast(t('city.renamed')); } },
       h('div', { class: 'field' }, h('label', { for: 'cityName' }, t('city.nameLabel')), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), t('city.saveName'))),
       h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, t('city.growsTitle')),
       h('p', {}, t('city.growsText')),

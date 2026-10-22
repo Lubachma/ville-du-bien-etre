@@ -967,6 +967,7 @@ DICT.fr = {
   'routine.moveUp': 'Monter l’étape {n} : {name}',
   'routine.moveDown': 'Descendre l’étape {n} : {name}',
   'routine.removeStep': 'Retirer l’étape {n} : {name}',
+  'routine.stepAdded': 'Étape {n} ajoutée : {name}.',
   'routine.total': '{n}/6 étapes · {time}',
   'routine.errorCount': 'Choisis entre 2 et 6 étapes.',
   'routine.errorInvalid': 'Retire les activités supprimées, ponctuelles ou récurrentes.',
@@ -1225,6 +1226,7 @@ DICT.fr = {
   'settings.pauseNote': 'Pendant une pause, ta série t’attend. Une session réussie compte quand même.',
   'settings.hideStreak': 'Masquer la série',
   'streak.pausedSince': 'En pause depuis le {date}',
+  'streak.spoken': { one: '{n}\u00a0jour de série', other: '{n}\u00a0jours de série' },
   'journal.kpiWeekActive': 'Jours actifs cette semaine',
   'journal.streakStart': 'Une session aujourd’hui lance ta série.',
   'journal.streakNext': { one: 'Une session aujourd’hui : {n}\u00a0jour', other: 'Une session aujourd’hui : {n}\u00a0jours' },
@@ -2230,6 +2232,7 @@ DICT.en = {
   'routine.moveUp': 'Move step {n} up: {name}',
   'routine.moveDown': 'Move step {n} down: {name}',
   'routine.removeStep': 'Remove step {n}: {name}',
+  'routine.stepAdded': 'Step {n} added: {name}.',
   'routine.total': '{n}/6 steps · {time}',
   'routine.errorCount': 'Choose between 2 and 6 steps.',
   'routine.errorInvalid': 'Remove deleted, one-off or recurring activities.',
@@ -2488,6 +2491,7 @@ DICT.en = {
   'settings.pauseNote': 'During a pause, your streak waits for you. A successful session still counts.',
   'settings.hideStreak': 'Hide the streak',
   'streak.pausedSince': 'Paused since {date}',
+  'streak.spoken': { one: '{n}-day streak', other: '{n}-day streak' },
   'journal.kpiWeekActive': 'Active days this week',
   'journal.streakStart': 'A session today starts your streak.',
   'journal.streakNext': { one: 'A session today: {n}\u00a0day', other: 'A session today: {n}\u00a0days' },
@@ -8367,6 +8371,8 @@ function renderHeader() {
   if (chip.hidden) return;
   const st = streak(), pause = pauseActive();
   $('#streak').textContent = t('unit.streakDays', { n: st });
+  // Un lecteur d'écran lit la phrase entière (« 7 jours de série »), pas l'abréviation affichée (« 7 j »), que le HTML lui cache.
+  $('#streakSpoken').textContent = t('streak.spoken', { n: st });
   $('use', chip).setAttribute('href', pause ? '#i-pause' : '#i-flame');
   chip.title = pause ? t('streak.pausedSince', { date: dayLabel(pause.from) }) : st ? t('header.streakTitle', { n: st }) : t('header.noStreak');
 }
@@ -8611,7 +8617,7 @@ function openEditSheet(key, id) {
       const cur = S[key].find(x => x.id === id);
       if (!cur) { closeSheet(); toast(t('act.gone')); return; }
       const nm = name.value.trim().slice(0, 40);
-      if (!nm) { name.focus(); return; }
+      if (!nm) { rejectBlank(name); return; }
       cur.name = nm;
       if (isCat(cat.value)) cur.cat = cat.value;
       cur.min = int(Number(min.value), 1, 180, cur.min);
@@ -9743,7 +9749,14 @@ function openRoutineEditor(id) {
     const choices = h('select', { class: 'select', id: 'routineActivity', 'aria-label': t('routine.activityToAdd') }, S.activities.filter(a => !a.repeat || a.repeat === 'always').map(a => h('option', { value: a.id }, displayName(a.name) + ' · ' + a.min + NB + 'min')));
     const steps = h('ol', { class: 'routine-steps', 'aria-label': t('routine.stepsLabel') });
     const error = h('p', { class: 'note', role: 'status' });
-    const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => { if (selected.length < 6 && S.activities.some(a => a.id === choices.value && (!a.repeat || a.repeat === 'always'))) { selected.push(choices.value); drawSteps(); } } }, icon('plus'), t('routine.add'));
+    const add = h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => {
+      const chosen = S.activities.find(a => a.id === choices.value && (!a.repeat || a.repeat === 'always'));
+      if (selected.length >= 6 || !chosen) return;
+      selected.push(chosen.id);
+      drawSteps();
+      // La liste change sous le bouton, qui garde le focus : l'étape ajoutée est annoncée.
+      announce(t('routine.stepAdded', { n: selected.length, name: displayName(chosen.name) }));
+    } }, icon('plus'), t('routine.add'));
     const total = h('p', { class: 'note' });
     function drawSteps() {
       steps.replaceChildren();
@@ -9762,7 +9775,7 @@ function openRoutineEditor(id) {
     body.append(h('form', { class: 'add-form', onsubmit: e => {
       e.preventDefault();
       const title = name.value.trim().slice(0, 40);
-      if (!title) { name.focus(); return; }
+      if (!title) { rejectBlank(name); return; }
       if (selected.length < 2 || selected.length > 6) { error.textContent = t('routine.errorCount'); return; }
       if (selected.some(key => !S.activities.some(a => a.id === key && (!a.repeat || a.repeat === 'always')))) { error.textContent = t('routine.errorInvalid'); return; }
       S.routines = S.routines || [];
@@ -9858,7 +9871,7 @@ function buildingLevelText(key) {
 function openCityPersonalization() {
   openSheet(t('city.personalTitle'), body => {
     const name = h('input', { class: 'input', id: 'cityName', maxlength: '40', value: cityName(), required: true });
-    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = cleanName(name.value, 40); if (!title) { name.focus(); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast(t('city.renamed')); } },
+    body.append(h('form', { class: 'add-form', onsubmit: e => { e.preventDefault(); const title = cleanName(name.value, 40); if (!title) { rejectBlank(name); return; } S.personal = { ...(S.personal || {}), name: title }; closeSheet(); commit(); toast(t('city.renamed')); } },
       h('div', { class: 'field' }, h('label', { for: 'cityName' }, t('city.nameLabel')), name), h('button', { class: 'btn btn-primary', type: 'submit' }, icon('check'), t('city.saveName'))),
       h('hr', { class: 'divider' }), h('h3', { class: 'section-title' }, t('city.growsTitle')),
       h('p', {}, t('city.growsText')),
@@ -9932,6 +9945,12 @@ function showFieldError(field) {
   field.setAttribute('aria-invalid', 'true');
   field.setAttribute('aria-describedby', note.id);
   field.addEventListener('input', () => { note.remove(); field.removeAttribute('aria-invalid'); field.removeAttribute('aria-describedby'); }, { once: true });
+}
+// Un nom fait seulement d'espaces passe la validation du navigateur (le champ n'est pas vide), mais ce n'est pas un nom. Le formulaire vide alors
+// le champ et rejoue la validation : « Ce champ est à remplir » s'affiche sous le champ, comme pour un champ laissé vide.
+function rejectBlank(field) {
+  field.value = '';
+  field.form.reportValidity();
 }
 function setupAccessibility() {
   syncRadioGroups();
@@ -11449,7 +11468,8 @@ function renderChallengesCard() {
   if (!$('#view-journal')) return;
   let card = $('#challengesCard');
   if (S.settings.challenges === false) { if (card) card.remove(); return; }
-  if (!card) card = h('section', { id: 'challengesCard', class: 'card feature-card', 'aria-label': t('chal.title') });
+  // Construite une fois, mais redessinée à chaque rendu : son nom est celui de son titre, qui suit la langue.
+  if (!card) card = h('section', { id: 'challengesCard', class: 'card feature-card', 'aria-labelledby': 'challengesTitle' });
   // Juste sous l'objectif de la semaine, même si la carte du carnet s'y glisse ensuite.
   const anchor = $('#goalsCard') || $('#kpis');
   if (card.previousElementSibling !== anchor) anchor.after(card);
@@ -11465,7 +11485,7 @@ function renderChallengesCard() {
       swapped || done ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-focus-key': 'chal-swap:' + i, 'aria-label': t('chal.swapLabel', { text }),
         onclick: () => { if (swapChallenge(i)) commit(); } }, t('chal.swap')));
   });
-  card.replaceChildren(h('h3', {}, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));
+  card.replaceChildren(h('h3', { id: 'challengesTitle' }, t('chal.title')), h('p', { class: 'note' }, t('chal.note')), h('ul', { class: 'chal-list' }, ...rows));
 }
 
 // Humeur sur l'écran de fin : cinq visages, un toucher suffit et on peut changer d'avis. « Passer » retire la question ;
@@ -12146,7 +12166,7 @@ function bindEvents() {
   $('#addActForm').addEventListener('submit', e => {
     e.preventDefault();
     const name = $('#actName').value.trim().slice(0, 40);
-    if (!name) return;
+    if (!name) { rejectBlank($('#actName')); return; }
     if (S.activities.length >= LIST_MAX) { toast(t('act.listFull', { max: LIST_MAX })); return; }
     S.activities.push(Object.assign({ id: uid(), name, cat: $('#actCat').value, min: Number($('#actMin').value) }, readActivityFields($('#addActForm'))));
     $('#actName').value = '';
@@ -12157,7 +12177,7 @@ function bindEvents() {
     f.addEventListener('submit', e => {
       e.preventDefault();
       const name = f.elements.name.value.trim().slice(0, 40);
-      if (!name) return;
+      if (!name) { rejectBlank(f.elements.name); return; }
       const key = f.dataset.list;
       if (S[key].length >= LIST_MAX) { toast(t('draw.listFull', { max: LIST_MAX })); return; }
       S[key].push(Object.assign({ id: uid(), name, cat: f.elements.cat.value, min: Number(f.elements.min.value) }, readActivityFields(f)));
