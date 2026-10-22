@@ -8,7 +8,7 @@ const PAINT = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10
 const PALETTE = { night: false, esprit: '#3f78c4', corps: '#d9573b', calme: '#3a9a7a', foyer: '#e3a12f', crea: '#d0628f', prestige: '#b8862b', decor: '#7a8b6e', accent: '#2e6f4e', danger: '#b4452e' };
 // Chaque tâche ajoute ici les noms qu'elle crée.
 const EXPOSE = ['makePainter', 'drawSmoke', 'drawBeam', 'drawWeather', 'drawSeasonLife', 'drawWalker', 'drawDoer', 'VISITOR_DRAW', 'VISITORS', 'drawBunting', 'drawFestival', 'FESTIVALS',
-  'SKINS', 'personSkin', 'walkerLook', 'drawPerson', 'CAT_ORDER'];
+  'SKINS', 'personSkin', 'walkerLook', 'drawPerson', 'CAT_ORDER', 'chance'];
 const app = () => loadApp(PAINT, { expose: EXPOSE });
 // Une case de 100 px dont le sommet est en (200, 200) : centre en (200, 225), bas en 250.
 function draw(a, fn, look = {}) {
@@ -75,20 +75,22 @@ test('habitants : chacun dessiné près de son point, promeneurs et habitants qu
 // Habitants divers : cinq peaux qui tournent selon la ville, et au besoin une canne ou un fauteuil roulant.
 // Une autre ville : seule sa date de création change, et avec elle tous les tirages.
 const townNo = (a, k) => { a.state.createdAt = 1.7e12 + k * 7919e5; };
-// Couleurs de remplissage dans l'ordre du tracé (le contexte factice ne les garde pas), et le peintre qui les a produites.
+// Couleurs de remplissage et de trait dans l'ordre du tracé (le contexte factice ne les garde pas), et le peintre qui les a produites.
 function fillColors(a, fn, look = {}) {
-  const ctx = fakeContext(), colors = [];
+  const ctx = fakeContext(), colors = [], strokes = [];
   ctx.fill = () => { colors.push(ctx.fillStyle); };
+  ctx.stroke = () => { strokes.push(ctx.strokeStyle); };
   const g = a.makePainter(ctx, 100, 200, 200, { ...PALETTE, ...look });
   fn(g);
-  return { colors, g };
+  return { colors, strokes, g };
 }
+// Clarté d'une couleur « #rrggbb » : la somme de ses trois canaux, de quoi ordonner des teintes.
+const light = hex => [1, 3, 5].reduce((sum, i) => sum + parseInt(hex.slice(i, i + 2), 16), 0);
 
 test('habitants : cinq promeneurs ont cinq couleurs de peau différentes, stables pour une ville', () => {
   const a = app(), firstSkins = new Set();
   assert.equal(a.SKINS.length, 5);
   assert.equal(new Set(a.SKINS).size, 5, 'cinq couleurs toutes différentes');
-  const light = hex => [1, 3, 5].reduce((sum, i) => sum + parseInt(hex.slice(i, i + 2), 16), 0);
   a.SKINS.forEach((hex, i) => { if (i) assert.ok(light(a.SKINS[i - 1]) > light(hex), `${hex} n'est pas plus foncée que ${a.SKINS[i - 1]}`); });
   for (let k = 0; k < 30; k++) {
     townNo(a, k);
@@ -108,8 +110,25 @@ test('habitants : environ un promeneur sur sept en fauteuil et un sur cinq avec 
   }
   const chair = seen.chair / (towns * walkers), cane = seen.cane / (towns * walkers);
   assert.equal(seen.chair + seen.cane + seen[''], towns * walkers, 'une aide inconnue');
-  assert.ok(chair >= .10 && chair <= .19, `fauteuils : ${chair.toFixed(3)}`);
-  assert.ok(cane >= .13 && cane <= .25, `cannes : ${cane.toFixed(3)}`);
+  // Le tirage est déterministe : ces 300 villes donnent 246 fauteuils et 323 cannes sur 1 800 promeneurs (.137 et .179), à .03 près.
+  assert.ok(Math.abs(chair - .137) <= .03, `fauteuils : ${chair.toFixed(3)}`);
+  assert.ok(Math.abs(cane - .179) <= .03, `cannes : ${cane.toFixed(3)}`);
+});
+
+test("habitants : quand les deux règles tombent sur le même promeneur, c'est le fauteuil qui l'emporte", () => {
+  const a = app();
+  let both = 0;
+  for (let k = 0; k < 300; k++) {
+    townNo(a, k);
+    for (let i = 0; i < 6; i++) {
+      // Les deux règles du cahier des charges, lues sans passer par walkerLook.
+      const chairRule = (i + Math.floor(a.chance('fauteuil') * 7)) % 7 === 0, caneRule = (i + Math.floor(a.chance('canne') * 5)) % 5 === 0;
+      if (!chairRule || !caneRule) continue;
+      both++;
+      assert.equal(a.walkerLook(i).aid, 'chair', `ville ${k}, promeneur ${i} : fauteuil et canne tirés ensemble`);
+    }
+  }
+  assert.ok(both > 0, "aucun promeneur n'a les deux règles : le test ne prouve rien");
 });
 
 test('habitants : canne et fauteuil restent dans le cadre de la personne', () => {
@@ -127,6 +146,27 @@ test('habitants : canne et fauteuil restent dans le cadre de la personne', () =>
   }
 });
 
+test('habitants : la roue et la canne sont plus claires la nuit que le jour, pour rester visibles sur le sol sombre', () => {
+  const a = app(), skin = a.SKINS[2];
+  // Le seul trait que dessine un promeneur avec cette aide est la roue, ou la canne.
+  const strokeAt = (aid, dark) => {
+    const { strokes } = fillColors(a, g => a.drawWalker(g, 200, 220, { color: '#d9573b', skin, aid }), { dark });
+    assert.equal(strokes.length, 1, `${aid}, obscurité ${dark} : un seul trait attendu, vu ${strokes}`);
+    return strokes[0];
+  };
+  for (const [aid, name] of [['chair', 'roue'], ['cane', 'canne']]) {
+    const day = strokeAt(aid, 0), night = strokeAt(aid, 1);
+    assert.ok(light(night) > light(day), `${name} : ${day} le jour, ${night} la nuit`);
+  }
+});
+
+test("habitants : assis dans son fauteuil, l'épaule reste à moins d'un dixième de s de l'épaule debout", () => {
+  const a = app(), g = a.makePainter(fakeContext(), 100, 200, 200, PALETTE), s = g.tw * .18;
+  const stand = a.drawPerson(g, 200, 220, '#d9573b'), chair = a.drawPerson(g, 200, 220, '#d9573b', 'chair');
+  assert.ok(Math.abs(chair[0] - stand[0]) <= .1 * s, `épaule en x : ${chair[0]} au lieu de ${stand[0]}`);
+  assert.ok(Math.abs(chair[1] - stand[1]) <= .1 * s, `épaule en y : ${chair[1]} au lieu de ${stand[1]}`);
+});
+
 test('habitants : la tête prend la couleur de peau donnée', () => {
   const a = app(), skin = '#8e5a3a';
   for (const pose of ['stand', 'sit', 'chair']) for (const dark of [0, 1]) {
@@ -138,6 +178,15 @@ test('habitants : la tête prend la couleur de peau donnée', () => {
     assert.equal(colors.filter(c => c === head).length, 1, `${pose}, obscurité ${dark} : une seule tête de couleur ${head}, vu ${colors}`);
   }
   assert.ok(fillColors(a, g => a.drawPerson(g, 200, 220, '#d9573b')).colors.includes(a.SKINS[0]), 'sans peau donnée, la plus claire');
+});
+
+test('habitants : le promeneur porte la peau de son look, avec ou sans aide, de jour comme de nuit', () => {
+  const a = app(), skin = a.SKINS[3];
+  for (const aid of ['', 'cane', 'chair']) for (const dark of [0, 1]) {
+    const { colors, g } = fillColors(a, p => a.drawWalker(p, 200, 220, { color: '#d9573b', skin, aid }), { dark });
+    const head = g.c(skin);
+    assert.equal(colors.filter(c => c === head).length, 1, `${aid || 'sans aide'}, obscurité ${dark} : une seule tête de couleur ${head}, vu ${colors}`);
+  }
 });
 
 test('habitants : ceux qui font comme toi et les deux musiciens de passage ont chacun leur peau', () => {
