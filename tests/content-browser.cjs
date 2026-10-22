@@ -172,6 +172,8 @@ async function runContent(browser, baseURL) {
       await page.getByRole('radio', { name: '5 min', exact: true }).click();
       await page.getByRole('radio', { name: 'Activité libre', exact: true }).click();
       await page.getByRole('button', { name: /^Commencer/ }).click();
+      // La séance, ou la mise en garde « écran allumé » d'une fenêtre ouverte (celle de la séance d'avant reste dans la fenêtre fermée).
+      await page.waitForFunction(() => window.__ville.activeState() === 'mine' || !!document.querySelector('#sheet:not([hidden]) #wakeAck'));
       const warning = page.getByRole('button', { name: "C'est réglé, commencer", exact: true });
       if (await warning.isVisible()) await warning.click();
       await page.waitForFunction(() => window.__ville.activeState() === 'mine');

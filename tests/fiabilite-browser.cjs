@@ -20,8 +20,9 @@ async function assertNoTechText(page, selector) {
 }
 
 // Attend que la séance tourne : la mise en garde « écran allumé » suit la demande au navigateur, parfois un peu plus tard.
+// La mise en garde de la séance d'avant reste dans la fenêtre fermée : seule celle d'une fenêtre ouverte compte.
 async function confirmStart(page) {
-  await page.waitForFunction(() => window.__ville.activeState() === 'mine' || !!document.querySelector('#wakeAck'));
+  await page.waitForFunction(() => window.__ville.activeState() === 'mine' || !!document.querySelector('#sheet:not([hidden]) #wakeAck'));
   const warning = page.getByRole('button', { name: "C'est réglé, commencer", exact: true });
   if (await warning.isVisible()) await warning.click();
   await page.waitForFunction(() => window.__ville.activeState() === 'mine');

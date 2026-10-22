@@ -32,8 +32,9 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
   await page.getByRole('radio', { name: duration + ' min', exact: true }).click();
   await page.getByRole('radio', { name: mode === 'free' ? 'Activité libre' : 'Concentration', exact: true }).click();
   await page.getByRole('button', { name: /^Commencer/ }).click();
-  // La mise en garde « écran allumé » suit la demande au navigateur, parfois un peu plus tard : on attend la séance ou elle.
-  await page.waitForFunction(() => window.__ville.activeState() === 'mine' || !!document.querySelector('#wakeAck'));
+  // La mise en garde « écran allumé » suit la demande au navigateur, parfois un peu plus tard : on attend la séance ou elle. Celle de la
+  // séance d'avant reste dans la fenêtre fermée : seule celle d'une fenêtre ouverte compte.
+  await page.waitForFunction(() => window.__ville.activeState() === 'mine' || !!document.querySelector('#sheet:not([hidden]) #wakeAck'));
   const warning = page.getByRole('button', { name: "C'est réglé, commencer", exact: true });
   if (await warning.isVisible()) await warning.click();
   await page.waitForFunction(() => window.__ville.activeState() === 'mine');
