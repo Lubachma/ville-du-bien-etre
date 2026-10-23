@@ -9330,6 +9330,10 @@ function restoreBackup(st) {
   const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet({ defer: true, save: false }) : null;
   // La sauvegarde remplace tout : ni fusion avec un autre onglet, ni reprise de ce que gardait l'ancienne ville.
   const saved = commit({ flush: true, replace: true });
+  // Reprise et enregistrée, la ville égale une sauvegarde que la personne détient : elle compte comme faite sur cet appareil (comme « Copier ma ville »),
+  // et le rappel de sauvegarde ne vient pas aussitôt, dans une app installée neuve où rien n'a encore été exporté. Pas enregistrée (le stockage refuse),
+  // elle ne compte pas. markBackup redessine la Ville (si elle est affichée) : le focus que l'appelant pose ensuite (restorePastedTown) vient après.
+  if (saved) markBackup();
   City.relayout();
   if (caught && (caught.achievements.length || caught.sets.length)) flushCarnetNote();
   else toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));
@@ -12501,9 +12505,10 @@ async function pasteTown() {
       h('button', { class: 'btn btn-primary', type: 'button', onclick: () => restorePastedTown(res.state) }, t('welcome.pasteRestore')),
       h('button', { class: 'btn btn-ghost', type: 'button', onclick: closeSheet }, t('common.cancel')))));
 }
-// « Reprendre cette ville » : la sauvegarde remplace la ville neuve (restoreBackup ferme la feuille, enregistre et le dit ; pendant une séance, il
-// refuse et la feuille reste). La ville reprise a des séances : l'accueil disparaît avec son bouton, et le focus passe à « Lancer une activité »,
-// sous la ville, que le navigateur ait ou non donné le focus au bouton cliqué.
+// « Reprendre cette ville » : la sauvegarde remplace la ville neuve (restoreBackup ferme la feuille, enregistre, la compte comme une sauvegarde faite
+// ici et le dit ; pendant une séance, il refuse et la feuille reste). La ville reprise a presque toujours des séances : l'accueil disparaît alors avec
+// son bouton ; la sauvegarde d'une ville qui n'a fait aucune séance les laisse tous deux. Dans les deux cas le focus passe à « Lancer une activité », sous
+// la ville, que le navigateur ait ou non donné le focus au bouton cliqué. Il est posé après restoreBackup, donc après les dessins qu'il a faits.
 function restorePastedTown(state) {
   restoreBackup(state);
   if ($('#sheet').hidden) $('#ctaStart').focus({ preventScroll: true });

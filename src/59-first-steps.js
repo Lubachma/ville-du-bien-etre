@@ -181,9 +181,10 @@ async function pasteTown() {
       h('button', { class: 'btn btn-primary', type: 'button', onclick: () => restorePastedTown(res.state) }, t('welcome.pasteRestore')),
       h('button', { class: 'btn btn-ghost', type: 'button', onclick: closeSheet }, t('common.cancel')))));
 }
-// « Reprendre cette ville » : la sauvegarde remplace la ville neuve (restoreBackup ferme la feuille, enregistre et le dit ; pendant une séance, il
-// refuse et la feuille reste). La ville reprise a des séances : l'accueil disparaît avec son bouton, et le focus passe à « Lancer une activité »,
-// sous la ville, que le navigateur ait ou non donné le focus au bouton cliqué.
+// « Reprendre cette ville » : la sauvegarde remplace la ville neuve (restoreBackup ferme la feuille, enregistre, la compte comme une sauvegarde faite
+// ici et le dit ; pendant une séance, il refuse et la feuille reste). La ville reprise a presque toujours des séances : l'accueil disparaît alors avec
+// son bouton ; la sauvegarde d'une ville qui n'a fait aucune séance les laisse tous deux. Dans les deux cas le focus passe à « Lancer une activité », sous
+// la ville, que le navigateur ait ou non donné le focus au bouton cliqué. Il est posé après restoreBackup, donc après les dessins qu'il a faits.
 function restorePastedTown(state) {
   restoreBackup(state);
   if ($('#sheet').hidden) $('#ctaStart').focus({ preventScroll: true });

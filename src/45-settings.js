@@ -69,6 +69,10 @@ function restoreBackup(st) {
   const caught = typeof catchUpCarnet === 'function' ? catchUpCarnet({ defer: true, save: false }) : null;
   // La sauvegarde remplace tout : ni fusion avec un autre onglet, ni reprise de ce que gardait l'ancienne ville.
   const saved = commit({ flush: true, replace: true });
+  // Reprise et enregistrée, la ville égale une sauvegarde que la personne détient : elle compte comme faite sur cet appareil (comme « Copier ma ville »),
+  // et le rappel de sauvegarde ne vient pas aussitôt, dans une app installée neuve où rien n'a encore été exporté. Pas enregistrée (le stockage refuse),
+  // elle ne compte pas. markBackup redessine la Ville (si elle est affichée) : le focus que l'appelant pose ensuite (restorePastedTown) vient après.
+  if (saved) markBackup();
   City.relayout();
   if (caught && (caught.achievements.length || caught.sets.length)) flushCarnetNote();
   else toast(saved ? t('backup.restored') : t('backup.restoredNotSaved'));

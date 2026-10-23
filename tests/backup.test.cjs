@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
+const { storage, stateApp, FILES } = require('./helpers/state-vm.cjs');
 function api() {
   const context = vm.createContext({ Intl, Date, Math, JSON, TextEncoder, TextDecoder,
     btoa: text => Buffer.from(text, 'binary').toString('base64'), atob: text => Buffer.from(text, 'base64').toString('binary'),
@@ -77,4 +78,34 @@ test('sauvegarde : un texte coupé en lignes est accepté', () => {
   assert.ok(a.readBackup('VBE2.\n.\n').error);
   assert.ok(a.readBackup(' \n\t ').error);
   assert.ok(a.readBackup(null).error);
+});
+// Une ville reprise d'une sauvegarde égale une sauvegarde que la personne détient : elle compte comme faite sur cet appareil (sa date est rangée, le
+// rappel de sauvegarde n'est plus dû). Seulement si elle a pu être enregistrée : sinon la personne ne l'a pas encore, et le rappel reste dû.
+test('restauration : une ville reprise et enregistrée compte comme une sauvegarde faite sur cet appareil', () => {
+  const AT = 'ville-bien-etre/v1:backup-at', KEY = 'ville-bien-etre/v2';
+  // Un onglet sur une ville de trois séances que l'appareil n'a jamais exportée : le rappel est dû tant qu'elle ne compte pas comme sauvegardée.
+  const open = disk => {
+    const a = stateApp(disk, undefined, { files: [...FILES, '45-settings.js'], expose: ['restoreBackup', 'backupDue'] });
+    a.init();
+    Object.assign(a.context, { refreshLang() {} });   // les textes fixes et les listes de la page : rien à refaire dans la VM
+    a.api.state.stats.ok = 3;
+    a.commit({ silent: true });
+    assert.equal(a.backupDue(), true, 'le rappel est dû');
+    return a;
+  };
+  const backupOf = a => a.normalize({ ...JSON.parse(JSON.stringify(a.api.state)), coins: 42e6 });
+
+  const disk = storage(), a = open(disk);
+  a.restoreBackup(backupOf(a));
+  assert.equal(a.api.state.coins, 42e6);
+  assert.ok(Number(disk.getItem(AT)) > 0, 'la date de la sauvegarde est rangée');
+  assert.equal(a.backupDue(), false, "le rappel n'est plus dû");
+
+  // Reprise mais pas enregistrée (le stockage refuse la ville) : elle ne compte pas, le rappel reste dû.
+  const full = storage(), b = open(full), write = full.setItem.bind(full);
+  full.setItem = (key, value) => { if (key === KEY) throw new Error('QuotaExceededError'); return write(key, value); };
+  b.restoreBackup(backupOf(b));
+  assert.equal(b.api.state.coins, 42e6);
+  assert.equal(full.getItem(AT), null, "rien n'est rangé");
+  assert.equal(b.backupDue(), true, 'le rappel reste dû');
 });

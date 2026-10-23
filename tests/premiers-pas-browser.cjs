@@ -877,19 +877,24 @@ const SAFARI_DAY = Date.parse('2026-10-16T10:00:00Z');
 const safariBackup = (lang = 'fr') => signBackup(town({}, [], { settings: { lang }, coins: 42e6, stats: { ok: 3, byCat: {}, days: { '2026-10-16': 30 } },
   achievements: { 'premier-pas': SAFARI_DAY } }));
 const plain = text => text.replace(/\s+/g, ' ');
+// Le texte tel qu'un courriel ou une messagerie le rend : précédé d'un saut de ligne, coupé en lignes de 60 caractères, suivi d'un autre saut de
+// ligne. readBackup ignore tous les blancs, et l'empreinte vérifie que rien d'autre n'a changé.
+const wrapped = text => '\n' + text.match(/.{1,60}/g).join('\n') + '\n';
 const activeId = page => page.evaluate(() => document.activeElement && document.activeElement.id);
 const clipboardHolds = (page, clip, refused = false) => page.evaluate(({ clip, refused }) => { window.__clip = clip; window.__clipRefused = refused; }, { clip, refused });
 
-// Le bouton lit le presse-papiers pendant le clic et ouvre la feuille « Reprendre ma ville », qui montre la ville trouvée. « Annuler » et Échap la
-// ferment sans rien changer, le focus revient au bouton (Safari ne le donne pas au bouton cliqué). « Reprendre cette ville » remplace la ville neuve
-// en un geste : la ville est enregistrée, l'accueil disparaît et le focus passe à « Lancer une activité ». Le texte que « Copier ma ville » a copié dans
-// Safari est celui que l'app installée reprend.
+// Le bouton lit le presse-papiers pendant le clic et ouvre la feuille « Reprendre ma ville », qui montre la ville trouvée (un texte précédé d'un saut
+// de ligne et coupé en lignes s'ouvre de même). « Annuler » et Échap la ferment sans rien changer, le focus revient au bouton (Safari ne le donne pas
+// au bouton cliqué). « Reprendre cette ville » remplace la ville neuve en un geste : la ville est enregistrée et compte comme une sauvegarde faite sur
+// cet appareil, l'accueil disparaît et le focus passe à « Lancer une activité » ; une ville de Safari sans séance laisse l'accueil, et le focus passe
+// quand même. Le texte que « Copier ma ville » a copié dans Safari est celui que l'app installée reprend.
 async function pasteFromSafari(browser, baseURL) {
   {
     const { context, page, errors } = await installedTown(browser, baseURL);
     try {
       const card = page.locator('#welcomeCard'), paste = page.locator('#welcomePaste'), sheet = page.locator('#sheet');
       assert.deepEqual(await page.evaluate(() => [navigator.standalone, __ville.state.coins, __ville.state.stats.ok]), [true, 15e6, 0]);
+      assert.equal(await backupAt(page), 0, "aucune sauvegarde n'a été faite depuis cet appareil");
       assert.equal(await card.isVisible(), true);
       assert.equal(await paste.isVisible(), true);
       assert.equal(plain(await paste.innerText()), 'J’avais commencé dans Safari : coller ma ville');
@@ -925,6 +930,16 @@ async function pasteFromSafari(browser, baseURL) {
       assert.equal(await activeId(page), 'welcomePaste');
       assert.equal(await page.evaluate(() => __ville.state.coins), 15e6);
 
+      // Collé après un courriel : précédé d'un saut de ligne et coupé en lignes, le texte est lu de même (l'empreinte vérifie qu'il est entier).
+      await clipboardHolds(page, wrapped(safariBackup()));
+      await paste.click();
+      await sheet.waitFor();
+      assert.match(plain(await page.locator('#sheetBody strong').innerText()), /^42 M · .+ · 3 sessions réussies · /);
+      await sheet.getByRole('button', { name: 'Annuler', exact: true }).click();
+      await sheet.waitFor({ state: 'hidden' });
+      assert.equal(await page.evaluate(() => __ville.state.coins), 15e6);
+      await clipboardHolds(page, safariBackup());
+
       // « Reprendre cette ville » : la ville de Safari remplace la ville neuve, enregistrée, sans accueil, le focus sur « Lancer une activité ».
       await paste.click();
       await sheet.waitFor();
@@ -936,10 +951,35 @@ async function pasteFromSafari(browser, baseURL) {
       assert.equal(await activeId(page), 'ctaStart');
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('ville-bien-etre/v2')).coins), 42e6);
       assert.match(await page.locator('#balance').textContent(), /^42\sM$/);
+      // La ville reprise égale une sauvegarde que la personne détient : elle compte comme faite sur cet appareil, et le rappel de sauvegarde (trois
+      // séances, aucun export fait ici) ne vient pas tout de suite. La Ville, redessinée pour cela, laisse le focus sur « Lancer une activité ».
+      assert.ok(Math.abs(await page.evaluate(() => Date.now()) - await backupAt(page)) < 60000, 'la reprise est datée de maintenant');
+      assert.equal(await page.locator('#remind').isHidden(), true);
+      assert.equal(await activeId(page), 'ctaStart');
       await page.reload();
       await page.waitForFunction(() => !!window.__ville);
       assert.deepEqual(await page.evaluate(() => [__ville.state.coins, __ville.state.stats.ok]), [42e6, 3]);
       assert.equal(await card.isHidden(), true);
+      assert.equal(await page.locator('#remind').isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    // Une ville de Safari sans aucune séance (la personne n'avait fait que l'ouvrir) : la reprise la remplace, mais l'accueil reste, et son bouton
+    // avec ; le focus passe quand même à « Lancer une activité », sans erreur.
+    const { context, page, errors } = await installedTown(browser, baseURL);
+    try {
+      await clipboardHolds(page, signBackup(town({}, [], { coins: 7e6, stats: { ok: 0, byCat: {}, days: {} } })));
+      await page.locator('#welcomePaste').click();
+      await page.locator('#sheet').waitFor();
+      assert.match(plain(await page.locator('#sheetBody strong').innerText()), /^7 M · .+ · 0 session réussie · /);
+      await page.locator('#sheet').getByRole('button', { name: 'Reprendre cette ville', exact: true }).click();
+      await page.locator('#sheet').waitFor({ state: 'hidden' });
+      assert.deepEqual(await page.evaluate(() => [__ville.state.coins, __ville.state.stats.ok + __ville.state.stats.ko]), [7e6, 0]);
+      assert.equal(plain(await page.locator('#toast').innerText()), 'Sauvegarde restaurée et enregistrée.');
+      assert.equal(await page.locator('#welcomeCard').isVisible(), true);
+      assert.equal(await page.locator('#welcomePaste').isVisible(), true);
+      assert.equal(await activeId(page), 'ctaStart');
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
   }
@@ -971,8 +1011,8 @@ async function pasteFromSafari(browser, baseURL) {
   return "Coller ma ville : la feuille montre la ville de Safari, « Annuler » la laisse, « Reprendre cette ville » la reprend en un geste (enregistrée, sans accueil, focus sur « Lancer une activité »)";
 }
 
-// Rien à reprendre, ou rien de lisible : presse-papiers vide, autre texte, refusé, absent, sauvegarde coupée ou abîmée. Un message doux qui reste, avec
-// la porte de Réglages → Sauvegarde ; la ville n'a pas changé et aucune feuille ne s'est ouverte.
+// Rien à reprendre, ou rien de lisible : presse-papiers vide, autre texte, refusé, absent, sauvegarde coupée, abîmée ou dont la version ne va pas. Un
+// message doux qui reste, avec la porte de Réglages → Sauvegarde ; la ville n'a pas changé et aucune feuille ne s'est ouverte.
 async function pasteNothing(browser, baseURL) {
   const { context, page, errors } = await installedTown(browser, baseURL);
   try {
@@ -987,6 +1027,9 @@ async function pasteNothing(browser, baseURL) {
       ['un presse-papiers refusé', { refused: true }, NONE],
       ['une sauvegarde abîmée', { clip: damaged }, 'Cette sauvegarde a été modifiée ou abîmée : impossible de la restaurer.'],
       ['une sauvegarde coupée', { clip: whole.slice(0, 80) }, "Ce texte n'est pas une sauvegarde de la Ville du bien-être."],
+      // « VBE1. » (l'ancienne version) passe la porte comme « VBE2. » : c'est la lecture qui dit ce qui ne va pas. La signature ne couvre que le
+      // corps, elle est bonne ; mais la ville écrite dedans est de la version 2, pas 1.
+      ['un texte en VBE1. dont la version ne va pas', { clip: 'VBE1.' + whole.slice(5) }, "Cette sauvegarde n'est pas lisible."],
       ['un navigateur sans presse-papiers', { missing: true }, NONE],
     ];
     for (const [label, { clip = '', refused = false, missing = false }, message] of cases) {
@@ -1107,10 +1150,36 @@ async function pasteFits320(browser, baseURL) {
   return 'Coller ma ville : à 320 px, rien ne déborde, en français et en anglais';
 }
 
+// Une ville reprise d'une sauvegarde égale une sauvegarde que la personne détient : elle compte comme faite sur cet appareil, comme « Copier ma ville »,
+// et le rappel de sauvegarde n'est pas dû tout de suite. C'est restoreBackup qui le fait, pour le collage dans l'app installée (voir pasteFromSafari)
+// comme pour Réglages → Sauvegarde, ici : coller le texte, vérifier, remplacer en deux gestes.
+async function restoreCountsAsBackup(browser, baseURL) {
+  const { context, page, errors } = await freshTown(browser, baseURL);
+  try {
+    assert.equal(await backupAt(page), 0, "aucune sauvegarde n'a été faite depuis cet appareil");
+    await page.locator('#settingsBtn').click();
+    await page.locator('#importArea').fill(safariBackup());
+    await page.getByRole('button', { name: 'Vérifier la sauvegarde', exact: true }).click();
+    await page.getByRole('button', { name: 'Remplacer ma ville par cette sauvegarde', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirmer le remplacement', exact: true }).click();
+    await page.locator('#sheet').waitFor({ state: 'hidden' });
+    assert.deepEqual(await page.evaluate(() => [__ville.state.coins, __ville.state.stats.ok]), [42e6, 3]);
+    assert.equal(plain(await page.locator('#toast').innerText()), 'Sauvegarde restaurée et enregistrée.');
+    assert.ok(Math.abs(await page.evaluate(() => Date.now()) - await backupAt(page)) < 60000, 'la restauration est datée de maintenant');
+    assert.equal(await page.locator('#remind').isHidden(), true);
+    await page.reload();
+    await page.waitForFunction(() => !!window.__ville);
+    assert.deepEqual(await page.evaluate(() => [__ville.state.coins, __ville.state.stats.ok]), [42e6, 3]);
+    assert.equal(await page.locator('#remind').isHidden(), true);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Restauration : une ville reprise depuis Réglages compte comme une sauvegarde faite sur cet appareil, sans rappel tout de suite';
+}
+
 const SCENARIOS = [welcomeForNewTown, welcomeCloseStays, welcomeCloseWithoutStorage, welcomeLanguage, welcomeLanguageClosesToast, welcomeChoose,
   welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing, quietFirstOpen,
   shelterAfterFirstSession, shelterNeverInstalled, shelterHideForGood, shelterCopyRefused, shelterAndroid, shelterFits320,
-  pasteFromSafari, pasteNothing, pasteHiddenOutsideApp, pasteFits320];
+  pasteFromSafari, pasteNothing, pasteHiddenOutsideApp, pasteFits320, restoreCountsAsBackup];
 async function runPremiersPas(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
