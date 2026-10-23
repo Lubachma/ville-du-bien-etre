@@ -305,7 +305,7 @@
     ...
     if (!season && !drawn && !news && !quiet) return;
     ```
-    Une étoile gagnée ensuite en posant un bâtiment garde son message, par `noticeProgress` comme aujourd'hui.
+    L'enregistrement de ce versement est visible, `commit(news || quiet ? {} : { silent: true })` : l'en-tête est dessiné avant le tic, il doit montrer les 15 M (correction de la relecture). Une étoile gagnée ensuite en posant un bâtiment garde son message, par `noticeProgress` comme aujourd'hui.
   - `drawTownWish(day)` ne tire rien tant qu'aucune séance réussie n'existe un jour antérieur : condition `!Object.keys(S.stats.days).some(d => d < day)` ajoutée à la garde de la ligne 71.
   - `help.installFirst` :
     - FR : « Tu peux commencer ici, sans rien installer. Sur iPhone, installe l'app quand tu veux : copie ta ville avec « Copier ma ville », puis colle-la à la première ouverture de l'app. »
