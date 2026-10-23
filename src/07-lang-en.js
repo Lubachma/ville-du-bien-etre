@@ -1278,4 +1278,8 @@ DICT.en = {
   'welcome.close': 'Close the welcome',
   'welcome.langs': 'App language',
   'welcome.paste': 'I started in Safari: paste my town',
+  'welcome.pasteTitle': 'Bring back my town',
+  'welcome.pasteLine': 'Town found on the clipboard:',
+  'welcome.pasteRestore': 'Bring back this town',
+  'welcome.pasteNone': 'No town on the clipboard. Copy it in Safari first, or paste it in Settings → Backup.',
 };

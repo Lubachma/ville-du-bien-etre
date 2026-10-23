@@ -175,7 +175,8 @@ test("aide : on peut commencer ici, sans rien installer ; sur iPhone, la ville s
 // l'apostrophe droite. L'anglais garde sa convention.
 const STAGE8_FR = ['help.installFirst', 'backup.openSection', 'tpl.breathe', 'install.title', 'install.iosWhy', 'install.ios', 'install.iosCopy', 'install.copy',
   'install.copied', 'install.copyFailed', 'install.prompt', 'install.install', 'install.hide', 'install.help', 'welcome.title', 'welcome.lede', 'welcome.step1',
-  'welcome.step2', 'welcome.step3', 'welcome.start', 'welcome.choose', 'welcome.note', 'welcome.close', 'welcome.langs', 'welcome.paste'];
+  'welcome.step2', 'welcome.step3', 'welcome.start', 'welcome.choose', 'welcome.note', 'welcome.close', 'welcome.langs', 'welcome.paste',
+  'welcome.pasteTitle', 'welcome.pasteLine', 'welcome.pasteRestore', 'welcome.pasteNone'];
 test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apostrophe droite", () => {
   const { DICT } = stateApp(undefined, undefined, { expose: ['DICT'] });
   for (const key of STAGE8_FR) {
@@ -184,7 +185,7 @@ test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apos
   }
   // Le texte entier, apostrophes comprises (U+2019).
   assert.deepEqual(Object.fromEntries(['install.title', 'install.iosWhy', 'install.iosCopy', 'install.prompt', 'install.copied', 'install.copyFailed',
-    'welcome.close', 'welcome.langs', 'welcome.paste'].map(key => [key, DICT.fr[key]])), {
+    'welcome.close', 'welcome.langs', 'welcome.paste', 'welcome.pasteNone'].map(key => [key, DICT.fr[key]])), {
     'install.title': 'Garde ta ville à l’abri',
     'install.iosWhy': 'Sur iPhone, le navigateur peut effacer un site resté sept jours sans visite, mais pas une app ajoutée à l’écran d’accueil.',
     'install.iosCopy': 'Puis copie ta ville ici et colle-la à la première ouverture de l’app.',
@@ -194,9 +195,16 @@ test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apos
     'welcome.close': 'Fermer l’accueil',
     'welcome.langs': 'Langue de l’app',
     'welcome.paste': 'J’avais commencé dans Safari : coller ma ville',
+    'welcome.pasteNone': 'Pas de ville dans le presse-papiers. Copie-la d’abord dans Safari, ou colle-la dans Réglages → Sauvegarde.',
   });
   assert.equal(DICT.en['install.iosWhy'], "On iPhone, the browser may erase a site left seven days without a visit, but not an app added to the Home Screen.");
   assert.equal(DICT.en['install.iosCopy'], 'Then copy your town here and paste it the first time you open the app.');
+  assert.deepEqual(Object.fromEntries(['welcome.pasteTitle', 'welcome.pasteLine', 'welcome.pasteRestore', 'welcome.pasteNone'].map(key => [key, DICT.en[key]])), {
+    'welcome.pasteTitle': 'Bring back my town',
+    'welcome.pasteLine': 'Town found on the clipboard:',
+    'welcome.pasteRestore': 'Bring back this town',
+    'welcome.pasteNone': 'No town on the clipboard. Copy it in Safari first, or paste it in Settings → Backup.',
+  });
 });
 
 // Le texte français fixe de la carte « Bienvenue » (index.html, lu avant que le script ne le remplace, ou sans lui) dit la même chose que le

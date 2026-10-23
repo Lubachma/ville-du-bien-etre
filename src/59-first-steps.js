@@ -1,5 +1,6 @@
 /* =========================================================================
-   Premiers pas : la carte « Bienvenue » d'une ville sans séance, puis la carte « Garde ta ville à l'abri » une fois la première séance faite
+   Premiers pas : la carte « Bienvenue » d'une ville sans séance (avec, dans l'app installée sur iPhone, le collage de la ville commencée dans
+   Safari), puis la carte « Garde ta ville à l'abri » une fois la première séance faite
    ========================================================================= */
 const FIRST_CALM_MIN = 2;   // la première séance proposée : deux minutes de calme
 
@@ -19,11 +20,15 @@ function welcomeShown() { return isNewTown() && !S.active && !welcomeDismissed()
 // reste, car tous les navigateurs ne le donnent pas au bouton cliqué (Safari) et applyLang redessine la carte. Il ferme avant le message
 // en cours (celui de la première ouverture) : il parle l'ancienne langue. hideToast() sans argument : hideToast(true) ne ferme que le
 // message qui reste, pas un message qui a son minuteur.
+// « J'avais commencé dans Safari : coller ma ville » n'est montré que dans l'app installée sur iPhone, dont le stockage n'est pas celui de Safari :
+// la ville commencée là-bas n'y est pas. Ailleurs (Safari, Android, un ordinateur), le stockage est celui du navigateur : rien à reprendre. Lu à
+// chaque dessin, jamais au chargement du fichier.
 function renderWelcome() {
-  const card = $('#welcomeCard'), box = $('#welcomeLangs');
+  const card = $('#welcomeCard'), box = $('#welcomeLangs'), paste = $('#welcomePaste');
   if (!card || !box) return;
   card.hidden = !welcomeShown();
   if (card.hidden) { box.replaceChildren(); return; }
+  if (paste) paste.hidden = !(isIOS() && isStandalone());
   box.replaceChildren(...langs().filter(code => code !== LANG).map(code => h('button', {
     class: 'btn btn-ghost btn-sm', type: 'button', lang: code, 'data-focus-key': 'welcome:lang',
     onclick: () => { hideToast(); applyLang(code); focusByKey('welcome:lang'); },
@@ -149,12 +154,48 @@ function hideShelter() {
   $('#ctaStart').focus({ preventScroll: true });
 }
 
+/* -------------------------------------------------------------------------
+   Coller ma ville : dans l'app installée sur iPhone, la ville commencée dans Safari
+   ------------------------------------------------------------------------- */
+// « J'avais commencé dans Safari : coller ma ville ». L'app installée a son propre stockage : sa ville est neuve, celle de Safari n'y est pas. « Copier
+// ma ville » (la carte d'installation, dans Safari) a mis la sauvegarde dans le presse-papiers ; le bouton l'y lit. Safari ne laisse lire le
+// presse-papiers que dans le geste de la personne : readText() part tout de suite, avant tout await. Un presse-papiers refusé ou absent vaut un
+// presse-papiers vide. Rien à reprendre (vide, autre texte, sauvegarde coupée ou abîmée) : un message doux qui reste, avec la porte de Réglages →
+// Sauvegarde ; rien n'est remplacé et aucune feuille ne s'ouvre. Un texte sans « VBE1. » ni « VBE2. » n'est pas une sauvegarde : le message dit comment
+// faire ; sinon readBackup dit lui-même ce qui ne va pas. Une sauvegarde lue ouvre la feuille « Reprendre ma ville » : la ville trouvée, et un geste.
+async function pasteTown() {
+  let text = '';
+  try { text = String(await navigator.clipboard.readText() || ''); } catch (e) { /* refusé, ou pas de presse-papiers : comme s'il était vide */ }
+  const res = /VBE[12]\./.test(text) ? readBackup(text) : { error: t('welcome.pasteNone') };
+  if (res.error) {
+    toast(res.error, { label: t('backup.openSection'), run: openBackupSettings }, undefined, { keep: true });
+    return;
+  }
+  // Safari ne donne pas le focus à un bouton cliqué : le bouton le prend ici, avant la feuille, et c'est à lui que la feuille le rend en se fermant
+  // (« Annuler », la croix, Échap).
+  $('#welcomePaste').focus({ preventScroll: true });
+  openSheet(t('welcome.pasteTitle'), body => body.append(
+    h('p', {}, t('welcome.pasteLine')),
+    h('p', {}, h('strong', {}, summary(res.state))),
+    h('div', { class: 'review-actions' },
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: () => restorePastedTown(res.state) }, t('welcome.pasteRestore')),
+      h('button', { class: 'btn btn-ghost', type: 'button', onclick: closeSheet }, t('common.cancel')))));
+}
+// « Reprendre cette ville » : la sauvegarde remplace la ville neuve (restoreBackup ferme la feuille, enregistre et le dit ; pendant une séance, il
+// refuse et la feuille reste). La ville reprise a des séances : l'accueil disparaît avec son bouton, et le focus passe à « Lancer une activité »,
+// sous la ville, que le navigateur ait ou non donné le focus au bouton cliqué.
+function restorePastedTown(state) {
+  restoreBackup(state);
+  if ($('#sheet').hidden) $('#ctaStart').focus({ preventScroll: true });
+}
+
 // Les boutons fixes de la carte « Bienvenue » (les boutons de langue sont créés par renderWelcome), puis ceux de la carte d'installation,
 // qui se refait : les clics sont reçus par la carte.
 function bindFirstSteps() {
   $('#welcomeClose').addEventListener('click', closeWelcome);
   $('#welcomeChoose').addEventListener('click', () => go('activites', true));
   $('#welcomeStart').addEventListener('click', () => startFirstCalm());
+  $('#welcomePaste').addEventListener('click', pasteTown);
   $('#installCard').addEventListener('click', e => {
     const act = e.target.closest('button[data-act]')?.dataset.act;
     if (act === 'copy') copyTown();

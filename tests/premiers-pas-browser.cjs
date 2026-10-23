@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { town } = require('./content-browser.cjs');
+const { town, signBackup } = require('./content-browser.cjs');
 const { cityAt } = require('./ambient-browser.cjs');
 
 // Étape 8, les premiers pas : la carte « Bienvenue » d'une ville sans séance, puis (tâches suivantes) la première respiration, l'abri,
@@ -444,14 +444,21 @@ async function quietFirstOpen(browser, baseURL) {
 }
 
 // L'abri : la carte « Garde ta ville à l’abri ». Un faux presse-papiers, posé avant le chargement de la page : writeText range le texte
-// dans window.__copied et répond, ou refuse quand window.__clipboardFails est vrai (le vrai presse-papiers demande un accord que le test
-// ne donne pas).
+// dans window.__copied et répond, ou refuse quand window.__clipboardFails est vrai ; readText (le collage de la ville dans l'app installée)
+// répond window.__clip, ou refuse quand window.__clipRefused est vrai, et note dans window.__readInClick s'il est appelé pendant le clic
+// même (window.event est alors le clic : Safari ne laisse lire le presse-papiers que dans le geste de la personne). Le vrai presse-papiers
+// demande un accord que le test ne donne pas.
 const fakeClipboard = () => {
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
     writeText(text) {
       if (window.__clipboardFails) return Promise.reject(new DOMException('Écriture refusée', 'NotAllowedError'));
       window.__copied = text;
       return Promise.resolve();
+    },
+    readText() {
+      window.__readInClick = !!window.event && window.event.type === 'click';
+      if (window.__clipRefused) return Promise.reject(new DOMException('Lecture refusée', 'NotAllowedError'));
+      return Promise.resolve(window.__clip ?? '');
     },
   } });
 };
@@ -851,9 +858,259 @@ async function shelterFits320(browser, baseURL) {
   return 'Abri : à 320 px, rien ne déborde, en français et en anglais';
 }
 
+// Coller ma ville : l'app installée sur iPhone a son propre stockage, séparé de celui de Safari. Sa ville est neuve (15 M) ; « J’avais commencé
+// dans Safari : coller ma ville » y reprend la sauvegarde que « Copier ma ville » a mise dans le presse-papiers.
+// installedTown : comme shelterTown, freshTown ouvre la page elle-même, puis le contexte reçoit le faux presse-papiers et, pour l'app installée,
+// navigator.standalone, et la page est rechargée ; la ville reste celle qu'elle a rangée. iphone: false, standalone: false : un autre
+// navigateur, ou Safari lui-même.
+async function installedTown(browser, baseURL, { standalone = true, iphone = true, ...options } = {}) {
+  const found = await freshTown(browser, baseURL, { ...(iphone && { userAgent: IPHONE_UA }), ...options });
+  await found.context.addInitScript(fakeClipboard);
+  if (standalone) await found.context.addInitScript(() => Object.defineProperty(navigator, 'standalone', { value: true, configurable: true }));
+  await found.page.reload();
+  await found.page.waitForFunction(() => !!window.__ville);
+  return found;
+}
+// Une sauvegarde signée comme celle de « Copier ma ville » : 42 M et trois séances réussies. Son premier succès est déjà inscrit, comme dans une
+// vraie sauvegarde : sans cela la reprendre le rattraperait, et le message parlerait des succès au lieu de la restauration.
+const SAFARI_DAY = Date.parse('2026-10-16T10:00:00Z');
+const safariBackup = (lang = 'fr') => signBackup(town({}, [], { settings: { lang }, coins: 42e6, stats: { ok: 3, byCat: {}, days: { '2026-10-16': 30 } },
+  achievements: { 'premier-pas': SAFARI_DAY } }));
+const plain = text => text.replace(/\s+/g, ' ');
+const activeId = page => page.evaluate(() => document.activeElement && document.activeElement.id);
+const clipboardHolds = (page, clip, refused = false) => page.evaluate(({ clip, refused }) => { window.__clip = clip; window.__clipRefused = refused; }, { clip, refused });
+
+// Le bouton lit le presse-papiers pendant le clic et ouvre la feuille « Reprendre ma ville », qui montre la ville trouvée. « Annuler » et Échap la
+// ferment sans rien changer, le focus revient au bouton (Safari ne le donne pas au bouton cliqué). « Reprendre cette ville » remplace la ville neuve
+// en un geste : la ville est enregistrée, l'accueil disparaît et le focus passe à « Lancer une activité ». Le texte que « Copier ma ville » a copié dans
+// Safari est celui que l'app installée reprend.
+async function pasteFromSafari(browser, baseURL) {
+  {
+    const { context, page, errors } = await installedTown(browser, baseURL);
+    try {
+      const card = page.locator('#welcomeCard'), paste = page.locator('#welcomePaste'), sheet = page.locator('#sheet');
+      assert.deepEqual(await page.evaluate(() => [navigator.standalone, __ville.state.coins, __ville.state.stats.ok]), [true, 15e6, 0]);
+      assert.equal(await card.isVisible(), true);
+      assert.equal(await paste.isVisible(), true);
+      assert.equal(plain(await paste.innerText()), 'J’avais commencé dans Safari : coller ma ville');
+      await clipboardHolds(page, safariBackup());
+
+      // La feuille montre la ville trouvée, avec ses deux boutons ; le presse-papiers a été lu pendant le clic.
+      await paste.click();
+      await sheet.waitFor();
+      assert.equal(await page.evaluate(() => window.__readInClick), true, 'le presse-papiers est lu pendant le clic, pas après');
+      assert.equal(await page.locator('#sheetTitle').innerText(), 'Reprendre ma ville');
+      const found = await page.locator('#sheetBody').evaluate(body => {
+        const plain = text => text.replace(/\s+/g, ' ');
+        return { lines: [...body.querySelectorAll(':scope > p')].map(p => plain(p.textContent)), bold: [...body.querySelectorAll(':scope > p > strong')].map(el => plain(el.textContent)),
+          actions: [...body.querySelectorAll(':scope > div.review-actions > button')].map(button => [button.textContent, button.className]) };
+      });
+      assert.equal(found.lines[0], 'Ville trouvée dans le presse-papiers :');
+      assert.equal(found.lines.length, 2);
+      assert.equal(found.bold.length, 1);
+      assert.equal(found.lines[1], found.bold[0]);
+      assert.match(found.bold[0], /^42 M · .+ · 3 sessions réussies · /);
+      assert.deepEqual(found.actions, [['Reprendre cette ville', 'btn btn-primary'], ['Annuler', 'btn btn-ghost']]);
+
+      // « Annuler » : la feuille se ferme, la ville est inchangée, le focus revient au bouton. Échap fait de même.
+      await sheet.getByRole('button', { name: 'Annuler', exact: true }).click();
+      await sheet.waitFor({ state: 'hidden' });
+      assert.equal(await activeId(page), 'welcomePaste');
+      assert.equal(await page.evaluate(() => __ville.state.coins), 15e6);
+      assert.equal(await card.isVisible(), true);
+      await paste.click();
+      await sheet.waitFor();
+      await page.keyboard.press('Escape');
+      await sheet.waitFor({ state: 'hidden' });
+      assert.equal(await activeId(page), 'welcomePaste');
+      assert.equal(await page.evaluate(() => __ville.state.coins), 15e6);
+
+      // « Reprendre cette ville » : la ville de Safari remplace la ville neuve, enregistrée, sans accueil, le focus sur « Lancer une activité ».
+      await paste.click();
+      await sheet.waitFor();
+      await sheet.getByRole('button', { name: 'Reprendre cette ville', exact: true }).click();
+      await sheet.waitFor({ state: 'hidden' });
+      assert.deepEqual(await page.evaluate(() => [__ville.state.coins, __ville.state.stats.ok, __ville.state.active]), [42e6, 3, null]);
+      assert.equal(await card.isHidden(), true);
+      assert.equal(plain(await page.locator('#toast').innerText()), 'Sauvegarde restaurée et enregistrée.');
+      assert.equal(await activeId(page), 'ctaStart');
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('ville-bien-etre/v2')).coins), 42e6);
+      assert.match(await page.locator('#balance').textContent(), /^42\sM$/);
+      await page.reload();
+      await page.waitForFunction(() => !!window.__ville);
+      assert.deepEqual(await page.evaluate(() => [__ville.state.coins, __ville.state.stats.ok]), [42e6, 3]);
+      assert.equal(await card.isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    // De bout en bout : le texte que « Copier ma ville » copie dans Safari (la carte d'installation) est repris tel quel par l'app installée.
+    const safari = await shelterTown(browser, baseURL);
+    let copied;
+    try {
+      await safari.page.locator('#installCard [data-act="copy"]').click();
+      await safari.page.locator('#toast').filter({ hasText: 'Ville copiée' }).waitFor();
+      copied = await safari.page.evaluate(() => window.__copied);
+      assert.match(copied, /^VBE2\./);
+      assert.deepEqual(safari.errors, []);
+    } finally { await safari.context.close(); }
+    const { context, page, errors } = await installedTown(browser, baseURL);
+    try {
+      await clipboardHolds(page, copied);
+      await page.locator('#welcomePaste').click();
+      await page.locator('#sheet').waitFor();
+      assert.match(plain(await page.locator('#sheetBody strong').innerText()), /^3 Md · 0 construction · 1 session réussie · /);
+      await page.locator('#sheet').getByRole('button', { name: 'Reprendre cette ville', exact: true }).click();
+      await page.locator('#sheet').waitFor({ state: 'hidden' });
+      assert.deepEqual(await page.evaluate(() => [__ville.state.coins, __ville.state.stats.ok]), [3e9, 1]);
+      assert.equal(await page.locator('#welcomeCard').isHidden(), true);
+      assert.equal(await activeId(page), 'ctaStart');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Coller ma ville : la feuille montre la ville de Safari, « Annuler » la laisse, « Reprendre cette ville » la reprend en un geste (enregistrée, sans accueil, focus sur « Lancer une activité »)";
+}
+
+// Rien à reprendre, ou rien de lisible : presse-papiers vide, autre texte, refusé, absent, sauvegarde coupée ou abîmée. Un message doux qui reste, avec
+// la porte de Réglages → Sauvegarde ; la ville n'a pas changé et aucune feuille ne s'est ouverte.
+async function pasteNothing(browser, baseURL) {
+  const { context, page, errors } = await installedTown(browser, baseURL);
+  try {
+    const toast = page.locator('#toast'), open = toast.getByRole('button', { name: 'Aller à la sauvegarde', exact: true });
+    const NONE = 'Pas de ville dans le presse-papiers. Copie-la d’abord dans Safari, ou colle-la dans Réglages → Sauvegarde.';
+    const whole = safariBackup(), middle = Math.floor(whole.length / 2);
+    // Un caractère du milieu change (en restant dans l'alphabet d'une sauvegarde) : l'empreinte ne va plus.
+    const damaged = whole.slice(0, middle) + (whole[middle] === 'A' ? 'B' : 'A') + whole.slice(middle + 1);
+    const cases = [
+      ['un presse-papiers vide', { clip: '' }, NONE],
+      ['un autre texte', { clip: 'https://example.org/une-page' }, NONE],
+      ['un presse-papiers refusé', { refused: true }, NONE],
+      ['une sauvegarde abîmée', { clip: damaged }, 'Cette sauvegarde a été modifiée ou abîmée : impossible de la restaurer.'],
+      ['une sauvegarde coupée', { clip: whole.slice(0, 80) }, "Ce texte n'est pas une sauvegarde de la Ville du bien-être."],
+      ['un navigateur sans presse-papiers', { missing: true }, NONE],
+    ];
+    for (const [label, { clip = '', refused = false, missing = false }, message] of cases) {
+      if (missing) await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true }));
+      else await clipboardHolds(page, clip, refused);
+      await page.locator('#welcomePaste').click();
+      await open.waitFor();
+      assert.equal(plain(await toast.locator('span').innerText()), message, label);
+      assert.equal(await page.evaluate(() => document.body.classList.contains('toast-kept')), true, `${label} : le message reste`);
+      assert.equal(await page.locator('#sheet').isHidden(), true, `${label} : aucune feuille ne s'ouvre`);
+      assert.deepEqual(await page.evaluate(() => [__ville.state.coins, __ville.state.stats.ok]), [15e6, 0], `${label} : la ville n'a pas changé`);
+      assert.equal(await page.locator('#welcomeCard').isVisible(), true, `${label} : l'accueil reste`);
+      // Changer d'onglet ferme le message qui reste : le cas suivant en voit un neuf.
+      await page.locator('[data-tab="activites"]').click();
+      assert.equal(await toast.isHidden(), true);
+      await page.locator('[data-tab="ville"]').click();
+    }
+    // Le bouton du message mène aux Réglages, à la section Sauvegarde (le message se ferme). Le navigateur est sans presse-papiers ici : même message.
+    await page.locator('#welcomePaste').click();
+    await open.click();
+    await page.locator('#sheet').waitFor();
+    assert.equal(await toast.isHidden(), true);
+    assert.equal(await page.locator('#settingsBackup').isVisible(), true);
+    await page.waitForTimeout(150);
+    assert.deepEqual(await page.evaluate(() => ({ text: document.activeElement.textContent, inBackup: !!document.activeElement.closest('#settingsBackup') })), { text: 'Sauvegarde', inBackup: true });
+    assert.equal(await page.evaluate(() => __ville.state.coins), 15e6);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return "Coller ma ville : vide, autre texte, refusé, absent, coupé ou abîmé, un message doux mène à Réglages → Sauvegarde, rien n'est remplacé ni ouvert";
+}
+
+// Le bouton n'existe que dans l'app installée sur iPhone, où la ville de Safari n'est pas : ni dans Safari lui-même (iPhone, hors de l'app), ni dans
+// une app installée ailleurs (Android, ordinateur : le stockage y est celui du navigateur), ni dans un navigateur ordinaire. L'accueil, lui, est là
+// partout. Le premier cas, l'app installée sur iPhone, est la preuve que le bouton peut se montrer : sans elle, un bouton toujours caché passerait.
+async function pasteHiddenOutsideApp(browser, baseURL) {
+  const cases = [
+    ['dans l’app installée sur iPhone', {}, { iphone: true, standalone: true }, false],
+    ['dans Safari, hors de l’app installée', { standalone: false }, { iphone: true, standalone: false }, true],
+    ['dans une app installée qui n’est pas sur iPhone', { iphone: false }, { iphone: false, standalone: true }, true],
+    ['dans un navigateur ordinaire', { iphone: false, standalone: false }, { iphone: false, standalone: false }, true],
+  ];
+  for (const [where, options, expected, hidden] of cases) {
+    const { context, page, errors } = await installedTown(browser, baseURL, options);
+    try {
+      const paste = page.locator('#welcomePaste');
+      assert.deepEqual(await page.evaluate(() => ({ iphone: /iPhone/.test(navigator.userAgent), standalone: navigator.standalone === true })), expected, `${where} : le décor`);
+      assert.equal(await page.locator('#welcomeCard').isVisible(), true, `${where} : l'accueil est là`);
+      assert.equal(await paste.evaluate(el => el.hidden), hidden, `${where} : le bouton ${hidden ? 'est caché' : 'se montre'}`);
+      assert.equal(await paste.isHidden(), hidden);
+      // Redessinée avec la Ville, la carte garde le même avis.
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await paste.isHidden(), hidden, `${where} : après un dessin`);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Coller ma ville : le bouton se montre dans l'app installée sur iPhone, et reste caché dans Safari, dans une app installée hors iPhone et dans un navigateur ordinaire";
+}
+
+// Chaque élément affiché de ces sélecteurs tient dans la largeur et son contenu dans lui-même ; la page ne défile pas de côté.
+async function assertFits(page, selectors, width, where) {
+  const found = await page.evaluate(selectors => {
+    const boxes = selectors.flatMap(selector => [...document.querySelectorAll(selector)]).filter(el => el.getClientRects().length).map(el => {
+      const box = el.getBoundingClientRect();
+      return { name: el.id || el.className || el.tagName, left: Math.round(box.left), right: Math.round(box.right), inner: el.scrollWidth - el.clientWidth };
+    });
+    return { page: document.documentElement.scrollWidth, boxes };
+  }, selectors);
+  assert.ok(found.page <= width, `${where} : la page déborde (${found.page} px pour ${width})`);
+  assert.ok(found.boxes.length >= selectors.length, `${where} : les éléments sont affichés (${found.boxes.length})`);
+  for (const box of found.boxes) {
+    assert.ok(box.left >= 0 && box.right <= width, `${where} : « ${box.name} » sort de l'écran (${box.left} à ${box.right} pour ${width})`);
+    assert.ok(box.inner <= 1, `${where} : le contenu de « ${box.name} » déborde (${box.inner} px)`);
+  }
+}
+
+// À 320 px, en français et en anglais, rien ne déborde : l'accueil avec son bouton « coller ma ville », la feuille et le message doux.
+async function pasteFits320(browser, baseURL) {
+  const TEXTS = {
+    fr: { locale: 'fr-FR', paste: /^J’avais commencé dans Safari/, title: 'Reprendre ma ville', cancel: 'Annuler', restore: 'Reprendre cette ville',
+      none: /^Pas de ville dans le presse-papiers\./, open: 'Aller à la sauvegarde', restored: 'Sauvegarde restaurée et enregistrée.' },
+    en: { locale: 'en-US', paste: /^I started in Safari/, title: 'Bring back my town', cancel: 'Cancel', restore: 'Bring back this town',
+      none: /^No town on the clipboard\./, open: 'Go to Backup', restored: 'Backup restored and saved.' },
+  };
+  for (const lang of ['fr', 'en']) {
+    const texts = TEXTS[lang], where = `en ${lang} à 320 px`;
+    const { context, page, errors } = await installedTown(browser, baseURL, { viewport: { width: 320, height: 568 }, locale: texts.locale });
+    try {
+      const sheet = page.locator('#sheet'), toast = page.locator('#toast');
+      assert.equal(await page.evaluate(() => document.documentElement.lang), lang);
+      assert.match(plain(await page.locator('#welcomePaste').innerText()), texts.paste);
+      await assertWelcomeFits(page, 320, `l'accueil ${where}`);
+      // La feuille, puis « Annuler ».
+      await clipboardHolds(page, safariBackup(lang));
+      await page.locator('#welcomePaste').click();
+      await sheet.waitFor();
+      assert.equal(await page.locator('#sheetTitle').innerText(), texts.title);
+      await assertFits(page, ['#sheet', '#sheetBody p', '#sheetBody button'], 320, `la feuille ${where}`);
+      await sheet.getByRole('button', { name: texts.cancel, exact: true }).click();
+      await sheet.waitFor({ state: 'hidden' });
+      assert.equal(await activeId(page), 'welcomePaste');
+      // Le message doux, avec son bouton.
+      await clipboardHolds(page, '');
+      await page.locator('#welcomePaste').click();
+      await toast.getByRole('button', { name: texts.open, exact: true }).waitFor();
+      assert.match(plain(await toast.locator('span').innerText()), texts.none);
+      await assertFits(page, ['#toast', '#toast span', '#toast button'], 320, `le message ${where}`);
+      // Reprise : le message de la restauration, dans la langue de la ville reprise (la même ici).
+      await clipboardHolds(page, safariBackup(lang));
+      await page.locator('#welcomePaste').click();
+      await sheet.waitFor();
+      await sheet.getByRole('button', { name: texts.restore, exact: true }).click();
+      await sheet.waitFor({ state: 'hidden' });
+      assert.equal(plain(await toast.innerText()), texts.restored);
+      assert.equal(await page.evaluate(() => document.documentElement.lang), lang);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return 'Coller ma ville : à 320 px, rien ne déborde, en français et en anglais';
+}
+
 const SCENARIOS = [welcomeForNewTown, welcomeCloseStays, welcomeCloseWithoutStorage, welcomeLanguage, welcomeLanguageClosesToast, welcomeChoose,
   welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing, quietFirstOpen,
-  shelterAfterFirstSession, shelterNeverInstalled, shelterHideForGood, shelterCopyRefused, shelterAndroid, shelterFits320];
+  shelterAfterFirstSession, shelterNeverInstalled, shelterHideForGood, shelterCopyRefused, shelterAndroid, shelterFits320,
+  pasteFromSafari, pasteNothing, pasteHiddenOutsideApp, pasteFits320];
 async function runPremiersPas(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

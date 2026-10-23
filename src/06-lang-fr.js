@@ -1278,4 +1278,8 @@ DICT.fr = {
   'welcome.close': 'Fermer l’accueil',
   'welcome.langs': 'Langue de l’app',
   'welcome.paste': 'J’avais commencé dans Safari : coller ma ville',
+  'welcome.pasteTitle': 'Reprendre ma ville',
+  'welcome.pasteLine': 'Ville trouvée dans le presse-papiers :',
+  'welcome.pasteRestore': 'Reprendre cette ville',
+  'welcome.pasteNone': 'Pas de ville dans le presse-papiers. Copie-la d’abord dans Safari, ou colle-la dans Réglages → Sauvegarde.',
 };
