@@ -1200,13 +1200,13 @@ DICT.fr = {
   'help.modesText': 'Concentration : garde cette app affichée pendant le chrono. Activité libre : tu peux verrouiller le téléphone ou utiliser une autre app. Le bilan apparaît à ton retour.',
   'help.installTitle': 'Installer sur ton téléphone',
   'help.installText': 'iPhone : ouvre le lien dans Safari, puis Partager → Sur l’écran d’accueil → Ajouter. Android : ouvre le menu de Chrome, puis Installer l’application ou Ajouter à l’écran d’accueil. Les libellés peuvent varier.',
-  'help.installFirst': 'Tu peux commencer ici, sans rien installer. Sur iPhone, installe l’app quand tu veux : copie ta ville avec « Copier ma ville », puis colle-la à la première ouverture de l’app.',
+  'help.installFirst': 'Tu peux commencer ici, sans rien installer. Sur iPhone, installe l’app quand tu veux : copie ta ville avec « Copier ma ville » (ou Réglages → Sauvegarde), puis colle-la à la première ouverture de l’app.',
   'help.personalTitle': 'Ta ville reste personnelle',
   'help.personalText': 'Sur ce site, chaque personne a sa propre ville, enregistrée sur son appareil. Elle ne se synchronise pas entre téléphones. Effacer les données du navigateur peut la supprimer : garde une copie dans Réglages → Sauvegarde.',
   'help.offlineTitle': 'Hors connexion',
   'help.offlineText': 'En activité libre, le téléphone peut suspendre la page : le chrono est retrouvé à ton retour, mais le son de fin n’est pas garanti quand l’app est fermée.',
   'install.title': 'Garde ta ville à l’abri',
-  'install.iosWhy': 'Sur iPhone, le navigateur peut effacer un site resté sept jours sans visite, mais pas une app ajoutée à l’écran d’accueil.',
+  'install.iosWhy': 'Sur iPhone et iPad, le navigateur peut effacer les données d’un site resté sept jours sans visite, mais pas celles d’une app ajoutée à l’écran d’accueil.',
   'install.ios': 'Dans Safari, ouvre Partager, puis « Sur l’écran d’accueil » et « Ajouter ».',
   'install.iosCopy': 'Puis copie ta ville ici et colle-la à la première ouverture de l’app.',
   'install.copy': 'Copier ma ville',
@@ -2491,13 +2491,13 @@ DICT.en = {
   'help.modesText': 'Focus: keep this app on screen during the timer. Free activity: you can lock the phone or use another app. The summary appears when you come back.',
   'help.installTitle': 'Install it on your phone',
   'help.installText': 'iPhone: open the link in Safari, then Share → Add to Home Screen → Add. Android: open the Chrome menu, then Install app or Add to Home screen. The labels may vary.',
-  'help.installFirst': 'You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with “Copy my town”, then paste it the first time you open the app.',
+  'help.installFirst': 'You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with “Copy my town” (or Settings → Backup), then paste it the first time you open the app.',
   'help.personalTitle': 'Your town stays personal',
   'help.personalText': 'On this site, each person has their own town, saved on their device. It does not sync between phones. Clearing the browser data can delete it: keep a copy in Settings → Backup.',
   'help.offlineTitle': 'Offline',
   'help.offlineText': 'In a free activity, the phone may suspend the page: the timer is found again when you come back, but the end sound is not guaranteed while the app is closed.',
   'install.title': 'Keep your town safe',
-  'install.iosWhy': 'On iPhone, the browser may erase a site left seven days without a visit, but not an app added to the Home Screen.',
+  'install.iosWhy': 'On iPhone and iPad, the browser may erase a website’s data after seven days without a visit, but not the data of an app added to the Home Screen.',
   'install.ios': 'In Safari, open Share, then “Add to Home Screen” and “Add”.',
   'install.iosCopy': 'Then copy your town here and paste it the first time you open the app.',
   'install.copy': 'Copy my town',
@@ -3090,7 +3090,7 @@ DICT.en = {
   'welcome.start': 'Start with 2\u00a0minutes of calm',
   'welcome.choose': 'Choose an activity',
   'welcome.note': 'Free, no account, no ads. Your town stays on this device.',
-  'welcome.close': 'Close the welcome',
+  'welcome.close': 'Close welcome',
   'welcome.langs': 'App language',
   'welcome.paste': 'I started in Safari: paste my town',
   'welcome.pasteTitle': 'Bring back my town',
@@ -9442,6 +9442,7 @@ function refreshLang() {
 // Faux, sans rien changer, pour une langue inconnue. Elle ne touche pas aux Réglages : la carte « Bienvenue » s'en sert aussi.
 function applyLang(pref) {
   if (!['auto', ...langs()].includes(pref)) return false;
+  hideToast();   // un message en cours parle l'ancienne langue : Réglages et accueil le ferment tous deux
   S.settings.lang = pref;
   commit({ silent: true });
   refreshLang();
@@ -12291,7 +12292,7 @@ function companionFail() {
 // Allumée, elle alterne toutes les 5 s « Inspire » et « Expire » sous le minuteur ; le compagnon (ou un disque léger) grandit à
 // l'inspiration. Le choix revient aux séances Calme suivantes (le réglage de la personne), sauf pour une séance qui porte sa propre
 // respiration (`breathing` de la séance enregistrée : la première séance de l'accueil) : son bouton ne change que cette séance, jamais
-// le réglage, et le choix de la séance suit un rechargement et un « Recommencer ».
+// le réglage, et le choix de la séance suit « Recommencer » et la reprise d'une séance libre (en Concentration, un rechargement interrompt la séance).
 let breath = { timer: 0, phase: '' };
 // Une séance qui porte sa propre respiration : un booléen, oui ou non (voir cleanActive).
 const hasOwnBreathing = a => !!a && typeof a.breathing === 'boolean';
@@ -12377,9 +12378,8 @@ function welcomeShown() { return isNewTown() && !S.active && !welcomeDismissed()
 // La carte, première de la Ville (index.html). Cachée dès qu'une séance est comptée ou en cours, ou une fois fermée. Visible, elle propose
 // un bouton par langue connue autre que la langue affichée, écrite dans sa propre langue : il change la langue de l'app sans ouvrir les
 // Réglages. Refaits à chaque rendu de la Ville, ces boutons ont une clé de focus (keepFocus) ; le clic redonne aussi le focus à celui qui
-// reste, car tous les navigateurs ne le donnent pas au bouton cliqué (Safari) et applyLang redessine la carte. Il ferme avant le message
-// en cours (celui de la première ouverture) : il parle l'ancienne langue. hideToast() sans argument : hideToast(true) ne ferme que le
-// message qui reste, pas un message qui a son minuteur.
+// reste, car tous les navigateurs ne le donnent pas au bouton cliqué (Safari) et applyLang redessine la carte. applyLang ferme le message en cours
+// (celui de la première ouverture) : il parle l'ancienne langue.
 // « J'avais commencé dans Safari : coller ma ville » n'est montré que dans l'app installée sur iPhone, dont le stockage n'est pas celui de Safari :
 // la ville commencée là-bas n'y est pas. Ailleurs (Safari, Android, un ordinateur), le stockage est celui du navigateur : rien à reprendre. Lu à
 // chaque dessin, jamais au chargement du fichier.
@@ -12391,17 +12391,18 @@ function renderWelcome() {
   if (paste) paste.hidden = !(isIOS() && isStandalone());
   box.replaceChildren(...langs().filter(code => code !== LANG).map(code => h('button', {
     class: 'btn btn-ghost btn-sm', type: 'button', lang: code, 'data-focus-key': 'welcome:lang',
-    onclick: () => { hideToast(); applyLang(code); focusByKey('welcome:lang'); },
+    onclick: () => { applyLang(code); focusByKey('welcome:lang'); },
   }, DICT[code]['lang.self'] || code)));
 }
 
 // La croix : l'accueil ne revient plus sur cet appareil, et même si le stockage refuse l'écriture, il ne revient plus sur cette page.
 // La carte disparaît, le focus passe à « Lancer une activité » sous la ville.
+function focusStart() { $('#ctaStart').focus({ preventScroll: true }); }
 function closeWelcome() {
   welcomeHiddenHere = true;
   try { localStorage.setItem(LS_WELCOME, '1'); } catch (e) { /* stockage indisponible : fermée pour cette page seulement */ }
   renderWelcome();
-  $('#ctaStart').focus({ preventScroll: true });
+  focusStart();
 }
 // « Tout recommencer » : une ville neuve, l'accueil revient, pour la page comme pour l'appareil.
 function resetWelcome() {
@@ -12468,7 +12469,7 @@ function renderShelter() {
   card.hidden = !shelterShown(kind);
   if (card.hidden) {
     card.replaceChildren();
-    if (held) $('#ctaStart').focus({ preventScroll: true });
+    if (held) focusStart();
     return;
   }
   const button = (act, cls, label) => h('button', { class: 'btn ' + cls + ' btn-sm', type: 'button', 'data-act': act, 'data-focus-key': 'install:' + act }, label);
@@ -12519,7 +12520,7 @@ function hideShelter() {
   shelterHiddenHere = true;
   try { localStorage.setItem(LS_INSTALL_HINT, '1'); } catch (e) { /* stockage indisponible : cachée pour cette page seulement */ }
   renderShelter();
-  $('#ctaStart').focus({ preventScroll: true });
+  focusStart();
 }
 
 /* -------------------------------------------------------------------------
@@ -12555,7 +12556,7 @@ async function pasteTown() {
 // la ville, que le navigateur ait ou non donné le focus au bouton cliqué. Il est posé après restoreBackup, donc après les dessins qu'il a faits.
 function restorePastedTown(state) {
   restoreBackup(state);
-  if ($('#sheet').hidden) $('#ctaStart').focus({ preventScroll: true });
+  if ($('#sheet').hidden) focusStart();
 }
 
 // Les boutons fixes de la carte « Bienvenue » (les boutons de langue sont créés par renderWelcome), puis ceux de la carte d'installation,

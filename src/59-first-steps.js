@@ -17,9 +17,8 @@ function welcomeShown() { return isNewTown() && !S.active && !welcomeDismissed()
 // La carte, première de la Ville (index.html). Cachée dès qu'une séance est comptée ou en cours, ou une fois fermée. Visible, elle propose
 // un bouton par langue connue autre que la langue affichée, écrite dans sa propre langue : il change la langue de l'app sans ouvrir les
 // Réglages. Refaits à chaque rendu de la Ville, ces boutons ont une clé de focus (keepFocus) ; le clic redonne aussi le focus à celui qui
-// reste, car tous les navigateurs ne le donnent pas au bouton cliqué (Safari) et applyLang redessine la carte. Il ferme avant le message
-// en cours (celui de la première ouverture) : il parle l'ancienne langue. hideToast() sans argument : hideToast(true) ne ferme que le
-// message qui reste, pas un message qui a son minuteur.
+// reste, car tous les navigateurs ne le donnent pas au bouton cliqué (Safari) et applyLang redessine la carte. applyLang ferme le message en cours
+// (celui de la première ouverture) : il parle l'ancienne langue.
 // « J'avais commencé dans Safari : coller ma ville » n'est montré que dans l'app installée sur iPhone, dont le stockage n'est pas celui de Safari :
 // la ville commencée là-bas n'y est pas. Ailleurs (Safari, Android, un ordinateur), le stockage est celui du navigateur : rien à reprendre. Lu à
 // chaque dessin, jamais au chargement du fichier.
@@ -31,17 +30,18 @@ function renderWelcome() {
   if (paste) paste.hidden = !(isIOS() && isStandalone());
   box.replaceChildren(...langs().filter(code => code !== LANG).map(code => h('button', {
     class: 'btn btn-ghost btn-sm', type: 'button', lang: code, 'data-focus-key': 'welcome:lang',
-    onclick: () => { hideToast(); applyLang(code); focusByKey('welcome:lang'); },
+    onclick: () => { applyLang(code); focusByKey('welcome:lang'); },
   }, DICT[code]['lang.self'] || code)));
 }
 
 // La croix : l'accueil ne revient plus sur cet appareil, et même si le stockage refuse l'écriture, il ne revient plus sur cette page.
 // La carte disparaît, le focus passe à « Lancer une activité » sous la ville.
+function focusStart() { $('#ctaStart').focus({ preventScroll: true }); }
 function closeWelcome() {
   welcomeHiddenHere = true;
   try { localStorage.setItem(LS_WELCOME, '1'); } catch (e) { /* stockage indisponible : fermée pour cette page seulement */ }
   renderWelcome();
-  $('#ctaStart').focus({ preventScroll: true });
+  focusStart();
 }
 // « Tout recommencer » : une ville neuve, l'accueil revient, pour la page comme pour l'appareil.
 function resetWelcome() {
@@ -108,7 +108,7 @@ function renderShelter() {
   card.hidden = !shelterShown(kind);
   if (card.hidden) {
     card.replaceChildren();
-    if (held) $('#ctaStart').focus({ preventScroll: true });
+    if (held) focusStart();
     return;
   }
   const button = (act, cls, label) => h('button', { class: 'btn ' + cls + ' btn-sm', type: 'button', 'data-act': act, 'data-focus-key': 'install:' + act }, label);
@@ -159,7 +159,7 @@ function hideShelter() {
   shelterHiddenHere = true;
   try { localStorage.setItem(LS_INSTALL_HINT, '1'); } catch (e) { /* stockage indisponible : cachée pour cette page seulement */ }
   renderShelter();
-  $('#ctaStart').focus({ preventScroll: true });
+  focusStart();
 }
 
 /* -------------------------------------------------------------------------
@@ -195,7 +195,7 @@ async function pasteTown() {
 // la ville, que le navigateur ait ou non donné le focus au bouton cliqué. Il est posé après restoreBackup, donc après les dessins qu'il a faits.
 function restorePastedTown(state) {
   restoreBackup(state);
-  if ($('#sheet').hidden) $('#ctaStart').focus({ preventScroll: true });
+  if ($('#sheet').hidden) focusStart();
 }
 
 // Les boutons fixes de la carte « Bienvenue » (les boutons de langue sont créés par renderWelcome), puis ceux de la carte d'installation,

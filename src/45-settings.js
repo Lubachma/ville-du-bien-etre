@@ -168,6 +168,7 @@ function refreshLang() {
 // Faux, sans rien changer, pour une langue inconnue. Elle ne touche pas aux Réglages : la carte « Bienvenue » s'en sert aussi.
 function applyLang(pref) {
   if (!['auto', ...langs()].includes(pref)) return false;
+  hideToast();   // un message en cours parle l'ancienne langue : Réglages et accueil le ferment tous deux
   S.settings.lang = pref;
   commit({ silent: true });
   refreshLang();

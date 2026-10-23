@@ -216,6 +216,12 @@ async function welcomeLanguageClosesToast(browser, baseURL) {
     await page.locator('#welcomeLangs').getByRole('button', { name: 'English', exact: true }).click();
     assert.equal(await toast.isHidden(), true);
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
+    // Même chose depuis Réglages → Langue : un message à minuteur se ferme aussi.
+    await page.locator('#settingsBtn').click();
+    await page.getByRole('button', { name: 'Check for an update', exact: true }).click();
+    await toast.getByText('Update check done.').waitFor();
+    await page.locator('#settingsLang').getByRole('radio', { name: 'Français', exact: true }).click();
+    assert.equal(await toast.isHidden(), true);
     assert.deepEqual(errors, []);
   } finally { await context.close(); }
   return 'Accueil : le lien de langue ferme le message en cours';
@@ -421,7 +427,7 @@ async function quietFirstOpen(browser, baseURL) {
     await page.getByRole('button', { name: /^Bien démarrer et installer/ }).click();
     const help = await page.locator('#sheetBody').innerText();
     assert.match(help, /Tu peux commencer ici, sans rien installer\./);
-    assert.match(help, /Sur iPhone, installe l.app quand tu veux\s: copie ta ville avec\s«\sCopier ma ville\s», puis colle-la à la première ouverture de l.app\./);
+    assert.match(help, /Sur iPhone, installe l.app quand tu veux\s: copie ta ville avec\s«\sCopier ma ville\s»\s\(ou Réglages → Sauvegarde\), puis colle-la à la première ouverture de l.app\./);
     assert.doesNotMatch(help, /avant de commencer/);
     await page.locator('#sheetClose').click();
 
@@ -542,7 +548,7 @@ async function shelterAfterFirstSession(browser, baseURL) {
       { tag: 'DIV', role: 'region', label: 'installTitle', title: 'H3', before: 'welcomeCard', parent: 'view-ville' });
       assert.equal(await page.locator('#installTitle').innerText(), 'Garde ta ville à l’abri');
       assert.deepEqual(await shelterTexts(card), [
-        'Sur iPhone, le navigateur peut effacer un site resté sept jours sans visite, mais pas une app ajoutée à l’écran d’accueil.',
+        'Sur iPhone et iPad, le navigateur peut effacer les données d’un site resté sept jours sans visite, mais pas celles d’une app ajoutée à l’écran d’accueil.',
         'Dans Safari, ouvre Partager, puis « Sur l’écran d’accueil » et « Ajouter ».',
         'Puis copie ta ville ici et colle-la à la première ouverture de l’app.',
       ]);
@@ -829,7 +835,7 @@ async function shelterFits320(browser, baseURL) {
   const viewport = { width: 320, height: 568 };
   const TEXTS = {
     fr: { title: 'Garde ta ville à l’abri', ios: /sept jours/, prompt: /Installée, l’app s’ouvre/, copy: 'Copier ma ville' },
-    en: { title: 'Keep your town safe', ios: /left seven days without a visit/, prompt: /Once installed, the app opens from your home screen/, copy: 'Copy my town' },
+    en: { title: 'Keep your town safe', ios: /after seven days without a visit/, prompt: /Once installed, the app opens from your home screen/, copy: 'Copy my town' },
   };
   for (const lang of ['fr', 'en']) {
     const seed = town({}, [], { settings: { lang } }), texts = TEXTS[lang];

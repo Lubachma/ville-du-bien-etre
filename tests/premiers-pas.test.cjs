@@ -167,8 +167,8 @@ test("séance : la respiration de la séance est enregistrée avec elle, et un r
 test("aide : on peut commencer ici, sans rien installer ; sur iPhone, la ville se copie vers l'app installée", () => {
   const { DICT } = stateApp(undefined, undefined, { expose: ['DICT'] });
   const fr = DICT.fr['help.installFirst'], en = DICT.en['help.installFirst'];
-  assert.equal(fr, 'Tu peux commencer ici, sans rien installer. Sur iPhone, installe l’app quand tu veux : copie ta ville avec « Copier ma ville », puis colle-la à la première ouverture de l’app.');
-  assert.equal(en, 'You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with “Copy my town”, then paste it the first time you open the app.');
+  assert.equal(fr, 'Tu peux commencer ici, sans rien installer. Sur iPhone, installe l’app quand tu veux : copie ta ville avec « Copier ma ville » (ou Réglages → Sauvegarde), puis colle-la à la première ouverture de l’app.');
+  assert.equal(en, 'You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with “Copy my town” (or Settings → Backup), then paste it the first time you open the app.');
   for (const text of [fr, en]) assert.doesNotMatch(text, /avant de commencer|before you start/);
 });
 
@@ -203,7 +203,7 @@ test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apos
   assert.deepEqual(Object.fromEntries(['install.title', 'install.iosWhy', 'install.iosCopy', 'install.prompt', 'install.copied', 'install.copyFailed',
     'welcome.close', 'welcome.langs', 'welcome.paste', 'welcome.pasteNone'].map(key => [key, DICT.fr[key]])), {
     'install.title': 'Garde ta ville à l’abri',
-    'install.iosWhy': 'Sur iPhone, le navigateur peut effacer un site resté sept jours sans visite, mais pas une app ajoutée à l’écran d’accueil.',
+    'install.iosWhy': 'Sur iPhone et iPad, le navigateur peut effacer les données d’un site resté sept jours sans visite, mais pas celles d’une app ajoutée à l’écran d’accueil.',
     'install.iosCopy': 'Puis copie ta ville ici et colle-la à la première ouverture de l’app.',
     'install.prompt': 'Installée, l’app s’ouvre depuis ton écran d’accueil et garde ta ville sur ce téléphone.',
     'install.copied': 'Ville copiée : colle-la à la première ouverture de l’app.',
@@ -213,7 +213,7 @@ test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apos
     'welcome.paste': 'J’avais commencé dans Safari : coller ma ville',
     'welcome.pasteNone': 'Pas de ville dans le presse-papiers. Copie-la d’abord dans Safari, ou colle-la dans Réglages → Sauvegarde.',
   });
-  assert.equal(DICT.en['install.iosWhy'], "On iPhone, the browser may erase a site left seven days without a visit, but not an app added to the Home Screen.");
+  assert.equal(DICT.en['install.iosWhy'], "On iPhone and iPad, the browser may erase a website’s data after seven days without a visit, but not the data of an app added to the Home Screen.");
   assert.equal(DICT.en['install.iosCopy'], 'Then copy your town here and paste it the first time you open the app.');
   assert.deepEqual(Object.fromEntries(['welcome.pasteTitle', 'welcome.pasteLine', 'welcome.pasteRestore', 'welcome.pasteNone'].map(key => [key, DICT.en[key]])), {
     'welcome.pasteTitle': 'Bring back my town',

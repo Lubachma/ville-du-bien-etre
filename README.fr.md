@@ -41,7 +41,7 @@
 | 🗓️ **Défis de la semaine** | Chaque semaine, trois petits défis à ta mesure (pratique, moments, découverte), calculés sur tes semaines passées : 5 M chacun, et un défi qu’on peut changer une fois par semaine. Rien n’est perdu si on n’y arrive pas |
 | 📬 **Bilan de la semaine** | Au début de la semaine, « Ta semaine » : temps de pratique, jours actifs, domaines, beaux moments, objectif et progrès sur la semaine d’avant, toujours dits en positif ; puis les défis de la semaine qui commence. La carte reste en haut du Journal |
 | 🙂 **Humeur** | Après une séance, « Comment te sens-tu ? » en un toucher (cinq visages, ou « Passer »). Le Journal montre ce qui te fait du bien, domaine par domaine, et une carte douce quand les dernières séances ont été difficiles. L’humeur reste sur l’appareil, jamais dans un lien ni dans une image |
-| 💌 **Ville d’un ami** | « Partager ma ville » envoie un lien qui contient la ville, sans serveur. L’ami la visite en grand, sous son propre ciel, et garde sa carte postale dans le carnet ; un lien reçu peut aussi se coller dans l’app |
+| 💌 **Ville d’un ami** | « Partager ma ville » envoie un lien qui contient la ville, sans serveur. L’ami la visite en grand, sous son propre ciel, et garde sa carte postale dans le carnet ; un lien reçu peut aussi se coller dans l’app. Un nouveau venu qui ouvre le lien d’un ami découvre ce qu’est le jeu et peut commencer sa propre ville avec « Faire grandir ma ville » |
 | 📅 **Récapitulatifs** | À chaque nouveau mois, « Octobre 2026 » : chiffres, domaines, beaux moments et ce qui est arrivé à la ville ; en janvier, toute l’année. Une image de 1080 × 1350 à partager, sans l’humeur |
 | 💭 **Souhaits des habitants** | Chaque jour, un bâtiment aimerait un décor juste à côté (« J’aimerais un banc juste à côté. ») : une bulle au-dessus de lui, une carte sous la ville avec « Placer un banc ». L’exaucer rapporte 3 M et un merci. Un souhait n’expire jamais, et « Pas maintenant » le range sans un mot de plus. Le premier vient le lendemain de la première séance |
 | ⭐ **Harmonie** | Cinq étoiles à gagner en arrangeant sa ville : verdure, variété, petits détails, quartiers et lumières du soir, chacune avec un conseil doux. Une étoile gagnée le reste ; les cinq offrent l’Arche fleurie |
@@ -81,7 +81,7 @@
 2. **iPhone** : dans Safari, **Partager → Sur l’écran d’accueil → Ajouter**. **Android** : menu de Chrome → **Installer l’application** ou **Ajouter à l’écran d’accueil**.
 3. Ouvrir l’app depuis son icône. Dans les réglages, attendre l’indication **Disponible hors connexion** avant de compter sur le mode hors ligne.
 
-Tu peux commencer ici, sans rien installer. Sur iPhone, installe l’app quand tu veux : copie ta ville avec **Copier ma ville**, puis colle-la à la première ouverture de l’app installée. L’aide reste accessible dans **Réglages → Bien démarrer et installer l’app**.
+Tu peux commencer ici, sans rien installer. Sur iPhone, installe l’app quand tu veux : copie ta ville avec **Copier ma ville** (ou **Réglages → Sauvegarde**), puis colle-la à la première ouverture de l’app installée. L’aide reste accessible dans **Réglages → Bien démarrer et installer l’app**.
 
 ## 🔒 Données et confidentialité
 

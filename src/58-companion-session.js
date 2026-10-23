@@ -55,7 +55,7 @@ function companionFail() {
 // Allumée, elle alterne toutes les 5 s « Inspire » et « Expire » sous le minuteur ; le compagnon (ou un disque léger) grandit à
 // l'inspiration. Le choix revient aux séances Calme suivantes (le réglage de la personne), sauf pour une séance qui porte sa propre
 // respiration (`breathing` de la séance enregistrée : la première séance de l'accueil) : son bouton ne change que cette séance, jamais
-// le réglage, et le choix de la séance suit un rechargement et un « Recommencer ».
+// le réglage, et le choix de la séance suit « Recommencer » et la reprise d'une séance libre (en Concentration, un rechargement interrompt la séance).
 let breath = { timer: 0, phase: '' };
 // Une séance qui porte sa propre respiration : un booléen, oui ou non (voir cleanActive).
 const hasOwnBreathing = a => !!a && typeof a.breathing === 'boolean';

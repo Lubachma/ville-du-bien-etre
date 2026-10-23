@@ -41,7 +41,7 @@
 | 🗓️ **Weekly challenges** | Every week, three small challenges sized to you (practice, moments, discovery), based on your past weeks: 5 M each, and one challenge you can swap once a week. Nothing is lost if you don't make it |
 | 📬 **Weekly review** | At the start of the week, “Your week”: practice time, active days, domains, highlights, the goal and the progress on the week before, always put positively; then the challenges of the week ahead. The card stays at the top of the Journal |
 | 🙂 **Mood** | After a session, “How do you feel?” in one tap (five faces, or “Skip”). The Journal shows what makes you feel good, domain by domain, and a gentle card when the last sessions have been hard. Moods stay on the device, never in a link or a picture |
-| 💌 **A friend's town** | “Share my town” sends a link that carries the town, with no server. Your friend visits it full screen, under their own sky, and keeps its postcard in the notebook; a received link can also be pasted into the app |
+| 💌 **A friend's town** | “Share my town” sends a link that carries the town, with no server. Your friend visits it full screen, under their own sky, and keeps its postcard in the notebook; a received link can also be pasted into the app. A newcomer who opens a friend's link sees what the game is and can start their own town with “Grow my own town” |
 | 📅 **Recaps** | Each new month, “October 2026”: figures, domains, highlights and what happened in the town; in January, the whole year. A 1080 × 1350 picture to share, without moods |
 | 💭 **Residents' wishes** | Every day, a building would love a decoration right next to it (“I'd love a bench right next to me.”): a bubble above it, a card under the town with “Place a bench”. Granting it brings 3 M and a thank-you. A wish never expires, and “Not now” puts it away without another word. The first one comes the day after your first session |
 | ⭐ **Harmony** | Five stars to earn by arranging your town: greenery, variety, little touches, neighbourhoods and evening lights, each with a gentle hint. A star you earn stays yours; all five give the Flower arch |
@@ -81,7 +81,7 @@
 2. **iPhone**: in Safari, **Share → Add to Home Screen → Add**. **Android**: Chrome menu → **Install app** or **Add to Home screen**.
 3. Launch it from its icon. In the settings, wait for **“Available offline”** before relying on offline mode.
 
-You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with **“Copy my town”**, then paste it the first time you open the installed app. The in-app help lives in **Settings → Getting started and installing the app**.
+You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with **“Copy my town”** (or **Settings → Backup**), then paste it the first time you open the installed app. The in-app help lives in **Settings → Getting started and installing the app**.
 
 ## 🔒 Data & privacy
 
