@@ -272,6 +272,7 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
     }
     {
       const { context, page } = await newPage(browser, baseURL + '#debug');
+      // Android : le navigateur propose d'installer l'app dès l'ouverture, mais la ville n'a pas encore de séance : la carte attend.
       await page.evaluate(() => {
         window.installCalls = 0;
         const e = new Event('beforeinstallprompt', { cancelable: true });
@@ -279,10 +280,7 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
         e.userChoice = Promise.resolve({ outcome: 'dismissed' });
         window.dispatchEvent(e);
       });
-      await page.locator('#installCard [data-act="install"]').click();
-      assert.equal(await page.locator('#installCard [data-act="install"]').isVisible(), false);
-      assert.match(await page.locator('#installCard .install-help').innerText(), /menu de ton navigateur/);
-      assert.equal(await page.evaluate(() => window.installCalls), 1);
+      assert.equal(await page.locator('#installCard').isHidden(), true);
       await page.waitForFunction(() => window.VillePWA?.state === 'ready' && window.VillePWA.version);
       const previous = await page.evaluate(() => VillePWA.version);
       const other = await context.newPage(); await other.goto(baseURL + '#debug');
@@ -295,6 +293,12 @@ async function chooseSession(page, { mode = 'free', activity = 'Méditation', du
       await page.clock.install(); await chooseSession(page, { mode: 'free' });
       await page.clock.fastForward(301000); await page.waitForFunction(() => __ville.state.stats.ok === 1);
       await page.getByRole('button', { name: 'Retour à la ville', exact: true }).click();
+      // La première séance est comptée : la carte vient, avec « Installer », dont l'invite du navigateur ne part qu'une fois.
+      assert.equal(await page.locator('#installCard').isVisible(), true);
+      await page.locator('#installCard [data-act="install"]').click();
+      assert.equal(await page.locator('#installCard [data-act="install"]').isVisible(), false);
+      assert.match(await page.locator('#installCard .install-help').innerText(), /menu de ton navigateur/);
+      assert.equal(await page.evaluate(() => window.installCalls), 1);
       // L'autre onglet n'a rien demandé : il est au repos, il se recharge de lui-même dès que la mise à jour est acceptée ici.
       const otherReload = other.waitForNavigation();
       await Promise.all([page.waitForNavigation(), page.locator('#updateNotice').getByRole('button', { name: 'Mettre à jour', exact: true }).click()]);

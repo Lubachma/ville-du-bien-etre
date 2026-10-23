@@ -19,6 +19,7 @@ const LS_REMINDER = 'ville-bien-etre/v1:reminder-time';   // heure du rappel quo
 const LS_CARNET_SEEN = 'ville-bien-etre/v1:carnet-seen';  // succès et ensembles déjà vus dans le carnet, sur cet appareil
 const LS_MOOD_CARD = 'ville-bien-etre/v1:mood-card';      // carte des moments difficiles : quand elle a été fermée, sur cet appareil
 const LS_WELCOME = 'ville-bien-etre/v1:welcome-closed';   // carte « Bienvenue » fermée ('1'), sur cet appareil
+const LS_INSTALL_HINT = 'ville-bien-etre/v1:install-hint';  // carte « Garde ta ville à l'abri » masquée pour de bon ('1'), sur cet appareil
 const BACKUP_EVERY = 14 * 86400000;                       // rappel quand la dernière sauvegarde a plus de 14 jours
 const HISTORY_MAX = 150;
 const LIST_MAX = 60;
@@ -1138,6 +1139,7 @@ DICT.fr = {
   'backup.copied': 'Sauvegarde copiée.',
   'backup.selectAndCopy': 'Sélectionne le texte et copie-le.',
   'backup.copy': 'Copier ma sauvegarde',
+  'backup.openSection': 'Aller à la sauvegarde',
   'backup.restoreTitle': 'Restaurer une sauvegarde',
   'backup.openFile': 'Ouvrir un fichier de sauvegarde',
   'backup.verify': 'Vérifier la sauvegarde',
@@ -1207,10 +1209,14 @@ DICT.fr = {
   'help.personalText': 'Sur ce site, chaque personne a sa propre ville, enregistrée sur son appareil. Elle ne se synchronise pas entre téléphones. Effacer les données du navigateur peut la supprimer : garde une copie dans Réglages → Sauvegarde.',
   'help.offlineTitle': 'Hors connexion',
   'help.offlineText': 'En activité libre, le téléphone peut suspendre la page : le chrono est retrouvé à ton retour, mais le son de fin n’est pas garanti quand l’app est fermée.',
-  'install.title': 'Ta ville sur ton téléphone',
+  'install.title': "Garde ta ville à l'abri",
+  'install.iosWhy': "Sur iPhone, le navigateur peut effacer les données d'un site resté sept jours sans visite. Une app ajoutée à l'écran d'accueil garde les siennes.",
   'install.ios': 'Dans Safari, ouvre Partager, puis « Sur l’écran d’accueil » et « Ajouter ».',
-  'install.prompt': 'Installe l’app pour la retrouver sur ton écran d’accueil.',
-  'install.personal': 'Ta ville est personnelle et reste sur cet appareil. Pour la transférer : Réglages → Sauvegarde.',
+  'install.iosCopy': "Ensuite, copie ta ville ici et colle-la à la première ouverture de l'app.",
+  'install.copy': 'Copier ma ville',
+  'install.copied': "Ville copiée : colle-la à la première ouverture de l'app.",
+  'install.copyFailed': "La copie n'a pas marché. Tu peux copier ta ville dans Réglages → Sauvegarde.",
+  'install.prompt': "Installée, l'app s'ouvre depuis ton écran d'accueil et garde ta ville sur ce téléphone.",
   'install.install': 'Installer',
   'install.hide': 'Ne plus afficher',
   'install.help': 'Tu peux aussi utiliser le menu de ton navigateur → Installer l’application ou Ajouter à l’écran d’accueil. L’app reste utilisable ici.',
@@ -2417,6 +2423,7 @@ DICT.en = {
   'backup.copied': 'Backup copied.',
   'backup.selectAndCopy': 'Select the text and copy it.',
   'backup.copy': 'Copy my backup',
+  'backup.openSection': 'Go to Backup',
   'backup.restoreTitle': 'Restore a backup',
   'backup.openFile': 'Open a backup file',
   'backup.verify': 'Check the backup',
@@ -2486,10 +2493,14 @@ DICT.en = {
   'help.personalText': 'On this site, each person has their own town, saved on their device. It does not sync between phones. Clearing the browser data can delete it: keep a copy in Settings → Backup.',
   'help.offlineTitle': 'Offline',
   'help.offlineText': 'In a free activity, the phone may suspend the page: the timer is found again when you come back, but the end sound is not guaranteed while the app is closed.',
-  'install.title': 'Your town on your phone',
+  'install.title': 'Keep your town safe',
+  'install.iosWhy': "On iPhone, the browser may erase a site's data after seven days without a visit. An app added to the Home Screen keeps its own.",
   'install.ios': 'In Safari, open Share, then “Add to Home Screen” and “Add”.',
-  'install.prompt': 'Install the app to find it on your home screen.',
-  'install.personal': 'Your town is personal and stays on this device. To move it: Settings → Backup.',
+  'install.iosCopy': 'Then copy your town here and paste it the first time you open the app.',
+  'install.copy': 'Copy my town',
+  'install.copied': 'Town copied: paste it the first time you open the app.',
+  'install.copyFailed': "The copy didn't work. You can copy your town in Settings → Backup.",
+  'install.prompt': 'Once installed, the app opens from your home screen and keeps your town on this phone.',
   'install.install': 'Install',
   'install.hide': "Don't show again",
   'install.help': "You can also use your browser's menu → Install app or Add to Home screen. The app keeps working here.",
@@ -8505,6 +8516,7 @@ function renderVille() {
   // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).
   liveTick();
   if (typeof renderWelcome === 'function') renderWelcome();
+  if (typeof renderShelter === 'function') renderShelter();
   renderCityCaption();
   if (typeof renderCompanionInvite === 'function') { renderCompanionInvite(); renderCompanionButton(); }
   if (typeof renderTownWishCard === 'function') renderTownWishCard();
@@ -9712,6 +9724,16 @@ function openSettings() {
       typeof openCompanionChoice === 'function' ? settingsCompanion() : null, settingsTheme(), settingsStrict(), settingsBackup(), settingsReset()].filter(Boolean);
     sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
   });
+}
+// Les Réglages ouverts sur la section Sauvegarde : elle est amenée à l'écran et son titre prend le focus (la feuille ne le lui reprend pas :
+// elle ne donne le sien à son titre que si rien de la feuille ne l'a). Là où mène le message d'une copie de la ville qui n'a pas marché.
+function openBackupSettings() {
+  openSettings();
+  const title = $('#settingsBackup .section-title');
+  if (!title) return;
+  title.tabIndex = -1;
+  title.focus({ preventScroll: true });
+  $('#settingsBackup').scrollIntoView({ block: 'start' });
 }
 
 
@@ -12294,7 +12316,7 @@ function stopBreathing() {
 
 /* ---- 59-first-steps.js ---- */
 /* =========================================================================
-   Premiers pas : la carte « Bienvenue » d'une ville sans séance
+   Premiers pas : la carte « Bienvenue » d'une ville sans séance, puis la carte « Garde ta ville à l'abri » une fois la première séance faite
    ========================================================================= */
 const FIRST_CALM_MIN = 2;   // la première séance proposée : deux minutes de calme
 
@@ -12346,11 +12368,111 @@ function startFirstCalm() {
   return beginSession({ name: t('tpl.breathe'), cat: 'calme', min: FIRST_CALM_MIN, mode: 'focus', breathing: true });
 }
 
-// Les boutons fixes de la carte (les boutons de langue sont créés par renderWelcome).
+/* -------------------------------------------------------------------------
+   Garde ta ville à l'abri : la carte d'installation, après la première séance
+   ------------------------------------------------------------------------- */
+// Le navigateur d'Android (Chrome) propose d'installer l'app : l'événement est gardé pour le bouton « Installer ». promptSeen retient qu'il est
+// venu sur un téléphone (pointeur tactile) et le reste une fois l'invite lancée : la carte demeure alors, avec son aide. installed : l'app a
+// été installée depuis cette page. shelterHiddenHere : « Ne plus afficher » tient pour cette page même si le stockage refuse d'écrire.
+let installPrompt = null, promptSeen = false, installed = false, installHelpShown = false, shelterHiddenHere = false;
+
+// Posés dès le chargement du fichier : le navigateur peut proposer l'installation sans attendre le démarrage de la ville.
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();   // pas de bannière du navigateur : la carte propose l'installation, après la première séance
+  installPrompt = e;
+  installHelpShown = false;   // une proposition neuve : le bouton revient, l'aide devenue inutile s'en va
+  if (window.matchMedia('(pointer: coarse)').matches) promptSeen = true;
+  renderShelter();
+});
+window.addEventListener('appinstalled', () => { installed = true; renderShelter(); });
+
+// Quelle carte : sur iPhone et iPad le navigateur ne propose rien, la carte explique et copie la ville ('ios') ; ailleurs elle n'existe que
+// si le navigateur a proposé d'installer l'app sur un téléphone ('prompt'). Lu à chaque dessin, jamais au chargement du fichier.
+function shelterKind() { return isIOS() ? 'ios' : promptSeen ? 'prompt' : ''; }
+// « Ne plus afficher » : rangé sur l'appareil ('1'), et tenu pour cette page tout de suite (le stockage peut refuser d'écrire).
+function shelterHidden() {
+  if (shelterHiddenHere) return true;
+  try { return localStorage.getItem(LS_INSTALL_HINT) === '1'; } catch (e) { return false; }
+}
+// Une ville qui a vécu une séance, réussie ou non (isNewTown : lu dans les compteurs, jamais dans l'historique). Jamais dans l'app installée,
+// ni hors d'un contexte sûr (HTTPS ou localhost : là où l'app s'installe), ni une fois cachée pour de bon ou installée.
+function shelterShown(kind = shelterKind()) {
+  return !!kind && !isNewTown() && !isStandalone() && window.isSecureContext && !shelterHidden() && !installed;
+}
+
+// La carte, juste après l'accueil (index.html), remplie ici comme le rappel de sauvegarde et refaite à chaque rendu de la Ville : ses boutons
+// ont une clé de focus (keepFocus). Une carte qui disparaît avec le focus le passe à « Lancer une activité ».
+function renderShelter() {
+  const card = $('#installCard');
+  if (!card) return;
+  const kind = shelterKind(), held = card.contains(document.activeElement);
+  card.hidden = !shelterShown(kind);
+  if (card.hidden) {
+    card.replaceChildren();
+    if (held) $('#ctaStart').focus({ preventScroll: true });
+    return;
+  }
+  const button = (act, cls, label) => h('button', { class: 'btn ' + cls + ' btn-sm', type: 'button', 'data-act': act, 'data-focus-key': 'install:' + act }, label);
+  card.replaceChildren(
+    h('img', { src: 'icons/icon-192.png', alt: '', width: '48', height: '48' }),
+    h('div', { class: 'install-main' },
+      h('h3', { id: 'installTitle' }, t('install.title')),
+      kind === 'ios' ? [h('p', {}, t('install.iosWhy')), h('p', {}, t('install.ios')), h('p', {}, t('install.iosCopy'))] : h('p', {}, t('install.prompt')),
+      h('div', { class: 'install-actions' },
+        kind === 'ios' && button('copy', 'btn-primary', t('install.copy')),
+        kind === 'prompt' && !installHelpShown && button('install', 'btn-primary', t('install.install')),
+        button('hide', 'btn-ghost', t('install.hide'))),
+      installHelpShown && h('p', { class: 'note install-help' }, t('install.help'))));
+}
+
+// « Copier ma ville » : le texte de sauvegarde, à coller à la première ouverture de l'app installée. Il compte comme une sauvegarde (markBackup).
+// Le presse-papiers peut manquer ou refuser : le message reste alors, avec la porte de Réglages → Sauvegarde. Le focus revient au bouton, que
+// la Ville redessinée ait ou non remplacé celui qu'on a cliqué (Safari ne donne pas le focus à un bouton cliqué).
+async function copyTown() {
+  let copied = false;
+  try { await navigator.clipboard.writeText(exportBackup()); copied = true; } catch (e) { /* refusé, ou pas de presse-papiers : le message d'échec */ }
+  if (copied) { markBackup(); toast(t('install.copied')); }
+  else toast(t('install.copyFailed'), { label: t('backup.openSection'), run: openBackupSettings }, undefined, { keep: true });
+  focusByKey('install:copy');
+}
+
+// « Installer » : l'aide s'affiche tout de suite (l'invite du navigateur ne se lance qu'une fois, et peut ne rien dire), le focus reste dans la
+// carte, puis l'invite. Accepter ferme la carte.
+async function installApp() {
+  const prompt = installPrompt;
+  if (!prompt) return;
+  installPrompt = null;
+  installHelpShown = true;
+  renderShelter();
+  focusByKey('install:hide');
+  try {
+    await prompt.prompt();
+    const choice = await prompt.userChoice;
+    if (choice && choice.outcome === 'accepted') { installed = true; renderShelter(); }
+  } catch (e) { /* le navigateur n'a pas pu lancer l'invite : l'aide dit comment installer à la main */ }
+}
+
+// « Ne plus afficher » : pour de bon sur cet appareil, et tout de suite pour cette page. Le focus passe à « Lancer une activité », sous la
+// ville, même quand le navigateur ne l'avait pas donné au bouton cliqué.
+function hideShelter() {
+  shelterHiddenHere = true;
+  try { localStorage.setItem(LS_INSTALL_HINT, '1'); } catch (e) { /* stockage indisponible : cachée pour cette page seulement */ }
+  renderShelter();
+  $('#ctaStart').focus({ preventScroll: true });
+}
+
+// Les boutons fixes de la carte « Bienvenue » (les boutons de langue sont créés par renderWelcome), puis ceux de la carte d'installation,
+// qui se refait : les clics sont reçus par la carte.
 function bindFirstSteps() {
   $('#welcomeClose').addEventListener('click', closeWelcome);
   $('#welcomeChoose').addEventListener('click', () => go('activites', true));
   $('#welcomeStart').addEventListener('click', () => startFirstCalm());
+  $('#installCard').addEventListener('click', e => {
+    const act = e.target.closest('button[data-act]')?.dataset.act;
+    if (act === 'copy') copyTown();
+    else if (act === 'install') installApp();
+    else if (act === 'hide') hideShelter();
+  });
 }
 
 
@@ -12528,14 +12650,12 @@ try {
 setTimeout(() => bootOnce({}), 1500);
 
 })();
-/* Installation mobile et disponibilité hors connexion, sans serveur applicatif. */
+/* Disponibilité hors connexion et mises à jour, sans serveur applicatif. Hors de la fermeture de l'app : elle ne voit pas la ville. La carte
+   d'installation, qui en a besoin (elle attend la première séance), est dans 59-first-steps.js. */
 (() => {
   'use strict';
-  const HINT_KEY = 'ville-bien-etre/v1:install-hint';
-  const ua = navigator.userAgent || '';
   const standalone = navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
   const secure = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
-  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   document.documentElement.classList.toggle('standalone', standalone);
   let registration = null;
   const pwa = window.VillePWA = {
@@ -12600,87 +12720,8 @@ setTimeout(() => bootOnce({}), 1500);
   }
   notify();
   try {
-    if (secure && navigator.storage && navigator.storage.persist && !/firefox/i.test(ua)) {
+    if (secure && navigator.storage && navigator.storage.persist && !/firefox/i.test(navigator.userAgent || '')) {
       navigator.storage.persisted().then(p => p || navigator.storage.persist()).catch(() => {});
     }
   } catch { /* La sauvegarde exportée reste le filet de sécurité. */ }
-
-  const hidden = () => { try { return localStorage.getItem(HINT_KEY) === '1'; } catch { return false; } };
-  const hideForGood = () => { try { localStorage.setItem(HINT_KEY, '1'); } catch { /* pas de stockage */ } };
-  // Textes de l'app (05-i18n.js) : la carte suit la langue affichée.
-  const t = (key, params) => (window.VilleI18n ? window.VilleI18n.t(key, params) : key);
-  const node = (tag, attrs, text) => {
-    const el = document.createElement(tag);
-    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
-    if (text != null) el.textContent = text;
-    return el;
-  };
-  let deferred = null, card = null, kind = '', installHidden = false, helpShown = false;
-  // Bouton « Installer » masqué et aide affichée survivent à un changement de langue.
-  function applyState() {
-    const button = card.querySelector('[data-act="install"]');
-    if (button) button.hidden = installHidden;
-    let help = card.querySelector('.install-help');
-    if (helpShown && !help) { help = node('p', { class: 'note install-help' }); card.querySelector('.install-main').append(help); }
-    if (help) help.textContent = t('install.help');
-  }
-  function fill() {
-    const actions = node('div', { class: 'install-actions' });
-    if (kind === 'prompt') actions.append(node('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-act': 'install' }, t('install.install')));
-    actions.append(node('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-act': 'hide' }, t('install.hide')));
-    const main = node('div', { class: 'install-main' });
-    main.append(node('h3', { id: 'installTitle' }, t('install.title')),
-      node('p', {}, kind === 'ios' ? t('install.ios') : t('install.prompt')),
-      node('p', { class: 'note' }, t('install.personal')), actions);
-    card.replaceChildren(node('img', { src: 'icons/icon-192.png', alt: '', width: '48', height: '48' }), main);
-    applyState();
-  }
-  function installHelp() {
-    if (!card) return;
-    installHidden = true; helpShown = true;
-    applyState();
-  }
-  function show(variant) {
-    if (standalone || hidden()) return;
-    if (card) {
-      if (variant === 'prompt') { installHidden = false; applyState(); }
-      return;
-    }
-    const view = document.getElementById('view-ville');
-    if (!view) return;
-    kind = variant; installHidden = false; helpShown = false;
-    card = document.createElement('div');
-    card.className = 'card install-card'; card.id = 'installCard';
-    card.setAttribute('role', 'region'); card.setAttribute('aria-labelledby', 'installTitle');
-    fill();
-    card.addEventListener('click', async e => {
-      const button = e.target.closest('button[data-act]');
-      if (!button) return;
-      if (button.dataset.act === 'hide') { hideForGood(); remove(); return; }
-      if (button.dataset.act !== 'install' || !deferred) return;
-      const prompt = deferred; deferred = null;
-      installHelp();
-      try {
-        await prompt.prompt();
-        const choice = await prompt.userChoice;
-        if (choice && choice.outcome === 'accepted') remove();
-      } catch { installHelp(); }
-    });
-    view.prepend(card);
-  }
-  function remove() {
-    if (!card) return;
-    const focus = card.contains(document.activeElement);
-    card.remove(); card = null;
-    if (focus) document.getElementById('ctaStart')?.focus();
-  }
-  if (!standalone && secure) {
-    if (ios) show('ios');
-    window.addEventListener('beforeinstallprompt', e => {
-      e.preventDefault(); deferred = e;
-      if (window.matchMedia('(pointer: coarse)').matches) show('prompt');
-    });
-    window.addEventListener('appinstalled', () => { deferred = null; remove(); });
-  }
-  window.addEventListener('ville:lang', () => { if (card) fill(); });
 })();

@@ -36,7 +36,7 @@ function stateApp(localStorage = storage(), locks = lockManager(), { files = FIL
   const element = { hidden: true, style: { setProperty() {} }, replaceChildren() {}, focus() {}, append() {}, querySelector() { return this; }, setAttribute() {} };
   const context = vm.createContext({ console, Date: Clock, Intl, Math, JSON, setTimeout, clearTimeout, setInterval: () => 1, clearInterval() {}, localStorage,
     navigator: { locks }, performance: { now: () => wall },
-    window: { matchMedia: () => ({ matches: true }) },
+    window: { matchMedia: () => ({ matches: true }), addEventListener() {} },
     document: { visibilityState: 'visible', hasFocus: () => true, querySelector: () => element, querySelectorAll: () => [], createElement: () => element },
     currentTab: 'activites', Mode: {}, Selection: {}, City: { relayout() {} }, sheetKeepOnSync: true,
     renderStorageStatus() {}, renderSyncStatus() {}, renderAll() {}, renderVille() {}, updateInert() {}, closeSheet() {}, toast() {}, bump() {},

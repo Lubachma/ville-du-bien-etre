@@ -467,3 +467,13 @@ function openSettings() {
     sections.forEach((section, i) => { if (i) body.append(h('hr', { class: 'divider' })); body.append(section); });
   });
 }
+// Les Réglages ouverts sur la section Sauvegarde : elle est amenée à l'écran et son titre prend le focus (la feuille ne le lui reprend pas :
+// elle ne donne le sien à son titre que si rien de la feuille ne l'a). Là où mène le message d'une copie de la ville qui n'a pas marché.
+function openBackupSettings() {
+  openSettings();
+  const title = $('#settingsBackup .section-title');
+  if (!title) return;
+  title.tabIndex = -1;
+  title.focus({ preventScroll: true });
+  $('#settingsBackup').scrollIntoView({ block: 'start' });
+}

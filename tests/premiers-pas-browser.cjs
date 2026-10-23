@@ -443,8 +443,381 @@ async function quietFirstOpen(browser, baseURL) {
   return "Première ouverture calme : l'étoile versée sans message, pas de souhait avant le lendemain de la première séance, l'aide dit de commencer ici";
 }
 
+// L'abri : la carte « Garde ta ville à l'abri ». Un faux presse-papiers, posé avant le chargement de la page : writeText range le texte
+// dans window.__copied et répond, ou refuse quand window.__clipboardFails est vrai (le vrai presse-papiers demande un accord que le test
+// ne donne pas).
+const fakeClipboard = () => {
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+    writeText(text) {
+      if (window.__clipboardFails) return Promise.reject(new DOMException('Écriture refusée', 'NotAllowedError'));
+      window.__copied = text;
+      return Promise.resolve();
+    },
+  } });
+};
+// Une ville amorcée qui a une séance comptée (town() : stats.ok 1 et historique vide), vue d'un iPhone au faux presse-papiers. cityAt ouvre la
+// page elle-même : les scripts d'initialisation du contexte (le faux presse-papiers, et pour l'app installée navigator.standalone) sont
+// posés ensuite, et la page est rechargée ; la ville reste celle qu'elle a rangée.
+async function shelterTown(browser, baseURL, { standalone = false, insecure = false, seed = town({}, []), ...options } = {}) {
+  const found = await cityAt(browser, baseURL, seed, NOW, { userAgent: IPHONE_UA, ...options });
+  await found.context.addInitScript(fakeClipboard);
+  if (standalone) await found.context.addInitScript(() => Object.defineProperty(navigator, 'standalone', { value: true, configurable: true }));
+  if (insecure) await found.context.addInitScript(() => Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true }));
+  await found.page.reload();
+  await found.page.waitForFunction(() => !!window.__ville);
+  return found;
+}
+// Le navigateur propose d'installer l'app (Android, Chrome) : l'événement beforeinstallprompt, avec son invite et le choix que fera la
+// personne (« accepted » ou « dismissed »). Vrai si l'app l'a empêché d'ouvrir la bannière du navigateur (preventDefault).
+const propose = (page, outcome) => page.evaluate(outcome => {
+  window.installCalls = 0;
+  const event = new Event('beforeinstallprompt', { cancelable: true });
+  event.prompt = () => { window.installCalls++; return Promise.resolve(); };
+  event.userChoice = Promise.resolve({ outcome });
+  return !window.dispatchEvent(event);
+}, outcome);
+const shelterTexts = async card => (await card.locator('.install-main p').allInnerTexts()).map(text => text.replaceAll(NB, ' '));
+const backupAt = page => page.evaluate(() => Number(localStorage.getItem('ville-bien-etre/v1:backup-at')) || 0);
+const focusedKey = page => page.evaluate(() => document.activeElement && (document.activeElement.dataset.focusKey || document.activeElement.id));
+
+// La page, la carte et chacun de ses éléments tiennent dans la largeur, et le texte d'un bouton reste dans le bouton.
+async function assertShelterFits(page, width, where) {
+  const found = await page.evaluate(() => {
+    const card = document.querySelector('#installCard');
+    const boxes = [card, ...card.querySelectorAll('img, h3, p, button')].filter(el => el.getClientRects().length).map(el => {
+      const box = el.getBoundingClientRect();
+      return { name: el.id || el.dataset.act || el.tagName, left: Math.round(box.left), right: Math.round(box.right), inner: el.scrollWidth - el.clientWidth };
+    });
+    return { page: document.documentElement.scrollWidth, boxes };
+  });
+  assert.ok(found.page <= width, `${where} : la page déborde (${found.page} px pour ${width})`);
+  assert.ok(found.boxes.length >= 5, `${where} : la carte, son titre, son texte et ses boutons sont affichés`);
+  for (const box of found.boxes) {
+    assert.ok(box.left >= 0 && box.right <= width, `${where} : « ${box.name} » sort de l'écran (${box.left} à ${box.right} pour ${width})`);
+    assert.ok(box.inner <= 1, `${where} : le contenu de « ${box.name} » déborde (${box.inner} px)`);
+  }
+}
+
+// La carte ne vient pas avant la première séance, ni pendant elle, et vient quand elle est comptée. Sur iPhone elle dit pourquoi garder sa
+// ville à l'abri (le navigateur peut effacer un site resté sept jours sans visite), comment ajouter l'app à l'écran d'accueil, et qu'il faut
+// ensuite copier la ville ici ; « Copier ma ville » copie une vraie sauvegarde, qui compte comme une sauvegarde, et le dit.
+async function shelterAfterFirstSession(browser, baseURL) {
+  {
+    // Une ville neuve : ni au chargement, ni pendant la première séance ; elle vient quand la séance est comptée.
+    const { context, page, errors } = await freshTown(browser, baseURL, { userAgent: IPHONE_UA });
+    try {
+      const card = page.locator('#installCard');
+      assert.equal(await card.isHidden(), true);
+      await page.locator('#welcomeStart').click();
+      await confirmStart(page);
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await card.isHidden(), true);
+      await page.clock.runFor('02:03');
+      await result(page).locator('.res-title', { hasText: 'Session réussie' }).waitFor();
+      await backToCity(page);
+      assert.equal(await card.isVisible(), true);
+      assert.equal(await page.locator('#installTitle').innerText(), "Garde ta ville à l'abri");
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    // Une séance comptée et un historique vide (ville amorcée, vieille sauvegarde) : la ville a vécu une séance, la carte est là.
+    const { context, page, errors } = await shelterTown(browser, baseURL);
+    try {
+      const card = page.locator('#installCard');
+      assert.equal(await page.evaluate(() => __ville.state.history.length), 0);
+      assert.equal(await card.isVisible(), true);
+      // Une région nommée par son titre (un h3), juste après l'accueil (caché ici), première de la Ville avec lui.
+      assert.deepEqual(await card.evaluate(el => ({ tag: el.tagName, role: el.getAttribute('role'), label: el.getAttribute('aria-labelledby'),
+        title: document.getElementById('installTitle').tagName, before: el.previousElementSibling.id, parent: el.parentElement.id })),
+      { tag: 'DIV', role: 'region', label: 'installTitle', title: 'H3', before: 'welcomeCard', parent: 'view-ville' });
+      assert.equal(await page.locator('#installTitle').innerText(), "Garde ta ville à l'abri");
+      assert.deepEqual(await shelterTexts(card), [
+        "Sur iPhone, le navigateur peut effacer les données d'un site resté sept jours sans visite. Une app ajoutée à l'écran d'accueil garde les siennes.",
+        'Dans Safari, ouvre Partager, puis « Sur l’écran d’accueil » et « Ajouter ».',
+        "Ensuite, copie ta ville ici et colle-la à la première ouverture de l'app.",
+      ]);
+      assert.match(await card.innerText(), /sept jours/);
+      // Pas de bouton « Installer » sur iPhone : « Copier ma ville », puis « Ne plus afficher ».
+      assert.deepEqual(await card.locator('button').evaluateAll(buttons => buttons.map(button => [button.dataset.act, button.dataset.focusKey, button.textContent, button.className])), [
+        ['copy', 'install:copy', 'Copier ma ville', 'btn btn-primary btn-sm'],
+        ['hide', 'install:hide', 'Ne plus afficher', 'btn btn-ghost btn-sm'],
+      ]);
+      assert.equal(await card.locator('[data-act="install"]').count(), 0);
+      assert.deepEqual(await card.locator('img').evaluateAll(images => images.map(img => [img.getAttribute('src'), img.getAttribute('alt'), img.width, img.height])), [['icons/icon-192.png', '', 48, 48]]);
+      // Redessinée avec la Ville, la carte garde le focus d'un de ses boutons.
+      await card.locator('[data-act="hide"]').focus();
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await focusedKey(page), 'install:hide');
+
+      // « Copier ma ville » : le texte d'une vraie sauvegarde, sans séance en cours, compté comme une sauvegarde, et le message le dit.
+      assert.equal(await backupAt(page), 0);
+      await card.locator('[data-act="copy"]').click();
+      await page.locator('#toast').filter({ hasText: 'Ville copiée' }).waitFor();
+      assert.match(await page.locator('#toast').innerText(), /^Ville copiée\s: colle-la à la première ouverture de l'app\.$/);
+      const copied = await page.evaluate(() => window.__copied);
+      assert.match(copied, /^VBE2\.[A-Za-z0-9_-]+\.[0-9a-z]+$/);
+      const saved = JSON.parse(Buffer.from(copied.split('.')[1], 'base64url').toString('utf8'));
+      assert.deepEqual([saved.v, saved.stats.ok, saved.active], [2, 1, null]);
+      const now = await page.evaluate(() => Date.now());
+      assert.ok(Math.abs(now - await backupAt(page)) < 60000, 'la copie est datée de maintenant');
+      // La carte reste (la ville n'est pas encore dans l'app), le focus revient au bouton, même quand le navigateur ne le donne pas au clic.
+      assert.equal(await card.isVisible(), true);
+      assert.equal(await focusedKey(page), 'install:copy');
+
+      // « Tout recommencer » : une ville neuve n'a pas de séance, l'accueil revient et la carte repart.
+      await page.locator('#settingsBtn').click();
+      await page.getByRole('button', { name: 'Tout recommencer', exact: true }).click();
+      await page.getByRole('button', { name: 'Confirmer : tout effacer', exact: true }).click();
+      await page.waitForFunction(() => !document.querySelector('#welcomeCard').hidden);
+      assert.equal(await card.isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Abri : la carte vient après la première séance, dit pourquoi sur iPhone, et « Copier ma ville » copie une vraie sauvegarde";
+}
+
+// Dans l'app installée, la carte n'a plus rien à proposer : jamais, même pour une ville qui a des séances (la même ville, dans le navigateur,
+// la voit). Elle ne vient pas non plus hors d'un contexte sûr (ni HTTPS ni localhost), où l'app ne peut pas s'installer.
+async function shelterNeverInstalled(browser, baseURL) {
+  {
+    const { context, page, errors } = await shelterTown(browser, baseURL);
+    try {
+      assert.notEqual(await page.evaluate(() => navigator.standalone), true);
+      assert.equal(await page.evaluate(() => window.isSecureContext), true);
+      assert.equal(await page.locator('#installCard').isVisible(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    const { context, page, errors } = await shelterTown(browser, baseURL, { standalone: true });
+    try {
+      assert.equal(await page.evaluate(() => navigator.standalone), true);
+      assert.equal(await page.evaluate(() => __ville.state.stats.ok), 1);
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    const { context, page, errors } = await shelterTown(browser, baseURL, { insecure: true });
+    try {
+      assert.equal(await page.evaluate(() => window.isSecureContext), false);
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Abri : jamais dans l'app installée, ni hors d'un contexte sûr";
+}
+
+// « Ne plus afficher » cache la carte pour de bon sur cet appareil (le focus va à « Lancer une activité ») : un rechargement ne la rend pas.
+// Si le stockage refuse d'écrire, elle est cachée pour la page quand même, et un rechargement la rend.
+async function shelterHideForGood(browser, baseURL) {
+  {
+    const { context, page, errors } = await shelterTown(browser, baseURL);
+    try {
+      assert.equal(await page.locator('#installCard').isVisible(), true);
+      await page.locator('#installCard [data-act="hide"]').click();
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'ctaStart');
+      assert.equal(await page.evaluate(() => localStorage.getItem('ville-bien-etre/v1:install-hint')), '1');
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      await page.reload();
+      await page.waitForFunction(() => !!window.__ville);
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    const { context, page, errors } = await shelterTown(browser, baseURL);
+    try {
+      await page.evaluate(() => {
+        const set = Storage.prototype.setItem;
+        Storage.prototype.setItem = function (name, value) {
+          if (name === 'ville-bien-etre/v1:install-hint') throw new DOMException('Quota exceeded', 'QuotaExceededError');
+          return set.call(this, name, value);
+        };
+      });
+      await page.locator('#installCard [data-act="hide"]').click();
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'ctaStart');
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      assert.equal(await page.evaluate(() => localStorage.getItem('ville-bien-etre/v1:install-hint')), null);
+      await page.reload();
+      await page.waitForFunction(() => !!window.__ville);
+      assert.equal(await page.locator('#installCard').isVisible(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Abri : « Ne plus afficher » cache la carte pour de bon, et pour la page quand le stockage refuse d'écrire";
+}
+
+// Un presse-papiers qui refuse : rien n'est copié ni compté comme une sauvegarde, le message reste (il ne s'efface pas seul) avec un bouton
+// qui ouvre les Réglages sur la section Sauvegarde, amenée à l'écran, le focus sur son titre.
+async function shelterCopyRefused(browser, baseURL) {
+  const { context, page, errors } = await shelterTown(browser, baseURL);
+  try {
+    const sectionInView = () => page.evaluate(() => {
+      const body = document.querySelector('#sheetBody').getBoundingClientRect(), title = document.querySelector('#settingsBackup .section-title').getBoundingClientRect();
+      return title.top >= body.top && title.bottom <= body.bottom;
+    });
+    // Ouverts à la main, les Réglages ne montrent pas la section Sauvegarde : elle est plus bas.
+    await page.locator('#settingsBtn').click();
+    await page.locator('#settingsBackup').waitFor();
+    assert.equal(await sectionInView(), false);
+    await page.locator('#sheetClose').click();
+    assert.equal(await page.locator('#sheet').isHidden(), true);
+
+    await page.evaluate(() => { window.__clipboardFails = true; });
+    await page.locator('#installCard [data-act="copy"]').click();
+    const toast = page.locator('#toast'), open = toast.getByRole('button', { name: 'Aller à la sauvegarde', exact: true });
+    await open.waitFor();
+    assert.match(await toast.innerText(), /^La copie n.a pas marché\.\sTu peux copier ta ville dans Réglages → Sauvegarde\./);
+    assert.equal(await page.evaluate(() => document.body.classList.contains('toast-kept')), true, 'le message reste');
+    assert.equal(await page.evaluate(() => window.__copied ?? null), null, "rien n'a été copié");
+    assert.equal(await backupAt(page), 0, 'une copie refusée ne compte pas comme une sauvegarde');
+    assert.equal(await page.locator('#sheet').isHidden(), true, "aucune feuille ne s'ouvre d'elle-même");
+    assert.equal(await page.locator('#installCard').isVisible(), true);
+    assert.equal(await focusedKey(page), 'install:copy');
+
+    await open.click();
+    await page.locator('#sheet').waitFor();
+    assert.equal(await page.locator('#settingsBackup').isVisible(), true);
+    assert.equal(await sectionInView(), true);
+    assert.equal(await toast.isHidden(), true);
+    // Le titre de la section a le focus, et la feuille ne le lui reprend pas (elle donne le sien à son titre, 30 ms plus tard).
+    await page.waitForTimeout(150);
+    assert.deepEqual(await page.evaluate(() => ({ text: document.activeElement.textContent, inBackup: !!document.activeElement.closest('#settingsBackup') })), { text: 'Sauvegarde', inBackup: true });
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  {
+    // Sans presse-papiers du tout (navigator.clipboard absent) : le même message, rien n'est compté.
+    const { context, page, errors } = await shelterTown(browser, baseURL);
+    try {
+      await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true }));
+      await page.locator('#installCard [data-act="copy"]').click();
+      const toast = page.locator('#toast');
+      await toast.getByRole('button', { name: 'Aller à la sauvegarde', exact: true }).waitFor();
+      assert.match(await toast.innerText(), /^La copie n.a pas marché\./);
+      assert.equal(await backupAt(page), 0);
+      assert.equal(await page.locator('#sheet').isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Abri : une copie refusée, ou sans presse-papiers, laisse le message, qui mène aux Réglages, section Sauvegarde";
+}
+
+// Android : le navigateur propose d'installer l'app. La carte attend la première séance, puis montre « Installer » ; le clic lance l'invite du
+// navigateur une seule fois et laisse l'aide ; accepter, ou l'événement « appinstalled », la fait disparaître ; sur un ordinateur (pointeur
+// précis), la proposition ne la fait jamais venir.
+async function shelterAndroid(browser, baseURL) {
+  {
+    const { context, page, errors } = await cityAt(browser, baseURL, town({}, []), NOW);
+    try {
+      const card = page.locator('#installCard');
+      assert.equal(await card.isHidden(), true);
+      assert.equal(await propose(page, 'dismissed'), true, 'la bannière du navigateur est empêchée');
+      assert.equal(await card.isVisible(), true);
+      assert.equal(await page.locator('#installTitle').innerText(), "Garde ta ville à l'abri");
+      assert.deepEqual(await shelterTexts(card), ["Installée, l'app s'ouvre depuis ton écran d'accueil et garde ta ville sur ce téléphone."]);
+      assert.deepEqual(await card.locator('button').evaluateAll(buttons => buttons.map(button => [button.dataset.act, button.dataset.focusKey, button.textContent])), [
+        ['install', 'install:install', 'Installer'],
+        ['hide', 'install:hide', 'Ne plus afficher'],
+      ]);
+      assert.equal(await card.locator('.install-help').count(), 0);
+      await card.locator('[data-act="install"]').click();
+      assert.equal(await card.locator('[data-act="install"]').count(), 0);
+      assert.match(await card.locator('.install-help').innerText(), /menu de ton navigateur/);
+      assert.equal(await page.evaluate(() => window.installCalls), 1);
+      assert.equal(await focusedKey(page), 'install:hide');
+      // Redessinée, la carte garde son aide et ne rend pas le bouton.
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await card.locator('[data-act="install"]').count(), 0);
+      assert.equal(await card.locator('.install-help').count(), 1);
+      // Une nouvelle proposition du navigateur rend le bouton (et reprend l'aide) : on peut installer.
+      await propose(page, 'accepted');
+      assert.equal(await card.locator('[data-act="install"]').isVisible(), true);
+      assert.equal(await card.locator('.install-help').count(), 0);
+      await card.locator('[data-act="install"]').click();
+      await card.waitFor({ state: 'hidden' });
+      assert.equal(await page.evaluate(() => window.installCalls), 1);
+      assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'ctaStart');
+      assert.equal(await page.evaluate(() => localStorage.getItem('ville-bien-etre/v1:install-hint')), null);
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await card.isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    // « appinstalled » (l'app a été installée par le menu du navigateur) : la carte part.
+    const { context, page, errors } = await cityAt(browser, baseURL, town({}, []), NOW);
+    try {
+      await propose(page, 'dismissed');
+      assert.equal(await page.locator('#installCard').isVisible(), true);
+      await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    // Un ordinateur : la proposition est gardée mais la carte, faite pour un téléphone, ne vient pas.
+    const { context, page, errors } = await cityAt(browser, baseURL, town({}, []), NOW, { isMobile: false, hasTouch: false });
+    try {
+      assert.equal(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), false);
+      assert.equal(await propose(page, 'dismissed'), true);
+      await page.evaluate(() => __ville.renderAll());
+      assert.equal(await page.locator('#installCard').isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Abri : sur Android, « Installer » lance l'invite une seule fois, accepter ou « appinstalled » ferme la carte, jamais sur un ordinateur";
+}
+
+// À 320 px, rien ne déborde, en français et en anglais, pour l'iPhone (trois paragraphes et « Copier ma ville ») comme pour Android
+// (« Installer », puis l'aide).
+async function shelterFits320(browser, baseURL) {
+  const viewport = { width: 320, height: 568 };
+  const TEXTS = {
+    fr: { title: "Garde ta ville à l'abri", ios: /sept jours/, prompt: /Installée, l.app s.ouvre/, copy: 'Copier ma ville' },
+    en: { title: 'Keep your town safe', ios: /seven days/, prompt: /Once installed, the app opens from your home screen/, copy: 'Copy my town' },
+  };
+  for (const lang of ['fr', 'en']) {
+    const seed = town({}, [], { settings: { lang } }), texts = TEXTS[lang];
+    {
+      const { context, page, errors } = await shelterTown(browser, baseURL, { seed, viewport });
+      try {
+        assert.equal(await page.locator('#installTitle').innerText(), texts.title);
+        assert.match(await page.locator('#installCard').innerText(), texts.ios);
+        assert.equal(await page.locator('#installCard [data-act="copy"]').innerText(), texts.copy);
+        await assertShelterFits(page, 320, `iPhone en ${lang} à 320 px`);
+        assert.deepEqual(errors, []);
+      } finally { await context.close(); }
+    }
+    {
+      const { context, page, errors } = await cityAt(browser, baseURL, seed, NOW, { viewport });
+      try {
+        await propose(page, 'dismissed');
+        assert.equal(await page.locator('#installTitle').innerText(), texts.title);
+        assert.match(await page.locator('#installCard').innerText(), texts.prompt);
+        await assertShelterFits(page, 320, `Android en ${lang} à 320 px`);
+        await page.locator('#installCard [data-act="install"]').click();
+        assert.equal(await page.locator('#installCard .install-help').isVisible(), true);
+        await assertShelterFits(page, 320, `Android avec l'aide, en ${lang} à 320 px`);
+        assert.deepEqual(errors, []);
+      } finally { await context.close(); }
+    }
+  }
+  return 'Abri : à 320 px, rien ne déborde, en français et en anglais';
+}
+
 const SCENARIOS = [welcomeForNewTown, welcomeCloseStays, welcomeCloseWithoutStorage, welcomeLanguage, welcomeLanguageClosesToast, welcomeChoose,
-  welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing, quietFirstOpen];
+  welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing, quietFirstOpen,
+  shelterAfterFirstSession, shelterNeverInstalled, shelterHideForGood, shelterCopyRefused, shelterAndroid, shelterFits320];
 async function runPremiersPas(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

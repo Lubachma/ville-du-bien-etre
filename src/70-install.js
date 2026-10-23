@@ -1,11 +1,9 @@
-/* Installation mobile et disponibilité hors connexion, sans serveur applicatif. */
+/* Disponibilité hors connexion et mises à jour, sans serveur applicatif. Hors de la fermeture de l'app : elle ne voit pas la ville. La carte
+   d'installation, qui en a besoin (elle attend la première séance), est dans 59-first-steps.js. */
 (() => {
   'use strict';
-  const HINT_KEY = 'ville-bien-etre/v1:install-hint';
-  const ua = navigator.userAgent || '';
   const standalone = navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
   const secure = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
-  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   document.documentElement.classList.toggle('standalone', standalone);
   let registration = null;
   const pwa = window.VillePWA = {
@@ -70,87 +68,8 @@
   }
   notify();
   try {
-    if (secure && navigator.storage && navigator.storage.persist && !/firefox/i.test(ua)) {
+    if (secure && navigator.storage && navigator.storage.persist && !/firefox/i.test(navigator.userAgent || '')) {
       navigator.storage.persisted().then(p => p || navigator.storage.persist()).catch(() => {});
     }
   } catch { /* La sauvegarde exportée reste le filet de sécurité. */ }
-
-  const hidden = () => { try { return localStorage.getItem(HINT_KEY) === '1'; } catch { return false; } };
-  const hideForGood = () => { try { localStorage.setItem(HINT_KEY, '1'); } catch { /* pas de stockage */ } };
-  // Textes de l'app (05-i18n.js) : la carte suit la langue affichée.
-  const t = (key, params) => (window.VilleI18n ? window.VilleI18n.t(key, params) : key);
-  const node = (tag, attrs, text) => {
-    const el = document.createElement(tag);
-    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
-    if (text != null) el.textContent = text;
-    return el;
-  };
-  let deferred = null, card = null, kind = '', installHidden = false, helpShown = false;
-  // Bouton « Installer » masqué et aide affichée survivent à un changement de langue.
-  function applyState() {
-    const button = card.querySelector('[data-act="install"]');
-    if (button) button.hidden = installHidden;
-    let help = card.querySelector('.install-help');
-    if (helpShown && !help) { help = node('p', { class: 'note install-help' }); card.querySelector('.install-main').append(help); }
-    if (help) help.textContent = t('install.help');
-  }
-  function fill() {
-    const actions = node('div', { class: 'install-actions' });
-    if (kind === 'prompt') actions.append(node('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-act': 'install' }, t('install.install')));
-    actions.append(node('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-act': 'hide' }, t('install.hide')));
-    const main = node('div', { class: 'install-main' });
-    main.append(node('h3', { id: 'installTitle' }, t('install.title')),
-      node('p', {}, kind === 'ios' ? t('install.ios') : t('install.prompt')),
-      node('p', { class: 'note' }, t('install.personal')), actions);
-    card.replaceChildren(node('img', { src: 'icons/icon-192.png', alt: '', width: '48', height: '48' }), main);
-    applyState();
-  }
-  function installHelp() {
-    if (!card) return;
-    installHidden = true; helpShown = true;
-    applyState();
-  }
-  function show(variant) {
-    if (standalone || hidden()) return;
-    if (card) {
-      if (variant === 'prompt') { installHidden = false; applyState(); }
-      return;
-    }
-    const view = document.getElementById('view-ville');
-    if (!view) return;
-    kind = variant; installHidden = false; helpShown = false;
-    card = document.createElement('div');
-    card.className = 'card install-card'; card.id = 'installCard';
-    card.setAttribute('role', 'region'); card.setAttribute('aria-labelledby', 'installTitle');
-    fill();
-    card.addEventListener('click', async e => {
-      const button = e.target.closest('button[data-act]');
-      if (!button) return;
-      if (button.dataset.act === 'hide') { hideForGood(); remove(); return; }
-      if (button.dataset.act !== 'install' || !deferred) return;
-      const prompt = deferred; deferred = null;
-      installHelp();
-      try {
-        await prompt.prompt();
-        const choice = await prompt.userChoice;
-        if (choice && choice.outcome === 'accepted') remove();
-      } catch { installHelp(); }
-    });
-    view.prepend(card);
-  }
-  function remove() {
-    if (!card) return;
-    const focus = card.contains(document.activeElement);
-    card.remove(); card = null;
-    if (focus) document.getElementById('ctaStart')?.focus();
-  }
-  if (!standalone && secure) {
-    if (ios) show('ios');
-    window.addEventListener('beforeinstallprompt', e => {
-      e.preventDefault(); deferred = e;
-      if (window.matchMedia('(pointer: coarse)').matches) show('prompt');
-    });
-    window.addEventListener('appinstalled', () => { deferred = null; remove(); });
-  }
-  window.addEventListener('ville:lang', () => { if (card) fill(); });
 })();

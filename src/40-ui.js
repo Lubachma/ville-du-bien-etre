@@ -299,6 +299,7 @@ function renderVille() {
   // Saison vue et jour de fête (cadeau et message à la première ouverture, ou au passage de minuit l'appli ouverte).
   liveTick();
   if (typeof renderWelcome === 'function') renderWelcome();
+  if (typeof renderShelter === 'function') renderShelter();
   renderCityCaption();
   if (typeof renderCompanionInvite === 'function') { renderCompanionInvite(); renderCompanionButton(); }
   if (typeof renderTownWishCard === 'function') renderTownWishCard();

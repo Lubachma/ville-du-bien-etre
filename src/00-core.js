@@ -14,6 +14,7 @@ const LS_REMINDER = 'ville-bien-etre/v1:reminder-time';   // heure du rappel quo
 const LS_CARNET_SEEN = 'ville-bien-etre/v1:carnet-seen';  // succès et ensembles déjà vus dans le carnet, sur cet appareil
 const LS_MOOD_CARD = 'ville-bien-etre/v1:mood-card';      // carte des moments difficiles : quand elle a été fermée, sur cet appareil
 const LS_WELCOME = 'ville-bien-etre/v1:welcome-closed';   // carte « Bienvenue » fermée ('1'), sur cet appareil
+const LS_INSTALL_HINT = 'ville-bien-etre/v1:install-hint';  // carte « Garde ta ville à l'abri » masquée pour de bon ('1'), sur cet appareil
 const BACKUP_EVERY = 14 * 86400000;                       // rappel quand la dernière sauvegarde a plus de 14 jours
 const HISTORY_MAX = 150;
 const LIST_MAX = 60;
