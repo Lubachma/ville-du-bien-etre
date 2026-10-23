@@ -1143,7 +1143,7 @@ DICT.en = {
   'recap.imageDays': 'Active days',
   'recap.imageBuilt': 'Items placed',
   'recap.imageFavorite': 'Favourite domain: {cat}',
-  'recap.imageFooter': 'Ville du bien-être',
+  'recap.imageFooter': 'Ville du bien-être · {address}',
   'recap.imageSaved': 'Picture downloaded.',
   'recap.imageFailed': 'Could not create the picture right now. Try again a little later.',
   'city.listVisitor': 'Visitor of the day: {name}',

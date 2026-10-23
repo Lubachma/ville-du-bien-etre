@@ -281,11 +281,11 @@ function openCityPersonalization() {
       h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: exportCityImage }, icon('download'), t('city.saveImage')));
   });
 }
-// Image de sa ville, au moins 1 200 pixels de large : son nom, sa ville (jamais celle d'une visite) sous le ciel du moment, puis le
-// temps pris pour soi.
+// Image de sa ville, au moins 1 200 pixels de large : son nom, sa ville (jamais celle d'une visite) sous le ciel du moment, puis un pied
+// de deux lignes, le temps pris pour soi et l'adresse de l'app.
 async function cityImageCanvas() {
   const source = typeof City.snapshot === 'function' ? City.snapshot() : $('#city');
-  const width = Math.max(1200, source.width), ratio = width / source.width, margin = Math.round(width * .05), head = Math.round(width * .12), foot = Math.round(width * .065);
+  const width = Math.max(1200, source.width), ratio = width / source.width, margin = Math.round(width * .05), head = Math.round(width * .12), foot = Math.round(width * .095);
   const cityH = Math.round(source.height * ratio);
   const out = document.createElement('canvas');
   out.width = width; out.height = cityH + head + foot;
@@ -298,8 +298,11 @@ async function cityImageCanvas() {
   ctx.fillStyle = imageInk(sky, head * .55 / out.height).ink; ctx.textBaseline = 'middle'; ctx.font = titleFont;
   ctx.fillText(frTypo(cityName()), margin, head * .55, width - margin * 2);
   ctx.drawImage(source, 0, head, width, cityH);
+  // Les deux lignes du pied, de part et d'autre du milieu du pied, dans la même police et la même encre.
+  const mid = out.height - foot * .5, gap = Math.round(width * .03);
   ctx.fillStyle = imageInk(sky, 1 - foot * .5 / out.height).muted; ctx.font = footFont;
-  ctx.fillText(frTypo(t('png.footer', { time: fmtEffort(totalEffortMinutes()) })), margin, out.height - foot * .5, width - margin * 2);
+  ctx.fillText(frTypo(t('png.footer', { time: fmtEffort(totalEffortMinutes()) })), margin, mid - gap / 2, width - margin * 2);
+  ctx.fillText(appAddress(), margin, mid + gap / 2, width - margin * 2);
   return out;
 }
 // « Enregistrer une image de ma ville » : par le partage de l'iPhone s'il accepte les fichiers, sinon par un téléchargement.

@@ -75,6 +75,9 @@ function decodeCity(code) {
   } catch (e) { return null; }
 }
 const shareLink = code => location.origin + location.pathname + '#ville=' + code;
+// L'adresse de l'app comme on la tape, pour les images partagées (lubachma.github.io/ville-du-bien-etre) : l'hôte et le chemin de la page, sans
+// protocole, sans « index.html » ni barre finale. C'est le seul endroit qui sait comment l'écrire ; shareLink garde l'adresse entière.
+const appAddress = () => (location.origin + location.pathname).replace(/^[^:/]+:\/\//, '').replace(/\/index\.html$/i, '').replace(/\/+$/, '');
 // Le code d'un lien de ville trouvé dans un texte collé, ou un code collé seul (qui doit alors se lire).
 function codeFromText(text) {
   const value = String(text || ''), link = value.match(/#ville=([A-Za-z0-9_-]*)/);

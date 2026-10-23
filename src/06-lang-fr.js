@@ -1143,7 +1143,7 @@ DICT.fr = {
   'recap.imageDays': 'Jours actifs',
   'recap.imageBuilt': 'Éléments posés',
   'recap.imageFavorite': 'Domaine favori : {cat}',
-  'recap.imageFooter': 'Ville du bien-être',
+  'recap.imageFooter': 'Ville du bien-être · {address}',
   'recap.imageSaved': 'Image téléchargée.',
   'recap.imageFailed': "Impossible de créer l'image pour le moment. Réessaie un peu plus tard.",
   'city.listVisitor': 'Visiteur du jour : {name}',

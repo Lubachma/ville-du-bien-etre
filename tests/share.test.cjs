@@ -5,9 +5,9 @@ const { loadApp, plain } = require('./helpers/app.cjs');
 
 const FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '22-sets.js', '23-achievements.js', '24-ambient.js',
   '25-challenges.js', '26-summaries.js', '27-share.js', '46-features.js'];
-const EXPOSE = ['encodeCity', 'decodeCity', 'shareLink', 'codeFromText', 'keepPostcard', 'ensureShareId', 'buildingLevel', 'cleanName', 'normalize', 't'];
-const app = () => loadApp(FILES, { expose: EXPOSE,
-  globals: { btoa, atob, crypto: webcrypto, location: { origin: 'https://lubachma.github.io', pathname: '/ville-du-bien-etre/' } } });
+const EXPOSE = ['encodeCity', 'decodeCity', 'shareLink', 'appAddress', 'codeFromText', 'keepPostcard', 'ensureShareId', 'buildingLevel', 'cleanName', 'normalize', 't'];
+const PUBLIC = { origin: 'https://lubachma.github.io', pathname: '/ville-du-bien-etre/' };
+const app = (location = PUBLIC) => loadApp(FILES, { expose: EXPOSE, globals: { btoa, atob, crypto: webcrypto, location } });
 const ITEMS_ORDER = ['arbre', 'fleurs', 'chemin', 'banc', 'lampadaire', 'etang', 'maison', 'boulangerie', 'serre', 'bibliotheque', 'ecole', 'observatoire',
   'terrain', 'piscine', 'stade', 'jardin', 'fontaine', 'pavillon', 'kiosque', 'atelier', 'theatre', 'horloge', 'lavoir', 'moulin', 'marche', 'musee', 'universite',
   'planetarium', 'skatepark', 'escalade', 'gymnase', 'labyrinthe', 'source', 'pagode', 'galerie', 'cinema', 'chapiteau', 'haie', 'cerisier', 'livres', 'lanterne',
@@ -46,6 +46,21 @@ test('lien de ville : une ville de 11 × 11 pleine tient en moins de 1 000 carac
   assert.deepEqual(Object.keys(a.decodeCity(code)).sort(), ['flowers', 'id', 'name', 'size', 'tiles']);
   assert.equal(bytes(code).length, 3 + Buffer.byteLength(name) + 6 + 1 + 3 * 121 + 1);
   assert.doesNotMatch(code, /=/);
+});
+
+// L'adresse que les images partagées donnent pour trouver l'app : celle de la page, comme on la tape (l'hôte et le chemin), sans protocole,
+// sans « index.html » ni barre finale. C'est le seul endroit qui sait l'écrire ; shareLink, lui, garde l'adresse entière.
+test("adresse de l'app : hôte et chemin, sans protocole ni barre finale", () => {
+  const address = location => app(location).appAddress();
+  assert.equal(address(PUBLIC), 'lubachma.github.io/ville-du-bien-etre');
+  assert.equal(address({ origin: 'https://lubachma.github.io', pathname: '/ville-du-bien-etre/index.html' }), 'lubachma.github.io/ville-du-bien-etre');
+  assert.equal(address({ origin: 'http://127.0.0.1:8766', pathname: '/' }), '127.0.0.1:8766');
+  // Un chemin sans barre finale, « index.html » à la racine d'un site, un chemin plus profond : toujours l'hôte et le chemin.
+  assert.equal(address({ origin: 'https://lubachma.github.io', pathname: '/ville-du-bien-etre' }), 'lubachma.github.io/ville-du-bien-etre');
+  assert.equal(address({ origin: 'https://exemple.org', pathname: '/index.html' }), 'exemple.org');
+  assert.equal(address({ origin: 'https://exemple.org', pathname: '/un/autre/chemin/' }), 'exemple.org/un/autre/chemin');
+  // shareLink n'a pas changé : le lien entier, avec son protocole et son code.
+  assert.equal(app().shareLink('abc'), 'https://lubachma.github.io/ville-du-bien-etre/#ville=abc');
 });
 
 test('lien de ville : un nom par défaut s’encode vide, et pas de fleurs sans Grand Arbre fleuri', () => {

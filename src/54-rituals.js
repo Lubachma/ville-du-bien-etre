@@ -238,8 +238,9 @@ async function recapCanvas(r) {
     ctx.fillStyle = skyInk(1194).ink; ctx.font = sans(600, 40);
     ctx.fillText(frTypo(t('recap.imageFavorite', { cat: catName(r.favorite) })), M + 44, 1194, W - M * 2 - 44);
   }
+  // Le pied dit aussi où trouver l'app : le nom, puis son adresse, sur une seule ligne.
   ctx.fillStyle = skyInk(1292).muted; ctx.font = sans(600, 28);
-  ctx.fillText(frTypo(t('recap.imageFooter')), M, 1292, W - M * 2);
+  ctx.fillText(frTypo(t('recap.imageFooter', { address: appAddress() })), M, 1292, W - M * 2);
   return out;
 }
 // Partage de l'image : par le partage du téléphone s'il accepte les fichiers, sinon par un téléchargement. Partage annulé :

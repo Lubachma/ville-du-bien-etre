@@ -1664,7 +1664,7 @@ DICT.fr = {
   'recap.imageDays': 'Jours actifs',
   'recap.imageBuilt': 'Éléments posés',
   'recap.imageFavorite': 'Domaine favori : {cat}',
-  'recap.imageFooter': 'Ville du bien-être',
+  'recap.imageFooter': 'Ville du bien-être · {address}',
   'recap.imageSaved': 'Image téléchargée.',
   'recap.imageFailed': "Impossible de créer l'image pour le moment. Réessaie un peu plus tard.",
   'city.listVisitor': 'Visiteur du jour : {name}',
@@ -2955,7 +2955,7 @@ DICT.en = {
   'recap.imageDays': 'Active days',
   'recap.imageBuilt': 'Items placed',
   'recap.imageFavorite': 'Favourite domain: {cat}',
-  'recap.imageFooter': 'Ville du bien-être',
+  'recap.imageFooter': 'Ville du bien-être · {address}',
   'recap.imageSaved': 'Picture downloaded.',
   'recap.imageFailed': 'Could not create the picture right now. Try again a little later.',
   'city.listVisitor': 'Visitor of the day: {name}',
@@ -5237,6 +5237,9 @@ function decodeCity(code) {
   } catch (e) { return null; }
 }
 const shareLink = code => location.origin + location.pathname + '#ville=' + code;
+// L'adresse de l'app comme on la tape, pour les images partagées (lubachma.github.io/ville-du-bien-etre) : l'hôte et le chemin de la page, sans
+// protocole, sans « index.html » ni barre finale. C'est le seul endroit qui sait comment l'écrire ; shareLink garde l'adresse entière.
+const appAddress = () => (location.origin + location.pathname).replace(/^[^:/]+:\/\//, '').replace(/\/index\.html$/i, '').replace(/\/+$/, '');
 // Le code d'un lien de ville trouvé dans un texte collé, ou un code collé seul (qui doit alors se lire).
 function codeFromText(text) {
   const value = String(text || ''), link = value.match(/#ville=([A-Za-z0-9_-]*)/);
@@ -10043,11 +10046,11 @@ function openCityPersonalization() {
       h('button', { class: 'btn btn-secondary btn-block', type: 'button', onclick: exportCityImage }, icon('download'), t('city.saveImage')));
   });
 }
-// Image de sa ville, au moins 1 200 pixels de large : son nom, sa ville (jamais celle d'une visite) sous le ciel du moment, puis le
-// temps pris pour soi.
+// Image de sa ville, au moins 1 200 pixels de large : son nom, sa ville (jamais celle d'une visite) sous le ciel du moment, puis un pied
+// de deux lignes, le temps pris pour soi et l'adresse de l'app.
 async function cityImageCanvas() {
   const source = typeof City.snapshot === 'function' ? City.snapshot() : $('#city');
-  const width = Math.max(1200, source.width), ratio = width / source.width, margin = Math.round(width * .05), head = Math.round(width * .12), foot = Math.round(width * .065);
+  const width = Math.max(1200, source.width), ratio = width / source.width, margin = Math.round(width * .05), head = Math.round(width * .12), foot = Math.round(width * .095);
   const cityH = Math.round(source.height * ratio);
   const out = document.createElement('canvas');
   out.width = width; out.height = cityH + head + foot;
@@ -10060,8 +10063,11 @@ async function cityImageCanvas() {
   ctx.fillStyle = imageInk(sky, head * .55 / out.height).ink; ctx.textBaseline = 'middle'; ctx.font = titleFont;
   ctx.fillText(frTypo(cityName()), margin, head * .55, width - margin * 2);
   ctx.drawImage(source, 0, head, width, cityH);
+  // Les deux lignes du pied, de part et d'autre du milieu du pied, dans la même police et la même encre.
+  const mid = out.height - foot * .5, gap = Math.round(width * .03);
   ctx.fillStyle = imageInk(sky, 1 - foot * .5 / out.height).muted; ctx.font = footFont;
-  ctx.fillText(frTypo(t('png.footer', { time: fmtEffort(totalEffortMinutes()) })), margin, out.height - foot * .5, width - margin * 2);
+  ctx.fillText(frTypo(t('png.footer', { time: fmtEffort(totalEffortMinutes()) })), margin, mid - gap / 2, width - margin * 2);
+  ctx.fillText(appAddress(), margin, mid + gap / 2, width - margin * 2);
   return out;
 }
 // « Enregistrer une image de ma ville » : par le partage de l'iPhone s'il accepte les fichiers, sinon par un téléchargement.
@@ -11890,8 +11896,9 @@ async function recapCanvas(r) {
     ctx.fillStyle = skyInk(1194).ink; ctx.font = sans(600, 40);
     ctx.fillText(frTypo(t('recap.imageFavorite', { cat: catName(r.favorite) })), M + 44, 1194, W - M * 2 - 44);
   }
+  // Le pied dit aussi où trouver l'app : le nom, puis son adresse, sur une seule ligne.
   ctx.fillStyle = skyInk(1292).muted; ctx.font = sans(600, 28);
-  ctx.fillText(frTypo(t('recap.imageFooter')), M, 1292, W - M * 2);
+  ctx.fillText(frTypo(t('recap.imageFooter', { address: appAddress() })), M, 1292, W - M * 2);
   return out;
 }
 // Partage de l'image : par le partage du téléphone s'il accepte les fichiers, sinon par un téléchargement. Partage annulé :

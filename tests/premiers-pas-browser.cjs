@@ -1595,12 +1595,102 @@ async function friendLinkOwnTown(browser, baseURL) {
   return 'Lien d’un ami : un nouveau venu qui ouvre son propre lien voit sa ville comme ses amis la voient, sans la ligne ni « Faire grandir ma ville »';
 }
 
+// Les deux images qu'on partage disent où trouver l'app. Le pied du récapitulatif tient en une ligne, « Ville du bien-être · » et l'adresse ; celui de l'image
+// de la ville passe à deux lignes, le temps pris pour soi puis l'adresse, dans la même police et la même encre. L'adresse est celle de la page, sans protocole
+// ni barre finale (ici elle porte le port du serveur de test, que la page seule connaît). Le titre reste le premier texte de chaque image, et l'adresse ne
+// touche rien : tout texte reste dans l'image sans en chevaucher un autre ni la ville, et le canevas n'a pas à resserrer le pied ou l'adresse (un texte plus large
+// que sa place est comprimé). L'adresse publique, plus longue que celle des tests, tient elle aussi dans le pied du récapitulatif.
+const PUBLIC_ADDRESS = 'lubachma.github.io/ville-du-bien-etre';
+// Installé dans la page : note chaque texte écrit et chaque image posée sur un canevas, de quoi savoir où va chaque ligne d'une image.
+function spyOnCanvas() {
+  const fillText = CanvasRenderingContext2D.prototype.fillText, drawImage = CanvasRenderingContext2D.prototype.drawImage;
+  window.__drawn = [];
+  CanvasRenderingContext2D.prototype.fillText = function (text, x, y, max) {
+    window.__drawn.push({ canvas: this.canvas, text, x, y, max, font: this.font, ink: this.fillStyle, align: this.textAlign, baseline: this.textBaseline, width: this.measureText(text).width });
+    return fillText.apply(this, arguments);
+  };
+  CanvasRenderingContext2D.prototype.drawImage = function (image, ...place) {
+    window.__drawn.push({ canvas: this.canvas, picture: place });
+    return drawImage.apply(this, arguments);
+  };
+}
+// Le rectangle d'un texte sur son image : sa largeur (resserrée à sa place s'il est plus large), sa hauteur selon sa ligne de base.
+const textRect = c => {
+  const size = Number(/(\d+(?:\.\d+)?)px/.exec(c.font)[1]), width = Math.min(c.width, c.max || Infinity), left = c.align === 'center' ? c.x - width / 2 : c.x;
+  const [top, bottom] = c.baseline === 'middle' ? [c.y - size / 2, c.y + size / 2] : [c.y - size * .8, c.y + size * .25];
+  return { name: c.text, left, right: left + width, top, bottom, size };
+};
+// Tout ce qui est posé sur l'image (textes et ville) reste dedans, et rien n'en touche un autre.
+function assertNothingTouches(drawn, [width, height], where) {
+  const rects = drawn.map(c => c.picture ? { name: 'la ville', left: c.picture[0], top: c.picture[1], right: c.picture[0] + c.picture[2], bottom: c.picture[1] + c.picture[3] } : textRect(c));
+  for (const r of rects) assert.ok(r.left >= 0 && r.right <= width && r.top >= 0 && r.bottom <= height, `${where} : « ${r.name} » sort de l'image (${JSON.stringify(r)} pour ${width}×${height})`);
+  for (let i = 0; i < rects.length; i++) {
+    for (let j = i + 1; j < rects.length; j++) {
+      const a = rects[i], b = rects[j];
+      assert.ok(!(a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom), `${where} : « ${a.name} » touche « ${b.name} »`);
+    }
+  }
+}
+async function imagesShowAddress(browser, baseURL) {
+  const TEXTS = { fr: { title: 'Octobre 2026', city: 'Ma ville', care: / pour prendre soin de moi$/ }, en: { title: 'October 2026', city: 'My town', care: / of self-care$/ } };
+  for (const lang of ['fr', 'en']) {
+    const texts = TEXTS[lang], where = lang === 'fr' ? 'en français' : 'en anglais';
+    const { context, page, errors } = await recapTown(browser, baseURL, { lang });
+    try {
+      // L'adresse attendue, calculée dans la page : l'hôte et le chemin, sans barre finale.
+      const address = await page.evaluate(() => (location.host + location.pathname).replace(/\/+$/, ''));
+      assert.match(address, /^127\.0\.0\.1:\d+\/ville-du-bien-etre$/);
+      await page.evaluate(spyOnCanvas);
+      // Le récapitulatif du mois, sans partage du téléphone (comme la planche) : l'image est téléchargée.
+      await page.evaluate(() => { navigator.canShare = () => false; window.__drawn.length = 0; });
+      assert.equal(await page.locator('#sheetTitle').innerText(), texts.title);
+      const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#sheetBody').getByRole('button', { name: lang === 'fr' ? "Partager l'image" : 'Share the picture', exact: true }).click()]);
+      assert.equal(download.suggestedFilename(), 'mon-mois-2026-10.png');
+      const recap = await page.evaluate(() => window.__drawn.filter(c => c.canvas.width === 1080 && c.canvas.height === 1350).map(({ canvas, ...rest }) => rest));
+      const recapTexts = recap.filter(c => 'text' in c), footer = recapTexts.filter(c => c.text.includes(address));
+      assert.equal(recapTexts[0].text, texts.title, `récapitulatif ${where} : le titre reste le premier texte`);
+      assert.deepEqual(footer.map(c => c.text), ['Ville du bien-être · ' + address], `récapitulatif ${where} : une seule ligne de pied, avec l'adresse`);
+      assert.notEqual(footer[0].ink, recapTexts[0].ink, `récapitulatif ${where} : le pied est en encre douce, comme le titre est en encre pleine`);
+      assert.ok(footer[0].width <= footer[0].max, `récapitulatif ${where} : le pied est comprimé (${footer[0].width} px pour ${footer[0].max})`);
+      const publicWidth = await page.evaluate(([font, text]) => { const ctx = document.createElement('canvas').getContext('2d'); ctx.font = font; return ctx.measureText(text).width; },
+        [footer[0].font, 'Ville du bien-être · ' + PUBLIC_ADDRESS]);
+      assert.ok(publicWidth <= footer[0].max, `récapitulatif ${where} : le pied avec l'adresse publique serait comprimé (${publicWidth} px pour ${footer[0].max})`);
+      assertNothingTouches(recap, [1080, 1350], `récapitulatif ${where}`);
+      // L'image de la ville : le pied de toujours, puis l'adresse sur une seconde ligne.
+      const image = await page.evaluate(async () => {
+        window.__drawn.length = 0;
+        const out = await __ville.png.canvas();
+        return { size: [out.width, out.height], drawn: window.__drawn.filter(c => c.canvas === out).map(({ canvas, ...rest }) => rest) };
+      });
+      const cityTexts = image.drawn.filter(c => 'text' in c), at = cityTexts.findIndex(c => c.text === address);
+      assert.equal(cityTexts[0].text, texts.city, `image de la ville ${where} : le titre reste le premier texte`);
+      assert.ok(at > 0, `image de la ville ${where} : l'adresse est écrite après le titre (${JSON.stringify(cityTexts.map(c => c.text))})`);
+      const line = cityTexts[at - 1], last = cityTexts[at], picture = image.drawn.find(c => c.picture).picture;
+      assert.match(line.text, /^Ville du bien-être · /, `image de la ville ${where} : la ligne du dessus est le pied de toujours`);
+      assert.match(line.text, texts.care);
+      assert.equal(at, cityTexts.length - 1, `image de la ville ${where} : l'adresse est la dernière ligne`);
+      assert.equal(last.font, line.font, `image de la ville ${where} : même police`);
+      assert.equal(last.ink, line.ink, `image de la ville ${where} : même encre`);
+      assert.notEqual(line.ink, cityTexts[0].ink, `image de la ville ${where} : le pied est en encre douce, comme le titre est en encre pleine`);
+      assert.equal(last.x, line.x, `image de la ville ${where} : alignées`);
+      const [upper, lower] = [textRect(line), textRect(last)];
+      assert.ok(upper.top >= picture[1] + picture[3] + upper.size * .5, `image de la ville ${where} : le pied respire sous la ville`);
+      assert.ok(lower.top - upper.bottom >= upper.size * .5, `image de la ville ${where} : les deux lignes respirent`);
+      assert.ok(image.size[1] - lower.bottom >= lower.size * .5, `image de la ville ${where} : l'adresse respire au-dessus du bas de l'image`);
+      assert.ok(line.width <= line.max && last.width <= last.max, `image de la ville ${where} : le pied n'est pas comprimé`);
+      assertNothingTouches(image.drawn, image.size, `image de la ville ${where}`);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Images partagées : l'adresse de l'app dans le pied du récapitulatif (une ligne) et de l'image de la ville (une seconde ligne), après le titre, sans rien toucher";
+}
+
 const SCENARIOS = [welcomeForNewTown, welcomeCloseStays, welcomeCloseWithoutStorage, welcomeLanguage, welcomeLanguageClosesToast, welcomeChoose,
   welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing, quietFirstOpen,
   shelterAfterFirstSession, shelterNeverInstalled, shelterHideForGood, shelterCopyRefused, shelterAndroid, shelterFits320,
   pasteFromSafari, pasteNothing, pasteHiddenOutsideApp, pasteFits320, restoreCountsAsBackup, recapBackupButton,
   friendLinkForNewcomer, friendLinkEscape, friendLinkWelcomeClosed, friendLinkUnchanged, friendLinkAfterFirstSession, friendLinkCarnetBack, friendLinkFits320,
-  friendLinkOwnTown];
+  friendLinkOwnTown, imagesShowAddress];
 async function runPremiersPas(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

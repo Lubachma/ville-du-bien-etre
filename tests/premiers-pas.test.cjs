@@ -177,7 +177,7 @@ test("aide : on peut commencer ici, sans rien installer ; sur iPhone, la ville s
 const STAGE8_FR = ['help.installFirst', 'backup.openSection', 'tpl.breathe', 'install.title', 'install.iosWhy', 'install.ios', 'install.iosCopy', 'install.copy',
   'install.copied', 'install.copyFailed', 'install.prompt', 'install.install', 'install.hide', 'install.help', 'welcome.title', 'welcome.lede', 'welcome.step1',
   'welcome.step2', 'welcome.step3', 'welcome.start', 'welcome.choose', 'welcome.note', 'welcome.close', 'welcome.langs', 'welcome.paste',
-  'welcome.pasteTitle', 'welcome.pasteLine', 'welcome.pasteRestore', 'welcome.pasteNone', 'recap.backup', 'visit.pitch', 'visit.grow'];
+  'welcome.pasteTitle', 'welcome.pasteLine', 'welcome.pasteRestore', 'welcome.pasteNone', 'recap.backup', 'recap.imageFooter', 'visit.pitch', 'visit.grow'];
 test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apostrophe droite", () => {
   const { DICT } = stateApp(undefined, undefined, { expose: ['DICT'] });
   for (const key of STAGE8_FR) {
@@ -187,6 +187,9 @@ test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apos
   // Le bouton des récapitulatifs du mois et de l'année.
   assert.equal(DICT.fr['recap.backup'], 'Sauvegarder ma ville');
   assert.equal(DICT.en['recap.backup'], 'Back up my town');
+  // Le pied de l'image du récapitulatif : le nom de l'app (le même dans les deux langues), puis l'adresse où la trouver.
+  assert.equal(DICT.fr['recap.imageFooter'], 'Ville du bien-être · {address}');
+  assert.equal(DICT.en['recap.imageFooter'], 'Ville du bien-être · {address}');
   // La visite d'un ami, pour un nouveau venu : la ligne sous le nom et la taille, et le bouton qui ferme la visite.
   assert.deepEqual(Object.fromEntries(['visit.pitch', 'visit.grow'].map(key => [key, DICT.fr[key]])), {
     'visit.pitch': 'Cette ville grandit avec de vrais moments : lire, bouger, respirer, ranger, créer.',
