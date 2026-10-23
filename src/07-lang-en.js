@@ -685,7 +685,7 @@ DICT.en = {
   'help.offlineTitle': 'Offline',
   'help.offlineText': 'In a free activity, the phone may suspend the page: the timer is found again when you come back, but the end sound is not guaranteed while the app is closed.',
   'install.title': 'Keep your town safe',
-  'install.iosWhy': "On iPhone, the browser may erase a site's data after seven days without a visit. An app added to the Home Screen keeps its own.",
+  'install.iosWhy': 'On iPhone, the browser may erase a site left seven days without a visit, but not an app added to the Home Screen.',
   'install.ios': 'In Safari, open Share, then “Add to Home Screen” and “Add”.',
   'install.iosCopy': 'Then copy your town here and paste it the first time you open the app.',
   'install.copy': 'Copy my town',

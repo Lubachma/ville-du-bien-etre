@@ -755,6 +755,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .install-main .share-ic { width: 18px; height: 18px; vertical-align: -3px; color: var(--accent-ink); }
 .install-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
 .install-actions > .btn-ghost:first-child { margin-left: -14px; }
+/* Sous 380 px (le plus petit téléphone, 320 px, surtout), l'icône cède sa place : le texte prend toute la largeur et la carte d'iPhone, avec ses trois
+   paragraphes, tient plus haut dans l'écran. */
+@media (max-width: 379.98px) { .install-card > img { display: none; } }
 /* Carte « Bienvenue » d'une ville sans séance : le titre et la croix en haut, une phrase, trois étapes, puis les boutons l'un sous l'autre sur
    toute la largeur (un libellé long passe à la ligne, à 320 px comme en anglais) et les langues, centrées. */
 .welcome-card { display: grid; gap: 12px; }

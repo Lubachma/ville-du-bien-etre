@@ -55,15 +55,16 @@ function startFirstCalm() {
    Garde ta ville à l'abri : la carte d'installation, après la première séance
    ------------------------------------------------------------------------- */
 // Le navigateur d'Android (Chrome) propose d'installer l'app : l'événement est gardé pour le bouton « Installer ». promptSeen retient qu'il est
-// venu sur un téléphone (pointeur tactile) et le reste une fois l'invite lancée : la carte demeure alors, avec son aide. installed : l'app a
-// été installée depuis cette page. shelterHiddenHere : « Ne plus afficher » tient pour cette page même si le stockage refuse d'écrire.
-let installPrompt = null, promptSeen = false, installed = false, installHelpShown = false, shelterHiddenHere = false;
+// venu sur un téléphone (pointeur tactile) et le reste une fois l'invite lancée : la carte demeure alors. installButtonHidden : le bouton a
+// servi (l'invite ne se lance qu'une fois). installHelpShown : l'aide (le menu du navigateur) s'affiche, et reste. installed : l'app a été
+// installée depuis cette page. shelterHiddenHere : « Ne plus afficher » tient pour cette page même si le stockage refuse d'écrire.
+let installPrompt = null, promptSeen = false, installed = false, installButtonHidden = false, installHelpShown = false, shelterHiddenHere = false;
 
 // Posés dès le chargement du fichier : le navigateur peut proposer l'installation sans attendre le démarrage de la ville.
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();   // pas de bannière du navigateur : la carte propose l'installation, après la première séance
   installPrompt = e;
-  installHelpShown = false;   // une proposition neuve : le bouton revient, l'aide devenue inutile s'en va
+  installButtonHidden = false;   // une proposition neuve : le bouton « Installer » revient, l'aide reste (comme avant)
   if (window.matchMedia('(pointer: coarse)').matches) promptSeen = true;
   renderShelter();
 });
@@ -83,12 +84,14 @@ function shelterShown(kind = shelterKind()) {
   return !!kind && !isNewTown() && !isStandalone() && window.isSecureContext && !shelterHidden() && !installed;
 }
 
-// La carte, juste après l'accueil (index.html), remplie ici comme le rappel de sauvegarde et refaite à chaque rendu de la Ville : ses boutons
-// ont une clé de focus (keepFocus). Une carte qui disparaît avec le focus le passe à « Lancer une activité ».
+// La carte, juste après l'accueil (index.html), remplie ici comme le rappel de sauvegarde et refaite à chaque rendu de la Ville, mais aussi quand
+// le navigateur parle (proposition d'installer, app installée), hors de renderVille et de son keepFocus. Ses boutons ont une clé de focus :
+// redessinée sous un focus (au clavier), la carte le rend elle-même au bouton de même clé ; disparue avec lui, elle le passe à « Lancer une
+// activité ».
 function renderShelter() {
   const card = $('#installCard');
   if (!card) return;
-  const kind = shelterKind(), held = card.contains(document.activeElement);
+  const kind = shelterKind(), held = card.contains(document.activeElement), key = held ? focusKeyOf(document.activeElement) : null;
   card.hidden = !shelterShown(kind);
   if (card.hidden) {
     card.replaceChildren();
@@ -103,9 +106,10 @@ function renderShelter() {
       kind === 'ios' ? [h('p', {}, t('install.iosWhy')), h('p', {}, t('install.ios')), h('p', {}, t('install.iosCopy'))] : h('p', {}, t('install.prompt')),
       h('div', { class: 'install-actions' },
         kind === 'ios' && button('copy', 'btn-primary', t('install.copy')),
-        kind === 'prompt' && !installHelpShown && button('install', 'btn-primary', t('install.install')),
+        kind === 'prompt' && !installButtonHidden && button('install', 'btn-primary', t('install.install')),
         button('hide', 'btn-ghost', t('install.hide'))),
       installHelpShown && h('p', { class: 'note install-help' }, t('install.help'))));
+  if (held) focusByKey(key);
 }
 
 // « Copier ma ville » : le texte de sauvegarde, à coller à la première ouverture de l'app installée. Il compte comme une sauvegarde (markBackup).
@@ -125,6 +129,7 @@ async function installApp() {
   const prompt = installPrompt;
   if (!prompt) return;
   installPrompt = null;
+  installButtonHidden = true;
   installHelpShown = true;
   renderShelter();
   focusByKey('install:hide');

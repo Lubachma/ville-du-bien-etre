@@ -93,7 +93,7 @@ async function runI18n(browser, baseURL) {
     }
     await page.setViewportSize({ width: 390, height: 844 });
 
-    // Carte « Garde ta ville à l'abri » en anglais, puis changement de langue en direct. Elle vient après la première séance : la ville en a une.
+    // Carte « Garde ta ville à l’abri » en anglais, puis changement de langue en direct. Elle vient après la première séance : la ville en a une.
     await page.locator('[data-tab="ville"]').click();
     await page.evaluate(() => {
       __ville.state.stats.ok = 1;
@@ -108,7 +108,7 @@ async function runI18n(browser, baseURL) {
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'fr');
     assert.deepEqual(await sections(), { ids: ORDER, titles: ['Langue', 'Tolérance de sortie', 'Série', 'Semaine et rappel', 'Rituels', 'Compagnon', 'Apparence', 'Mode strict', 'Sauvegarde'] });
     assert.ok(await page.getByRole('button', { name: 'Lancer une activité', exact: true }).isVisible());
-    assert.equal(await page.locator('#installTitle').innerText(), "Garde ta ville à l'abri");
+    assert.equal(await page.locator('#installTitle').innerText(), 'Garde ta ville à l’abri');
     assert.equal(await page.locator('#addActForm .activity-options summary').textContent(), 'Mode, fréquence et contexte');
     await page.locator('#sheetClose').click();
     await page.locator('[data-tab="tirage"]').click();

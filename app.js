@@ -452,9 +452,6 @@ function setLang(pref) {
   LANG = resolveLang(pref);
   TYPO = (DICT[LANG] && DICT[LANG]['lang.typo']) || '';
   if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = LANG;
-  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
-    window.dispatchEvent(new CustomEvent('ville:lang'));
-  }
 }
 
 function pluralCategory(n) {
@@ -518,8 +515,6 @@ function cityName() {
   const name = S.personal && S.personal.name;
   return name && !langs().some(lang => DICT[lang]['city.defaultName'] === name) ? name : t('city.defaultName');
 }
-
-if (typeof window !== 'undefined') window.VilleI18n = Object.freeze({ t: (key, params) => t(key, params), lang: () => LANG });
 
 
 /* ---- 06-lang-fr.js ---- */
@@ -1209,14 +1204,14 @@ DICT.fr = {
   'help.personalText': 'Sur ce site, chaque personne a sa propre ville, enregistrée sur son appareil. Elle ne se synchronise pas entre téléphones. Effacer les données du navigateur peut la supprimer : garde une copie dans Réglages → Sauvegarde.',
   'help.offlineTitle': 'Hors connexion',
   'help.offlineText': 'En activité libre, le téléphone peut suspendre la page : le chrono est retrouvé à ton retour, mais le son de fin n’est pas garanti quand l’app est fermée.',
-  'install.title': "Garde ta ville à l'abri",
-  'install.iosWhy': "Sur iPhone, le navigateur peut effacer les données d'un site resté sept jours sans visite. Une app ajoutée à l'écran d'accueil garde les siennes.",
+  'install.title': 'Garde ta ville à l’abri',
+  'install.iosWhy': 'Sur iPhone, le navigateur peut effacer un site resté sept jours sans visite, mais pas une app ajoutée à l’écran d’accueil.',
   'install.ios': 'Dans Safari, ouvre Partager, puis « Sur l’écran d’accueil » et « Ajouter ».',
-  'install.iosCopy': "Ensuite, copie ta ville ici et colle-la à la première ouverture de l'app.",
+  'install.iosCopy': 'Puis copie ta ville ici et colle-la à la première ouverture de l’app.',
   'install.copy': 'Copier ma ville',
-  'install.copied': "Ville copiée : colle-la à la première ouverture de l'app.",
-  'install.copyFailed': "La copie n'a pas marché. Tu peux copier ta ville dans Réglages → Sauvegarde.",
-  'install.prompt': "Installée, l'app s'ouvre depuis ton écran d'accueil et garde ta ville sur ce téléphone.",
+  'install.copied': 'Ville copiée : colle-la à la première ouverture de l’app.',
+  'install.copyFailed': 'La copie n’a pas marché. Tu peux copier ta ville dans Réglages → Sauvegarde.',
+  'install.prompt': 'Installée, l’app s’ouvre depuis ton écran d’accueil et garde ta ville sur ce téléphone.',
   'install.install': 'Installer',
   'install.hide': 'Ne plus afficher',
   'install.help': 'Tu peux aussi utiliser le menu de ton navigateur → Installer l’application ou Ajouter à l’écran d’accueil. L’app reste utilisable ici.',
@@ -1800,9 +1795,9 @@ DICT.fr = {
   'welcome.start': 'Commencer par 2\u00a0minutes de calme',
   'welcome.choose': 'Choisir une activité',
   'welcome.note': 'Gratuit, sans compte ni pub. Ta ville reste sur cet appareil.',
-  'welcome.close': "Fermer l'accueil",
-  'welcome.langs': "Langue de l'app",
-  'welcome.paste': "J'avais commencé dans Safari : coller ma ville",
+  'welcome.close': 'Fermer l’accueil',
+  'welcome.langs': 'Langue de l’app',
+  'welcome.paste': 'J’avais commencé dans Safari : coller ma ville',
 };
 
 
@@ -2494,7 +2489,7 @@ DICT.en = {
   'help.offlineTitle': 'Offline',
   'help.offlineText': 'In a free activity, the phone may suspend the page: the timer is found again when you come back, but the end sound is not guaranteed while the app is closed.',
   'install.title': 'Keep your town safe',
-  'install.iosWhy': "On iPhone, the browser may erase a site's data after seven days without a visit. An app added to the Home Screen keeps its own.",
+  'install.iosWhy': 'On iPhone, the browser may erase a site left seven days without a visit, but not an app added to the Home Screen.',
   'install.ios': 'In Safari, open Share, then “Add to Home Screen” and “Add”.',
   'install.iosCopy': 'Then copy your town here and paste it the first time you open the app.',
   'install.copy': 'Copy my town',
@@ -12372,15 +12367,16 @@ function startFirstCalm() {
    Garde ta ville à l'abri : la carte d'installation, après la première séance
    ------------------------------------------------------------------------- */
 // Le navigateur d'Android (Chrome) propose d'installer l'app : l'événement est gardé pour le bouton « Installer ». promptSeen retient qu'il est
-// venu sur un téléphone (pointeur tactile) et le reste une fois l'invite lancée : la carte demeure alors, avec son aide. installed : l'app a
-// été installée depuis cette page. shelterHiddenHere : « Ne plus afficher » tient pour cette page même si le stockage refuse d'écrire.
-let installPrompt = null, promptSeen = false, installed = false, installHelpShown = false, shelterHiddenHere = false;
+// venu sur un téléphone (pointeur tactile) et le reste une fois l'invite lancée : la carte demeure alors. installButtonHidden : le bouton a
+// servi (l'invite ne se lance qu'une fois). installHelpShown : l'aide (le menu du navigateur) s'affiche, et reste. installed : l'app a été
+// installée depuis cette page. shelterHiddenHere : « Ne plus afficher » tient pour cette page même si le stockage refuse d'écrire.
+let installPrompt = null, promptSeen = false, installed = false, installButtonHidden = false, installHelpShown = false, shelterHiddenHere = false;
 
 // Posés dès le chargement du fichier : le navigateur peut proposer l'installation sans attendre le démarrage de la ville.
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();   // pas de bannière du navigateur : la carte propose l'installation, après la première séance
   installPrompt = e;
-  installHelpShown = false;   // une proposition neuve : le bouton revient, l'aide devenue inutile s'en va
+  installButtonHidden = false;   // une proposition neuve : le bouton « Installer » revient, l'aide reste (comme avant)
   if (window.matchMedia('(pointer: coarse)').matches) promptSeen = true;
   renderShelter();
 });
@@ -12400,12 +12396,14 @@ function shelterShown(kind = shelterKind()) {
   return !!kind && !isNewTown() && !isStandalone() && window.isSecureContext && !shelterHidden() && !installed;
 }
 
-// La carte, juste après l'accueil (index.html), remplie ici comme le rappel de sauvegarde et refaite à chaque rendu de la Ville : ses boutons
-// ont une clé de focus (keepFocus). Une carte qui disparaît avec le focus le passe à « Lancer une activité ».
+// La carte, juste après l'accueil (index.html), remplie ici comme le rappel de sauvegarde et refaite à chaque rendu de la Ville, mais aussi quand
+// le navigateur parle (proposition d'installer, app installée), hors de renderVille et de son keepFocus. Ses boutons ont une clé de focus :
+// redessinée sous un focus (au clavier), la carte le rend elle-même au bouton de même clé ; disparue avec lui, elle le passe à « Lancer une
+// activité ».
 function renderShelter() {
   const card = $('#installCard');
   if (!card) return;
-  const kind = shelterKind(), held = card.contains(document.activeElement);
+  const kind = shelterKind(), held = card.contains(document.activeElement), key = held ? focusKeyOf(document.activeElement) : null;
   card.hidden = !shelterShown(kind);
   if (card.hidden) {
     card.replaceChildren();
@@ -12420,9 +12418,10 @@ function renderShelter() {
       kind === 'ios' ? [h('p', {}, t('install.iosWhy')), h('p', {}, t('install.ios')), h('p', {}, t('install.iosCopy'))] : h('p', {}, t('install.prompt')),
       h('div', { class: 'install-actions' },
         kind === 'ios' && button('copy', 'btn-primary', t('install.copy')),
-        kind === 'prompt' && !installHelpShown && button('install', 'btn-primary', t('install.install')),
+        kind === 'prompt' && !installButtonHidden && button('install', 'btn-primary', t('install.install')),
         button('hide', 'btn-ghost', t('install.hide'))),
       installHelpShown && h('p', { class: 'note install-help' }, t('install.help'))));
+  if (held) focusByKey(key);
 }
 
 // « Copier ma ville » : le texte de sauvegarde, à coller à la première ouverture de l'app installée. Il compte comme une sauvegarde (markBackup).
@@ -12442,6 +12441,7 @@ async function installApp() {
   const prompt = installPrompt;
   if (!prompt) return;
   installPrompt = null;
+  installButtonHidden = true;
   installHelpShown = true;
   renderShelter();
   focusByKey('install:hide');

@@ -33,9 +33,6 @@ function setLang(pref) {
   LANG = resolveLang(pref);
   TYPO = (DICT[LANG] && DICT[LANG]['lang.typo']) || '';
   if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = LANG;
-  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
-    window.dispatchEvent(new CustomEvent('ville:lang'));
-  }
 }
 
 function pluralCategory(n) {
@@ -99,5 +96,3 @@ function cityName() {
   const name = S.personal && S.personal.name;
   return name && !langs().some(lang => DICT[lang]['city.defaultName'] === name) ? name : t('city.defaultName');
 }
-
-if (typeof window !== 'undefined') window.VilleI18n = Object.freeze({ t: (key, params) => t(key, params), lang: () => LANG });

@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { storage, lockManager, stateApp, FILES } = require('./helpers/state-vm.cjs');
 
 // Étape 8, les premiers pas : « ville sans séance » se lit dans les compteurs (S.stats), jamais dans l'historique.
@@ -167,4 +169,48 @@ test("aide : on peut commencer ici, sans rien installer ; sur iPhone, la ville s
   assert.equal(fr, 'Tu peux commencer ici, sans rien installer. Sur iPhone, installe l’app quand tu veux : copie ta ville avec « Copier ma ville », puis colle-la à la première ouverture de l’app.');
   assert.equal(en, 'You can start right here, with nothing to install. On iPhone, install the app whenever you like: copy your town with “Copy my town”, then paste it the first time you open the app.');
   for (const text of [fr, en]) assert.doesNotMatch(text, /avant de commencer|before you start/);
+});
+
+// Les textes français de l'étape 8 s'écrivent avec l'apostrophe typographique (’, U+2019), comme leurs voisins (help.*, install.ios) : jamais
+// l'apostrophe droite. L'anglais garde sa convention.
+const STAGE8_FR = ['help.installFirst', 'backup.openSection', 'tpl.breathe', 'install.title', 'install.iosWhy', 'install.ios', 'install.iosCopy', 'install.copy',
+  'install.copied', 'install.copyFailed', 'install.prompt', 'install.install', 'install.hide', 'install.help', 'welcome.title', 'welcome.lede', 'welcome.step1',
+  'welcome.step2', 'welcome.step3', 'welcome.start', 'welcome.choose', 'welcome.note', 'welcome.close', 'welcome.langs', 'welcome.paste'];
+test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apostrophe droite", () => {
+  const { DICT } = stateApp(undefined, undefined, { expose: ['DICT'] });
+  for (const key of STAGE8_FR) {
+    assert.equal(typeof DICT.fr[key], 'string', key);
+    assert.doesNotMatch(DICT.fr[key], /'/, key);
+  }
+  // Le texte entier, apostrophes comprises (U+2019).
+  assert.deepEqual(Object.fromEntries(['install.title', 'install.iosWhy', 'install.iosCopy', 'install.prompt', 'install.copied', 'install.copyFailed',
+    'welcome.close', 'welcome.langs', 'welcome.paste'].map(key => [key, DICT.fr[key]])), {
+    'install.title': 'Garde ta ville à l’abri',
+    'install.iosWhy': 'Sur iPhone, le navigateur peut effacer un site resté sept jours sans visite, mais pas une app ajoutée à l’écran d’accueil.',
+    'install.iosCopy': 'Puis copie ta ville ici et colle-la à la première ouverture de l’app.',
+    'install.prompt': 'Installée, l’app s’ouvre depuis ton écran d’accueil et garde ta ville sur ce téléphone.',
+    'install.copied': 'Ville copiée : colle-la à la première ouverture de l’app.',
+    'install.copyFailed': 'La copie n’a pas marché. Tu peux copier ta ville dans Réglages → Sauvegarde.',
+    'welcome.close': 'Fermer l’accueil',
+    'welcome.langs': 'Langue de l’app',
+    'welcome.paste': 'J’avais commencé dans Safari : coller ma ville',
+  });
+  assert.equal(DICT.en['install.iosWhy'], "On iPhone, the browser may erase a site left seven days without a visit, but not an app added to the Home Screen.");
+  assert.equal(DICT.en['install.iosCopy'], 'Then copy your town here and paste it the first time you open the app.');
+});
+
+// Le texte français fixe de la carte « Bienvenue » (index.html, lu avant que le script ne le remplace, ou sans lui) dit la même chose que le
+// dictionnaire, apostrophes comprises : texte, et aria-label.
+test("carte Bienvenue : le texte français fixe d'index.html est celui du dictionnaire", () => {
+  const { DICT } = stateApp(undefined, undefined, { expose: ['DICT'] });
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('<section class="card welcome-card"'), card = html.slice(start, html.indexOf('</section>', start));
+  assert.ok(start > 0 && card.includes('id="welcomeTitle"'), 'la carte est dans la page');
+  assert.doesNotMatch(card, /'/, 'aucune apostrophe droite dans la carte');
+  const decode = text => text.replace(/&nbsp;/g, '\u00a0');
+  const pairs = [...card.matchAll(/data-i18n="([^"]+)"[^>]*>([^<]*)</g)].map(m => [m[1], decode(m[2])]);
+  pairs.push(...[...card.matchAll(/aria-label="([^"]*)"\s+data-i18n-aria-label="([^"]+)"/g)].map(m => [m[2], decode(m[1])]));
+  assert.deepEqual(pairs.map(([key]) => key).sort(), ['welcome.choose', 'welcome.close', 'welcome.langs', 'welcome.lede', 'welcome.note', 'welcome.paste', 'welcome.start',
+    'welcome.step1', 'welcome.step2', 'welcome.step3', 'welcome.title']);
+  for (const [key, text] of pairs) assert.equal(text, DICT.fr[key], key);
 });

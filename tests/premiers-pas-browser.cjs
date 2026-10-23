@@ -79,9 +79,9 @@ async function welcomeForNewTown(browser, baseURL) {
       assert.deepEqual(await card.locator('ol li').allInnerTexts(), ['Lance un chrono pour une vraie activité.', 'Chaque minute terminée te rapporte des pièces.', 'Construis ta ville avec tes pièces.']);
       assert.equal(await page.locator('#welcomeStart').innerText(), `Commencer par 2${NB}minutes de calme`);
       assert.equal(await page.locator('#welcomeChoose').innerText(), 'Choisir une activité');
-      assert.equal(await page.locator('#welcomeClose').getAttribute('aria-label'), "Fermer l'accueil");
+      assert.equal(await page.locator('#welcomeClose').getAttribute('aria-label'), 'Fermer l’accueil');
       assert.equal(await page.locator('#welcomeLangs').getAttribute('role'), 'group');
-      assert.equal(await page.locator('#welcomeLangs').getAttribute('aria-label'), "Langue de l'app");
+      assert.equal(await page.locator('#welcomeLangs').getAttribute('aria-label'), 'Langue de l’app');
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
   }
@@ -443,7 +443,7 @@ async function quietFirstOpen(browser, baseURL) {
   return "Première ouverture calme : l'étoile versée sans message, pas de souhait avant le lendemain de la première séance, l'aide dit de commencer ici";
 }
 
-// L'abri : la carte « Garde ta ville à l'abri ». Un faux presse-papiers, posé avant le chargement de la page : writeText range le texte
+// L'abri : la carte « Garde ta ville à l’abri ». Un faux presse-papiers, posé avant le chargement de la page : writeText range le texte
 // dans window.__copied et répond, ou refuse quand window.__clipboardFails est vrai (le vrai presse-papiers demande un accord que le test
 // ne donne pas).
 const fakeClipboard = () => {
@@ -516,7 +516,7 @@ async function shelterAfterFirstSession(browser, baseURL) {
       await result(page).locator('.res-title', { hasText: 'Session réussie' }).waitFor();
       await backToCity(page);
       assert.equal(await card.isVisible(), true);
-      assert.equal(await page.locator('#installTitle').innerText(), "Garde ta ville à l'abri");
+      assert.equal(await page.locator('#installTitle').innerText(), 'Garde ta ville à l’abri');
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
   }
@@ -531,11 +531,11 @@ async function shelterAfterFirstSession(browser, baseURL) {
       assert.deepEqual(await card.evaluate(el => ({ tag: el.tagName, role: el.getAttribute('role'), label: el.getAttribute('aria-labelledby'),
         title: document.getElementById('installTitle').tagName, before: el.previousElementSibling.id, parent: el.parentElement.id })),
       { tag: 'DIV', role: 'region', label: 'installTitle', title: 'H3', before: 'welcomeCard', parent: 'view-ville' });
-      assert.equal(await page.locator('#installTitle').innerText(), "Garde ta ville à l'abri");
+      assert.equal(await page.locator('#installTitle').innerText(), 'Garde ta ville à l’abri');
       assert.deepEqual(await shelterTexts(card), [
-        "Sur iPhone, le navigateur peut effacer les données d'un site resté sept jours sans visite. Une app ajoutée à l'écran d'accueil garde les siennes.",
+        'Sur iPhone, le navigateur peut effacer un site resté sept jours sans visite, mais pas une app ajoutée à l’écran d’accueil.',
         'Dans Safari, ouvre Partager, puis « Sur l’écran d’accueil » et « Ajouter ».',
-        "Ensuite, copie ta ville ici et colle-la à la première ouverture de l'app.",
+        'Puis copie ta ville ici et colle-la à la première ouverture de l’app.',
       ]);
       assert.match(await card.innerText(), /sept jours/);
       // Pas de bouton « Installer » sur iPhone : « Copier ma ville », puis « Ne plus afficher ».
@@ -545,16 +545,25 @@ async function shelterAfterFirstSession(browser, baseURL) {
       ]);
       assert.equal(await card.locator('[data-act="install"]').count(), 0);
       assert.deepEqual(await card.locator('img').evaluateAll(images => images.map(img => [img.getAttribute('src'), img.getAttribute('alt'), img.width, img.height])), [['icons/icon-192.png', '', 48, 48]]);
-      // Redessinée avec la Ville, la carte garde le focus d'un de ses boutons.
+      assert.equal(await card.locator('img').isVisible(), true, "à 390 px, l'icône est là");
+      // Elle cède sa place au texte sous 380 px (375 px est un iPhone courant) et revient à 380 px.
+      for (const [width, shown] of [[375, false], [379, false], [380, true], [390, true]]) {
+        await page.setViewportSize({ width, height: 844 });
+        assert.equal(await card.locator('img').isVisible(), shown, `l'icône à ${width} px`);
+      }
+      // Redessinée avec la Ville, la carte garde le focus d'un de ses boutons ; et quand le navigateur envoie une proposition d'installation
+      // (sans effet ici, mais elle redessine la carte), au clavier sur « Ne plus afficher », le focus n'est pas perdu non plus.
       await card.locator('[data-act="hide"]').focus();
       await page.evaluate(() => __ville.renderAll());
+      assert.equal(await focusedKey(page), 'install:hide');
+      await propose(page, 'dismissed');
       assert.equal(await focusedKey(page), 'install:hide');
 
       // « Copier ma ville » : le texte d'une vraie sauvegarde, sans séance en cours, compté comme une sauvegarde, et le message le dit.
       assert.equal(await backupAt(page), 0);
       await card.locator('[data-act="copy"]').click();
       await page.locator('#toast').filter({ hasText: 'Ville copiée' }).waitFor();
-      assert.match(await page.locator('#toast').innerText(), /^Ville copiée\s: colle-la à la première ouverture de l'app\.$/);
+      assert.match(await page.locator('#toast').innerText(), /^Ville copiée\s: colle-la à la première ouverture de l’app\.$/);
       const copied = await page.evaluate(() => window.__copied);
       assert.match(copied, /^VBE2\.[A-Za-z0-9_-]+\.[0-9a-z]+$/);
       const saved = JSON.parse(Buffer.from(copied.split('.')[1], 'base64url').toString('utf8'));
@@ -574,7 +583,25 @@ async function shelterAfterFirstSession(browser, baseURL) {
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
   }
-  return "Abri : la carte vient après la première séance, dit pourquoi sur iPhone, et « Copier ma ville » copie une vraie sauvegarde";
+  for (const lang of ['fr', 'en']) {
+    // Sur le plus petit téléphone (320 × 568), la carte est compacte : l'icône cède sa place au texte (sous 380 px), et les deux boutons se voient
+    // en entier sans défiler, leur bas au-dessus de la barre des onglets.
+    const { context, page, errors } = await shelterTown(browser, baseURL, { seed: town({}, [], { settings: { lang } }), viewport: { width: 320, height: 568 } });
+    try {
+      const where = `à 320 × 568 en ${lang}`;
+      const found = await page.evaluate(() => {
+        const card = document.querySelector('#installCard'), bottom = act => Math.round(card.querySelector(`[data-act="${act}"]`).getBoundingClientRect().bottom);
+        return { scrolled: document.querySelector('#main').scrollTop, icon: card.querySelector('img').getClientRects().length > 0, copy: bottom('copy'), hide: bottom('hide'),
+          tabbar: Math.round(document.querySelector('.tabbar').getBoundingClientRect().top) };
+      });
+      assert.equal(found.scrolled, 0, `${where} : la page n'est pas défilée`);
+      assert.equal(found.icon, false, `${where} : l'icône prend la place du texte`);
+      assert.ok(found.copy <= found.tabbar, `${where} : « Copier ma ville » finit à ${found.copy} px, sous la barre des onglets (${found.tabbar} px)`);
+      assert.ok(found.hide <= found.tabbar, `${where} : « Ne plus afficher » finit à ${found.hide} px, sous la barre des onglets (${found.tabbar} px)`);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Abri : la carte vient après la première séance, dit pourquoi sur iPhone, tient sans défiler à 320 px, et « Copier ma ville » copie une vraie sauvegarde";
 }
 
 // Dans l'app installée, la carte n'a plus rien à proposer : jamais, même pour une ville qui a des séances (la même ville, dans le navigateur,
@@ -677,7 +704,7 @@ async function shelterCopyRefused(browser, baseURL) {
     await page.locator('#installCard [data-act="copy"]').click();
     const toast = page.locator('#toast'), open = toast.getByRole('button', { name: 'Aller à la sauvegarde', exact: true });
     await open.waitFor();
-    assert.match(await toast.innerText(), /^La copie n.a pas marché\.\sTu peux copier ta ville dans Réglages → Sauvegarde\./);
+    assert.match(await toast.innerText(), /^La copie n’a pas marché\.\sTu peux copier ta ville dans Réglages → Sauvegarde\./);
     assert.equal(await page.evaluate(() => document.body.classList.contains('toast-kept')), true, 'le message reste');
     assert.equal(await page.evaluate(() => window.__copied ?? null), null, "rien n'a été copié");
     assert.equal(await backupAt(page), 0, 'une copie refusée ne compte pas comme une sauvegarde');
@@ -703,7 +730,7 @@ async function shelterCopyRefused(browser, baseURL) {
       await page.locator('#installCard [data-act="copy"]').click();
       const toast = page.locator('#toast');
       await toast.getByRole('button', { name: 'Aller à la sauvegarde', exact: true }).waitFor();
-      assert.match(await toast.innerText(), /^La copie n.a pas marché\./);
+      assert.match(await toast.innerText(), /^La copie n’a pas marché\./);
       assert.equal(await backupAt(page), 0);
       assert.equal(await page.locator('#sheet').isHidden(), true);
       assert.deepEqual(errors, []);
@@ -723,13 +750,17 @@ async function shelterAndroid(browser, baseURL) {
       assert.equal(await card.isHidden(), true);
       assert.equal(await propose(page, 'dismissed'), true, 'la bannière du navigateur est empêchée');
       assert.equal(await card.isVisible(), true);
-      assert.equal(await page.locator('#installTitle').innerText(), "Garde ta ville à l'abri");
-      assert.deepEqual(await shelterTexts(card), ["Installée, l'app s'ouvre depuis ton écran d'accueil et garde ta ville sur ce téléphone."]);
+      assert.equal(await page.locator('#installTitle').innerText(), 'Garde ta ville à l’abri');
+      assert.deepEqual(await shelterTexts(card), ['Installée, l’app s’ouvre depuis ton écran d’accueil et garde ta ville sur ce téléphone.']);
       assert.deepEqual(await card.locator('button').evaluateAll(buttons => buttons.map(button => [button.dataset.act, button.dataset.focusKey, button.textContent])), [
         ['install', 'install:install', 'Installer'],
         ['hide', 'install:hide', 'Ne plus afficher'],
       ]);
       assert.equal(await card.locator('.install-help').count(), 0);
+      // Le navigateur peut envoyer sa proposition deux fois : la carte est redessinée sous un focus au clavier, qui reste sur son bouton.
+      await card.locator('[data-act="install"]').focus();
+      await propose(page, 'dismissed');
+      assert.equal(await focusedKey(page), 'install:install');
       await card.locator('[data-act="install"]').click();
       assert.equal(await card.locator('[data-act="install"]').count(), 0);
       assert.match(await card.locator('.install-help').innerText(), /menu de ton navigateur/);
@@ -739,10 +770,13 @@ async function shelterAndroid(browser, baseURL) {
       await page.evaluate(() => __ville.renderAll());
       assert.equal(await card.locator('[data-act="install"]').count(), 0);
       assert.equal(await card.locator('.install-help').count(), 1);
-      // Une nouvelle proposition du navigateur rend le bouton (et reprend l'aide) : on peut installer.
+      // Après un refus, Chrome renvoie sa proposition : la carte est redessinée, le focus qu'elle avait reste sur son bouton, « Installer »
+      // revient et l'aide (le menu du navigateur) reste, comme avant.
       await propose(page, 'accepted');
+      assert.equal(await focusedKey(page), 'install:hide');
       assert.equal(await card.locator('[data-act="install"]').isVisible(), true);
-      assert.equal(await card.locator('.install-help').count(), 0);
+      assert.equal(await card.locator('.install-help').count(), 1);
+      assert.deepEqual(await card.locator('button').evaluateAll(buttons => buttons.map(button => button.dataset.act)), ['install', 'hide']);
       await card.locator('[data-act="install"]').click();
       await card.waitFor({ state: 'hidden' });
       assert.equal(await page.evaluate(() => window.installCalls), 1);
@@ -759,8 +793,10 @@ async function shelterAndroid(browser, baseURL) {
     try {
       await propose(page, 'dismissed');
       assert.equal(await page.locator('#installCard').isVisible(), true);
+      await page.locator('#installCard [data-act="hide"]').focus();
       await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
       assert.equal(await page.locator('#installCard').isHidden(), true);
+      assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'ctaStart');
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
   }
@@ -783,8 +819,8 @@ async function shelterAndroid(browser, baseURL) {
 async function shelterFits320(browser, baseURL) {
   const viewport = { width: 320, height: 568 };
   const TEXTS = {
-    fr: { title: "Garde ta ville à l'abri", ios: /sept jours/, prompt: /Installée, l.app s.ouvre/, copy: 'Copier ma ville' },
-    en: { title: 'Keep your town safe', ios: /seven days/, prompt: /Once installed, the app opens from your home screen/, copy: 'Copy my town' },
+    fr: { title: 'Garde ta ville à l’abri', ios: /sept jours/, prompt: /Installée, l’app s’ouvre/, copy: 'Copier ma ville' },
+    en: { title: 'Keep your town safe', ios: /left seven days without a visit/, prompt: /Once installed, the app opens from your home screen/, copy: 'Copy my town' },
   };
   for (const lang of ['fr', 'en']) {
     const seed = town({}, [], { settings: { lang } }), texts = TEXTS[lang];
