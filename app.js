@@ -21,6 +21,7 @@ const LS_MOOD_CARD = 'ville-bien-etre/v1:mood-card';      // carte des moments d
 const LS_WELCOME = 'ville-bien-etre/v1:welcome-closed';   // carte « Bienvenue » fermée ('1'), sur cet appareil
 const LS_INSTALL_HINT = 'ville-bien-etre/v1:install-hint';  // carte « Garde ta ville à l'abri » masquée pour de bon ('1'), sur cet appareil
 const BACKUP_EVERY = 14 * 86400000;                       // rappel quand la dernière sauvegarde a plus de 14 jours
+const IOS_BACKUP_EVERY = 5 * 86400000;                    // dans un onglet sur iPhone ou iPad (le navigateur peut effacer un site resté 7 jours sans visite) : plus de 5 jours
 const HISTORY_MAX = 150;
 const LIST_MAX = 60;
 const DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
@@ -1578,6 +1579,7 @@ DICT.fr = {
   'recap.sets': { one: '{n} ensemble découvert', other: '{n} ensembles découverts' },
   'recap.achievements': { one: '{n} succès gagné', other: '{n} succès gagnés' },
   'recap.share': "Partager l'image",
+  'recap.backup': 'Sauvegarder ma ville',
   'recap.cardMonth': 'Ton mois',
   'recap.cardYear': 'Ton année',
   'recap.open': 'Voir',
@@ -2866,6 +2868,7 @@ DICT.en = {
   'recap.sets': { one: '{n} set discovered', other: '{n} sets discovered' },
   'recap.achievements': { one: '{n} achievement earned', other: '{n} achievements earned' },
   'recap.share': 'Share the picture',
+  'recap.backup': 'Back up my town',
   'recap.cardMonth': 'Your month',
   'recap.cardYear': 'Your year',
   'recap.open': 'View',
@@ -9359,11 +9362,16 @@ function markBackup() {
   if (line) line.textContent = frTypo(lastBackupText());
   if (currentTab === 'ville') renderVille();
 }
-// Rappel si la ville a changé depuis la dernière sauvegarde et que celle-ci a plus de 14 jours.
+// Rappel si la ville a changé depuis la dernière sauvegarde. Ordinairement : après trois séances réussies, quand la dernière sauvegarde a plus de 14 jours.
 function backupDue() {
-  if (Store.mode === 'cloud' || S.stats.ok < 3 || Date.now() < lsNum(LS_REMIND)) return false;
+  if (Store.mode === 'cloud' || Date.now() < lsNum(LS_REMIND)) return false;
   const at = lsNum(LS_BACKUP_AT);
-  return S.updatedAt > at && Date.now() - at > BACKUP_EVERY;
+  if (S.updatedAt <= at) return false;
+  // Onglet sur iPhone ou iPad : le navigateur peut effacer un site resté sept jours sans visite. Le rappel vient dès la première séance réussie, quand la ville et
+  // la dernière sauvegarde (la plus récente des deux) ont plus de 5 jours. L'app installée n'est pas effacée ainsi : elle suit la règle ordinaire. createdAt est
+  // toujours une date valide (normalize y veille) ; « || 0 » garde un nombre dans le calcul quoi qu'il arrive.
+  if (isIOS() && !isStandalone()) return S.stats.ok >= 1 && Date.now() - Math.max(at, S.createdAt || 0) > IOS_BACKUP_EVERY;
+  return S.stats.ok >= 3 && Date.now() - at > BACKUP_EVERY;
 }
 function renderRemind() {
   const rm = $('#remind');
@@ -11831,6 +11839,9 @@ function openRecap(kind, key) {
         sharing = true;
         try { await shareRecapImage(r); } finally { sharing = false; }
       } }, icon('share'), t('recap.share')),
+      // La sauvegarde de Réglages → Sauvegarde, à portée de main juste après un beau moment : un fichier (la feuille de partage sur iPhone), qui compte comme
+      // une sauvegarde. La feuille reste ouverte et ce bouton n'est pas redessiné (markBackup ne refait que la Ville, dessous) : le focus n'a rien à retrouver.
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => saveBackupFile() }, icon('download'), t('recap.backup')),
       h('button', { class: 'btn btn-primary', type: 'button', onclick: closeSheet }, t('common.close'))));
   }, { keep: true });   // une lecture, comme le bilan de la semaine
 }

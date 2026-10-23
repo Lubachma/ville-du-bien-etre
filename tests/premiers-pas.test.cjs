@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { storage, lockManager, stateApp, FILES } = require('./helpers/state-vm.cjs');
+const { loadApp } = require('./helpers/app.cjs');
 
 // Étape 8, les premiers pas : « ville sans séance » se lit dans les compteurs (S.stats), jamais dans l'historique.
 // Les villes amorcées des tests, et les vieilles sauvegardes, ont des séances comptées et un historique vide.
@@ -176,13 +177,16 @@ test("aide : on peut commencer ici, sans rien installer ; sur iPhone, la ville s
 const STAGE8_FR = ['help.installFirst', 'backup.openSection', 'tpl.breathe', 'install.title', 'install.iosWhy', 'install.ios', 'install.iosCopy', 'install.copy',
   'install.copied', 'install.copyFailed', 'install.prompt', 'install.install', 'install.hide', 'install.help', 'welcome.title', 'welcome.lede', 'welcome.step1',
   'welcome.step2', 'welcome.step3', 'welcome.start', 'welcome.choose', 'welcome.note', 'welcome.close', 'welcome.langs', 'welcome.paste',
-  'welcome.pasteTitle', 'welcome.pasteLine', 'welcome.pasteRestore', 'welcome.pasteNone'];
+  'welcome.pasteTitle', 'welcome.pasteLine', 'welcome.pasteRestore', 'welcome.pasteNone', 'recap.backup'];
 test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apostrophe droite", () => {
   const { DICT } = stateApp(undefined, undefined, { expose: ['DICT'] });
   for (const key of STAGE8_FR) {
     assert.equal(typeof DICT.fr[key], 'string', key);
     assert.doesNotMatch(DICT.fr[key], /'/, key);
   }
+  // Le bouton des récapitulatifs du mois et de l'année.
+  assert.equal(DICT.fr['recap.backup'], 'Sauvegarder ma ville');
+  assert.equal(DICT.en['recap.backup'], 'Back up my town');
   // Le texte entier, apostrophes comprises (U+2019).
   assert.deepEqual(Object.fromEntries(['install.title', 'install.iosWhy', 'install.iosCopy', 'install.prompt', 'install.copied', 'install.copyFailed',
     'welcome.close', 'welcome.langs', 'welcome.paste', 'welcome.pasteNone'].map(key => [key, DICT.fr[key]])), {
@@ -221,4 +225,80 @@ test("carte Bienvenue : le texte français fixe d'index.html est celui du dictio
   assert.deepEqual(pairs.map(([key]) => key).sort(), ['welcome.choose', 'welcome.close', 'welcome.langs', 'welcome.lede', 'welcome.note', 'welcome.paste', 'welcome.start',
     'welcome.step1', 'welcome.step2', 'welcome.step3', 'welcome.title']);
   for (const [key, text] of pairs) assert.equal(text, DICT.fr[key], key);
+});
+
+// Le rappel de sauvegarde. Dans un onglet de navigateur sur iPhone ou iPad, le navigateur peut effacer un site resté sept jours sans visite : le rappel
+// vient dès la première séance réussie, quand la ville et la dernière sauvegarde ont plus de 5 jours. Ailleurs (un autre appareil, l'app installée), la
+// règle reste 3 séances réussies et 14 jours. backupDue lit l'horloge, le navigateur et le stockage de l'appareil : un chargement par date, avec les
+// fichiers de backup.test.cjs, et le navigateur donné (loadApp remplace navigator et window).
+const BACKUP_FILES = ['00-core.js', '05-i18n.js', '06-lang-fr.js', '07-lang-en.js', '10-state.js', '20-rules.js', '45-settings.js'];
+const BACKUP_AT = 'ville-bien-etre/v1:backup-at', BACKUP_LATER = 'ville-bien-etre/v1:backup-later';
+const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+const SAFARI_MAC_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
+const CHROME_MAC_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+// Les globaux d'un appareil : son navigateur, et si la page y est ouverte comme une app (display-mode: standalone).
+const device = (navigator, { displayStandalone = false } = {}) => ({ navigator: { languages: ['fr-CH'], ...navigator }, window: { matchMedia: () => ({ matches: displayStandalone }) } });
+const iphone = (extra, options) => device({ userAgent: IPHONE_UA, platform: 'iPhone', maxTouchPoints: 5, ...extra }, options);
+const ipad = () => device({ userAgent: SAFARI_MAC_UA, platform: 'MacIntel', maxTouchPoints: 5 });   // l'iPad se présente comme un Mac, mais il a un écran tactile
+const mac = () => device({ userAgent: CHROME_MAC_UA, platform: 'MacIntel', maxTouchPoints: 0 });
+// Une ville née le 10 octobre 2026, de `ok` séances réussies, changée pour la dernière fois une heure avant `now` (ou à `changed`), regardée à la date `now`
+// depuis l'appareil donné. backedUp : la dernière sauvegarde faite depuis cet appareil ; later : « Plus tard » appuyé jusqu'à cette date ; cloud : la
+// ville est synchronisée avec un compte ; undated : une ville sans date de création (elle ne peut pas exister : normalize en donne toujours une).
+function backupDueOn(now, globals, { ok = 1, backedUp, changed, later, cloud, undated } = {}) {
+  const a = loadApp(BACKUP_FILES, { now, expose: ['backupDue', 'lsSet', 'Store'], globals });
+  a.state.stats.ok = ok;
+  a.state.createdAt = Date.parse('2026-10-10T10:00:00Z');
+  if (undated) delete a.state.createdAt;
+  a.state.updatedAt = changed ? Date.parse(changed) : Date.parse(now) - 3600000;
+  if (backedUp) a.lsSet(BACKUP_AT, Date.parse(backedUp));
+  if (later) a.lsSet(BACKUP_LATER, Date.parse(later));
+  if (cloud) a.Store.mode = 'cloud';
+  return a.backupDue();
+}
+
+test('rappel de sauvegarde : sur iPhone dès la première séance, après 5 jours', () => {
+  const due = (now, options, globals = iphone()) => backupDueOn(now, globals, options);
+  // Une seule séance réussie, une ville née le 10 octobre : à quatre jours rien ne presse, à six le rappel vient (sans attendre trois séances ni 14 jours).
+  assert.equal(due('2026-10-14T12:00:00Z'), false, 'quatre jours');
+  assert.equal(due('2026-10-16T12:00:00Z'), true, 'six jours');
+  // Au-delà de cinq jours seulement : cinq jours pile, non ; une milliseconde de plus, oui.
+  assert.equal(due('2026-10-15T10:00:00Z'), false, 'cinq jours pile');
+  assert.equal(due('2026-10-15T10:00:00.001Z'), true, 'cinq jours et une milliseconde');
+  // Une sauvegarde faite le 13 repart de là : trois jours seulement. Dépassé de nouveau cinq jours après elle, le rappel revient.
+  assert.equal(due('2026-10-16T12:00:00Z', { backedUp: '2026-10-13T10:00:00Z' }), false, 'sauvegardée il y a trois jours');
+  assert.equal(due('2026-10-19T12:00:00Z', { backedUp: '2026-10-13T10:00:00Z' }), true, 'sauvegardée il y a six jours, la ville a changé depuis');
+  // Une ville inchangée depuis sa dernière sauvegarde n'a rien à sauvegarder, même vieille de dix jours.
+  assert.equal(due('2026-10-20T12:00:00Z', { backedUp: '2026-10-12T10:00:00Z', changed: '2026-10-12T09:00:00Z' }), false, 'inchangée depuis la sauvegarde');
+  // L'iPad aussi (il se présente comme un Mac, mais il a un écran tactile).
+  assert.equal(due('2026-10-16T12:00:00Z', {}, ipad()), true, 'iPad, six jours');
+  assert.equal(due('2026-10-14T12:00:00Z', {}, ipad()), false, 'iPad, quatre jours');
+  // Sans date de création (impossible, mais le calcul reste un nombre) : jamais sauvegardée, la ville est rappelée ; sauvegardée il y a trois jours, non.
+  assert.equal(due('2026-10-16T12:00:00Z', { undated: true }), true, 'sans date de création, jamais sauvegardée');
+  assert.equal(due('2026-10-16T12:00:00Z', { undated: true, backedUp: '2026-10-13T10:00:00Z' }), false, 'sans date de création, sauvegardée il y a trois jours');
+  // Il faut au moins une séance réussie, et le rappel reporté ou une ville synchronisée avec un compte le font taire.
+  assert.equal(due('2026-10-16T12:00:00Z', { ok: 0 }), false, 'aucune séance réussie');
+  assert.equal(due('2026-10-16T12:00:00Z', { later: '2026-10-20T12:00:00Z' }), false, '« Plus tard »');
+  assert.equal(due('2026-10-16T12:00:00Z', { cloud: true }), false, 'ville synchronisée');
+  // L'app installée (navigator.standalone, ou display-mode: standalone) n'est pas effacée au bout de sept jours : la règle ordinaire, qui veut trois séances.
+  assert.equal(due('2026-10-16T12:00:00Z', {}, iphone({ standalone: true })), false, 'app installée, une séance');
+  assert.equal(due('2026-10-16T12:00:00Z', {}, iphone({}, { displayStandalone: true })), false, 'app installée (display-mode), une séance');
+  assert.equal(due('2026-10-16T12:00:00Z', { ok: 3 }, iphone({ standalone: true })), true, 'app installée, trois séances');
+});
+
+test('rappel de sauvegarde : ailleurs, la règle reste 3 séances et 14 jours', () => {
+  const due = (now, options, globals = mac()) => backupDueOn(now, globals, options);
+  // Une ville de six jours et une seule séance : hors de l'iPhone, rien ne presse.
+  assert.equal(due('2026-10-16T12:00:00Z'), false, 'une séance, jamais sauvegardée');
+  assert.equal(due('2026-10-16T12:00:00Z', { ok: 2 }), false, 'deux séances, jamais sauvegardée');
+  // Trois séances réussies et jamais sauvegardée : le rappel vient.
+  assert.equal(due('2026-10-16T12:00:00Z', { ok: 3 }), true, 'trois séances, jamais sauvegardée');
+  // Une sauvegarde de dix jours est récente ; de quinze jours, non. La limite est à plus de 14 jours : 14 jours pile, non ; une milliseconde de plus, oui.
+  assert.equal(due('2026-10-16T12:00:00Z', { ok: 3, backedUp: '2026-10-06T12:00:00Z' }), false, 'sauvegardée il y a dix jours');
+  assert.equal(due('2026-10-16T12:00:00Z', { ok: 3, backedUp: '2026-10-01T10:00:00Z' }), true, 'sauvegardée il y a quinze jours');
+  assert.equal(due('2026-10-16T12:00:00Z', { ok: 3, backedUp: '2026-10-02T12:00:00Z' }), false, 'sauvegardée il y a 14 jours pile');
+  assert.equal(due('2026-10-16T12:00:00Z', { ok: 3, backedUp: '2026-10-02T11:59:59.999Z' }), true, 'sauvegardée il y a 14 jours et une milliseconde');
+  // Un téléphone Android, tactile lui aussi, suit la même règle : seul l'iPhone ou l'iPad dans un onglet a un navigateur qui efface un site au bout de sept jours.
+  const android = device({ userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36', platform: 'Linux armv81', maxTouchPoints: 5 });
+  assert.equal(due('2026-10-16T12:00:00Z', {}, android), false, 'Android, une séance');
+  assert.equal(due('2026-10-16T12:00:00Z', { ok: 3 }, android), true, 'Android, trois séances');
 });

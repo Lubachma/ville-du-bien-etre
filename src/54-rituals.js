@@ -194,6 +194,9 @@ function openRecap(kind, key) {
         sharing = true;
         try { await shareRecapImage(r); } finally { sharing = false; }
       } }, icon('share'), t('recap.share')),
+      // La sauvegarde de Réglages → Sauvegarde, à portée de main juste après un beau moment : un fichier (la feuille de partage sur iPhone), qui compte comme
+      // une sauvegarde. La feuille reste ouverte et ce bouton n'est pas redessiné (markBackup ne refait que la Ville, dessous) : le focus n'a rien à retrouver.
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => saveBackupFile() }, icon('download'), t('recap.backup')),
       h('button', { class: 'btn btn-primary', type: 'button', onclick: closeSheet }, t('common.close'))));
   }, { keep: true });   // une lecture, comme le bilan de la semaine
 }

@@ -52,7 +52,7 @@
 | 🏆 **Collection and achievements** | A notebook in the Journal: 48 achievements (first steps, domains, times of day, regularity, time, city, living town, rituals, harmony, companion), 7 of which give a decoration; the collection of all 52 items, the sets discovered, the visitors met, the festivals celebrated and the postcards of friends' towns. An existing city receives the achievements it already earned in one go |
 | 🌱 **Kind streak** | 0 to 2 rest days per week, a pause mode, a +20 % welcome-back gift after a break, and never a guilt message. The streak can be hidden; its bonus still applies |
 | 🌍 **Languages** | English and French, following the phone or chosen in the settings. Switching is instant, without a reload; example activities you haven't renamed follow the language |
-| 💾 **Backups** | Export to a file (on iPhone: “Save to Files”) or a text, restore on another device; a reminder appears after 14 days |
+| 💾 **Backups** | Export to a file (on iPhone: “Save to Files”) or a text, restore on another device; a reminder appears after 14 days, or after 5 days in a browser tab on iPhone or iPad, where the browser may erase an unvisited site; the monthly and yearly recaps also offer “Back up my town” |
 
 ### Rewards
 

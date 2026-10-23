@@ -16,6 +16,7 @@ const LS_MOOD_CARD = 'ville-bien-etre/v1:mood-card';      // carte des moments d
 const LS_WELCOME = 'ville-bien-etre/v1:welcome-closed';   // carte « Bienvenue » fermée ('1'), sur cet appareil
 const LS_INSTALL_HINT = 'ville-bien-etre/v1:install-hint';  // carte « Garde ta ville à l'abri » masquée pour de bon ('1'), sur cet appareil
 const BACKUP_EVERY = 14 * 86400000;                       // rappel quand la dernière sauvegarde a plus de 14 jours
+const IOS_BACKUP_EVERY = 5 * 86400000;                    // dans un onglet sur iPhone ou iPad (le navigateur peut effacer un site resté 7 jours sans visite) : plus de 5 jours
 const HISTORY_MAX = 150;
 const LIST_MAX = 60;
 const DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];

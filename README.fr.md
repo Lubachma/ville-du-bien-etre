@@ -52,7 +52,7 @@
 | 🏆 **Collection et succès** | Un carnet dans le Journal : 48 succès (premiers pas, domaines, moments de la journée, régularité, temps, ville, ville vivante, rituels, harmonie, compagnon), dont 7 qui offrent un décor ; la collection des 52 éléments, les ensembles découverts, les visiteurs rencontrés, les fêtes vécues et les cartes postales des villes amies. Une ville existante reçoit d’un coup les succès déjà mérités |
 | 🌱 **Série bienveillante** | 0 à 2 jours de repos par semaine, un mode pause, un cadeau de bon retour (+20 %) après une coupure, et jamais de message culpabilisant. La série peut être masquée ; son bonus continue de s’appliquer |
 | 🌍 **Langues** | Français et anglais, selon le téléphone ou au choix dans les réglages. Le changement est immédiat, sans recharger ; les exemples d’activités jamais renommés suivent la langue |
-| 💾 **Sauvegardes** | Export en fichier (sur iPhone : « Enregistrer dans Fichiers ») ou en texte, restauration sur un autre appareil ; rappel au bout de 14 jours |
+| 💾 **Sauvegardes** | Export en fichier (sur iPhone : « Enregistrer dans Fichiers ») ou en texte, restauration sur un autre appareil ; rappel au bout de 14 jours, ou de 5 jours dans un onglet sur iPhone ou iPad, où le navigateur peut effacer un site resté sans visite ; les récapitulatifs du mois et de l’année proposent aussi « Sauvegarder ma ville » |
 
 ### Récompenses
 

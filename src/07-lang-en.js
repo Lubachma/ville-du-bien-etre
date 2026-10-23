@@ -1058,6 +1058,7 @@ DICT.en = {
   'recap.sets': { one: '{n} set discovered', other: '{n} sets discovered' },
   'recap.achievements': { one: '{n} achievement earned', other: '{n} achievements earned' },
   'recap.share': 'Share the picture',
+  'recap.backup': 'Back up my town',
   'recap.cardMonth': 'Your month',
   'recap.cardYear': 'Your year',
   'recap.open': 'View',

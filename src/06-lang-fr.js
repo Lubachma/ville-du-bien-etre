@@ -1058,6 +1058,7 @@ DICT.fr = {
   'recap.sets': { one: '{n} ensemble découvert', other: '{n} ensembles découverts' },
   'recap.achievements': { one: '{n} succès gagné', other: '{n} succès gagnés' },
   'recap.share': "Partager l'image",
+  'recap.backup': 'Sauvegarder ma ville',
   'recap.cardMonth': 'Ton mois',
   'recap.cardYear': 'Ton année',
   'recap.open': 'Voir',

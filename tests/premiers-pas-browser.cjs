@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
 const { town, signBackup } = require('./content-browser.cjs');
 const { cityAt } = require('./ambient-browser.cjs');
+const { filledWeek } = require('./rituals-browser.cjs');
 
 // Étape 8, les premiers pas : la carte « Bienvenue » d'une ville sans séance, puis (tâches suivantes) la première respiration, l'abri,
 // le collage depuis Safari et la visite d'un ami. Chaque scénario est une fonction à part, qu'on peut lancer seule.
@@ -1176,10 +1178,113 @@ async function restoreCountsAsBackup(browser, baseURL) {
   return 'Restauration : une ville reprise depuis Réglages compte comme une sauvegarde faite sur cet appareil, sans rappel tout de suite';
 }
 
+// Les récapitulatifs du mois et de l'année portent « Sauvegarder ma ville », entre « Partager l'image » et « Fermer » : la sauvegarde est à portée de
+// main juste après un beau moment. Le clic fait la sauvegarde de Réglages → Sauvegarde : un téléchargement (la feuille de partage sur iPhone), le message
+// qui le dit, la date de la dernière sauvegarde, et le rappel de sauvegarde qui disparaît ; la feuille reste ouverte. Le récapitulatif d'octobre 2026
+// s'ouvre de lui-même le 2 novembre, celui de 2026 le 4 janvier 2027 (filledWeek : une ville née en mai, des séances en octobre, jamais sauvegardée).
+const RECAP = { month: { day: '2026-11-02T09:00:00Z', title: 'Octobre 2026', file: 'ville-du-bien-etre-2026-11-02.txt' },
+  year: { day: '2027-01-04T09:00:00Z', title: '2026', file: 'ville-du-bien-etre-2027-01-04.txt' } };
+async function recapTown(browser, baseURL, { kind = 'month', lang = 'fr', iphone = false, viewport = { width: 390, height: 844 } } = {}) {
+  const seed = { ...filledWeek(), settings: { lang }, updatedAt: Date.parse('2026-10-31T10:00:00Z'),
+    rituals: { week: '9999-12-31', month: kind === 'month' ? '' : '9999-12', year: kind === 'year' ? '' : '9999' } };
+  const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true, locale: lang === 'en' ? 'en-US' : 'fr-FR', timezoneId: 'Europe/Zurich',
+    ...(iphone && { userAgent: IPHONE_UA }) });
+  const page = await context.newPage(), errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.clock.setFixedTime(new Date(RECAP[kind].day));
+  await page.addInitScript(state => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('ville-bien-etre/v2', JSON.stringify(state));
+  }, seed);
+  // Sur iPhone le bouton ouvre la feuille de partage : un faux navigator.share garde ce qu'on lui donne.
+  if (iphone) await page.addInitScript(() => { navigator.canShare = () => true; navigator.share = async data => { window.__shared = data; }; });
+  await page.goto(baseURL);
+  await page.waitForFunction(() => !!window.__ville);
+  await page.locator('#sheet').waitFor();
+  return { context, page, errors };
+}
+async function recapBackupButton(browser, baseURL) {
+  const chromium = browser.browserType().name() === 'chromium';
+  const FR = ["Partager l'image", 'Sauvegarder ma ville', 'Fermer'], EN = ['Share the picture', 'Back up my town', 'Close'];
+  const actions = page => page.locator('#sheetBody .review-actions button');
+  const save = page => page.locator('#sheetBody').getByRole('button', { name: 'Sauvegarder ma ville', exact: true });
+  // Le message, lu à l'instant où il apparaît (il disparaît seul au bout de quelques secondes) : son texte entier.
+  const toasted = async (page, text) => plain(await (await page.waitForFunction(text => {
+    const toast = document.querySelector('#toast');
+    return !toast.hidden && toast.textContent.includes(text) && toast.textContent;
+  }, text)).jsonValue());
+  {
+    // Le mois : le bouton à sa place, puis son clic.
+    const { context, page, errors } = await recapTown(browser, baseURL);
+    try {
+      assert.equal(await page.locator('#sheetTitle').innerText(), RECAP.month.title);
+      assert.deepEqual(await actions(page).allInnerTexts(), FR);
+      // Une ville qui a des séances, jamais sauvegardée depuis cet appareil : le rappel est affiché sous la feuille.
+      assert.equal(await backupAt(page), 0);
+      assert.equal(await page.locator('#remind').isVisible(), true);
+      if (chromium) {
+        const [download] = await Promise.all([page.waitForEvent('download'), save(page).click()]);
+        assert.equal(download.suggestedFilename(), RECAP.month.file);
+        assert.match(await fs.readFile(await download.path(), 'utf8'), /^VBE2\.[\w-]+\.[0-9a-z]+$/, 'le fichier est une sauvegarde');
+      } else await save(page).click();
+      assert.equal(await toasted(page, 'Téléchargement demandé'), 'Téléchargement demandé. Conserve le fichier de sauvegarde.');
+      // Comme toute sauvegarde : sa date est rangée, et le rappel disparaît. La feuille reste ouverte, avec ses trois gestes.
+      assert.ok(await backupAt(page) > 0, 'la date de la sauvegarde est rangée');
+      assert.equal(await page.locator('#remind').isHidden(), true, 'le rappel de sauvegarde disparaît');
+      assert.equal(await page.locator('#sheet').isVisible(), true);
+      assert.deepEqual(await actions(page).allInnerTexts(), FR);
+      // Chromium donne le focus au bouton cliqué, et la Ville qui se redessine sous la feuille ne le lui retire pas (WebKit ne focalise pas un bouton cliqué).
+      if (chromium) assert.equal(await page.evaluate(() => document.activeElement.textContent.trim()), 'Sauvegarder ma ville');
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    // Sur iPhone : la feuille de partage reçoit un fichier texte daté, qui est une sauvegarde ; elle compte aussi.
+    const { context, page, errors } = await recapTown(browser, baseURL, { iphone: true });
+    try {
+      assert.equal(await page.locator('#remind').isVisible(), true);
+      await save(page).click();
+      await page.waitForFunction(() => !!window.__shared);
+      const shared = await page.evaluate(async () => { const [file] = window.__shared.files; return { count: window.__shared.files.length, name: file.name, type: file.type, text: await file.text() }; });
+      assert.deepEqual([shared.count, shared.name, shared.type], [1, RECAP.month.file, 'text/plain']);
+      assert.match(shared.text, /^VBE2\.[\w-]+\.[0-9a-z]+$/, 'le fichier est une sauvegarde');
+      assert.equal(await toasted(page, 'Partage terminé'), 'Partage terminé. Vérifie que tu as conservé la sauvegarde.');
+      assert.ok(await backupAt(page) > 0);
+      assert.equal(await page.locator('#remind').isHidden(), true);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  {
+    // L'année : le même bouton, le même geste.
+    const { context, page, errors } = await recapTown(browser, baseURL, { kind: 'year' });
+    try {
+      assert.equal(await page.locator('#sheetTitle').innerText(), RECAP.year.title);
+      assert.match(await page.locator('#sheetBody').innerText(), /Ton année en un coup d'œil/);
+      assert.deepEqual(await actions(page).allInnerTexts(), FR);
+      await save(page).click();
+      await toasted(page, 'Téléchargement demandé');
+      assert.ok(await backupAt(page) > 0);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  // À 320 px, en français et en anglais, les trois gestes tiennent dans la feuille.
+  for (const [lang, labels] of [['fr', FR], ['en', EN]]) {
+    const { context, page, errors } = await recapTown(browser, baseURL, { lang, viewport: { width: 320, height: 568 } });
+    try {
+      assert.equal(await page.evaluate(() => document.documentElement.lang), lang);
+      assert.deepEqual(await actions(page).allInnerTexts(), labels);
+      await assertFits(page, ['#sheet', '#sheetBody .review-actions button'], 320, `le récapitulatif en ${lang} à 320 px`);
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+  return "Récapitulatifs : « Sauvegarder ma ville » entre « Partager l'image » et « Fermer », une vraie sauvegarde comptée (téléchargement, ou feuille de partage sur iPhone), tient à 320 px";
+}
+
 const SCENARIOS = [welcomeForNewTown, welcomeCloseStays, welcomeCloseWithoutStorage, welcomeLanguage, welcomeLanguageClosesToast, welcomeChoose,
   welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing, quietFirstOpen,
   shelterAfterFirstSession, shelterNeverInstalled, shelterHideForGood, shelterCopyRefused, shelterAndroid, shelterFits320,
-  pasteFromSafari, pasteNothing, pasteHiddenOutsideApp, pasteFits320, restoreCountsAsBackup];
+  pasteFromSafari, pasteNothing, pasteHiddenOutsideApp, pasteFits320, restoreCountsAsBackup, recapBackupButton];
 async function runPremiersPas(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));
