@@ -120,9 +120,10 @@ The build is a small Node script: it concatenates `src/` into `app.js` and stamp
 | `npm run build` | Generates `app.js` and `sw.js` from `src/` |
 | `npm run check` | JavaScript syntax and manifest validation |
 | `npm test` | Unit tests (node:test): rules, streak, translations, storage, merges, sessions, backups, calendar reminder, achievements, sets, wonders, living town (time, seasons, weather, visitors, festivals), challenges, reviews and recaps, mood, town links and postcards, harmony and wishes, companion (friendship, accessories, word of the day, merges), compatibility between versions (unknown parts, merges between tabs), clock, amount format, session platform (screen on, sound, progress ring), contrast, drawings |
-| `npm run test:browser` | Playwright scenarios, on Chromium or, with `BROWSER=webkit`, on WebKit: mobile layouts, offline under the Pages subpath, sessions, migration, updates, languages, streak, sound, reminder, notebook, wonders, shop and placement, living town (sky, light animation loop, residents, visitor, festival, settings), rituals (challenges, review, mood, recaps and their picture, visiting a friend's town, sharing, postcards, settings), harmony (wishes, bubble, stars), ambiences (levels, session, choice), the companion (arrival, town, sheet, session, breathing, settings), reliability (stale tab, screens without technical words, balance and recaps, ambience and sound, images of the town, zoom, focus, undo, 320 px header, announcements, blank names) and first steps (the welcome card, its language links, the first two minutes of calm) |
+| `npm run test:browser` | Playwright scenarios, on Chromium or, with `BROWSER=webkit`, on WebKit: mobile layouts, offline under the Pages subpath, sessions, migration, updates, languages, streak, sound, reminder, notebook, wonders, shop and placement, living town (sky, light animation loop, residents, visitor, festival, settings), rituals (challenges, review, mood, recaps and their picture, visiting a friend's town, sharing, postcards, settings), harmony (wishes, bubble, stars), ambiences (levels, session, choice), the companion (arrival, town, sheet, session, breathing, settings), reliability (stale tab, screens without technical words, balance and recaps, ambience and sound, images of the town, zoom, focus, undo, 320 px header, announcements, blank names), first steps (the welcome card, its language links, the first two minutes of calm), the shelter card, pasting your town, a friend's link and shared pictures |
 | `npm run board` | Drawing board in `test-results/planche/` (with `PLAYWRIGHT_CHANNEL=chrome` where Playwright's own Chromium isn't installed): city by day and by night, wonders by stage, a 320 px screen, notebook thumbnails, times of day, seasons, weather, visitors and festivals, rituals (review, recap and its picture, visit, Journal), wish of the day, harmony, the Flower arch and a session screen with its ambience, the companion (poses, accessories, session, breathing, end screen, town by day and by night with its Hut); drawing time of one frame with a 4× slower processor |
 | `npm run serve` | Local server on port 8766 |
+| `npm run apercu` | Regenerates the link-preview image and the manifest screenshots in `apercu/` (with `PLAYWRIGHT_CHANNEL=chrome` where Playwright's own Chromium isn't installed): rerun it when the look changes |
 | `npm run package` | Prepares the deployable `dist/` folder |
 
 Browser tests need `npx playwright install chromium`, or `PLAYWRIGHT_CHANNEL=chrome` to reuse an installed Chrome; `BROWSER=webkit` runs them on WebKit, Safari's engine, after `npx playwright install webkit`.
@@ -181,9 +182,11 @@ src/
 ├── 56-harmony.js       # wish of the day card, harmony window
 ├── 57-companion.js     # companion: invitation, choosing the animal and name, sheet and wardrobe, button on the town
 ├── 58-companion-session.js # companion during the session and on the end screen, guided breathing
+├── 59-first-steps.js   # welcome card and shelter card (backup, install)
 ├── 60-boot.js          # events and startup
-└── 70-install.js       # install prompt, offline cache, updates
-scripts/                # build, check, package, serve, service worker template
+└── 70-install.js       # service worker: offline cache, updates (no install card any more)
+apercu/                 # link-preview image and manifest screenshots, published but not precached (`npm run apercu`)
+scripts/                # build, check, package, page guard (`page-guard.mjs`), preview, serve, service worker template
 tests/                  # unit tests (VM) and Playwright scenarios
 ```
 

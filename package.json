@@ -10,6 +10,7 @@
     "test": "node --test tests/*.test.cjs",
     "test:browser": "node tests/browser.cjs",
     "board": "node tests/board.cjs",
+    "apercu": "node scripts/apercu.cjs",
     "serve": "node scripts/serve.mjs"
   },
   "devDependencies": {

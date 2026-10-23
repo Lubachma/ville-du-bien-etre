@@ -72,3 +72,32 @@ test("publication : une adresse absolue n'est permise que dans les métadonnées
   // Ce qui entoure une balise permise n'est pas recollé en une adresse qui n'existe pas dans la page.
   assert.deepEqual(strayAddresses('http://exem<meta property="og:x" content="y">ple.ch'), ['http://exem']);
 });
+
+// Largeur et hauteur d'un PNG : octets 16 à 23 de l'en-tête, en grand-boutiste.
+const pngSize = name => { const head = fs.readFileSync(path.join(__dirname, '..', name)); return [head.readUInt32BE(16), head.readUInt32BE(20)]; };
+
+test("aperçu : image des liens en 1200 × 630, à l'adresse annoncée par la page", () => {
+  assert.ok(fs.existsSync(path.join(__dirname, '..', 'apercu', 'ville-1200x630.png')));
+  assert.deepEqual(pngSize('apercu/ville-1200x630.png'), [1200, 630]);
+  const [image] = meta('property', 'og:image');
+  assert.ok(image.endsWith('apercu/ville-1200x630.png'), image);
+});
+
+test('manifeste : trois captures étroites qui existent, à leur taille', () => {
+  const { screenshots } = JSON.parse(read('manifest.webmanifest'));
+  assert.equal(screenshots.length, 3);
+  for (const shot of screenshots) {
+    assert.equal(shot.form_factor, 'narrow');
+    assert.notEqual(String(shot.label || '').trim(), '');
+    assert.equal(shot.type, 'image/png');
+    assert.ok(fs.existsSync(path.join(__dirname, '..', shot.src)), shot.src);
+    const [w, h] = pngSize(shot.src);
+    assert.equal(shot.sizes, w + 'x' + h, shot.src);
+    assert.ok(Math.max(w, h) / Math.min(w, h) <= 2.3, shot.src);
+  }
+});
+
+test('publication : apercu est copié dans dist/', () => {
+  const line = read('scripts/package.mjs').split('\n').find(l => l.includes("'index.html'"));
+  assert.ok(line.includes("'apercu'"), line);
+});

@@ -34,5 +34,28 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "apercu/ecran-ville.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Ta ville grandit à chaque moment pour toi"
+    },
+    {
+      "src": "apercu/ecran-seance.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Une séance de calme avec ton compagnon"
+    },
+    {
+      "src": "apercu/ecran-carnet.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Le carnet de ta ville"
+    }
   ]
 }

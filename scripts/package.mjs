@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(root, 'dist');
 await rm(output, { recursive: true, force: true });
 await mkdir(output);
-for (const name of ['index.html', 'app.js', 'sw.js', 'styles.css', 'styles-activities.css', 'styles-features.css', 'manifest.webmanifest', '.nojekyll', 'icons', 'fonts']) {
+for (const name of ['index.html', 'app.js', 'sw.js', 'styles.css', 'styles-activities.css', 'styles-features.css', 'manifest.webmanifest', '.nojekyll', 'icons', 'fonts', 'apercu']) {
   await cp(path.join(root, name), path.join(output, name), { recursive: true });
 }
 const html = await readFile(path.join(output, 'index.html'), 'utf8');

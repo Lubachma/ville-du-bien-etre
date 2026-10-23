@@ -120,9 +120,10 @@ Le build est un petit script Node : il assemble `src/` en `app.js` et donne au s
 | `npm run build` | Génère `app.js` et `sw.js` depuis `src/` |
 | `npm run check` | Syntaxe JavaScript et manifeste |
 | `npm test` | Tests unitaires (node:test) : règles, série, traductions, stockage, fusions, sessions, sauvegardes, rappel d’agenda, succès, ensembles, merveilles, ville vivante (heure, saisons, météo, visiteurs, fêtes), défis, bilans et récapitulatifs, humeur, lien de ville et cartes postales, harmonie et souhaits, compagnon (complicité, accessoires, mot du jour, fusion), compatibilité entre versions (parties inconnues, fusion entre onglets), horloge, format des montants, plateforme des séances (écran allumé, son, anneau), contrastes, dessins |
-| `npm run test:browser` | Parcours Playwright, sur Chromium ou, avec `BROWSER=webkit`, sur WebKit : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son, rappel, carnet, merveilles, boutique et pose, ville vivante (ciel, animation sobre, habitants, visiteur, fête, réglages), rituels (défis, bilan, humeur, récapitulatifs et leur image, visite d’une ville amie, partage, cartes postales, réglages), harmonie (souhaits, bulle, étoiles), ambiances (niveaux, séance, choix), compagnon (arrivée, ville, fiche, séance, respiration, réglages), fiabilité (onglet en retard, écrans sans mot technique, solde et récapitulatifs, ambiance et son, images de la ville, zoom, focus, annulation, en-tête à 320 px, annonces, noms vides) et premiers pas (carte Bienvenue, ses liens de langue, les deux premières minutes de calme) |
+| `npm run test:browser` | Parcours Playwright, sur Chromium ou, avec `BROWSER=webkit`, sur WebKit : écrans mobiles, hors connexion sous le chemin de Pages, sessions, migration, mises à jour, langues, série, son, rappel, carnet, merveilles, boutique et pose, ville vivante (ciel, animation sobre, habitants, visiteur, fête, réglages), rituels (défis, bilan, humeur, récapitulatifs et leur image, visite d’une ville amie, partage, cartes postales, réglages), harmonie (souhaits, bulle, étoiles), ambiances (niveaux, séance, choix), compagnon (arrivée, ville, fiche, séance, respiration, réglages), fiabilité (onglet en retard, écrans sans mot technique, solde et récapitulatifs, ambiance et son, images de la ville, zoom, focus, annulation, en-tête à 320 px, annonces, noms vides), premiers pas (carte Bienvenue, ses liens de langue, les deux premières minutes de calme), carte à l’abri, coller sa ville, lien d’un ami et images partagées |
 | `npm run board` | Planche des dessins dans `test-results/planche/` (avec `PLAYWRIGHT_CHANNEL=chrome` là où le Chromium de Playwright n’est pas installé) : ville de jour et de nuit, merveilles par étape, écran de 320 px, vignettes du carnet, moments, saisons, météo, visiteurs et fêtes, rituels (bilan, récapitulatif et son image, visite, Journal), souhait du jour, harmonie, Arche fleurie et écran d’une séance avec son ambiance, compagnon (gestes, accessoires, séance, respiration, écran de fin, ville de jour et de nuit avec sa Cabane) ; temps de dessin d’une image, processeur ralenti 4 fois |
 | `npm run serve` | Serveur local sur le port 8766 |
+| `npm run apercu` | Régénère l’image d’aperçu des liens et les captures du manifeste dans `apercu/` (avec `PLAYWRIGHT_CHANNEL=chrome` là où le Chromium de Playwright n’est pas installé) : à relancer quand l’apparence change |
 | `npm run package` | Prépare le dossier publiable `dist/` |
 
 Les tests navigateur demandent `npx playwright install chromium`, ou `PLAYWRIGHT_CHANNEL=chrome` pour réutiliser un Chrome installé ; `BROWSER=webkit` les lance sur WebKit, le moteur de Safari, après `npx playwright install webkit`.
@@ -181,9 +182,11 @@ src/
 ├── 56-harmony.js       # carte du souhait du jour, fenêtre de l’harmonie
 ├── 57-companion.js     # compagnon : invitation, choix de l’animal et du nom, fiche et garde-robe, bouton sur la ville
 ├── 58-companion-session.js # compagnon pendant la séance et sur l’écran de fin, respiration guidée
+├── 59-first-steps.js   # carte Bienvenue et carte à l’abri (sauvegarde, installation)
 ├── 60-boot.js          # événements et démarrage
-└── 70-install.js       # installation, cache hors connexion, mises à jour
-scripts/                # build, vérification, packaging, serveur, modèle du service worker
+└── 70-install.js       # service worker : cache hors connexion, mises à jour (plus de carte d’installation)
+apercu/                 # image d’aperçu des liens et captures du manifeste, publiées mais non mises en cache (`npm run apercu`)
+scripts/                # build, vérification, packaging, garde de la page (`page-guard.mjs`), aperçu, serveur, modèle du service worker
 tests/                  # tests unitaires (VM) et parcours Playwright
 ```
 
