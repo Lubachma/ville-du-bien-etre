@@ -1135,6 +1135,8 @@ DICT.en = {
   'visit.kept': 'Postcard kept in your notebook',
   'visit.keptShort': 'Kept',
   'visit.shareBack': 'Share my town back',
+  'visit.pitch': 'This town grows with real moments: reading, moving, breathing, tidying, creating.',
+  'visit.grow': 'Grow my own town',
   'visit.badLink': "This town link can't be read",
   'visit.afterSession': "Your session first: your friend's town will open right after",
   'recap.imageMinutes': 'Practice time',

@@ -342,12 +342,15 @@ const City = (() => {
     if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
   }
   // Visite : la ville d'un code s'ouvre en grand, avec son nom, son nombre d'éléments et la taille de son terrain. Si la vue
-  // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose. back : ce que sa fermeture rouvre.
-  function openVisit(snapshot, { own = false, back = null } = {}) {
+  // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose. back : ce que sa fermeture fait ensuite
+  // (rouvrir le carnet, amener le focus à l'accueil). pitch : une ligne de plus sous la taille, qui dit ce qu'est ce jeu (pour un nouveau
+  // venu) ; la tête est remplie avant la mise en page, qui la mesure.
+  function openVisit(snapshot, { own = false, back = null, pitch = false } = {}) {
     if (Mode.state) return false;
     visit = { city: snapshot, own };
     const name = own ? cityName() : snapshot.name || t('visit.friendCity'), meta = t('visit.cityMeta', { n: snapshot.tiles.length, size: snapshot.size });
-    $('#cityVisitHead').replaceChildren(h('p', { class: 'visit-name' }, name), h('p', { class: 'visit-meta' }, meta), ...(own ? [h('p', { class: 'visit-meta' }, t('visit.ownCity'))] : []));
+    $('#cityVisitHead').replaceChildren(h('p', { class: 'visit-name' }, name), h('p', { class: 'visit-meta' }, meta),
+      ...(pitch ? [h('p', { class: 'visit-meta visit-pitch' }, t('visit.pitch'))] : []), ...(own ? [h('p', { class: 'visit-meta' }, t('visit.ownCity'))] : []));
     $('#cityVisitHead').hidden = $('#cityVisitBar').hidden = false;
     $('#visitKeep').hidden = own;
     $('#cityBigTitle').textContent = frTypo(own ? t('visit.ownCity') : name);

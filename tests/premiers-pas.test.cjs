@@ -177,7 +177,7 @@ test("aide : on peut commencer ici, sans rien installer ; sur iPhone, la ville s
 const STAGE8_FR = ['help.installFirst', 'backup.openSection', 'tpl.breathe', 'install.title', 'install.iosWhy', 'install.ios', 'install.iosCopy', 'install.copy',
   'install.copied', 'install.copyFailed', 'install.prompt', 'install.install', 'install.hide', 'install.help', 'welcome.title', 'welcome.lede', 'welcome.step1',
   'welcome.step2', 'welcome.step3', 'welcome.start', 'welcome.choose', 'welcome.note', 'welcome.close', 'welcome.langs', 'welcome.paste',
-  'welcome.pasteTitle', 'welcome.pasteLine', 'welcome.pasteRestore', 'welcome.pasteNone', 'recap.backup'];
+  'welcome.pasteTitle', 'welcome.pasteLine', 'welcome.pasteRestore', 'welcome.pasteNone', 'recap.backup', 'visit.pitch', 'visit.grow'];
 test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apostrophe droite", () => {
   const { DICT } = stateApp(undefined, undefined, { expose: ['DICT'] });
   for (const key of STAGE8_FR) {
@@ -187,6 +187,15 @@ test("textes français de l'étape 8 : l'apostrophe typographique, jamais l'apos
   // Le bouton des récapitulatifs du mois et de l'année.
   assert.equal(DICT.fr['recap.backup'], 'Sauvegarder ma ville');
   assert.equal(DICT.en['recap.backup'], 'Back up my town');
+  // La visite d'un ami, pour un nouveau venu : la ligne sous le nom et la taille, et le bouton qui ferme la visite.
+  assert.deepEqual(Object.fromEntries(['visit.pitch', 'visit.grow'].map(key => [key, DICT.fr[key]])), {
+    'visit.pitch': 'Cette ville grandit avec de vrais moments : lire, bouger, respirer, ranger, créer.',
+    'visit.grow': 'Faire grandir ma ville',
+  });
+  assert.deepEqual(Object.fromEntries(['visit.pitch', 'visit.grow'].map(key => [key, DICT.en[key]])), {
+    'visit.pitch': 'This town grows with real moments: reading, moving, breathing, tidying, creating.',
+    'visit.grow': 'Grow my own town',
+  });
   // Le texte entier, apostrophes comprises (U+2019).
   assert.deepEqual(Object.fromEntries(['install.title', 'install.iosWhy', 'install.iosCopy', 'install.prompt', 'install.copied', 'install.copyFailed',
     'welcome.close', 'welcome.langs', 'welcome.paste', 'welcome.pasteNone'].map(key => [key, DICT.fr[key]])), {
@@ -225,6 +234,20 @@ test("carte Bienvenue : le texte français fixe d'index.html est celui du dictio
   assert.deepEqual(pairs.map(([key]) => key).sort(), ['welcome.choose', 'welcome.close', 'welcome.langs', 'welcome.lede', 'welcome.note', 'welcome.paste', 'welcome.start',
     'welcome.step1', 'welcome.step2', 'welcome.step3', 'welcome.title']);
   for (const [key, text] of pairs) assert.equal(text, DICT.fr[key], key);
+});
+
+// La barre de la visite d'une ville amie (index.html) : « Faire grandir ma ville » est son premier bouton, caché (hidden) tant que l'app ne
+// sait pas que la visite est celle d'un nouveau venu, et chaque texte fixe dit la même chose que le dictionnaire.
+test("barre de la visite : « Faire grandir ma ville » est le premier bouton, caché, au texte du dictionnaire", () => {
+  const { DICT } = stateApp(undefined, undefined, { expose: ['DICT'] });
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('<div class="city-visit-bar"'), bar = html.slice(start, html.indexOf('</div>', start));
+  assert.ok(start > 0 && bar.includes('id="visitKeep"'), 'la barre est dans la page');
+  const buttons = [...bar.matchAll(/<button\b([^>]*)>([^<]*)<\/button>/g)].map(m => ({ id: /\bid="([^"]+)"/.exec(m[1])[1],
+    key: /\bdata-i18n="([^"]+)"/.exec(m[1])[1], hidden: /\shidden(\s|$)/.test(m[1]), text: m[2] }));
+  assert.deepEqual(buttons.map(({ id, key, hidden }) => [id, key, hidden]),
+    [['visitGrow', 'visit.grow', true], ['visitKeep', 'visit.keep', false], ['visitShare', 'visit.shareBack', false]]);
+  for (const { key, text } of buttons) assert.equal(text, DICT.fr[key], key);
 });
 
 // Le rappel de sauvegarde. Dans un onglet de navigateur sur iPhone ou iPad, le navigateur peut effacer un site resté sept jours sans visite : le rappel

@@ -1656,6 +1656,8 @@ DICT.fr = {
   'visit.kept': 'Carte postale gardée dans ton carnet',
   'visit.keptShort': 'Gardée',
   'visit.shareBack': 'Partager ma ville en retour',
+  'visit.pitch': 'Cette ville grandit avec de vrais moments : lire, bouger, respirer, ranger, créer.',
+  'visit.grow': 'Faire grandir ma ville',
   'visit.badLink': "Ce lien de ville n'est pas lisible",
   'visit.afterSession': "Ta séance d'abord : la ville amie s'ouvrira juste après",
   'recap.imageMinutes': 'Temps de pratique',
@@ -2945,6 +2947,8 @@ DICT.en = {
   'visit.kept': 'Postcard kept in your notebook',
   'visit.keptShort': 'Kept',
   'visit.shareBack': 'Share my town back',
+  'visit.pitch': 'This town grows with real moments: reading, moving, breathing, tidying, creating.',
+  'visit.grow': 'Grow my own town',
   'visit.badLink': "This town link can't be read",
   'visit.afterSession': "Your session first: your friend's town will open right after",
   'recap.imageMinutes': 'Practice time',
@@ -7430,12 +7434,15 @@ const City = (() => {
     if (typeof reloadWhenIdle === 'function') reloadWhenIdle();
   }
   // Visite : la ville d'un code s'ouvre en grand, avec son nom, son nombre d'éléments et la taille de son terrain. Si la vue
-  // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose. back : ce que sa fermeture rouvre.
-  function openVisit(snapshot, { own = false, back = null } = {}) {
+  // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose. back : ce que sa fermeture fait ensuite
+  // (rouvrir le carnet, amener le focus à l'accueil). pitch : une ligne de plus sous la taille, qui dit ce qu'est ce jeu (pour un nouveau
+  // venu) ; la tête est remplie avant la mise en page, qui la mesure.
+  function openVisit(snapshot, { own = false, back = null, pitch = false } = {}) {
     if (Mode.state) return false;
     visit = { city: snapshot, own };
     const name = own ? cityName() : snapshot.name || t('visit.friendCity'), meta = t('visit.cityMeta', { n: snapshot.tiles.length, size: snapshot.size });
-    $('#cityVisitHead').replaceChildren(h('p', { class: 'visit-name' }, name), h('p', { class: 'visit-meta' }, meta), ...(own ? [h('p', { class: 'visit-meta' }, t('visit.ownCity'))] : []));
+    $('#cityVisitHead').replaceChildren(h('p', { class: 'visit-name' }, name), h('p', { class: 'visit-meta' }, meta),
+      ...(pitch ? [h('p', { class: 'visit-meta visit-pitch' }, t('visit.pitch'))] : []), ...(own ? [h('p', { class: 'visit-meta' }, t('visit.ownCity'))] : []));
     $('#cityVisitHead').hidden = $('#cityVisitBar').hidden = false;
     $('#visitKeep').hidden = own;
     $('#cityBigTitle').textContent = frTypo(own ? t('visit.ownCity') : name);
@@ -11939,6 +11946,9 @@ let visiting = null;     // ville montrée en grand : { snapshot, code }
 // Ouvre la ville d'un code. Lien illisible : un message doux. Pendant une séance : le lien attend la fin de la séance.
 // Une pose en cours s'annule et une fenêtre ouverte se ferme : la ville amie prend la place, comme annoncé. back : ce que la
 // fermeture de la visite rouvre (le carnet, pour une de ses cartes postales).
+// Pour un nouveau venu (une ville sans séance), la visite dit ce qu'est ce jeu et offre « Faire grandir ma ville » en bouton principal ;
+// « Partager ma ville en retour » disparaît, puisqu'il n'y a encore rien à partager. Fermée, la visite amène le focus sur le premier pas de la
+// Ville (focusFirstStep), sauf si l'appelant a son propre retour (le carnet).
 function openVisitFromCode(code, { back = null } = {}) {
   const snapshot = decodeCity(code);
   if (!snapshot) { toast(t('visit.badLink')); return false; }
@@ -11949,11 +11959,17 @@ function openVisitFromCode(code, { back = null } = {}) {
   }
   if (Mode.state) Mode.cancel();
   if (!$('#sheet').hidden) closeSheet();
-  if (!City.openVisit(snapshot, { own: snapshot.id === S.shareId, back })) return false;
-  visiting = { snapshot, code };
-  const keep = $('#visitKeep');
+  // La barre est refaite à chaque ouverture, et avant la mise en page de la visite, qui la mesure : la ville a pu faire sa première séance
+  // depuis la visite d'avant. « Garder la carte postale » est le bouton principal, sauf pour un nouveau venu, qui a « Faire grandir ma ville ».
+  const newcomer = isNewTown(), keep = $('#visitKeep');
+  $('#visitGrow').hidden = !newcomer;
+  $('#visitShare').hidden = newcomer;
+  keep.classList.toggle('btn-primary', !newcomer);
+  keep.classList.toggle('btn-secondary', newcomer);
   keep.textContent = frTypo(t('visit.keep'));
   keep.removeAttribute('aria-disabled');
+  if (!City.openVisit(snapshot, { own: snapshot.id === S.shareId, back: back || (newcomer ? focusFirstStep : null), pitch: newcomer })) return false;
+  visiting = { snapshot, code };
   return true;
 }
 // La visite gardée pendant une séance s'ouvre dès que la séance et son écran de fin sont fermés.
@@ -12007,6 +12023,7 @@ function bindShare() {
     cheer(progress, t('visit.kept'));
   });
   $('#visitShare').addEventListener('click', openShareSheet);
+  $('#visitGrow').addEventListener('click', () => City.closeBig());
 }
 
 
@@ -12382,6 +12399,14 @@ function closeWelcome() {
 function resetWelcome() {
   welcomeHiddenHere = false;
   try { localStorage.removeItem(LS_WELCOME); } catch (e) { /* stockage indisponible */ }
+}
+
+// Le premier pas de la Ville : le bouton principal de l'accueil, ou « Lancer une activité » quand l'accueil n'y est pas (fermé). C'est là que va le
+// focus quand un nouveau venu referme la visite d'un ami (openVisitFromCode). La visite se ferme sur un geste de la personne : le bouton est
+// montré s'il était hors de vue, comme la carte postale d'où l'on revient. Vrai si l'un des deux a pris le focus ; quand la Ville n'est pas
+// affichée, aucun ne le peut et rien ne bouge.
+function focusFirstStep() {
+  return tryFocus($('#welcomeStart'), true) || tryFocus($('#ctaStart'), true);
 }
 
 // « Commencer par 2 minutes de calme » : la première séance, en Calme et en Concentration, avec la respiration guidée allumée pour cette

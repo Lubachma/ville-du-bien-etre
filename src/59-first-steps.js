@@ -49,6 +49,14 @@ function resetWelcome() {
   try { localStorage.removeItem(LS_WELCOME); } catch (e) { /* stockage indisponible */ }
 }
 
+// Le premier pas de la Ville : le bouton principal de l'accueil, ou « Lancer une activité » quand l'accueil n'y est pas (fermé). C'est là que va le
+// focus quand un nouveau venu referme la visite d'un ami (openVisitFromCode). La visite se ferme sur un geste de la personne : le bouton est
+// montré s'il était hors de vue, comme la carte postale d'où l'on revient. Vrai si l'un des deux a pris le focus ; quand la Ville n'est pas
+// affichée, aucun ne le peut et rien ne bouge.
+function focusFirstStep() {
+  return tryFocus($('#welcomeStart'), true) || tryFocus($('#ctaStart'), true);
+}
+
 // « Commencer par 2 minutes de calme » : la première séance, en Calme et en Concentration, avec la respiration guidée allumée pour cette
 // séance seulement (`breathing` de la séance en cours : le réglage de la personne ne change pas). Son nom est rangé dans la langue du moment
 // (displayName le traduit ensuite comme les exemples d'une ville neuve). Rend la promesse de beginSession.

@@ -7,6 +7,9 @@ let visiting = null;     // ville montrée en grand : { snapshot, code }
 // Ouvre la ville d'un code. Lien illisible : un message doux. Pendant une séance : le lien attend la fin de la séance.
 // Une pose en cours s'annule et une fenêtre ouverte se ferme : la ville amie prend la place, comme annoncé. back : ce que la
 // fermeture de la visite rouvre (le carnet, pour une de ses cartes postales).
+// Pour un nouveau venu (une ville sans séance), la visite dit ce qu'est ce jeu et offre « Faire grandir ma ville » en bouton principal ;
+// « Partager ma ville en retour » disparaît, puisqu'il n'y a encore rien à partager. Fermée, la visite amène le focus sur le premier pas de la
+// Ville (focusFirstStep), sauf si l'appelant a son propre retour (le carnet).
 function openVisitFromCode(code, { back = null } = {}) {
   const snapshot = decodeCity(code);
   if (!snapshot) { toast(t('visit.badLink')); return false; }
@@ -17,11 +20,17 @@ function openVisitFromCode(code, { back = null } = {}) {
   }
   if (Mode.state) Mode.cancel();
   if (!$('#sheet').hidden) closeSheet();
-  if (!City.openVisit(snapshot, { own: snapshot.id === S.shareId, back })) return false;
-  visiting = { snapshot, code };
-  const keep = $('#visitKeep');
+  // La barre est refaite à chaque ouverture, et avant la mise en page de la visite, qui la mesure : la ville a pu faire sa première séance
+  // depuis la visite d'avant. « Garder la carte postale » est le bouton principal, sauf pour un nouveau venu, qui a « Faire grandir ma ville ».
+  const newcomer = isNewTown(), keep = $('#visitKeep');
+  $('#visitGrow').hidden = !newcomer;
+  $('#visitShare').hidden = newcomer;
+  keep.classList.toggle('btn-primary', !newcomer);
+  keep.classList.toggle('btn-secondary', newcomer);
   keep.textContent = frTypo(t('visit.keep'));
   keep.removeAttribute('aria-disabled');
+  if (!City.openVisit(snapshot, { own: snapshot.id === S.shareId, back: back || (newcomer ? focusFirstStep : null), pitch: newcomer })) return false;
+  visiting = { snapshot, code };
   return true;
 }
 // La visite gardée pendant une séance s'ouvre dès que la séance et son écran de fin sont fermés.
@@ -75,4 +84,5 @@ function bindShare() {
     cheer(progress, t('visit.kept'));
   });
   $('#visitShare').addEventListener('click', openShareSheet);
+  $('#visitGrow').addEventListener('click', () => City.closeBig());
 }

@@ -1135,6 +1135,8 @@ DICT.fr = {
   'visit.kept': 'Carte postale gardée dans ton carnet',
   'visit.keptShort': 'Gardée',
   'visit.shareBack': 'Partager ma ville en retour',
+  'visit.pitch': 'Cette ville grandit avec de vrais moments : lire, bouger, respirer, ranger, créer.',
+  'visit.grow': 'Faire grandir ma ville',
   'visit.badLink': "Ce lien de ville n'est pas lisible",
   'visit.afterSession': "Ta séance d'abord : la ville amie s'ouvrira juste après",
   'recap.imageMinutes': 'Temps de pratique',
