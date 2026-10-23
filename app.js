@@ -7436,7 +7436,7 @@ const City = (() => {
   // Visite : la ville d'un code s'ouvre en grand, avec son nom, son nombre d'éléments et la taille de son terrain. Si la vue
   // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose. back : ce que sa fermeture fait ensuite
   // (rouvrir le carnet, amener le focus à l'accueil). pitch : une ligne de plus sous la taille, qui dit ce qu'est ce jeu (pour un nouveau
-  // venu) ; la tête est remplie avant la mise en page, qui la mesure.
+  // venu chez un ami) ; la tête est remplie avant la mise en page, qui la mesure.
   function openVisit(snapshot, { own = false, back = null, pitch = false } = {}) {
     if (Mode.state) return false;
     visit = { city: snapshot, own };
@@ -11946,9 +11946,10 @@ let visiting = null;     // ville montrée en grand : { snapshot, code }
 // Ouvre la ville d'un code. Lien illisible : un message doux. Pendant une séance : le lien attend la fin de la séance.
 // Une pose en cours s'annule et une fenêtre ouverte se ferme : la ville amie prend la place, comme annoncé. back : ce que la
 // fermeture de la visite rouvre (le carnet, pour une de ses cartes postales).
-// Pour un nouveau venu (une ville sans séance), la visite dit ce qu'est ce jeu et offre « Faire grandir ma ville » en bouton principal ;
-// « Partager ma ville en retour » disparaît, puisqu'il n'y a encore rien à partager. Fermée, la visite amène le focus sur le premier pas de la
-// Ville (focusFirstStep), sauf si l'appelant a son propre retour (le carnet).
+// Pour un nouveau venu (une ville sans séance) qui visite la ville d'un ami, la visite dit ce qu'est ce jeu et offre « Faire grandir ma ville »
+// en bouton principal ; « Partager ma ville en retour » disparaît, puisqu'il n'y a encore rien à partager. Fermée, la visite amène le focus sur
+// le premier pas de la Ville (focusFirstStep), sauf si l'appelant a son propre retour (le carnet). Rien de cela pour sa propre ville : un nouveau
+// venu qui ouvre son propre lien la voit comme toujours.
 function openVisitFromCode(code, { back = null } = {}) {
   const snapshot = decodeCity(code);
   if (!snapshot) { toast(t('visit.badLink')); return false; }
@@ -11960,15 +11961,15 @@ function openVisitFromCode(code, { back = null } = {}) {
   if (Mode.state) Mode.cancel();
   if (!$('#sheet').hidden) closeSheet();
   // La barre est refaite à chaque ouverture, et avant la mise en page de la visite, qui la mesure : la ville a pu faire sa première séance
-  // depuis la visite d'avant. « Garder la carte postale » est le bouton principal, sauf pour un nouveau venu, qui a « Faire grandir ma ville ».
-  const newcomer = isNewTown(), keep = $('#visitKeep');
+  // depuis la visite d'avant. « Garder la carte postale » est le bouton principal, sauf pour un nouveau venu chez un ami, qui a « Faire grandir ma ville ».
+  const own = snapshot.id === S.shareId, newcomer = isNewTown() && !own, keep = $('#visitKeep');
   $('#visitGrow').hidden = !newcomer;
   $('#visitShare').hidden = newcomer;
   keep.classList.toggle('btn-primary', !newcomer);
   keep.classList.toggle('btn-secondary', newcomer);
   keep.textContent = frTypo(t('visit.keep'));
   keep.removeAttribute('aria-disabled');
-  if (!City.openVisit(snapshot, { own: snapshot.id === S.shareId, back: back || (newcomer ? focusFirstStep : null), pitch: newcomer })) return false;
+  if (!City.openVisit(snapshot, { own, back: back || (newcomer ? focusFirstStep : null), pitch: newcomer })) return false;
   visiting = { snapshot, code };
   return true;
 }

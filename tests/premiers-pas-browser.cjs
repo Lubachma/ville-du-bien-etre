@@ -1306,6 +1306,14 @@ const newcomerBar = lang => [{ id: 'visitGrow', shown: true, text: FRIEND[lang].
   { id: 'visitShare', shown: false, text: FRIEND[lang].share, tone: 'secondary' }];
 const ordinaryBar = lang => [{ id: 'visitGrow', shown: false, text: FRIEND[lang].grow, tone: 'primary' }, { id: 'visitKeep', shown: true, text: FRIEND[lang].keep, tone: 'primary' },
   { id: 'visitShare', shown: true, text: FRIEND[lang].share, tone: 'secondary' }];
+// Pour sa propre ville, nouveau venu ou non : la barre de toujours, sans carte postale à garder (on ne garde pas sa propre ville).
+const ownBar = lang => [{ id: 'visitGrow', shown: false, text: FRIEND[lang].grow, tone: 'primary' }, { id: 'visitKeep', shown: false, text: FRIEND[lang].keep, tone: 'primary' },
+  { id: 'visitShare', shown: true, text: FRIEND[lang].share, tone: 'secondary' }];
+// L'élément est entièrement dans la zone qui défile (#main, entre l'en-tête et la barre d'onglets) : la personne le voit.
+const inView = (page, selector) => page.evaluate(selector => {
+  const box = document.querySelector(selector).getBoundingClientRect(), area = document.querySelector('#main').getBoundingClientRect();
+  return box.top >= area.top && box.bottom <= area.bottom;
+}, selector);
 
 // Une ville neuve ouverte sur le lien d'un ami (le fragment #ville=…, comme dans un message) : la visite s'ouvre au démarrage. Contrairement à
 // freshTown, la page se charge sur le lien. closedWelcome : l'accueil a déjà été fermé sur cet appareil (LS_WELCOME), ce que la page doit savoir
@@ -1325,9 +1333,10 @@ async function friendTown(browser, baseURL, code, { lang = 'fr', closedWelcome =
   await page.locator('#cityBig').waitFor();
   return { context, page, errors };
 }
-// Un lien reçu quand l'app est déjà ouverte et que rien n'a le focus (le point de départ d'un lien ouvert au démarrage) : la visite s'ouvre.
+// Un lien reçu quand l'app est déjà ouverte : la Ville est défilée jusqu'en bas (son accueil est alors hors de vue, sous la visite) et rien n'a le
+// focus (le point de départ d'un lien ouvert au démarrage) ; la visite s'ouvre.
 async function receiveFriendLink(page, code) {
-  await page.evaluate(() => document.activeElement.blur());
+  await page.evaluate(() => { document.querySelector('#main').scrollTop = 1e5; document.activeElement.blur(); });
   await page.evaluate(code => { location.hash = '#ville=' + code; }, code);
   await page.locator('#cityBig').waitFor();
 }
@@ -1371,6 +1380,8 @@ async function friendLinkForNewcomer(browser, baseURL) {
     assert.match(await page.locator('#visitKeep').getAttribute('class'), /\bbtn-secondary\b/);
     await page.locator('#visitGrow').click();
     await page.locator('#cityBig').waitFor({ state: 'hidden' });
+    // Le bouton ferme comme la croix, par l'historique (history.back, puis popstate) : l'entrée que la vue en grand a posée ne reste pas derrière.
+    assert.equal(await page.evaluate(() => !!(history.state && history.state.cityBig)), false);
     assert.equal(await page.evaluate(() => location.hash), '');
     assert.equal(await activeId(page), 'welcomeStart');
     assert.equal(await page.locator('#welcomeCard').isVisible(), true);
@@ -1398,11 +1409,13 @@ async function friendLinkEscape(browser, baseURL) {
     assert.equal(await page.evaluate(() => location.hash), '');
     for (const [how, close] of [['la croix', () => page.locator('#cityBigClose').click()], ['le geste retour', () => page.goBack()], ['Échap', () => page.keyboard.press('Escape')]]) {
       await receiveFriendLink(page, code);
+      assert.equal(await inView(page, '#welcomeStart'), false, `${how} : l'accueil est hors de vue, sous la visite`);
       assert.deepEqual(await visitHeadLines(page), newcomerHead('fr'), `${how} : la visite d'un nouveau venu`);
       await assertVisitLayout(page, 390, `la visite rouverte avant ${how}`);
       await close();
       await page.locator('#cityBig').waitFor({ state: 'hidden' });
       assert.equal(await activeId(page), 'welcomeStart', `visite fermée par ${how}`);
+      assert.equal(await inView(page, '#welcomeStart'), true, `visite fermée par ${how} : le focus amène le bouton en vue`);
       assert.equal(await page.evaluate(() => location.hash), '', how);
     }
     assert.deepEqual(errors, []);
@@ -1508,6 +1521,9 @@ async function friendLinkCarnetBack(browser, baseURL) {
     await page.locator('#cityBig').waitFor();
     assert.deepEqual(await visitHeadLines(page), newcomerHead('fr'));
     assert.deepEqual(await visitBarButtons(page), newcomerBar('fr'));
+    // « Gardée » est redevenu « Garder la carte postale » avant la mise en page, qui mesure la barre (une ligne de boutons avec le mot court, deux
+    // avec le libellé entier) : la ville ne bouge pas quand la vue est mesurée de nouveau.
+    await assertVisitLayout(page, 390, 'la visite rouverte depuis le carnet');
     await page.keyboard.press('Escape');
     await page.locator('#cityBig').waitFor({ state: 'hidden' });
     await page.locator('#sheet').waitFor();
@@ -1545,11 +1561,46 @@ async function friendLinkFits320(browser, baseURL) {
   return 'Lien d’un ami, nouveau venu : à 320 px, rien ne déborde, en français et en anglais';
 }
 
+// Un nouveau venu qui a partagé sa ville et ouvre son propre lien (celui qu'il envoie, et qu'il peut coller dans « Visiter une ville amie ») voit sa
+// ville comme ses amis la voient : la visite de toujours pour une ville à soi. Rien de ce qui parle à quelqu'un qui découvre la ville d'un ami : pas
+// la ligne qui dit ce qu'est ce jeu, pas de « Faire grandir ma ville » (c'est la sienne), pas de retour à l'accueil : le focus va où il allait.
+async function friendLinkOwnTown(browser, baseURL) {
+  const { context, page, errors } = await freshTown(browser, baseURL);
+  try {
+    assert.equal(await page.evaluate(() => __ville.state.stats.ok + __ville.state.stats.ko), 0);
+    // Partager sa ville lui donne son identifiant de partage : le lien le porte, et la visite y reconnaît sa propre ville (la ville de départ a six éléments).
+    const own = await page.evaluate(() => __ville.share.encode());
+    assert.match(await page.evaluate(() => __ville.state.shareId), /^[0-9a-f]{12}$/);
+    const ownHead = [['visit-name', 'Ma ville'], ['visit-meta', '6 éléments · terrain 7×7'], ['visit-meta', 'Ta ville, telle que tes amis la voient']];
+    await receiveFriendLink(page, own);
+    assert.deepEqual(await visitHeadLines(page), ownHead);
+    assert.deepEqual(await visitBarButtons(page), ownBar('fr'));
+    assert.equal(await page.locator('#visitGrow').isHidden(), true);
+    await page.keyboard.press('Escape');
+    await page.locator('#cityBig').waitFor({ state: 'hidden' });
+    assert.equal(await activeId(page), 'cityExpand');
+    // Comme dans l'app : « Partager ma ville » donne le lien, que « Visiter une ville amie » reçoit collé.
+    await page.locator('#shareCity').click();
+    const link = await page.locator('#shareLinkField').inputValue();
+    await page.locator('#visitLinkField').fill(link);
+    await page.locator('#sheetBody').getByRole('button', { name: 'Visiter', exact: true }).click();
+    await page.locator('#cityBig').waitFor();
+    assert.deepEqual(await visitHeadLines(page), ownHead);
+    assert.deepEqual(await visitBarButtons(page), ownBar('fr'));
+    await page.locator('#cityBigClose').click();
+    await page.locator('#cityBig').waitFor({ state: 'hidden' });
+    for (const first of ['welcomeStart', 'ctaStart']) assert.notEqual(await activeId(page), first, 'la visite de sa propre ville ne mène pas au premier pas');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+  return 'Lien d’un ami : un nouveau venu qui ouvre son propre lien voit sa ville comme ses amis la voient, sans la ligne ni « Faire grandir ma ville »';
+}
+
 const SCENARIOS = [welcomeForNewTown, welcomeCloseStays, welcomeCloseWithoutStorage, welcomeLanguage, welcomeLanguageClosesToast, welcomeChoose,
   welcomeGoneAfterFirstSession, firstCalmBreathes, resumedSessionKeepsBreathing, quietFirstOpen,
   shelterAfterFirstSession, shelterNeverInstalled, shelterHideForGood, shelterCopyRefused, shelterAndroid, shelterFits320,
   pasteFromSafari, pasteNothing, pasteHiddenOutsideApp, pasteFits320, restoreCountsAsBackup, recapBackupButton,
-  friendLinkForNewcomer, friendLinkEscape, friendLinkWelcomeClosed, friendLinkUnchanged, friendLinkAfterFirstSession, friendLinkCarnetBack, friendLinkFits320];
+  friendLinkForNewcomer, friendLinkEscape, friendLinkWelcomeClosed, friendLinkUnchanged, friendLinkAfterFirstSession, friendLinkCarnetBack, friendLinkFits320,
+  friendLinkOwnTown];
 async function runPremiersPas(browser, baseURL) {
   const scenarios = [];
   for (const scenario of SCENARIOS) scenarios.push(await scenario(browser, baseURL));

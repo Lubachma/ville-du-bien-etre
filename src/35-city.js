@@ -344,7 +344,7 @@ const City = (() => {
   // Visite : la ville d'un code s'ouvre en grand, avec son nom, son nombre d'éléments et la taille de son terrain. Si la vue
   // est déjà ouverte, la ville change sans nouvelle entrée d'historique. Pas pendant une pose. back : ce que sa fermeture fait ensuite
   // (rouvrir le carnet, amener le focus à l'accueil). pitch : une ligne de plus sous la taille, qui dit ce qu'est ce jeu (pour un nouveau
-  // venu) ; la tête est remplie avant la mise en page, qui la mesure.
+  // venu chez un ami) ; la tête est remplie avant la mise en page, qui la mesure.
   function openVisit(snapshot, { own = false, back = null, pitch = false } = {}) {
     if (Mode.state) return false;
     visit = { city: snapshot, own };
